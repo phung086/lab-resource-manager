@@ -1,0 +1,43 @@
+{
+  "name": "lab-resource-manager-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "start:prod": "node src/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:guard": "node prisma/applyBookingGuard.js",
+    "db:deploy": "prisma migrate deploy && node prisma/applyBookingGuard.js && node prisma/seedAdmin.js",
+    "db:seed:admin": "node prisma/seedAdmin.js",
+    "import:resources": "node scripts/importResources.js",
+    "agent:system": "node agents/systemMetricsAgent.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@prisma/client": "^6.1.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "csv-parse": "^5.6.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "mqtt": "^5.15.2",
+    "nodemailer": "^6.10.1",
+    "openai": "^6.49.0",
+    "prom-client": "^15.1.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9",
+    "prisma": "^6.1.0",
+    "supertest": "^7.0.0"
+  }
+}

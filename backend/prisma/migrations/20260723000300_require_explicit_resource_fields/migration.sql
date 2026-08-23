@@ -1,0 +1,3 @@
+ALTER TABLE "resources" ALTER COLUMN "status" DROP DEFAULT;
+ALTER TABLE "resources" ALTER COLUMN "capacity" DROP DEFAULT;
+ALTER TABLE "resources" ALTER COLUMN "requiresApproval" DROP DEFAULT;

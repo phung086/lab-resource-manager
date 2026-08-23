@@ -1,0 +1,15 @@
+.env
+.env.production
+.venv/
+__pycache__/
+*.py[cod]
+*.sqlite
+*.db
+.pytest_cache/
+node_modules/
+dist/
+.DS_Store
+coverage/
+*.log
+logs/
+.local-pgdata/

@@ -1,0 +1,1 @@
+ALTER TABLE "resources" ALTER COLUMN "ownerTeam" DROP DEFAULT;

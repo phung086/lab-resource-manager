@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-08-20T23:15:00.000Z",
+  "baselineVersion": "smart-lab-v1.0",
+  "branch": "refactor/smart-lab-v2",
+  "automatedTests": {
+    "total": 23,
+    "passed": 23,
+    "failed": 0,
+    "suites": [
+      "bookingOverlap.test.js",
+      "concurrency.test.js",
+      "dataContract.test.js",
+      "geneticScheduler.test.js",
+      "integrations.test.js",
+      "optimization.test.js",
+      "services.test.js"
+    ]
+  },
+  "concurrencyProtection": {
+    "rowLevelLocking": "SELECT FOR UPDATE implemented on resource and booking rows",
+    "dbLevelConstraint": "bookings_no_active_overlap (btree_gist GiST exclusion on tsrange)",
+    "duplicateEmailProtection": "Atomic P2002 exception catching on unique index"
+  },
+  "algorithmicEngines": {
+    "geneticAlgorithm": "Single-tier Multi-Objective GA (Population 40, Generations 25)",
+    "priorityScoring": "4-Factor Weighted Model (Role, Urgency, Reliability, FairShare)",
+    "predictiveMaintenance": "Statistical Health Index (0-100), Temp Variance & RUL in days",
+    "greenEstimator": "EVN Time-of-Use 3-Tariff (Off-peak 1100, Standard 1685, Peak 3190 VND/kWh)"
+  },
+  "frontend": {
+    "bundleSize": {
+      "js": "368.36 kB (gzip: 105.16 kB)",
+      "css": "36.77 kB (gzip: 7.92 kB)"
+    },
+    "buildTime": "8.93s"
+  }
+}
