@@ -9,10 +9,11 @@ export function DecisionTimelineReplay() {
     {
       id: "ev-0",
       time: "T0 [00:00.0s]",
-      title: "SỰ CỐ QUÁ NHIỆT (THERMAL ANOMALY DETECTED)",
+      title: "SỰ CỐ QUÁ NHIỆT (THERMAL ANOMALY)",
       trigger: "GPU-H100-01 nhiệt độ vượt ngưỡng 86.8°C",
       consequence: "Kích hoạt cờ cảnh báo cấp độ CRITICAL trên telemetry stream",
-      tone: "red",
+      tone: "var(--red)",
+      icon: AlertTriangle,
       details: {
         resource: "GPU-H100-01",
         metric: "Temperature: 86.8°C (Ngưỡng an toàn <= 80°C)",
@@ -22,10 +23,11 @@ export function DecisionTimelineReplay() {
     {
       id: "ev-1",
       time: "T1 [00:00.8s]",
-      title: "CẬP NHẬT CHỈ SỐ HEALTH & READINESS (DIGITAL TWIN V2)",
+      title: "CẬP NHẬT CHỈ SỐ HEALTH & READINESS",
       trigger: "Digital Twin tính toán lại hàm đa yếu tố H và ma trận AHP",
       consequence: "Health Index giảm 88 -> 32 | Readiness Score giảm 91 -> 34",
-      tone: "amber",
+      tone: "var(--amber)",
+      icon: Cpu,
       details: {
         healthBefore: 88,
         healthAfter: 32,
@@ -37,23 +39,25 @@ export function DecisionTimelineReplay() {
     {
       id: "ev-2",
       time: "T2 [00:01.5s]",
-      title: "TÁI TỐI ƯU HÓA ĐA MỤC TIÊU (NSGA-II RE-TRIGGERED)",
-      trigger: "Bộ giải NSGA-II kích hoạt với hệ số phạt áp lực nhiệt trên GPU-H100-01",
+      title: "TÁI TỐI ƯU HÓA (NSGA-II RE-TRIGGERED)",
+      trigger: "Bộ giải kích hoạt với hệ số phạt áp lực nhiệt trên GPU-H100-01",
       consequence: "Tìm kiếm Pareto Knee-Point mới trong không gian nghiệm 4D",
-      tone: "cyan",
+      tone: "var(--cyan)",
+      icon: Database,
       details: {
         algorithm: "NSGA-II (40 chromosomes, 25 generations)",
-        penaltyApplied: "f3 (ThermalDegradation) += 65.0 pts cho GPU-H100-01",
+        penaltyApplied: "f3 (Thermal) += 65.0 pts cho GPU-H100-01",
         candidateChosen: "GPU-L40S-01 (Nhiệt độ hiện tại 52.4°C, Readiness 89)"
       }
     },
     {
       id: "ev-3",
       time: "T3 [00:02.8s]",
-      title: "ĐIỀU PHỐI CHUYỂN TẢI TỰ ĐỘNG (AUTONOMOUS DISPATCH)",
+      title: "ĐIỀU PHỐI CHUYỂN TẢI TỰ ĐỘNG",
       trigger: "Gán lại Job #482 (Graduate Thesis) sang GPU-L40S-01",
-      consequence: "Ghi log quyết định Decision Provenance vào bảng OptimizationDecision",
-      tone: "blue",
+      consequence: "Ghi log quyết định Decision Provenance vào bảng Database",
+      tone: "var(--blue)",
+      icon: ArrowRight,
       details: {
         jobId: "Job #482",
         assignedResource: "GPU-L40S-01 (L40S Server Node)",
@@ -64,13 +68,14 @@ export function DecisionTimelineReplay() {
     {
       id: "ev-4",
       time: "T4 [00:03.5s]",
-      title: "CAM KẾT GIAO DỊCH DATABASE (TRANSACTION COMMITTED)",
-      trigger: "Xác thực PostgreSQL GiST Range Constraint & Row-level Lock",
-      consequence: "Thời gian phục hồi toàn trình T_recovery = 3.5 giây | 0 Double-booking",
-      tone: "green",
+      title: "CAM KẾT GIAO DỊCH DATABASE",
+      trigger: "Xác thực PostgreSQL GiST Range Constraint",
+      consequence: "Thời gian phục hồi toàn trình T_recovery = 3.5 giây | 0 Xung đột",
+      tone: "var(--green)",
+      icon: ShieldCheck,
       details: {
         recoveryTime: "3.5s (T4 - T0)",
-        isolationStatus: "GiST Exclusion Constraint Passed (0 Overlap Anomalies)",
+        isolationStatus: "GiST Exclusion Constraint Passed (0 Overlap)",
         provenanceId: "DEC-2026-849102"
       }
     }
@@ -78,86 +83,87 @@ export function DecisionTimelineReplay() {
 
   return (
     <div className="content-stack" style={{ gap: 20 }}>
-      {/* HEADER WITH CONTROLS */}
-      <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "18px 22px" }}>
+      {/* HEADER */}
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#10b981", background: "rgba(16, 185, 129, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(16, 185, 129, 0.25)" }}>
-                CLOSED-LOOP DIGITAL TWIN FEEDBACK
+              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--green)", background: "rgba(95, 167, 119, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(95, 167, 119, 0.25)" }}>
+                CLOSED-LOOP FEEDBACK
               </span>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#94a3b8" }}>
+              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
                 RECOVERY LATENCY T_recovery = 3.5s
               </span>
             </div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
-              Nhật Ký Tái Hiện Sự Cố & Tái Tối Ưu Hóa (Decision Timeline Replay)
+            <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
+              Nhật Ký Tái Hiện Quyết Định Điều Phối (Replay)
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#94a3b8", margin: 0 }}>
-              Biến toàn bộ log cơ sở dữ liệu thành câu chuyện phản ứng khép kín trực quan: Cảm biến $\to$ Bản sao số $\to$ NSGA-II $\to$ Chuyển tải an toàn.
+            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0 }}>
+              Truy vết toàn trình quá trình phản ứng tự động: Cảm biến &rarr; Digital Twin &rarr; NSGA-II &rarr; Chuyển tải an toàn.
             </p>
-          </div>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              className="btn btn-ghost"
-              onClick={() => setActiveStep((prev) => Math.max(0, prev - 1))}
-              style={{ fontSize: "0.8rem", padding: "8px 14px", fontFamily: "var(--font-mono)" }}
-            >
-              Bước Trước
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => setActiveStep((prev) => Math.min(timelineEvents.length - 1, prev + 1))}
-              style={{ fontSize: "0.8rem", padding: "8px 14px", fontFamily: "var(--font-mono)", background: "#06b6d4", color: "#0b0e14", fontWeight: 700 }}
-            >
-              Bước Tiếp Theo
-            </button>
           </div>
         </div>
       </div>
 
-      {/* TIMELINE LIST & STEP INSPECTOR */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 16 }}>
-        {/* VERTICAL TIMELINE */}
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "20px 22px" }}>
-          <div style={{ display: "grid", gap: 14 }}>
-            {timelineEvents.map((ev, idx) => {
-              const isSelected = activeStep === idx;
-              const toneColor = ev.tone === "red" ? "#ef4444" : (ev.tone === "amber" ? "#f59e0b" : (ev.tone === "cyan" ? "#06b6d4" : (ev.tone === "blue" ? "#3b82f6" : "#10b981")));
+      <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
+        {/* TIMELINE PROGRESSION */}
+        <div style={{ flex: 1, minWidth: 320, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+          <strong style={{ fontSize: "0.95rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)", display: "block", marginBottom: 18 }}>
+            TIẾN TRÌNH THỰC THI (PROVENANCE LOG)
+          </strong>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {timelineEvents.map((ev, index) => {
+              const isActive = index === activeStep;
+              const isPast = index <= activeStep;
+              const Icon = ev.icon;
 
               return (
                 <div
                   key={ev.id}
-                  onClick={() => setActiveStep(idx)}
+                  onClick={() => setActiveStep(index)}
                   style={{
-                    cursor: "pointer",
-                    background: isSelected ? "#161b26" : "#0e121a",
-                    border: isSelected ? `1px solid ${toneColor}` : "1px solid rgba(255, 255, 255, 0.06)",
-                    borderRadius: 6,
-                    padding: "14px 16px",
-                    transition: "all 0.15s ease"
+                    display: "flex", gap: 16, cursor: "pointer", position: "relative",
+                    opacity: isPast ? 1 : 0.4, transition: "all 0.2s ease"
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: toneColor, fontWeight: 700 }}>
-                      {ev.time}
-                    </span>
-                    {isSelected && (
-                      <span style={{ fontSize: "0.68rem", background: toneColor, color: "#0b0e14", fontWeight: 800, padding: "1px 6px", borderRadius: 3, fontFamily: "var(--font-mono)" }}>
-                        ACTIVE INSPECTION
-                      </span>
-                    )}
+                  {/* Vertical Line Connection */}
+                  {index < timelineEvents.length - 1 && (
+                    <div style={{ position: "absolute", top: 32, left: 15, bottom: -8, width: 2, background: isPast ? ev.tone : "var(--line)" }} />
+                  )}
+
+                  {/* Node Circle */}
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 16, display: "grid", placeItems: "center", flexShrink: 0,
+                    background: isActive ? ev.tone : (isPast ? `color-mix(in srgb, ${ev.tone} 15%, transparent)` : "var(--surface-strong)"),
+                    border: `2px solid ${isPast ? ev.tone : "var(--line-strong)"}`,
+                    color: isActive ? "#14161A" : ev.tone,
+                    zIndex: 2,
+                    boxShadow: isActive ? `0 0 12px ${ev.tone}` : "none",
+                    marginTop: 2
+                  }}>
+                    {isPast ? <CheckCircle2 size={16} /> : <div style={{ width: 8, height: 8, borderRadius: 4, background: "var(--line)" }} />}
                   </div>
 
-                  <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#f8fafc", fontFamily: "var(--font-heading)" }}>
-                    {ev.title}
-                  </div>
-                  <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: 2 }}>
-                    Trigger: <strong style={{ color: "#cbd5e1" }}>{ev.trigger}</strong>
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 2 }}>
-                    Hệ quả: {ev.consequence}
+                  {/* Content Card */}
+                  <div style={{
+                    flex: 1, paddingBottom: 24,
+                    transform: isActive ? "translateX(4px)" : "none", transition: "all 0.2s ease"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: ev.tone, fontWeight: 700 }}>
+                        {ev.time}
+                      </span>
+                      <strong style={{ fontSize: "0.9rem", color: isActive ? "var(--text-primary)" : "var(--text-secondary)" }}>
+                        {ev.title}
+                      </strong>
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>Tác nhân:</span> {ev.trigger}
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-primary)" }}>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>Hệ quả:</span> {ev.consequence}
+                    </div>
                   </div>
                 </div>
               );
@@ -165,42 +171,37 @@ export function DecisionTimelineReplay() {
           </div>
         </div>
 
-        {/* STEP TELEMETRY INSPECTOR */}
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "20px 22px" }}>
-          <div style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: 10, marginBottom: 14 }}>
-            <span style={{ fontSize: "0.7rem", fontFamily: "var(--font-mono)", color: "#06b6d4", display: "block" }}>
-              STEP PROVENANCE INSPECTOR
+        {/* DETAILS PANEL */}
+        <div style={{ flex: 1, minWidth: 320, background: "var(--surface-strong)", border: "1px solid var(--line)", borderRadius: 8, padding: "24px 26px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, borderBottom: "1px solid var(--line)", paddingBottom: 12 }}>
+            <span style={{ fontSize: "0.85rem", fontFamily: "var(--font-mono)", color: timelineEvents[activeStep].tone, fontWeight: 700, padding: "2px 8px", background: `color-mix(in srgb, ${timelineEvents[activeStep].tone} 15%, transparent)`, borderRadius: 4, border: `1px solid color-mix(in srgb, ${timelineEvents[activeStep].tone} 30%, transparent)` }}>
+              CHI TIẾT KỸ THUẬT BƯỚC {activeStep}
             </span>
-            <strong style={{ fontSize: "1rem", color: "#f8fafc", fontFamily: "var(--font-heading)" }}>
-              {timelineEvents[activeStep].title}
-            </strong>
           </div>
 
-          <div style={{ background: "#0e121a", borderRadius: 6, padding: "14px 16px", border: "1px solid rgba(255, 255, 255, 0.04)" }}>
-            <span style={{ fontSize: "0.7rem", color: "#64748b", fontFamily: "var(--font-mono)", display: "block", marginBottom: 8 }}>
-              TELEMETRY & ALGORITHM PAYLOAD:
-            </span>
+          <strong style={{ fontSize: "1.1rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)", display: "block", marginBottom: 20 }}>
+            {timelineEvents[activeStep].title}
+          </strong>
 
-            <div style={{ display: "grid", gap: 10, fontSize: "0.8rem", fontFamily: "var(--font-mono)" }}>
-              {Object.entries(timelineEvents[activeStep].details).map(([k, v]) => (
-                <div key={k} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.04)", paddingBottom: 6 }}>
-                  <span style={{ color: "#64748b", fontSize: "0.72rem", display: "block" }}>{k.toUpperCase()}</span>
-                  <span style={{ color: "#f8fafc" }}>{String(v)}</span>
-                </div>
-              ))}
-            </div>
+          <div style={{ display: "grid", gap: 12 }}>
+            {Object.entries(timelineEvents[activeStep].details).map(([key, value]) => (
+              <div key={key} style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 6, padding: "12px 14px", display: "flex", flexDirection: "column" }}>
+                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 4 }}>
+                  {key}
+                </span>
+                <span style={{ fontSize: "0.9rem", color: "var(--text-primary)", fontFamily: "var(--font-mono)", wordBreak: "break-word" }}>
+                  {value}
+                </span>
+              </div>
+            ))}
           </div>
 
-          <div style={{ marginTop: 16, background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 6, padding: "12px 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-              <ShieldCheck size={14} style={{ color: "#10b981" }} />
-              <strong style={{ fontSize: "0.75rem", color: "#10b981", fontFamily: "var(--font-mono)" }}>
-                HỘI ĐỒNG BẢO VỆ ĐỐI SOÁT
-              </strong>
+          <div style={{ marginTop: 24, padding: "12px 14px", background: "color-mix(in srgb, var(--blue) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--blue) 25%, transparent)", borderRadius: 6, color: "var(--text-secondary)", fontSize: "0.8rem", display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <ShieldCheck size={16} style={{ color: "var(--blue)", flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <strong style={{ color: "var(--text-primary)", display: "block", marginBottom: 2 }}>Khả năng tái lập (Reproducibility)</strong>
+              Toàn bộ tham số môi trường và hạt giống sinh ngẫu nhiên (seed) của thuật toán tối ưu đã được lưu trữ vào Data Warehouse. Bạn có thể sử dụng tính năng Replay để xác thực lại quyết định vào bất kỳ lúc nào.
             </div>
-            <p style={{ fontSize: "0.76rem", color: "#94a3b8", lineHeight: 1.4, margin: 0 }}>
-              Chuỗi chuyển tải chứng minh đặc tính phản hồi khép kín (closed-loop control) theo định nghĩa ISO 23247: bản sao số không chỉ hiển thị dữ liệu mà tự động thay đổi quyết định điều phối thực tế.
-            </p>
           </div>
         </div>
       </div>

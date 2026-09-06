@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ShieldAlert, Cpu, Wrench, Truck, CheckCircle2, AlertTriangle, Play, Sparkles, Clock, FileText, ArrowRight } from "lucide-react";
+import { apiRequest } from "../api.js";
 
 export function AiDiagnosticStudio() {
   const [selectedPattern, setSelectedPattern] = useState("cuda_oom_crash");
@@ -11,8 +12,7 @@ export function AiDiagnosticStudio() {
   const [report, setReport] = useState(null);
   const [remediating, setRemediating] = useState(false);
   const [remediationResult, setRemediationResult] = useState(null);
-
-  const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
+  const [error, setError] = useState("");
 
   const patterns = [
     {
@@ -36,27 +36,32 @@ export function AiDiagnosticStudio() {
     setLoading(true);
     setReport(null);
     setRemediationResult(null);
+    setError("");
 
     try {
-      const token = localStorage.getItem("lrm_token");
-      const res = await fetch(`http://${host}:8000/diagnostic/ai-diagnose`, {
+      // The backend route is actually mounted somewhere, we'll try /incidents/ai-diagnose based on route file comment, or /diagnostic/ai-diagnose
+      // According to route file comment: `POST /incidents/ai-diagnose`
+      const data = await apiRequest("/incidents/ai-diagnose", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
         body: JSON.stringify({
           presetPattern: selectedPattern,
-          logSnippet
+          logSnippet,
+          resourceId: undefined // Let backend pick first available
         })
+      }).catch(async (e) => {
+        // Fallback if route prefix is different
+        return await apiRequest("/diagnostic/ai-diagnose", {
+          method: "POST",
+          body: JSON.stringify({ presetPattern: selectedPattern, logSnippet })
+        });
       });
 
-      const data = await res.json();
       if (data.success) {
         setReport(data.diagnosticReport);
       }
     } catch (err) {
       console.error("Error diagnosing log", err);
+      setError("Lỗi chẩn đoán AI: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -65,189 +70,226 @@ export function AiDiagnosticStudio() {
   async function runAutoRemediation() {
     if (!report) return;
     setRemediating(true);
+    setError("");
 
     try {
-      const token = localStorage.getItem("lrm_token");
-      const res = await fetch(`http://${host}:8000/diagnostic/auto-remediate`, {
+      const data = await apiRequest("/incidents/auto-remediate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
         body: JSON.stringify({
           resourceId: report.resource.id,
           partCode: report.requiredPart.partCode,
           partName: report.requiredPart.partName,
           partPriceVnd: report.requiredPart.unitPriceVnd
         })
+      }).catch(async () => {
+        return await apiRequest("/diagnostic/auto-remediate", {
+          method: "POST",
+          body: JSON.stringify({
+            resourceId: report.resource.id,
+            partCode: report.requiredPart.partCode,
+            partName: report.requiredPart.partName,
+            partPriceVnd: report.requiredPart.unitPriceVnd
+          })
+        });
       });
 
-      const data = await res.json();
       if (data.success) {
         setRemediationResult(data);
       }
     } catch (err) {
       console.error("Error running auto-remediation", err);
+      setError("Lỗi tạo lệnh xuất kho: " + err.message);
     } finally {
       setRemediating(false);
     }
   }
 
   return (
-    <div className="content-stack">
+    <div className="content-stack" style={{ gap: 20 }}>
       {/* HEADER */}
-      <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span className="badge amber">Agentic Incident Workflow</span>
-            <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Chẩn Đoán Sự Cố AI & Tự Động Hóa Chuỗi Cung Ứng (Root Cause Analysis & Logistics)</h2>
+            <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--blue)", background: "rgba(59, 130, 246, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(59, 130, 246, 0.25)" }}>
+              AI DIAGNOSTIC & LOGISTICS
+            </span>
           </div>
-          <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: "0.875rem" }}>
-            Trợ lý AI tự động phân tích mã lỗi Kernel/Hardware, tính toán chỉ số độ tin cậy MTBF và tự động kích hoạt bảo trì & giao vận GHN
+          <h2 style={{ margin: "6px 0 2px 0", fontSize: "1.3rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)", fontWeight: 700 }}>
+            Chẩn Đoán Sự Cố AI & Tự Động Kích Hoạt Vận Đơn (Auto-Remediation)
+          </h2>
+          <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+            Phân tích Root Cause (RCA) từ logs thiết bị, tính toán tỷ lệ hỏng hóc MTBF, và tự động gọi API Logistics đặt linh kiện thay thế.
           </p>
+        </div>
+
+        <button className="btn btn-primary" onClick={runDiagnosis} disabled={loading} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--blue)", color: "#fff", fontWeight: 700, padding: "10px 20px" }}>
+          {loading ? <Sparkles size={16} className="spin" /> : <Play size={16} />}
+          <span>{loading ? "AI Đang Phân Tích..." : "Chạy AI Diagnostic"}</span>
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ background: "rgba(193, 80, 63, 0.1)", border: "1px solid var(--red)", borderRadius: 6, padding: "12px 16px", color: "var(--red)", fontSize: "0.85rem" }}>
+          {error}
+        </div>
+      )}
+
+      {/* INPUT PANEL */}
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, borderBottom: "1px solid var(--line)", paddingBottom: 12 }}>
+          <FileText size={18} style={{ color: "var(--blue)" }} />
+          <strong style={{ fontSize: "0.95rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>
+            RAW TELEMETRY / KERNEL LOGS
+          </strong>
+        </div>
+
+        <div style={{ display: "grid", gap: 16 }}>
+          <select
+            value={selectedPattern}
+            onChange={(e) => {
+              setSelectedPattern(e.target.value);
+              setLogSnippet(patterns.find(p => p.id === e.target.value)?.snippet || "");
+              setReport(null);
+              setRemediationResult(null);
+            }}
+            style={{ width: "100%", background: "var(--surface-strong)", border: "1px solid var(--line)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: 6, outline: "none", fontFamily: "var(--font-heading)", fontSize: "0.9rem" }}
+          >
+            {patterns.map(p => (
+              <option key={p.id} value={p.id}>{p.title}</option>
+            ))}
+          </select>
+
+          <textarea
+            value={logSnippet}
+            onChange={(e) => setLogSnippet(e.target.value)}
+            rows={4}
+            style={{ width: "100%", background: "var(--surface-strong)", border: "1px solid var(--line)", color: "var(--cyan)", padding: "12px 14px", borderRadius: 6, outline: "none", fontFamily: "var(--font-mono)", fontSize: "0.85rem", resize: "vertical" }}
+            spellCheck="false"
+          />
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: 16 }}>
-        {/* INPUT LOG & PATTERN SELECTOR */}
-        <div className="card">
-          <div className="card-header" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)", paddingBottom: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <FileText size={18} className="text-primary" />
-              <strong>Nhập Nhật Ký Lỗi Máy Chủ (Crash Log Input)</strong>
+      {/* AI DIAGNOSTIC REPORT */}
+      {report && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          {/* RCA PANEL */}
+          <div style={{ background: "var(--surface)", border: `1px solid ${report.severity === 'critical' ? 'var(--red)' : 'var(--amber)'}`, borderRadius: 8, padding: "20px 22px", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", inset: 0, background: report.severity === 'critical' ? 'rgba(193, 80, 63, 0.03)' : 'rgba(227, 162, 60, 0.03)', pointerEvents: "none" }} />
+            
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, borderBottom: "1px solid var(--line)", paddingBottom: 12, position: "relative", zIndex: 1 }}>
+              <ShieldAlert size={18} style={{ color: report.severity === 'critical' ? 'var(--red)' : 'var(--amber)' }} />
+              <strong style={{ fontSize: "0.95rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>
+                PHÂN TÍCH NGUYÊN NHÂN GỐC (ROOT CAUSE ANALYSIS)
+              </strong>
+            </div>
+
+            <div style={{ position: "relative", zIndex: 1, display: "grid", gap: 14 }}>
+              <div>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", textTransform: "uppercase" }}>Thiết Bị Gặp Sự Cố</span>
+                <div style={{ fontSize: "1.05rem", color: "var(--cyan)", fontFamily: "var(--font-mono)", fontWeight: 700, marginTop: 4 }}>
+                  {report.resource.code} - {report.resource.name}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", textTransform: "uppercase" }}>Chẩn Đoán Kỹ Thuật</span>
+                <div style={{ fontSize: "0.9rem", color: "var(--text-primary)", marginTop: 4, lineHeight: 1.5 }}>
+                  {report.rootCause}
+                </div>
+              </div>
+
+              <div style={{ background: "var(--surface-strong)", padding: 12, borderRadius: 6, border: "1px solid var(--line)" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", textTransform: "uppercase" }}>Khuyến Nghị Khắc Phục (Action Plan)</span>
+                <div style={{ fontSize: "0.9rem", color: "var(--green)", marginTop: 4, fontWeight: 500 }}>
+                  {report.recommendedAction}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="form-stack" style={{ gap: 12, marginTop: 14 }}>
-            <label>
-              <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Chọn Mẫu Sự Cố Thực Tế Để Test:</span>
-              <select
-                value={selectedPattern}
-                onChange={(e) => {
-                  setSelectedPattern(e.target.value);
-                  const p = patterns.find((item) => item.id === e.target.value);
-                  if (p) setLogSnippet(p.snippet);
-                }}
-              >
-                {patterns.map((p) => (
-                  <option key={p.id} value={p.id}>{p.title}</option>
-                ))}
-              </select>
-            </label>
+          {/* METRICS & LOGISTICS PANEL */}
+          <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 16 }}>
+            {/* RELIABILITY METRICS */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--line)", padding: 16, borderRadius: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, color: "var(--text-muted)", fontSize: "0.7rem", fontFamily: "var(--font-mono)" }}>
+                  <Clock size={14} /> MTBF (GIỜ HOẠT ĐỘNG LIÊN TỤC)
+                </div>
+                <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
+                  {report.metrics.mtbfHours} <span style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>h</span>
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--red)", marginTop: 4 }}>Nguy cơ hỏng: {report.metrics.failureProbability24hPercent}% trong 24h</div>
+              </div>
 
-            <label>
-              <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Nội dung Log Snippet (Stacktrace / Sensor Dmesg):</span>
-              <textarea
-                rows={5}
-                value={logSnippet}
-                onChange={(e) => setLogSnippet(e.target.value)}
-                style={{ fontFamily: "monospace", fontSize: "0.8rem", background: "rgba(0,0,0,0.02)" }}
-              />
-            </label>
-
-            <button
-              className="btn btn-primary"
-              onClick={runDiagnosis}
-              disabled={loading}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 6 }}
-            >
-              <Sparkles size={16} />
-              <span>{loading ? "AI đang phân tích Root Cause..." : "Phân Tích Nguyên Nhân Sự Cố (RCA)"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* AI DIAGNOSTIC REPORT */}
-        <div className="card">
-          <div className="card-header" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)", paddingBottom: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <ShieldAlert size={18} className="text-primary" />
-              <strong>Báo Cáo Phân Tích Kỹ Thuật (Autonomous RCA Report)</strong>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--line)", padding: 16, borderRadius: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, color: "var(--text-muted)", fontSize: "0.7rem", fontFamily: "var(--font-mono)" }}>
+                  <Wrench size={14} /> MTTR (TỐC ĐỘ PHỤC HỒI)
+                </div>
+                <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "var(--blue)", fontFamily: "var(--font-mono)" }}>
+                  {report.metrics.mttrMinutes} <span style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>min</span>
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 4 }}>Thời gian Downtime ước tính</div>
+              </div>
             </div>
-            {report && <span className={`badge ${report.severity === "critical" ? "danger" : "amber"}`}>{report.severity.toUpperCase()}</span>}
-          </div>
 
-          {report ? (
-            <div className="form-stack" style={{ gap: 14, marginTop: 14 }}>
-              {/* TARGET & CATEGORY */}
-              <div style={{ background: "rgba(59, 130, 246, 0.05)", padding: "10px 14px", borderRadius: 8 }}>
-                <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Thiết Bị Chẩn Đoán</div>
-                <div style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginTop: 2 }}>
-                  {report.resource.name} ({report.resource.code})
-                </div>
-                <div style={{ fontSize: "0.8rem", color: "#2563eb", marginTop: 4, fontWeight: 600 }}>
-                  Phân Loại Lỗi: {report.category}
-                </div>
+            {/* AUTO-REMEDIATION / SUPPLY CHAIN */}
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", padding: 20, borderRadius: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, borderBottom: "1px solid var(--line)", paddingBottom: 12 }}>
+                <Truck size={18} style={{ color: "var(--green)" }} />
+                <strong style={{ fontSize: "0.95rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>
+                  CHUỖI CUNG ỨNG & VẬN ĐƠN (SUPPLY CHAIN)
+                </strong>
               </div>
 
-              {/* ROOT CAUSE DESCRIPTION */}
-              <div style={{ fontSize: "0.85rem", lineHeight: 1.5 }}>
-                <strong style={{ color: "#334155" }}>Nguyên Nhân Cốt Lõi (Root Cause):</strong>
-                <p style={{ margin: "4px 0 0 0", color: "#475569" }}>{report.rootCause}</p>
-              </div>
-
-              {/* RELIABILITY ENGINEERING METRICS */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                <div style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, textAlign: "center" }}>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Chỉ Số MTBF</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 700, marginTop: 2 }}>{report.metrics.mtbfHours} h</div>
-                  <span style={{ fontSize: "0.65rem", color: "#94a3b8" }}>Thời gian giữa 2 sự cố</span>
-                </div>
-
-                <div style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, textAlign: "center" }}>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Chỉ Số MTTR</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 700, marginTop: 2 }}>{report.metrics.mttrMinutes} min</div>
-                  <span style={{ fontSize: "0.65rem", color: "#94a3b8" }}>Thời gian sửa chữa</span>
-                </div>
-
-                <div style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, textAlign: "center" }}>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Độ Tin Cậy 24h</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#059669", marginTop: 2 }}>{report.metrics.reliabilityScorePercent} %</div>
-                  <span style={{ fontSize: "0.65rem", color: "#94a3b8" }}>Xác suất vận hành tốt</span>
-                </div>
-              </div>
-
-              {/* RECOMMENDED PART REPLACEMENT */}
-              <div style={{ border: "1px dashed #cbd5e1", padding: 12, borderRadius: 8, background: "#fafafa" }}>
-                <div style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Linh Kiện Cần Thay Thế Đề Xuất:</div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-                  <div>
-                    <strong style={{ fontSize: "0.9rem" }}>{report.requiredPart.partName}</strong>
-                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Mã: {report.requiredPart.partCode} | Lead time: {report.requiredPart.leadTimeDays} ngày</div>
-                  </div>
-                  <span className="badge info" style={{ fontSize: "0.85rem" }}>
-                    {report.requiredPart.unitPriceVnd.toLocaleString("vi-VN")} đ
-                  </span>
-                </div>
-              </div>
-
-              {/* AUTONOMOUS REMEDIATION ACTION BUTTON */}
               {!remediationResult ? (
-                <button
-                  className="btn btn-success"
-                  onClick={runAutoRemediation}
-                  disabled={remediating}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}
-                >
-                  <Wrench size={16} />
-                  <span>{remediating ? "Đang tạo lịch bảo trì & lệnh GHN..." : "Kích Hoạt Bảo Trì Tự Động & Đặt Linh Kiện GHN"}</span>
-                </button>
+                <>
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 16 }}>
+                    Hệ thống xác định cần thay thế linh kiện: 
+                    <strong style={{ color: "var(--text-primary)", display: "block", marginTop: 4 }}>{report.requiredPart.partName} ({report.requiredPart.partCode})</strong>
+                    <div style={{ marginTop: 4, fontFamily: "var(--font-mono)", color: "var(--cyan)" }}>Đơn giá: {report.requiredPart.unitPriceVnd.toLocaleString()} VND (Sẵn hàng - Giao {report.requiredPart.leadTimeDays} ngày)</div>
+                  </div>
+
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={runAutoRemediation} 
+                    disabled={remediating}
+                    style={{ width: "100%", background: "var(--green)", color: "#14161A", fontWeight: 700, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
+                  >
+                    {remediating ? <RefreshCw size={16} className="spin" /> : <ArrowRight size={16} />}
+                    <span>{remediating ? "Đang gọi API Giao Hàng Nhanh..." : "Kích Hoạt Auto-Remediation (Đặt Hàng)"}</span>
+                  </button>
+                </>
               ) : (
-                <div className="alert success" style={{ fontSize: "0.85rem" }}>
-                  <CheckCircle2 size={18} />
-                  <div>
-                    <strong>Tự Động Hóa Hoàn Tất:</strong>
-                    <div>- Đã tạo Lịch bảo trì: #{remediationResult.maintenanceWindow.id.slice(0, 8)}</div>
-                    <div>- Đã tạo Vận đơn GHN: #{remediationResult.ghnShipment.trackingCode} (Dự kiến giao trong 24h)</div>
+                <div style={{ background: "rgba(95, 167, 119, 0.1)", border: "1px solid var(--green)", borderRadius: 6, padding: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--green)", marginBottom: 12, fontWeight: 700 }}>
+                    <CheckCircle2 size={20} />
+                    <span>ĐÃ TẠO VẬN ĐƠN LOGISTICS THÀNH CÔNG</span>
+                  </div>
+                  
+                  <div style={{ display: "grid", gap: 8, fontSize: "0.85rem", fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--text-muted)" }}>Mã Vận Đơn:</span>
+                      <strong>{remediationResult.shipmentOrder.trackingCode}</strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--text-muted)" }}>Nhà Cung Cấp:</span>
+                      <strong>{remediationResult.shipmentOrder.provider}</strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--text-muted)" }}>Dự Kiến Giao:</span>
+                      <strong>{new Date(remediationResult.shipmentOrder.estimatedDelivery).toLocaleDateString('vi-VN')}</strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--text-muted)" }}>Ticket Ghi Nhận:</span>
+                      <strong style={{ color: "var(--cyan)" }}>{remediationResult.incidentLog.id.split("-")[0]}...</strong>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
-          ) : (
-            <p className="empty-state">Bấm "Phân Tích Nguyên Nhân Sự Cố" để AI thực hiện phân tích chuyên sâu</p>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

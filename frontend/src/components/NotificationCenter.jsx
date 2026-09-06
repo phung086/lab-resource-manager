@@ -1,136 +1,189 @@
-import React, { useState } from "react";
-import { Bell, ShieldAlert, CheckCircle2, Clock, Activity, ArrowRight, UserCheck, AlertTriangle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Bell, ShieldAlert, CheckCircle2, Clock, AlertTriangle, ArrowRight, UserCheck, Info } from "lucide-react";
+import { apiRequest } from "../api.js";
 
-export function NotificationCenter() {
-  const [escalations, setEscalations] = useState([
-    {
-      id: "ESC-2026-08-01",
-      title: "Tranh Chấp Slot Drone DJI Matrice 300 (Ưu Tiên Ngang Nhau)",
-      parties: "NCS. Phạm Quốc Huy (Score 72) vs ThS. Đỗ Minh Khang (Score 70)",
-      reason: "Khoảng cách điểm ưu tiên < 5 điểm, hệ thống tự động chuyển cấp cho Trưởng Lab.",
-      timestamp: "10:14 Hôm nay",
-      status: "OPEN",
-      statusLabel: "CHỜ QUYẾT ĐỊNH",
-      statusTone: "red"
-    },
-    {
-      id: "ESC-2026-08-02",
-      title: "Yêu Cầu Vượt Quá 100% Định Mức Giờ GPU Hàng Tháng",
-      parties: "Sinh viên Đồ án Tốt nghiệp (Nhóm 12) — Đã dùng 172/180h",
-      reason: "Đề xuất mở rộng thêm 20 giờ chạy mô hình cho đợt bảo vệ tuần tới.",
-      timestamp: "09:30 Hôm nay",
-      status: "RESOLVED",
-      statusLabel: "ĐÃ DUYỆT NGOẠI LỆ",
-      statusTone: "green"
+const EMPTY_STATE_ICON_STYLE = { color: "var(--text-muted)", opacity: 0.5 };
+
+export function NotificationCenter({ notifications = [], onChanged }) {
+  const [escalations, setEscalations] = useState([]);
+  const [loadingEsc, setLoadingEsc] = useState(true);
+  const [escError, setEscError] = useState("");
+
+  useEffect(() => {
+    loadEscalations();
+  }, []);
+
+  async function loadEscalations() {
+    setLoadingEsc(true);
+    setEscError("");
+    try {
+      const data = await apiRequest("/incidents?status=open");
+      const items = Array.isArray(data?.data || data) ? (data.data || data) : [];
+      setEscalations(items.filter(inc => inc.severity === "critical" || inc.status === "open"));
+    } catch (err) {
+      setEscError("Không thể tải danh sách escalation.");
+      setEscalations([]);
+    } finally {
+      setLoadingEsc(false);
     }
-  ]);
-
-  function handleResolve(id, action) {
-    setEscalations((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, status: "RESOLVED", statusLabel: action === "APPROVE" ? "ĐÃ PHÊ DUYỆT" : "ĐÃ TỪ CHỐI", statusTone: action === "APPROVE" ? "green" : "red" } : e))
-    );
   }
+
+  async function handleResolve(id, action) {
+    try {
+      await apiRequest(`/incidents/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          status: action === "APPROVE" ? "resolved" : "closed",
+          resolutionNote: action === "APPROVE" ? "Đã phê duyệt ngoại lệ" : "Đã từ chối yêu cầu"
+        })
+      });
+      loadEscalations();
+      if (onChanged) onChanged();
+    } catch {
+      setEscalations((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, status: action === "APPROVE" ? "resolved" : "closed" } : e))
+      );
+    }
+  }
+
+  const openEscalations = escalations.filter(e => e.status === "open");
+  const resolvedEscalations = escalations.filter(e => e.status !== "open");
+  const unreadNotifs = notifications.filter(n => !n.isRead);
 
   return (
     <div className="content-stack" style={{ gap: 20 }}>
-      {/* HEADER BANNER */}
-      <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "18px 22px" }}>
+      {/* HEADER */}
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#ef4444", background: "rgba(239, 68, 68, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(239, 68, 68, 0.25)" }}>
+              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--red)", background: "rgba(193, 80, 63, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(193, 80, 63, 0.25)" }}>
                 ESCALATION & INCIDENT WORKFLOW
               </span>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#10b981" }}>
-                ● MTTR = 2.4 PHÚT
-              </span>
+              {openEscalations.length > 0 && (
+                <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--amber)" }}>
+                  ● {openEscalations.length} CA ĐANG MỞ
+                </span>
+              )}
             </div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
-              Trung Tâm Cảnh Báo & Xử Lý Escalation (Notification & Escalation Center)
+            <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
+              Trung Tâm Cảnh Báo & Xử Lý Escalation
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#94a3b8", margin: 0 }}>
-              Tiếp nhận và giải quyết các trường hợp ngoại lệ vượt ngoài khả năng tự động hóa của hệ thống, theo dõi chỉ số Mean Time To Resolve (MTTR).
+            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0 }}>
+              Tiếp nhận và giải quyết các trường hợp ngoại lệ, theo dõi thông báo hệ thống real-time.
             </p>
           </div>
         </div>
       </div>
 
-      {/* OPS PERFORMANCE KPIS */}
+      {/* STATS */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 8, padding: "16px 18px" }}>
-          <span style={{ fontSize: "0.7rem", color: "#64748b", fontFamily: "var(--font-mono)", display: "block" }}>THỜI GIAN GIẢI QUYẾT TB (MTTR)</span>
-          <strong style={{ fontSize: "1.6rem", color: "#10b981", fontFamily: "var(--font-mono)" }}>
-            2.4 Phút
-          </strong>
-          <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 2 }}>Phản hồi nhanh hơn 85% so với thủ công</div>
-        </div>
-
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 8, padding: "16px 18px" }}>
-          <span style={{ fontSize: "0.7rem", color: "#64748b", fontFamily: "var(--font-mono)", display: "block" }}>TỰ ĐỘNG XỬ LÝ THÀNH CÔNG</span>
-          <strong style={{ fontSize: "1.6rem", color: "#06b6d4", fontFamily: "var(--font-mono)" }}>
-            82.4%
-          </strong>
-          <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>Chỉ 17.6% ca cần con người duyệt</div>
-        </div>
-
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 8, padding: "16px 18px" }}>
-          <span style={{ fontSize: "0.7rem", color: "#64748b", fontFamily: "var(--font-mono)", display: "block" }}>TỔNG SỐ CA ESCALATED THÁNG NÀY</span>
-          <strong style={{ fontSize: "1.6rem", color: "#f59e0b", fontFamily: "var(--font-mono)" }}>
-            3 Ca
-          </strong>
-          <div style={{ fontSize: "0.72rem", color: "#10b981", marginTop: 2 }}>2 ca đã giải quyết, 1 ca đang mở</div>
-        </div>
+        <StatCard label="TỔNG THÔNG BÁO" value={notifications.length} sub={`${unreadNotifs.length} chưa đọc`} tone="var(--blue)" />
+        <StatCard label="SỰ CỐ ĐANG MỞ" value={openEscalations.length} sub="Cần xử lý" tone="var(--amber)" />
+        <StatCard label="ĐÃ GIẢI QUYẾT" value={resolvedEscalations.length} sub="Tháng này" tone="var(--green)" />
       </div>
 
-      {/* ESCALATIONS TICKETS */}
-      <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "20px 22px" }}>
-        <strong style={{ fontSize: "0.9rem", color: "#f8fafc", fontFamily: "var(--font-heading)", display: "block", marginBottom: 14 }}>
-          DANH SÁCH VỤ VIỆC CẦN PHÊ DUYỆT TRỰC TIẾP
+      {/* NOTIFICATIONS FROM API */}
+      {notifications.length > 0 && (
+        <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+          <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)", display: "block", marginBottom: 14 }}>
+            THÔNG BÁO HỆ THỐNG ({notifications.length})
+          </strong>
+          <div style={{ display: "grid", gap: 8, maxHeight: 320, overflowY: "auto" }}>
+            {notifications.slice(0, 20).map((notif, i) => (
+              <div
+                key={notif.id || i}
+                style={{
+                  borderLeft: `3px solid ${notif.isRead ? "var(--line-strong)" : "var(--amber)"}`,
+                  background: notif.isRead ? "var(--surface-muted)" : "var(--surface-strong)",
+                  borderRadius: "0 6px 6px 0",
+                  padding: "10px 14px",
+                  display: "flex", alignItems: "center", gap: 10
+                }}
+              >
+                <Bell size={14} style={{ flexShrink: 0, color: notif.isRead ? "var(--text-muted)" : "var(--amber)" }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.82rem", color: "var(--text-primary)" }}>{notif.message || notif.title || "Thông báo"}</div>
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", marginTop: 2 }}>
+                    {notif.createdAt ? new Date(notif.createdAt).toLocaleString("vi-VN") : ""}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ESCALATION TICKETS */}
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+        <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)", display: "block", marginBottom: 14 }}>
+          DANH SÁCH SỰ CỐ / ESCALATION
         </strong>
+
+        {loadingEsc && (
+          <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+            Đang tải danh sách sự cố...
+          </div>
+        )}
+
+        {escError && (
+          <div style={{ padding: 16, textAlign: "center", color: "var(--red)", fontSize: "0.85rem", background: "rgba(193, 80, 63, 0.08)", borderRadius: 6 }}>
+            {escError}
+          </div>
+        )}
+
+        {!loadingEsc && !escError && escalations.length === 0 && (
+          <div style={{ padding: 32, textAlign: "center" }}>
+            <CheckCircle2 size={32} style={EMPTY_STATE_ICON_STYLE} />
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 8 }}>
+              Không có sự cố nào cần xử lý. Hệ thống đang hoạt động bình thường.
+            </p>
+          </div>
+        )}
 
         <div style={{ display: "grid", gap: 14 }}>
           {escalations.map((esc) => {
-            const isOpen = esc.status === "OPEN";
-
+            const isOpen = esc.status === "open";
             return (
               <div
                 key={esc.id}
                 style={{
-                  background: "#161b26",
-                  border: isOpen ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid rgba(255, 255, 255, 0.06)",
-                  borderRadius: 6,
+                  borderLeft: `3px solid ${isOpen ? "var(--status-critical)" : "var(--status-ok)"}`,
+                  background: "var(--surface-strong)",
+                  border: isOpen ? "1px solid rgba(193, 80, 63, 0.3)" : "1px solid var(--line)",
+                  borderRadius: "0 6px 6px 0",
                   padding: "16px 18px"
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "#06b6d4", fontWeight: 700 }}>
-                      {esc.id}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--blue)", fontWeight: 600 }}>
+                      #{esc.id}
                     </span>
-                    <strong style={{ fontSize: "0.92rem", color: "#f8fafc" }}>{esc.title}</strong>
+                    <strong style={{ fontSize: "0.92rem", color: "var(--text-primary)" }}>
+                      {esc.title || esc.description || "Sự cố"}
+                    </strong>
                   </div>
-
-                  <span
-                    style={{
-                      fontSize: "0.7rem",
-                      fontWeight: 700,
-                      fontFamily: "var(--font-mono)",
-                      padding: "2px 8px",
-                      borderRadius: 4,
-                      background: isOpen ? "rgba(239, 68, 68, 0.15)" : "rgba(16, 185, 129, 0.15)",
-                      color: isOpen ? "#ef4444" : "#10b981",
-                      border: `1px solid ${isOpen ? "rgba(239, 68, 68, 0.3)" : "rgba(16, 185, 129, 0.3)"}`
-                    }}
-                  >
-                    {esc.statusLabel}
+                  <span style={{
+                    fontSize: "0.7rem", fontWeight: 600, fontFamily: "var(--font-mono)",
+                    padding: "2px 8px", borderRadius: 4,
+                    background: isOpen ? "rgba(193, 80, 63, 0.15)" : "rgba(95, 167, 119, 0.15)",
+                    color: isOpen ? "var(--red)" : "var(--green)",
+                    border: `1px solid ${isOpen ? "rgba(193, 80, 63, 0.3)" : "rgba(95, 167, 119, 0.3)"}`
+                  }}>
+                    {isOpen ? "CẦN XỬ LÝ" : "ĐÃ GIẢI QUYẾT"}
                   </span>
                 </div>
 
-                <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginBottom: 4 }}>
-                  Các bên liên quan: <strong style={{ color: "#f8fafc" }}>{esc.parties}</strong>
-                </div>
-                <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginBottom: 12 }}>
-                  Lý do chuyển cấp: {esc.reason} • <span style={{ fontFamily: "var(--font-mono)", color: "#64748b" }}>{esc.timestamp}</span>
+                {esc.description && (
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>
+                    {esc.description}
+                  </div>
+                )}
+
+                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 12 }}>
+                  Mức độ: <strong style={{ color: esc.severity === "critical" ? "var(--red)" : "var(--amber)" }}>{esc.severity || "N/A"}</strong>
+                  {esc.createdAt && <> • <span style={{ fontFamily: "var(--font-mono)" }}>{new Date(esc.createdAt).toLocaleString("vi-VN")}</span></>}
                 </div>
 
                 {isOpen && (
@@ -138,16 +191,16 @@ export function NotificationCenter() {
                     <button
                       className="btn btn-ghost"
                       onClick={() => handleResolve(esc.id, "REJECT")}
-                      style={{ fontSize: "0.78rem", padding: "6px 14px", fontFamily: "var(--font-mono)", color: "#ef4444" }}
+                      style={{ fontSize: "0.78rem", padding: "6px 14px", fontFamily: "var(--font-mono)", color: "var(--red)" }}
                     >
-                      Từ Chối Yêu Cầu
+                      Từ Chối
                     </button>
                     <button
                       className="btn btn-primary"
                       onClick={() => handleResolve(esc.id, "APPROVE")}
-                      style={{ fontSize: "0.78rem", padding: "6px 16px", fontFamily: "var(--font-mono)", background: "#10b981", color: "#0b0e14", fontWeight: 800 }}
+                      style={{ fontSize: "0.78rem", padding: "6px 16px", fontFamily: "var(--font-mono)", background: "var(--green)", color: "#14161A", fontWeight: 700 }}
                     >
-                      Phê Duyệt Ngoại Lệ
+                      Phê Duyệt
                     </button>
                   </div>
                 )}
@@ -156,6 +209,19 @@ export function NotificationCenter() {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, sub, tone }) {
+  return (
+    <div style={{
+      borderLeft: `3px solid ${tone}`,
+      background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "0 8px 8px 0", padding: "16px 18px"
+    }}>
+      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", display: "block" }}>{label}</span>
+      <strong style={{ fontSize: "1.6rem", color: tone, fontFamily: "var(--font-mono)" }}>{value}</strong>
+      <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 2 }}>{sub}</div>
     </div>
   );
 }

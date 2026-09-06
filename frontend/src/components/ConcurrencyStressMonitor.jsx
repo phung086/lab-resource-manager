@@ -35,21 +35,21 @@ export function ConcurrencyStressMonitor() {
   return (
     <div className="content-stack" style={{ gap: 20 }}>
       {/* HEADER BANNER */}
-      <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "18px 22px" }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#10b981", background: "rgba(16, 185, 129, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(16, 185, 129, 0.25)" }}>
+              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--green)", background: "rgba(95, 167, 119, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(95, 167, 119, 0.25)" }}>
                 POSTGRESQL GIST EXCLUSION CONSTRAINT
               </span>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#06b6d4" }}>
+              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--cyan)" }}>
                 ● PESSIMISTIC ROW-LOCKING
               </span>
             </div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
+            <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
               Giám Sát Kiểm Thử Tranh Chấp & Toàn Vẹn Dữ Liệu (Concurrency Stress Monitor)
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#94a3b8", margin: 0 }}>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0 }}>
               Bằng chứng thực nghiệm định lượng triệt tiêu 100% tình trạng Double-booking (Đặt trùng lịch) dưới áp lực tải đồng thời 250–500 requests.
             </p>
           </div>
@@ -58,7 +58,7 @@ export function ConcurrencyStressMonitor() {
             className="btn btn-primary"
             onClick={triggerStressTest}
             disabled={running}
-            style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", padding: "10px 18px", fontFamily: "var(--font-mono)", background: "#06b6d4", color: "#0b0e14", fontWeight: 700 }}
+            style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", padding: "10px 18px", fontFamily: "var(--font-mono)", background: "var(--cyan)", color: "#14161A", fontWeight: 700, opacity: running ? 0.6 : 1 }}
           >
             <RefreshCw size={14} className={running ? "spin" : ""} />
             <span>{running ? "Đang Bắn 250 Requests..." : "Kích Hoạt Stress-Test 250 Workers"}</span>
@@ -69,8 +69,8 @@ export function ConcurrencyStressMonitor() {
       {/* METRICS & DONUT VISUALIZATION */}
       <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 16 }}>
         {/* DONUT GAUGE CARD */}
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "20px 22px", textAlign: "center" }}>
-          <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#94a3b8", display: "block", marginBottom: 12 }}>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px", textAlign: "center" }}>
+          <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--text-muted)", display: "block", marginBottom: 12 }}>
             KẾT QUẢ TRANH CHẤP 1 SLOT TRÊN 1 GPU (250 WORKERS)
           </span>
 
@@ -83,11 +83,12 @@ export function ConcurrencyStressMonitor() {
                 cy="90"
                 r="70"
                 fill="none"
-                stroke="#f59e0b"
+                stroke="var(--amber)"
                 strokeWidth="16"
                 strokeDasharray="438 440"
                 strokeDashoffset="0"
                 strokeLinecap="round"
+                style={{ transition: "all 1s ease-out" }}
               />
               {/* Success arc (1/250) */}
               <circle
@@ -95,70 +96,80 @@ export function ConcurrencyStressMonitor() {
                 cy="90"
                 r="70"
                 fill="none"
-                stroke="#10b981"
+                stroke="var(--green)"
                 strokeWidth="16"
                 strokeDasharray="15 440"
-                strokeDashoffset="-425"
+                strokeDashoffset="-423"
                 strokeLinecap="round"
+                style={{ transition: "all 1s ease-out" }}
               />
             </svg>
-            <div style={{ position: "absolute", inset: 0, display: "grid", placeContent: "center" }}>
-              <strong style={{ fontSize: "1.8rem", fontFamily: "var(--font-mono)", color: "#f8fafc" }}>0</strong>
-              <span style={{ fontSize: "0.68rem", fontFamily: "var(--font-mono)", color: "#10b981", fontWeight: 700 }}>DOUBLE BOOKING</span>
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <strong style={{ fontSize: "2rem", color: "var(--text-primary)", fontFamily: "var(--font-mono)", lineHeight: 1 }}>{testResult.concurrencyLevel}</strong>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>REQUESTS</span>
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 16, fontSize: "0.75rem", fontFamily: "var(--font-mono)" }}>
-            <div style={{ background: "#0e121a", padding: "8px 10px", borderRadius: 6 }}>
-              <span style={{ color: "#10b981", display: "block" }}>THÀNH CÔNG</span>
-              <strong style={{ color: "#f8fafc", fontSize: "1.1rem" }}>{testResult.successfulBookings} Đơn (0.4%)</strong>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, padding: "0 10px" }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--amber)", fontSize: "0.8rem", marginBottom: 4 }}>
+                <AlertTriangle size={14} /> Từ chối
+              </div>
+              <strong style={{ fontSize: "1.2rem", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{testResult.rejectedConflicts}</strong>
             </div>
-            <div style={{ background: "#0e121a", padding: "8px 10px", borderRadius: 6 }}>
-              <span style={{ color: "#f59e0b", display: "block" }}>CHẶN XUNG ĐỘT</span>
-              <strong style={{ color: "#f8fafc", fontSize: "1.1rem" }}>{testResult.rejectedConflicts} Đơn (99.6%)</strong>
+            <div style={{ width: 1, background: "var(--line)", height: 40 }} />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--green)", fontSize: "0.8rem", marginBottom: 4 }}>
+                <CheckCircle2 size={14} /> Chấp nhận
+              </div>
+              <strong style={{ fontSize: "1.2rem", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{testResult.successfulBookings}</strong>
             </div>
           </div>
         </div>
 
-        {/* MULTI-RESOURCE THROUGHPUT & LATENCY CARD */}
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "20px 22px" }}>
-          <strong style={{ fontSize: "0.9rem", color: "#f8fafc", fontFamily: "var(--font-heading)", display: "block", marginBottom: 12 }}>
-            HIỆU NĂNG TẢI PHÂN TÁN ĐA TÀI NGUYÊN (500 REQUESTS / 20 NODES)
-          </strong>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
-            <div style={{ background: "#0e121a", padding: "12px 14px", borderRadius: 6 }}>
-              <span style={{ fontSize: "0.7rem", color: "#64748b", fontFamily: "var(--font-mono)", display: "block" }}>THROUGHPUT</span>
-              <strong style={{ fontSize: "1.3rem", color: "#06b6d4", fontFamily: "var(--font-mono)" }}>
-                {testResult.throughputReqSec} req/s
-              </strong>
+        {/* METRICS GRID */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 24px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <ShieldCheck size={18} style={{ color: "var(--green)" }} />
+              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>TỶ LỆ DOUBLE-BOOKING</span>
             </div>
-
-            <div style={{ background: "#0e121a", padding: "12px 14px", borderRadius: 6 }}>
-              <span style={{ fontSize: "0.7rem", color: "#64748b", fontFamily: "var(--font-mono)", display: "block" }}>ĐỘ TRỄ P95</span>
-              <strong style={{ fontSize: "1.3rem", color: "#10b981", fontFamily: "var(--font-mono)" }}>
-                {testResult.p95LatencyMs} ms
-              </strong>
+            <div style={{ fontSize: "2.4rem", fontWeight: 700, color: "var(--green)", fontFamily: "var(--font-mono)" }}>
+              {testResult.duplicateAnomalies}%
             </div>
-
-            <div style={{ background: "#0e121a", padding: "12px 14px", borderRadius: 6 }}>
-              <span style={{ fontSize: "0.7rem", color: "#64748b", fontFamily: "var(--font-mono)", display: "block" }}>ĐỘ TRỄ P99</span>
-              <strong style={{ fontSize: "1.3rem", color: "#3b82f6", fontFamily: "var(--font-mono)" }}>
-                {testResult.p99LatencyMs} ms
-              </strong>
-            </div>
+            <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: 4 }}>
+              Không có bất kỳ bản ghi nào trùng lặp thời gian nhờ GiST Exclusion Constraint.
+            </span>
           </div>
 
-          <div style={{ background: "#161b26", border: "1px solid rgba(255, 255, 255, 0.06)", borderRadius: 6, padding: "14px 16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <Lock size={14} style={{ color: "#10b981" }} />
-              <strong style={{ fontSize: "0.78rem", color: "#f8fafc", fontFamily: "var(--font-mono)" }}>
-                CƠ CHẾ BẢO VỆ CƠ SỞ DỮ LIỆU ĐÃ ĐƯỢC XÁC THỰC
-              </strong>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 24px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Activity size={18} style={{ color: "var(--cyan)" }} />
+              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>DATABASE THROUGHPUT</span>
             </div>
-            <p style={{ fontSize: "0.78rem", color: "#94a3b8", lineHeight: 1.5, margin: 0 }}>
-              Cơ chế kết hợp: <code>SELECT 1 FROM resources WHERE id = $id FOR UPDATE</code> (Khóa hàng tuần tự) và <code>EXCLUDE USING gist (resource_id WITH =, tsrange(start_at, end_at, '[)') WITH &&)</code> tại tầng lưu trữ PostgreSQL ngăn chặn tuyệt đối tình trạng race condition ở các điểm biên và giao thoa thời gian.
-            </p>
+            <div style={{ fontSize: "2.4rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
+              {testResult.throughputReqSec.toLocaleString()}
+            </div>
+            <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: 4 }}>
+              Requests / Second (Chỉ tính riêng thao tác Commit Transaction)
+            </span>
+          </div>
+
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 24px", gridColumn: "1 / -1" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <Lock size={16} style={{ color: "var(--blue)" }} />
+              <span style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: 700, fontFamily: "var(--font-mono)" }}>LATENCY PERCENTILES (TRỄ XỬ LÝ)</span>
+            </div>
+            <div style={{ display: "flex", gap: 40 }}>
+              <div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 4 }}>p95 (95% request hoàn thành dưới)</div>
+                <strong style={{ fontSize: "1.4rem", color: "var(--blue)", fontFamily: "var(--font-mono)" }}>{testResult.p95LatencyMs} ms</strong>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 4 }}>p99 (99% request hoàn thành dưới)</div>
+                <strong style={{ fontSize: "1.4rem", color: "var(--amber)", fontFamily: "var(--font-mono)" }}>{testResult.p99LatencyMs} ms</strong>
+              </div>
+            </div>
           </div>
         </div>
       </div>

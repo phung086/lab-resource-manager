@@ -147,8 +147,7 @@ function App() {
     setLoading(true);
     setError("");
     try {
-      const isStaffUser = ["admin", "lab_staff"].includes(user.role);
-      const [dashboardData, resourceData, bookingData, maintenanceData, logData, notificationData, userData, incidentData, courseData, certData] = await Promise.all([
+      const results = await Promise.allSettled([
         apiRequest("/dashboard"),
         apiRequest("/resources"),
         apiRequest("/bookings"),
@@ -156,21 +155,26 @@ function App() {
         apiRequest("/usage-logs"),
         apiRequest("/notifications"),
         user.role === "admin" ? apiRequest("/users") : Promise.resolve([]),
-        apiRequest("/incidents").then(r => r.data || r).catch(() => []),
-        apiRequest("/training/courses").then(r => r.data || r).catch(() => []),
-        apiRequest("/training/certifications/me").then(r => r.data || r).catch(() => [])
+        apiRequest("/incidents").then(r => r.data || r),
+        apiRequest("/training/courses").then(r => r.data || r),
+        apiRequest("/training/certifications/me").then(r => r.data || r)
       ]);
-      setDashboard(dashboardData);
-      setResources(resourceData);
-      setBookings(bookingData);
-      setMaintenance(maintenanceData);
-      setLogs(logData);
-      setNotifications(notificationData);
-      setUsers(userData);
-      setIncidents(Array.isArray(incidentData) ? incidentData : []);
-      setTrainings({ courses: Array.isArray(courseData) ? courseData : [], certifications: Array.isArray(certData) ? certData : [] });
-    } catch (requestError) {
-      handleError(requestError, setError, copy);
+      const val = (i, fallback) => results[i].status === "fulfilled" ? results[i].value : fallback;
+      setDashboard(val(0, null));
+      setResources(val(1, []));
+      setBookings(val(2, []));
+      setMaintenance(val(3, []));
+      setLogs(val(4, []));
+      setNotifications(val(5, []));
+      setUsers(val(6, []));
+      setIncidents(Array.isArray(val(7, [])) ? val(7, []) : []);
+      setTrainings({ courses: Array.isArray(val(8, [])) ? val(8, []) : [], certifications: Array.isArray(val(9, [])) ? val(9, []) : [] });
+      const failedCount = results.filter(r => r.status === "rejected").length;
+      if (failedCount > 0 && failedCount < results.length) {
+        setError(`⚠ ${failedCount} module tải thất bại — dữ liệu hiển thị có thể không đầy đủ.`);
+      } else if (failedCount === results.length) {
+        setError("Không thể kết nối hệ thống. Vui lòng kiểm tra kết nối mạng và backend.");
+      }
     } finally {
       setLoading(false);
     }
@@ -291,8 +295,8 @@ function App() {
         {activeTab === "quota_fairness" && <QuotaFairnessDashboard />}
         {activeTab === "chargeback" && <CostChargebackReport />}
         {activeTab === "policy_config" && <PolicyRulesConfig />}
-        {activeTab === "escalations" && <NotificationCenter />}
-        {activeTab === "dashboard" && <MissionControlOverview onNavigate={setActiveTab} />}
+        {activeTab === "escalations" && <NotificationCenter notifications={notifications} onChanged={loadData} />}
+        {activeTab === "dashboard" && <MissionControlOverview dashboard={dashboard} resources={resources} onNavigate={setActiveTab} />}
         {activeTab === "allocations" && <OrchestrationWizard onAllocated={loadData} />}
         {activeTab === "pareto" && <ParetoFrontierExplorer />}
         {activeTab === "timeline" && <DecisionTimelineReplay />}

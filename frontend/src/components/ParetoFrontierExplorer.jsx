@@ -73,19 +73,19 @@ export function ParetoFrontierExplorer() {
   return (
     <div className="content-stack" style={{ gap: 20 }}>
       {/* HEADER BANNER */}
-      <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "18px 22px" }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#06b6d4", background: "rgba(6, 182, 212, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(6, 182, 212, 0.25)" }}>
+              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--cyan)", background: "rgba(56, 189, 248, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(56, 189, 248, 0.25)" }}>
                 NSGA-II MULTI-OBJECTIVE SOLVER
               </span>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#10b981" }}>● 4D HYPERVOLUME HV = 0.4715</span>
+              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--green)" }}>● 4D HYPERVOLUME HV = 0.4715</span>
             </div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
+            <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
               Không Gian Nghiệm Pareto & Khảo Sát Trade-off Đa Mục Tiêu
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#94a3b8", margin: 0 }}>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0 }}>
               Kéo các thanh trượt trọng số để hệ thống tự động giải bài toán tối ưu hóa đa mục tiêu và định vị nghiệm tối ưu tương ứng trên đường biên Pareto.
             </p>
           </div>
@@ -94,190 +94,164 @@ export function ParetoFrontierExplorer() {
 
       <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: 16 }}>
         {/* SLIDERS PANEL */}
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "18px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: 10 }}>
-            <Sliders size={16} style={{ color: "#06b6d4" }} />
-            <strong style={{ fontSize: "0.85rem", color: "#f8fafc", fontFamily: "var(--font-heading)" }}>
-              TRỌNG SỐ ƯU TIÊN (WEIGHT TUNING)
+        <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, borderBottom: "1px solid var(--line)", paddingBottom: 10 }}>
+            <Sliders size={16} style={{ color: "var(--cyan)" }} />
+            <strong style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>
+              HÀM TRỌNG SỐ (WEIGHTS)
             </strong>
           </div>
 
-          <div style={{ display: "grid", gap: 16 }}>
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#94a3b8", marginBottom: 6 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Clock size={14} style={{ color: "#3b82f6" }} />
-                  Giảm Thời Gian Chờ (Wait Time)
-                </span>
-                <strong style={{ fontFamily: "var(--font-mono)", color: "#3b82f6" }}>{weights.wait}%</strong>
+          <div style={{ display: "grid", gap: 20 }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                <span>Độ ưu tiên hoàn thành nhanh (Wait)</span>
+                <strong style={{ color: "var(--text-primary)" }}>{weights.wait}</strong>
               </div>
               <input
                 type="range"
-                min={0}
-                max={100}
+                min="0" max="100"
                 value={weights.wait}
                 onChange={(e) => setWeights({ ...weights, wait: parseInt(e.target.value) })}
-                style={{ width: "100%", accentColor: "#3b82f6" }}
+                style={{ accentColor: "var(--cyan)" }}
               />
-            </div>
+            </label>
 
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#94a3b8", marginBottom: 6 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Zap size={14} style={{ color: "#10b981" }} />
-                  Tiết Kiệm Điện EVN (Energy Cost)
-                </span>
-                <strong style={{ fontFamily: "var(--font-mono)", color: "#10b981" }}>{weights.energy}%</strong>
+            <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                <span>Độ ưu tiên tiết kiệm điện năng (EVN)</span>
+                <strong style={{ color: "var(--text-primary)" }}>{weights.energy}</strong>
               </div>
               <input
                 type="range"
-                min={0}
-                max={100}
+                min="0" max="100"
                 value={weights.energy}
                 onChange={(e) => setWeights({ ...weights, energy: parseInt(e.target.value) })}
-                style={{ width: "100%", accentColor: "#10b981" }}
+                style={{ accentColor: "var(--green)" }}
               />
-            </div>
+            </label>
 
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#94a3b8", marginBottom: 6 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <ShieldCheck size={14} style={{ color: "#8b5cf6" }} />
-                  Tính Công Bằng Jain (Fairness)
-                </span>
-                <strong style={{ fontFamily: "var(--font-mono)", color: "#8b5cf6" }}>{weights.fairness}%</strong>
+            <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                <span>Độ ưu tiên công bằng Jain's Index</span>
+                <strong style={{ color: "var(--text-primary)" }}>{weights.fairness}</strong>
               </div>
               <input
                 type="range"
-                min={0}
-                max={100}
+                min="0" max="100"
                 value={weights.fairness}
                 onChange={(e) => setWeights({ ...weights, fairness: parseInt(e.target.value) })}
-                style={{ width: "100%", accentColor: "#8b5cf6" }}
+                style={{ accentColor: "var(--blue)" }}
               />
-            </div>
+            </label>
           </div>
 
-          {/* ACTIVE POINT DETAILS */}
-          {selectedPoint && (
-            <div style={{ marginTop: 20, background: "#161b26", border: "1px solid rgba(6, 182, 212, 0.3)", borderRadius: 6, padding: "14px 16px" }}>
-              <span style={{ fontSize: "0.68rem", fontFamily: "var(--font-mono)", color: "#06b6d4", display: "block", marginBottom: 2 }}>
-                NGHIỆM ĐƯỢC CHỌN TRÊN ĐƯỜNG BIÊN PARETO
-              </span>
-              <strong style={{ fontSize: "0.95rem", color: "#f8fafc", fontFamily: "var(--font-heading)" }}>
-                {selectedPoint.name}
-              </strong>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10, fontSize: "0.75rem", fontFamily: "var(--font-mono)" }}>
-                <div>
-                  <span style={{ color: "#64748b", display: "block" }}>Thời gian chờ:</span>
-                  <strong style={{ color: "#3b82f6" }}>{selectedPoint.objectives.waitingTimeHours} Giờ</strong>
-                </div>
-                <div>
-                  <span style={{ color: "#64748b", display: "block" }}>Tiền điện EVN:</span>
-                  <strong style={{ color: "#10b981" }}>{selectedPoint.objectives.energyCostVnd.toLocaleString("vi-VN")} đ</strong>
-                </div>
-                <div>
-                  <span style={{ color: "#64748b", display: "block" }}>Jain Index:</span>
-                  <strong style={{ color: "#8b5cf6" }}>{selectedPoint.objectives.jainsFairnessIndex}</strong>
-                </div>
-                <div>
-                  <span style={{ color: "#64748b", display: "block" }}>Áp lực nhiệt:</span>
-                  <strong style={{ color: "#f59e0b" }}>{selectedPoint.objectives.equipmentStressScore} pts</strong>
-                </div>
-              </div>
-            </div>
-          )}
+          <div style={{ background: "rgba(56, 189, 248, 0.1)", border: "1px solid rgba(56, 189, 248, 0.2)", borderRadius: 6, padding: 12, marginTop: 24, fontSize: "0.75rem", color: "var(--cyan)", lineHeight: 1.5 }}>
+            <strong style={{ display: "block", marginBottom: 4 }}>Nguyên Lý Pareto:</strong>
+            Không thể cải thiện một mục tiêu (ví dụ: làm nhanh hơn) mà không làm suy giảm mục tiêu khác (ví dụ: tốn điện hơn) khi hệ thống đã đạt trạng thái tối ưu Pareto.
+          </div>
         </div>
 
-        {/* 2D SCATTER TRADE-OFF CHART */}
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "18px 20px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <strong style={{ fontSize: "0.85rem", color: "#f8fafc", fontFamily: "var(--font-heading)" }}>
-              BIỂU ĐỒ PHÂN TÁN 2 CHIỀU: CHI PHÍ ĐIỆN NĂNG vs THỜI GIAN CHỜ ĐỢI
-            </strong>
-            <span style={{ fontSize: "0.72rem", color: "#64748b", fontFamily: "var(--font-mono)" }}>Trục X: VND | Trục Y: Giờ</span>
+        {/* VISUALIZATION PANEL */}
+        <div style={{ display: "grid", gap: 16 }}>
+          {/* 2D SCATTER PLOT */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+              <TrendingUp size={16} style={{ color: "var(--amber)" }} />
+              <strong style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>MẶT PHẲNG CHI PHÍ - THỜI GIAN (2D PROJECTION)</strong>
+            </div>
+
+            <div style={{ position: "relative", width: "100%", height: 260, background: "var(--surface-strong)", border: "1px solid var(--line)", borderRadius: 6 }}>
+              <svg width="100%" height="260" viewBox="0 0 500 260">
+                {/* Axes */}
+                <line x1="60" y1="240" x2="480" y2="240" stroke="var(--line-strong)" strokeWidth="2" />
+                <line x1="60" y1="20" x2="60" y2="240" stroke="var(--line-strong)" strokeWidth="2" />
+                <text x="270" y="255" fill="var(--text-secondary)" fontSize="10" textAnchor="middle">Chi Phí Điện (VND) →</text>
+                <text x="30" y="130" fill="var(--text-secondary)" fontSize="10" textAnchor="middle" transform="rotate(-90 30,130)">Thời Gian Chờ (Giờ) →</text>
+
+                {/* Pareto Frontier Line */}
+                <polyline
+                  points={paretoFrontier.sort((a,b) => a.objectives.energyCostVnd - b.objectives.energyCostVnd).map(p => `${toSvgX(p.objectives.energyCostVnd)},${toSvgY(p.objectives.waitingTimeHours)}`).join(" ")}
+                  fill="none"
+                  stroke="var(--line-strong)"
+                  strokeWidth="2"
+                  strokeDasharray="4 4"
+                />
+
+                {/* Points */}
+                {paretoFrontier.map((p) => {
+                  const isSelected = selectedPoint.id === p.id;
+                  const cx = toSvgX(p.objectives.energyCostVnd);
+                  const cy = toSvgY(p.objectives.waitingTimeHours);
+                  return (
+                    <g key={p.id}>
+                      {isSelected && (
+                        <circle cx={cx} cy={cy} r="16" fill="rgba(56, 189, 248, 0.2)" />
+                      )}
+                      <circle
+                        cx={cx} cy={cy} r={isSelected ? "8" : "5"}
+                        fill={isSelected ? "var(--cyan)" : "var(--line-strong)"}
+                        stroke={isSelected ? "#14161A" : "none"}
+                        strokeWidth="2"
+                        style={{ transition: "all 0.3s ease" }}
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
           </div>
 
-          <div style={{ position: "relative", width: "100%", height: 260, background: "#0e121a", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.04)" }}>
-            <svg width="100%" height="100%" viewBox="0 0 520 260">
-              {/* Grid Lines */}
-              <line x1="60" y1="40" x2="480" y2="40" stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
-              <line x1="60" y1="100" x2="480" y2="100" stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
-              <line x1="60" y1="160" x2="480" y2="160" stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
-              <line x1="60" y1="220" x2="480" y2="220" stroke="rgba(255,255,255,0.06)" />
-              <line x1="60" y1="40" x2="60" y2="220" stroke="rgba(255,255,255,0.06)" />
-
-              {/* Axis labels */}
-              <text x="60" y="240" fill="#64748b" fontSize="10" fontFamily="var(--font-mono)">40k đ</text>
-              <text x="250" y="240" fill="#64748b" fontSize="10" fontFamily="var(--font-mono)">57.5k đ</text>
-              <text x="450" y="240" fill="#64748b" fontSize="10" fontFamily="var(--font-mono)">75k đ</text>
-
-              <text x="20" y="224" fill="#64748b" fontSize="10" fontFamily="var(--font-mono)">0h</text>
-              <text x="20" y="135" fill="#64748b" fontSize="10" fontFamily="var(--font-mono)">1.5h</text>
-              <text x="20" y="45" fill="#64748b" fontSize="10" fontFamily="var(--font-mono)">3.0h</text>
-
-              {/* Pareto Curve connecting non-dominated points */}
-              <polyline
-                fill="none"
-                stroke="rgba(6, 182, 212, 0.4)"
-                strokeWidth="2"
-                strokeDasharray="4 4"
-                points={paretoFrontier
-                  .map((p) => `${toSvgX(p.objectives.energyCostVnd)},${toSvgY(p.objectives.waitingTimeHours)}`)
-                  .join(" ")}
-              />
-
-              {/* Pareto Points */}
-              {paretoFrontier.map((p) => {
-                const cx = toSvgX(p.objectives.energyCostVnd);
-                const cy = toSvgY(p.objectives.waitingTimeHours);
-                const isSelected = selectedPoint?.id === p.id;
-
-                return (
-                  <g key={p.id} style={{ cursor: "pointer" }} onClick={() => setWeights({ wait: 50, energy: 50, fairness: 50 })}>
-                    {isSelected && (
-                      <circle cx={cx} cy={cy} r="14" fill="none" stroke="#06b6d4" strokeWidth="2" opacity="0.6">
-                        <animate attributeName="r" values="8;16;8" dur="2s" repeatCount="indefinite" />
-                        <animate attributeName="opacity" values="0.8;0.2;0.8" dur="2s" repeatCount="indefinite" />
-                      </circle>
-                    )}
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={isSelected ? 6 : 4}
-                      fill={isSelected ? "#06b6d4" : "#64748b"}
-                      stroke="#f8fafc"
-                      strokeWidth={isSelected ? 2 : 1}
-                    />
-                    <text
-                      x={cx + 8}
-                      y={cy - 6}
-                      fill={isSelected ? "#f8fafc" : "#64748b"}
-                      fontSize="9"
-                      fontFamily="var(--font-mono)"
-                      fontWeight={isSelected ? 700 : 400}
-                    >
-                      {p.tag}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-
-          {/* FACTOR DECOMPOSITION EXPLAINABILITY BOX */}
+          {/* SELECTED POINT DETAILS */}
           {selectedPoint && (
-            <div style={{ marginTop: 14, background: "#161b26", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 6, padding: "12px 14px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <Sparkles size={14} style={{ color: "#06b6d4" }} />
-                <span style={{ fontSize: "0.72rem", color: "#06b6d4", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                  FACTOR DECOMPOSITION EXPLAINABILITY (GIẢI TRÌNH QUYẾT ĐỊNH)
+            <div style={{ background: "var(--surface-strong)", border: "1px solid var(--cyan)", borderRadius: 8, padding: "16px 20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", marginBottom: 4 }}>PHƯƠNG ÁN ĐƯỢC CHỌN (BEST COMPROMISE)</div>
+                  <strong style={{ fontSize: "1.1rem", color: "var(--cyan)" }}>{selectedPoint.name}</strong>
+                </div>
+                <span style={{ fontSize: "0.75rem", background: "var(--surface)", border: "1px solid var(--line)", padding: "4px 8px", borderRadius: 4, color: "var(--text-primary)" }}>
+                  {selectedPoint.tag}
                 </span>
               </div>
-              <p style={{ fontSize: "0.8rem", color: "#cbd5e1", lineHeight: 1.5, margin: 0 }}>
-                Nghiệm <strong style={{ color: "#06b6d4" }}>{selectedPoint.name}</strong> được lựa chọn với mức cân bằng tối ưu: đạt chi phí điện năng <strong>{selectedPoint.objectives.energyCostVnd.toLocaleString("vi-VN")} đ</strong> (tiết kiệm {Math.round((1 - selectedPoint.objectives.energyCostVnd / 68500) * 100)}% so với cực đại), thời gian chờ trung bình <strong>{selectedPoint.objectives.waitingTimeHours}h</strong> và chỉ số công bằng <strong>{selectedPoint.objectives.jainsFairnessIndex}</strong>.
-              </p>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ background: "var(--surface)", padding: "12px", borderRadius: 6, border: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ background: "rgba(16, 185, 129, 0.1)", color: "var(--green)", padding: 8, borderRadius: 6 }}>
+                    <Zap size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>NĂNG LƯỢNG (VND)</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
+                      {selectedPoint.objectives.energyCostVnd.toLocaleString()} đ
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ background: "var(--surface)", padding: "12px", borderRadius: 6, border: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ background: "rgba(227, 162, 60, 0.1)", color: "var(--amber)", padding: 8, borderRadius: 6 }}>
+                    <Clock size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>THỜI GIAN CHỜ</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
+                      {selectedPoint.objectives.waitingTimeHours.toFixed(1)} h
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ background: "var(--surface)", padding: "12px", borderRadius: 6, border: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ background: "rgba(59, 130, 246, 0.1)", color: "var(--blue)", padding: 8, borderRadius: 6 }}>
+                    <ShieldCheck size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>JAIN'S FAIRNESS INDEX</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
+                      {selectedPoint.objectives.jainsFairnessIndex.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

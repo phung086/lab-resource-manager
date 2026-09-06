@@ -1,427 +1,268 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AlertTriangle, CheckCircle2, Clock, ArrowRight, ShieldCheck, RefreshCw, Filter, Zap, UserCheck, XCircle, TrendingUp, Calendar } from "lucide-react";
+import { apiRequest } from "../api.js";
 
 export function ConflictResolutionQueue() {
-  const [filter, setFilter] = useState("ALL"); // ALL | PENDING | FORECASTED | AUTO_RESOLVED | ESCALATED
-  const [conflicts, setConflicts] = useState([
-    {
-      id: "CONF-2026-001",
-      resourceCode: "GPU-H100-01",
-      resourceName: "NVIDIA H100 SXM5 Node #1",
-      timeSlot: "14:00 - 16:00 (Hôm nay)",
-      conflictReason: "Trùng khung giờ trên cùng thiết bị vật lý",
-      status: "PENDING",
-      statusLabel: "CẦN PHÊ DUYỆT",
-      statusTone: "amber",
-      requestA: {
-        id: "REQ-841",
-        userName: "NCS. Nguyễn Văn An",
-        userRole: "Nghiên cứu sinh Tiến sĩ (PhD)",
-        project: "Mô hình Thị giác 3D (CVPR Deadline)",
-        urgency: "Khẩn Cấp (Paper Deadline)",
-        priorityScore: 92,
-        hasCert: true
-      },
-      requestB: {
-        id: "REQ-849",
-        userName: "SV. Trần Thị Bình",
-        userRole: "Sinh viên Đại học (Undergrad)",
-        project: "Đồ án Môn học Xử lý Ảnh",
-        urgency: "Đồ án Môn học",
-        priorityScore: 48,
-        hasCert: true
-      },
-      proposal: {
-        action: "Cấp phát GPU-H100-01 cho NCS. Nguyễn Văn An (Ưu tiên Deadline CVPR: 92 điểm). Di chuyển tác vụ SV. Trần Thị Bình sang máy chủ NVIDIA L40S-01 cùng khung giờ 14:00 (đáp ứng 100% tài nguyên).",
-        waitDeltaHours: 0,
-        energySavedVnd: 12500,
-        isLossless: true
-      }
-    },
-    {
-      id: "FORECAST-2026-004",
-      resourceCode: "GPU-H100-01",
-      resourceName: "NVIDIA H100 SXM5 Cluster",
-      timeSlot: "14:00 - 16:00 (Thứ Tư Tuần Tới)",
-      conflictReason: "Xác suất tắc nghẽn lịch sử P = 85.0% (Vượt ngưỡng cảnh báo 75%)",
-      status: "FORECASTED",
-      statusLabel: "DỰ BÁO XUNG ĐỘT (TẦN SUẤT LỊCH SỬ)",
-      statusTone: "blue",
-      congestionPercent: 85.0,
-      rollingWeeks: 8,
-      suggestedSlot: "10:00 - 12:00 (Cùng ngày Thứ Tư)",
-      suggestedSlotLoadPercent: 20.0,
-      requestA: {
-        id: "PRED-102",
-        userName: "ThS. Lê Hoàng Long",
-        userRole: "Học viên Cao học (Master)",
-        project: "Huấn luyện LLM Y Tế",
-        urgency: "Bảo vệ Luận văn",
-        priorityScore: 79,
-        hasCert: true
-      },
-      requestB: null,
-      proposal: {
-        action: "Khung giờ 14:00 Thứ Tư tuần tới có xác suất quá tải 85.0% dựa trên tần suất 8 tuần gần nhất. Gợi ý dịch chuyển ca sang 10:00 - 12:00 cùng ngày (mức tải dự kiến chỉ 20.0%).",
-        waitDeltaHours: 0,
-        energySavedVnd: 15400,
-        isLossless: true
-      }
-    },
-    {
-      id: "CONF-2026-002",
-      resourceCode: "GPU-H100-02",
-      resourceName: "NVIDIA H100 SXM5 Node #2",
-      timeSlot: "09:00 - 12:00 (Hôm nay)",
-      conflictReason: "Nhiệt độ node vượt 85°C kích hoạt tái điều phối bảo vệ",
-      status: "AUTO_RESOLVED",
-      statusLabel: "ĐÃ CHUYỂN TẢI AN TOÀN",
-      statusTone: "green",
-      requestA: {
-        id: "REQ-830",
-        userName: "ThS. Lê Hoàng Long",
-        userRole: "Học viên Cao học (Master)",
-        project: "Huấn luyện LLM Y Tế",
-        urgency: "Bảo vệ Luận văn",
-        priorityScore: 78,
-        hasCert: true
-      },
-      requestB: null,
-      proposal: {
-        action: "Đã chuyển tác vụ từ GPU-H100-02 sang GPU-L40S-01 lúc 09:02 để bảo vệ phần cứng do quá nhiệt. Thời gian phục hồi 3.5s.",
-        waitDeltaHours: 0,
-        energySavedVnd: 8400,
-        isLossless: true
-      }
-    },
-    {
-      id: "CONF-2026-003",
-      resourceCode: "DRONE-MATRICE-300",
-      resourceName: "DJI Matrice 300 RTK Lab Node",
-      timeSlot: "15:30 - 17:30 (Hôm nay)",
-      conflictReason: "Hai yêu cầu có mức độ ưu tiên ngang nhau (70 vs 72 điểm)",
-      status: "ESCALATED",
-      statusLabel: "CHUYỂN TRƯỞNG LAB DUYỆT",
-      statusTone: "red",
-      requestA: {
-        id: "REQ-855",
-        userName: "NCS. Phạm Quốc Huy",
-        userRole: "Nghiên cứu sinh (Robotics)",
-        project: "Thử nghiệm Bay Quét Lidar",
-        urgency: "Dự án NAFOSTED",
-        priorityScore: 72,
-        hasCert: true
-      },
-      requestB: {
-        id: "REQ-856",
-        userName: "ThS. Đỗ Minh Khang",
-        userRole: "Học viên Cao học (Robotics)",
-        project: "SLAM Tự Hành Ngoài Trời",
-        urgency: "Dự án NAFOSTED",
-        priorityScore: 70,
-        hasCert: true
-      },
-      proposal: {
-        action: "Độ chênh lệch ưu tiên < 5 điểm. Đề xuất Trưởng phòng Lab chọn trực tiếp người bay trước hoặc phân bổ slot ngày mai 08:00 cho bên còn lại.",
-        waitDeltaHours: 2.0,
-        energySavedVnd: 0,
-        isLossless: false
-      }
-    }
-  ]);
+  const [filter, setFilter] = useState("ALL");
+  const [conflicts, setConflicts] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  function handleAcceptSuggestion(confId) {
-    setConflicts((prev) =>
-      prev.map((c) =>
-        c.id === confId
-          ? {
-              ...c,
-              status: "AUTO_RESOLVED",
-              statusLabel: c.status === "FORECASTED" ? "ĐÃ PHÊ DUYỆT DỊCH CHUYỂN" : "ĐÃ PHÊ DUYỆT PHÂN BỔ",
-              statusTone: "green"
-            }
-          : c
-      )
-    );
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    setError("");
+    try {
+      const [conflictsRes, pendingBookings] = await Promise.allSettled([
+        apiRequest("/analytics/conflicts"),
+        apiRequest("/bookings?status=pending")
+      ]);
+
+      const conflictData = conflictsRes.status === "fulfilled" ? conflictsRes.value : null;
+      const pendingData = pendingBookings.status === "fulfilled" ? pendingBookings.value : [];
+
+      if (conflictData?.data) {
+        setStats(conflictData.data);
+      }
+
+      // Build conflict items from pending bookings that overlap
+      const items = (Array.isArray(pendingData) ? pendingData : pendingData?.data || []).map((b, i) => ({
+        id: `CONF-${b.id || i}`,
+        resourceCode: b.resource?.code || b.resourceId || "N/A",
+        resourceName: b.resource?.name || "Thiết bị",
+        timeSlot: b.startAt ? `${new Date(b.startAt).toLocaleString("vi-VN")} — ${new Date(b.endAt).toLocaleString("vi-VN")}` : "N/A",
+        conflictReason: b.status === "pending" ? "Yêu cầu đang chờ phê duyệt" : "Trùng khung giờ",
+        status: b.status === "pending" ? "PENDING" : "AUTO_RESOLVED",
+        statusLabel: b.status === "pending" ? "CẦN PHÊ DUYỆT" : "ĐÃ XỬ LÝ",
+        statusTone: b.status === "pending" ? "amber" : "green",
+        requestA: {
+          id: `REQ-${b.id}`,
+          userName: b.requestedBy?.fullName || b.requestedBy?.email || "N/A",
+          userRole: b.requestedBy?.role || "",
+          project: b.notes || "",
+          urgency: "",
+          priorityScore: null,
+          hasCert: false
+        },
+        requestB: null,
+        proposal: null
+      }));
+
+      setConflicts(items);
+    } catch (err) {
+      setError("Không thể tải dữ liệu xung đột: " + (err.message || ""));
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const filteredConflicts = conflicts.filter((c) => {
-    if (filter === "PENDING") return c.status === "PENDING";
-    if (filter === "FORECASTED") return c.status === "FORECASTED";
-    if (filter === "AUTO_RESOLVED") return c.status === "AUTO_RESOLVED";
-    if (filter === "ESCALATED") return c.status === "ESCALATED";
-    return true;
-  });
+  async function handleApprove(bookingId) {
+    try {
+      const realId = bookingId.replace("CONF-", "");
+      await apiRequest(`/bookings/${realId}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "approved" })
+      });
+      loadData();
+    } catch (err) {
+      setError("Không thể phê duyệt: " + (err.message || ""));
+    }
+  }
 
-  const pendingCount = conflicts.filter((c) => c.status === "PENDING").length;
-  const forecastCount = conflicts.filter((c) => c.status === "FORECASTED").length;
-  const escalatedCount = conflicts.filter((c) => c.status === "ESCALATED").length;
+  async function handleReject(bookingId) {
+    try {
+      const realId = bookingId.replace("CONF-", "");
+      await apiRequest(`/bookings/${realId}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "rejected" })
+      });
+      loadData();
+    } catch (err) {
+      setError("Không thể từ chối: " + (err.message || ""));
+    }
+  }
+
+  const filtered = filter === "ALL" ? conflicts : conflicts.filter(c => c.status === filter);
 
   return (
     <div className="content-stack" style={{ gap: 20 }}>
-      {/* OPERATIONS HEADER BANNER */}
-      <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "18px 22px" }}>
+      {/* HEADER */}
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#06b6d4", background: "rgba(6, 182, 212, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(6, 182, 212, 0.25)" }}>
-                REALTIME CONFLICT ORCHESTRATION HUB
-              </span>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#10b981" }}>
-                ● SSE LIVE DISPATCH STREAM
+              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--amber)", background: "rgba(227, 162, 60, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(227, 162, 60, 0.25)" }}>
+                CONFLICT RESOLUTION ENGINE
               </span>
             </div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
-              Hàng Đợi Xử Lý & Dự Báo Xung Đột Tài Nguyên (Conflict Resolution & Trend Forecasting Queue)
+            <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
+              Hàng Đợi Xử Lý Xung Đột & Phân Xử Ưu Tiên
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#94a3b8", margin: 0 }}>
-              Trung tâm chỉ huy vận hành hàng ngày của Quản lý Lab: Phát hiện trùng lịch thời gian thực, phân tích xu hướng đặt lịch 8 tuần gần nhất để dự báo quá tải chủ động, và hỗ trợ phê duyệt 1-chạm (Human-in-the-Loop).
+            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0 }}>
+              Phát hiện, phân loại và giải quyết xung đột tài nguyên real-time theo chính sách ưu tiên đa mục tiêu.
             </p>
           </div>
-
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ background: "#0e121a", padding: "8px 14px", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.06)", textAlign: "center" }}>
-              <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>ĐANG CHỜ DUYỆT</span>
-              <strong style={{ fontSize: "1.1rem", fontFamily: "var(--font-mono)", color: pendingCount > 0 ? "#f59e0b" : "#10b981" }}>
-                {pendingCount} Ca
-              </strong>
-            </div>
-            <div style={{ background: "#0e121a", padding: "8px 14px", borderRadius: 6, border: "1px solid rgba(2, 132, 199, 0.2)", textAlign: "center" }}>
-              <span style={{ fontSize: "0.68rem", color: "#38bdf8", display: "block" }}>DỰ BÁO QUÁ TẢI</span>
-              <strong style={{ fontSize: "1.1rem", fontFamily: "var(--font-mono)", color: "#38bdf8" }}>
-                {forecastCount} Ca
-              </strong>
-            </div>
-            <div style={{ background: "#0e121a", padding: "8px 14px", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.06)", textAlign: "center" }}>
-              <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>CẦN CAN THIỆP</span>
-              <strong style={{ fontSize: "1.1rem", fontFamily: "var(--font-mono)", color: escalatedCount > 0 ? "#ef4444" : "#10b981" }}>
-                {escalatedCount} Ca
-              </strong>
-            </div>
-          </div>
+          <button className="btn btn-ghost" onClick={loadData} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.78rem" }}>
+            <RefreshCw size={14} /> Làm mới
+          </button>
         </div>
       </div>
+
+      {/* STATS */}
+      {stats && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+          <StatCard label="TỔNG YÊU CẦU" value={stats.totalRequests} tone="var(--blue)" />
+          <StatCard label="BỊ TỪ CHỐI" value={stats.rejectedBookings} tone="var(--red)" />
+          <StatCard label="TỶ LỆ XUNG ĐỘT" value={`${(stats.conflictRate * 100).toFixed(1)}%`} tone={stats.conflictRate > 0.1 ? "var(--red)" : "var(--green)"} />
+          <StatCard label="ĐANG CHỜ XỬ LÝ" value={conflicts.filter(c => c.status === "PENDING").length} tone="var(--amber)" />
+        </div>
+      )}
 
       {/* FILTER TABS */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {[
-          { id: "ALL", label: `Tất Cả (${conflicts.length})` },
-          { id: "PENDING", label: `Chờ Phê Duyệt (${pendingCount})` },
-          { id: "FORECASTED", label: `Dự Báo Xu Hướng Lịch Sử (${forecastCount})` },
-          { id: "ESCALATED", label: `Cần Can Thiệp (${escalatedCount})` },
-          { id: "AUTO_RESOLVED", label: "Đã Xử Lý Xong" }
-        ].map((tab) => (
+          { key: "ALL", label: "Tất cả", count: conflicts.length },
+          { key: "PENDING", label: "Chờ duyệt", count: conflicts.filter(c => c.status === "PENDING").length },
+          { key: "AUTO_RESOLVED", label: "Đã xử lý", count: conflicts.filter(c => c.status === "AUTO_RESOLVED").length }
+        ].map(tab => (
           <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id)}
+            key={tab.key}
+            className={`btn ${filter === tab.key ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => setFilter(tab.key)}
             style={{
-              padding: "6px 14px",
-              borderRadius: 6,
-              fontSize: "0.78rem",
-              fontFamily: "var(--font-mono)",
-              cursor: "pointer",
-              background: filter === tab.id ? (tab.id === "FORECASTED" ? "#0284c7" : "#06b6d4") : "#111620",
-              color: filter === tab.id ? (tab.id === "FORECASTED" ? "#ffffff" : "#0b0e14") : "#94a3b8",
-              fontWeight: filter === tab.id ? 800 : 500,
-              border: tab.id === "FORECASTED" ? "1px solid rgba(2, 132, 199, 0.4)" : "1px solid rgba(255, 255, 255, 0.08)"
+              fontSize: "0.78rem", padding: "6px 14px", fontFamily: "var(--font-mono)",
+              background: filter === tab.key ? "var(--amber)" : "transparent",
+              color: filter === tab.key ? "#14161A" : "var(--text-secondary)",
+              fontWeight: filter === tab.key ? 700 : 400
             }}
           >
-            {tab.label}
+            {tab.label} ({tab.count})
           </button>
         ))}
       </div>
 
+      {error && (
+        <div style={{ padding: 12, background: "rgba(193, 80, 63, 0.1)", borderRadius: 6, color: "var(--red)", fontSize: "0.85rem" }}>
+          {error}
+        </div>
+      )}
+
       {/* CONFLICT LIST */}
-      <div style={{ display: "grid", gap: 16 }}>
-        {filteredConflicts.map((c) => {
-          const isPending = c.status === "PENDING";
-          const isEscalated = c.status === "ESCALATED";
-          const isForecasted = c.status === "FORECASTED";
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+        {loading && (
+          <div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+            Đang tải dữ liệu xung đột...
+          </div>
+        )}
 
-          return (
-            <div
-              key={c.id}
-              style={{
-                background: isForecasted ? "rgba(14, 25, 44, 0.95)" : "#111620",
-                border: isForecasted
-                  ? "1px solid rgba(2, 132, 199, 0.5)"
-                  : isPending
-                  ? "1px solid rgba(245, 158, 11, 0.4)"
-                  : isEscalated
-                  ? "1px solid rgba(239, 68, 68, 0.4)"
-                  : "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: 8,
-                padding: "18px 20px",
-                boxShadow: isForecasted ? "0 4px 20px rgba(2, 132, 199, 0.15)" : "none"
-              }}
-            >
-              {/* CARD TOPBAR */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <strong style={{ fontSize: "0.95rem", color: isForecasted ? "#38bdf8" : "#f8fafc", fontFamily: "var(--font-mono)" }}>
-                    {c.id}
-                  </strong>
-                  <span style={{ fontSize: "0.82rem", color: isForecasted ? "#38bdf8" : "#06b6d4", background: isForecasted ? "rgba(2, 132, 199, 0.15)" : "rgba(6, 182, 212, 0.1)", padding: "2px 8px", borderRadius: 4 }}>
-                    {c.resourceCode} — {c.resourceName}
-                  </span>
-                  <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
-                    Khung giờ: <strong style={{ color: "#f8fafc" }}>{c.timeSlot}</strong>
-                  </span>
-                </div>
+        {!loading && filtered.length === 0 && (
+          <div style={{ padding: 32, textAlign: "center" }}>
+            <CheckCircle2 size={32} style={{ color: "var(--green)", opacity: 0.5 }} />
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 8 }}>
+              {filter === "ALL" ? "Không có xung đột nào trong hệ thống." : `Không có xung đột nào ở trạng thái "${filter}".`}
+            </p>
+          </div>
+        )}
 
-                <span
-                  style={{
-                    fontSize: "0.72rem",
-                    fontWeight: 700,
-                    fontFamily: "var(--font-mono)",
-                    padding: "3px 10px",
-                    borderRadius: 4,
-                    background:
-                      c.statusTone === "blue"
-                        ? "rgba(2, 132, 199, 0.2)"
-                        : c.statusTone === "green"
-                        ? "rgba(16, 185, 129, 0.15)"
-                        : c.statusTone === "amber"
-                        ? "rgba(245, 158, 11, 0.15)"
-                        : "rgba(239, 68, 68, 0.15)",
-                    color:
-                      c.statusTone === "blue"
-                        ? "#38bdf8"
-                        : c.statusTone === "green"
-                        ? "#10b981"
-                        : c.statusTone === "amber"
-                        ? "#f59e0b"
-                        : "#ef4444",
-                    border: `1px solid ${
-                      c.statusTone === "blue"
-                        ? "rgba(2, 132, 199, 0.4)"
-                        : c.statusTone === "green"
-                        ? "rgba(16, 185, 129, 0.3)"
-                        : c.statusTone === "amber"
-                        ? "rgba(245, 158, 11, 0.3)"
-                        : "rgba(239, 68, 68, 0.3)"
-                    }`
-                  }}
-                >
-                  {c.statusLabel}
-                </span>
-              </div>
+        <div style={{ display: "grid", gap: 14 }}>
+          {filtered.map((conf) => {
+            const isPending = conf.status === "PENDING";
+            const stripColor = isPending ? "var(--status-warning)" : "var(--status-ok)";
 
-              {/* REASON ROW */}
-              <div style={{ fontSize: "0.82rem", color: "#cbd5e1", marginBottom: 12 }}>
-                Lý do phát hiện: <strong style={{ color: isForecasted ? "#38bdf8" : "#f8fafc" }}>{c.conflictReason}</strong>
-              </div>
-
-              {/* COMPETING REQUESTS OR SINGLE REQUEST */}
-              {c.requestB ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-                  {/* REQUEST A */}
-                  <div style={{ background: "#161b26", padding: "12px 14px", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <span style={{ fontSize: "0.68rem", color: "#06b6d4", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                        BÊN YÊU CẦU 1: {c.requestA.id}
-                      </span>
-                      <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "#10b981", fontWeight: 700 }}>
-                        Score: {c.requestA.priorityScore} pts
-                      </span>
-                    </div>
-                    <strong style={{ fontSize: "0.88rem", color: "#f8fafc" }}>{c.requestA.userName}</strong>
-                    <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{c.requestA.userRole}</div>
-                    <div style={{ fontSize: "0.75rem", color: "#cbd5e1", marginTop: 4 }}>
-                      Dự án: <strong style={{ color: "#f8fafc" }}>{c.requestA.project}</strong> ({c.requestA.urgency})
-                    </div>
-                  </div>
-
-                  {/* REQUEST B */}
-                  <div style={{ background: "#161b26", padding: "12px 14px", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <span style={{ fontSize: "0.68rem", color: "#f59e0b", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                        BÊN YÊU CẦU 2: {c.requestB.id}
-                      </span>
-                      <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "#94a3b8", fontWeight: 700 }}>
-                        Score: {c.requestB.priorityScore} pts
-                      </span>
-                    </div>
-                    <strong style={{ fontSize: "0.88rem", color: "#f8fafc" }}>{c.requestB.userName}</strong>
-                    <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{c.requestB.userRole}</div>
-                    <div style={{ fontSize: "0.75rem", color: "#cbd5e1", marginTop: 4 }}>
-                      Dự án: <strong style={{ color: "#f8fafc" }}>{c.requestB.project}</strong> ({c.requestB.urgency})
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                c.requestA && (
-                  <div style={{ background: isForecasted ? "#0c1527" : "#161b26", padding: "10px 14px", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.06)", marginBottom: 14 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
-                        <span style={{ fontSize: "0.68rem", color: isForecasted ? "#38bdf8" : "#06b6d4", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                          NGƯỜI DÙNG: {c.requestA.userName} ({c.requestA.userRole})
-                        </span>
-                        <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginTop: 2 }}>
-                          Đề tài: <strong style={{ color: "#f8fafc" }}>{c.requestA.project}</strong> • Điểm ưu tiên: <strong style={{ color: "#10b981" }}>{c.requestA.priorityScore} pts</strong>
-                        </div>
-                      </div>
-                      {isForecasted && (
-                        <div style={{ textAlign: "right" }}>
-                          <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>XÁC SUẤT QUÁ TẢI (8 TUẦN)</span>
-                          <strong style={{ fontSize: "1.1rem", fontFamily: "var(--font-mono)", color: "#38bdf8" }}>
-                            {c.congestionPercent}%
-                          </strong>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              )}
-
-              {/* ACTION PROPOSAL BOX */}
+            return (
               <div
+                key={conf.id}
                 style={{
-                  background: isForecasted ? "rgba(2, 132, 199, 0.08)" : "rgba(6, 182, 212, 0.06)",
-                  border: isForecasted ? "1px solid rgba(2, 132, 199, 0.3)" : "1px solid rgba(6, 182, 212, 0.2)",
-                  borderRadius: 6,
-                  padding: "12px 14px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: 12
+                  borderLeft: `3px solid ${stripColor}`,
+                  background: "var(--surface-strong)",
+                  border: isPending ? "1px solid rgba(227, 162, 60, 0.3)" : "1px solid var(--line)",
+                  borderRadius: "0 8px 8px 0",
+                  padding: "16px 18px",
+                  position: "relative"
                 }}
               >
-                <div style={{ flex: 1, minWidth: 280 }}>
-                  <span style={{ fontSize: "0.72rem", color: isForecasted ? "#38bdf8" : "#06b6d4", fontWeight: 700, fontFamily: "var(--font-mono)", display: "block", marginBottom: 2 }}>
-                    {isForecasted ? "KHUYẾN NGHỊ DỊCH CHUYỂN CHỦ ĐỘNG (PROACTIVE SHIFT RECOMMENDATION)" : "PHƯƠNG ÁN ĐIỀU PHỐI ĐỀ XUẤT"}
+                <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: 3, background: stripColor, borderRadius: "8px 0 0 8px" }} />
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--blue)", fontWeight: 600 }}>
+                      {conf.id}
+                    </span>
+                    <span style={{ fontSize: "0.78rem", fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
+                      {conf.resourceCode}
+                    </span>
+                    <span style={{ fontSize: "0.82rem", color: "var(--text-primary)" }}>
+                      {conf.resourceName}
+                    </span>
+                  </div>
+                  <span style={{
+                    fontSize: "0.7rem", fontWeight: 600, fontFamily: "var(--font-mono)", padding: "2px 8px", borderRadius: 4,
+                    background: isPending ? "rgba(227, 162, 60, 0.15)" : "rgba(95, 167, 119, 0.15)",
+                    color: isPending ? "var(--amber)" : "var(--green)",
+                    border: `1px solid ${isPending ? "rgba(227, 162, 60, 0.3)" : "rgba(95, 167, 119, 0.3)"}`
+                  }}>
+                    {conf.statusLabel}
                   </span>
-                  <p style={{ fontSize: "0.82rem", color: "#f8fafc", margin: 0, lineHeight: 1.4 }}>
-                    {c.proposal.action}
-                  </p>
                 </div>
 
-                {/* APPROVE ACTION BUTTON (HUMAN-IN-THE-LOOP) */}
-                {(c.status === "PENDING" || c.status === "FORECASTED") && (
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleAcceptSuggestion(c.id)}
-                    style={{
-                      fontSize: "0.78rem",
-                      padding: "8px 16px",
-                      fontFamily: "var(--font-mono)",
-                      background: isForecasted ? "#0284c7" : "#06b6d4",
-                      color: "#ffffff",
-                      fontWeight: 800,
-                      border: "none",
-                      borderRadius: 6,
-                      cursor: "pointer"
-                    }}
-                  >
-                    {isForecasted ? "Phê Duyệt Dịch Chuyển Lịch (1-Chạm)" : "Phê Duyệt Phương Án"}
-                  </button>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>
+                  <Clock size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
+                  {conf.timeSlot}
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 8 }}>
+                  {conf.conflictReason}
+                </div>
+
+                {conf.requestA && (
+                  <div style={{ background: "var(--surface-muted)", borderRadius: 6, padding: "10px 12px", marginBottom: 8 }}>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-primary)" }}>
+                      <strong>{conf.requestA.userName}</strong>
+                      {conf.requestA.userRole && <span style={{ color: "var(--text-muted)", marginLeft: 8, fontSize: "0.72rem" }}>{conf.requestA.userRole}</span>}
+                    </div>
+                    {conf.requestA.project && (
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>{conf.requestA.project}</div>
+                    )}
+                    {conf.requestA.priorityScore !== null && (
+                      <div style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--amber)", marginTop: 4 }}>
+                        Priority Score: {conf.requestA.priorityScore}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isPending && (
+                  <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                    <button className="btn btn-ghost" onClick={() => handleReject(conf.id)}
+                      style={{ fontSize: "0.78rem", padding: "6px 14px", fontFamily: "var(--font-mono)", color: "var(--red)" }}>
+                      Từ Chối
+                    </button>
+                    <button className="btn btn-primary" onClick={() => handleApprove(conf.id)}
+                      style={{ fontSize: "0.78rem", padding: "6px 16px", fontFamily: "var(--font-mono)", background: "var(--green)", color: "#14161A", fontWeight: 700 }}>
+                      Phê Duyệt
+                    </button>
+                  </div>
                 )}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, tone }) {
+  return (
+    <div style={{
+      borderLeft: `3px solid ${tone}`,
+      background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "0 8px 8px 0", padding: "16px 18px"
+    }}>
+      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", display: "block" }}>{label}</span>
+      <strong style={{ fontSize: "1.6rem", color: tone, fontFamily: "var(--font-mono)" }}>{value}</strong>
     </div>
   );
 }

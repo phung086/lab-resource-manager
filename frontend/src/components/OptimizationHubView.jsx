@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Cpu, Zap, Leaf, ShieldAlert, Award, Calculator, RefreshCw, ArrowRightLeft, AlertTriangle } from "lucide-react";
+import { apiRequest } from "../api.js";
 
 export function OptimizationHubView() {
   const [activeSubTab, setActiveSubTab] = useState("priority");
@@ -32,30 +33,22 @@ export function OptimizationHubView() {
     fetchPredictiveMaintenance();
   }, []);
 
-  const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-
   async function calculatePriority() {
     try {
-      const res = await fetch(`http://${host}:8000/optimization/priority-score`, {
+      const data = await apiRequest("/optimization/priority-score", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(priorityInputs)
       });
-      const data = await res.json();
       if (data.ok) setPriorityResult(data.data);
-    } catch (_err) {
-      // Fallback local calc
-    }
+    } catch (_err) {}
   }
 
   async function calculateEstimate() {
     try {
-      const res = await fetch(`http://${host}:8000/optimization/estimate-job`, {
+      const data = await apiRequest("/optimization/estimate-job", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(estimatorInputs)
       });
-      const data = await res.json();
       if (data.ok) setEstimatorResult(data.data);
     } catch (_err) {}
   }
@@ -64,11 +57,7 @@ export function OptimizationHubView() {
     setLoadingHealth(true);
     setHealthLoaded(false);
     try {
-      const token = localStorage.getItem("lrm_token");
-      const res = await fetch(`http://${host}:8000/optimization/predictive-maintenance`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      const data = await res.json();
+      const data = await apiRequest("/optimization/predictive-maintenance");
       if (data.ok) setMaintenanceReports(data.data);
     } catch (_err) {}
     finally {
@@ -78,251 +67,302 @@ export function OptimizationHubView() {
   }
 
   return (
-    <div className="view-root">
-      <div className="view-header">
+    <div className="content-stack" style={{ gap: 20 }}>
+      {/* HEADER */}
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px" }}>
         <div>
-          <h2>Trung Tâm Thuật Toán & Tối Ưu Hóa (Algorithm & Optimization Hub 2026)</h2>
-          <p className="view-subtitle">Phân hệ xử lý logic nâng cao phục vụ nghiên cứu & vận hành phòng lab thông minh</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--blue)", background: "rgba(59, 130, 246, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(59, 130, 246, 0.25)" }}>
+              ALGORITHM & OPTIMIZATION HUB
+            </span>
+          </div>
+          <h2 style={{ margin: "6px 0 2px 0", fontSize: "1.3rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)", fontWeight: 700 }}>
+            Trung Tâm Thuật Toán & Tối Ưu Hóa (2026 Edition)
+          </h2>
+          <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+            Phân hệ xử lý logic nâng cao phục vụ tính điểm ưu tiên, ước tính lượng phát thải Carbon (Green AI), và dự đoán hỏng hóc thiết bị.
+          </p>
         </div>
       </div>
 
-      <div className="sub-tab-bar" style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+      {/* TABS */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 8, overflowX: "auto" }}>
         <button
           className={`btn ${activeSubTab === "priority" ? "btn-primary" : "btn-ghost"}`}
           onClick={() => setActiveSubTab("priority")}
+          style={{ background: activeSubTab === "priority" ? "var(--cyan)" : "var(--surface)", color: activeSubTab === "priority" ? "#14161A" : "var(--text-primary)", border: `1px solid ${activeSubTab === "priority" ? "var(--cyan)" : "var(--line)"}` }}
         >
-          <Award size={16} /> Thuật Toán Điểm Ưu Tiên & Swap Ca
+          <Award size={16} /> Thuật Toán Ưu Tiên
         </button>
         <button
           className={`btn ${activeSubTab === "green" ? "btn-primary" : "btn-ghost"}`}
           onClick={() => setActiveSubTab("green")}
+          style={{ background: activeSubTab === "green" ? "var(--green)" : "var(--surface)", color: activeSubTab === "green" ? "#14161A" : "var(--text-primary)", border: `1px solid ${activeSubTab === "green" ? "var(--green)" : "var(--line)"}` }}
         >
-          <Leaf size={16} /> Green AI & Carbon Footprint Estimator
+          <Leaf size={16} /> Green AI Estimator
         </button>
         <button
-          className={`btn ${activeSubTab === "predictive" ? "btn-primary" : "btn-ghost"}`}
-          onClick={() => setActiveSubTab("predictive")}
+          className={`btn ${activeSubTab === "maintenance" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setActiveSubTab("maintenance")}
+          style={{ background: activeSubTab === "maintenance" ? "var(--amber)" : "var(--surface)", color: activeSubTab === "maintenance" ? "#14161A" : "var(--text-primary)", border: `1px solid ${activeSubTab === "maintenance" ? "var(--amber)" : "var(--line)"}` }}
         >
-          <ShieldAlert size={16} /> Dự Đoán Bảo Trì & Anomaly Detection IoT
+          <ShieldAlert size={16} /> Predictive Maintenance
         </button>
       </div>
 
-      {/* TAB 1: DYNAMIC PRIORITY SCORE */}
+      {/* PRIORITY TAB */}
       {activeSubTab === "priority" && (
-        <div className="split-layout">
-          <div className="card">
-            <div className="card-header">
-              <Calculator size={18} className="text-primary" />
-              <strong>Tính Điểm Ưu Tiên Động (Dynamic Priority Score)</strong>
-            </div>
-            <div className="form-stack" style={{ gap: 12, marginTop: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+            <h3 style={{ fontSize: "1.05rem", color: "var(--text-primary)", margin: "0 0 16px 0", borderBottom: "1px solid var(--line)", paddingBottom: 12, fontFamily: "var(--font-heading)" }}>
+              Tham Số Đầu Vào
+            </h3>
+            <div style={{ display: "grid", gap: 14 }}>
               <label>
-                <span>Vai trò người dùng:</span>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>Vai trò người dùng</div>
                 <select
                   value={priorityInputs.userRole}
                   onChange={(e) => setPriorityInputs({ ...priorityInputs, userRole: e.target.value })}
+                  style={{ width: "100%", background: "var(--surface-strong)", border: "1px solid var(--line)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: 6, outline: "none" }}
                 >
-                  <option value="phd_researcher">Nghiên cứu sinh Tiến sĩ (PhD)</option>
-                  <option value="master_student">Học viên Cao học (Master)</option>
-                  <option value="undergrad_student">Sinh viên Đại học (Undergrad)</option>
-                  <option value="guest">Khách mời / Thực tập sinh</option>
+                  <option value="phd_researcher">Tiến sĩ / Nghiên cứu viên</option>
+                  <option value="master_student">Học viên Cao học</option>
+                  <option value="undergrad_student">Sinh viên Đại học</option>
                 </select>
               </label>
 
               <label>
-                <span>Độ khẩn cấp nhiệm vụ:</span>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>Độ khẩn cấp dự án</div>
                 <select
                   value={priorityInputs.projectUrgency}
                   onChange={(e) => setPriorityInputs({ ...priorityInputs, projectUrgency: e.target.value })}
+                  style={{ width: "100%", background: "var(--surface-strong)", border: "1px solid var(--line)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: 6, outline: "none" }}
                 >
-                  <option value="paper_deadline">Nộp bài báo khoa học Q1/Q2 (Gấp)</option>
-                  <option value="thesis_defense">Bảo vệ Đồ án Tốt nghiệp</option>
-                  <option value="course_project">Bài tập lớn môn học</option>
-                  <option value="personal_learning">Tự học & Nghiên cứu cá nhân</option>
+                  <option value="paper_deadline">Sắp đến hạn nộp báo cáo/paper (High)</option>
+                  <option value="thesis_defense">Bảo vệ đồ án (High)</option>
+                  <option value="course_project">Bài tập lớn (Medium)</option>
+                  <option value="personal_learning">Học tập tự do (Low)</option>
                 </select>
               </label>
 
-              <label>
-                <span>Tỷ lệ No-show lịch sử (%):</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={priorityInputs.noShowRate}
-                  onChange={(e) => setPriorityInputs({ ...priorityInputs, noShowRate: parseFloat(e.target.value) })}
-                />
-              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <label>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>Tỷ lệ No-show (0 - 1)</div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="1"
+                    value={priorityInputs.noShowRate}
+                    onChange={(e) => setPriorityInputs({ ...priorityInputs, noShowRate: parseFloat(e.target.value) || 0 })}
+                    style={{ width: "100%", background: "var(--surface-strong)", border: "1px solid var(--line)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: 6, outline: "none" }}
+                  />
+                </label>
+                <label>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>Giờ đã dùng (tuần)</div>
+                  <input
+                    type="number"
+                    value={priorityInputs.recentUsageHours}
+                    onChange={(e) => setPriorityInputs({ ...priorityInputs, recentUsageHours: parseFloat(e.target.value) || 0 })}
+                    style={{ width: "100%", background: "var(--surface-strong)", border: "1px solid var(--line)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: 6, outline: "none" }}
+                  />
+                </label>
+              </div>
 
-              <label>
-                <span>Số giờ GPU đã dùng trong tuần:</span>
-                <input
-                  type="number"
-                  value={priorityInputs.recentUsageHours}
-                  onChange={(e) => setPriorityInputs({ ...priorityInputs, recentUsageHours: parseInt(e.target.value) })}
-                />
-              </label>
-
-              <button className="btn btn-primary" onClick={calculatePriority}>Tính Điểm Thuật Toán</button>
+              <button className="btn btn-primary" onClick={calculatePriority} style={{ background: "var(--cyan)", color: "#14161A", fontWeight: 700, marginTop: 8 }}>
+                Tính Điểm Priority
+              </button>
             </div>
           </div>
 
-          <div className="card">
-            <div className="card-header">
-              <Award size={18} className="text-success" />
-              <strong>Kết Quả Phân Tích Điểm Ưu Tiên</strong>
-            </div>
-
+          <div style={{ background: "var(--surface-strong)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+            <h3 style={{ fontSize: "1.05rem", color: "var(--text-primary)", margin: "0 0 16px 0", borderBottom: "1px solid var(--line)", paddingBottom: 12, fontFamily: "var(--font-heading)" }}>
+              Kết Quả Multi-Factor Evaluation
+            </h3>
             {priorityResult ? (
-              <div className="priority-result-box" style={{ marginTop: 16 }}>
-                <div style={{ textAlign: "center", padding: 16, background: "rgba(36, 107, 254, 0.08)", borderRadius: 12 }}>
-                  <div style={{ fontSize: 42, fontWeight: 700, color: "var(--blue)" }}>{priorityResult.totalScore} / 100</div>
-                  <span className="badge success">{priorityResult.tier}</span>
+              <div style={{ display: "grid", gap: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--surface)", padding: 16, borderRadius: 8, border: "1px solid var(--cyan)" }}>
+                  <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Tổng Điểm P_total</span>
+                  <span style={{ fontSize: "2rem", fontWeight: 700, color: "var(--cyan)", fontFamily: "var(--font-mono)" }}>{priorityResult.totalScore.toFixed(2)}</span>
                 </div>
 
-                <div style={{ marginTop: 16, fontSize: 13 }} className="form-stack">
-                  <div className="row between"><span>Điểm Vai trò (Role Weight):</span> <strong>+{priorityResult.breakdown.roleScore}</strong></div>
-                  <div className="row between"><span>Điểm Mức khẩn cấp (Urgency Weight):</span> <strong>+{priorityResult.breakdown.urgencyScore}</strong></div>
-                  <div className="row between"><span>Điểm Độ tin cậy (Reliability):</span> <strong>+{priorityResult.breakdown.reliabilityScore}</strong></div>
-                  <div className="row between"><span>Điểm Tương quan Fair-share:</span> <strong>+{priorityResult.breakdown.fairShareScore}</strong></div>
+                <div style={{ background: "var(--surface)", padding: 16, borderRadius: 8, border: "1px solid var(--line)" }}>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 12, fontFamily: "var(--font-mono)", textTransform: "uppercase" }}>Thành Phần Điểm</div>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                      <span>Trọng số vai trò ($P_{role}$)</span>
+                      <span style={{ fontFamily: "var(--font-mono)", color: "var(--blue)" }}>+{priorityResult.factors.roleWeight}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                      <span>Trọng số khẩn cấp ($P_{urgency}$)</span>
+                      <span style={{ fontFamily: "var(--font-mono)", color: "var(--blue)" }}>+{priorityResult.factors.urgencyWeight}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                      <span>Độ trừ No-show ($M_{noshow}$)</span>
+                      <span style={{ fontFamily: "var(--font-mono)", color: "var(--red)" }}>x {priorityResult.factors.noShowMultiplier.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                      <span>Độ trừ Quota ($M_{quota}$)</span>
+                      <span style={{ fontFamily: "var(--font-mono)", color: "var(--amber)" }}>x {priorityResult.factors.usageMultiplier.toFixed(2)}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="alert info" style={{ marginTop: 16 }}>
-                  <ArrowRightLeft size={16} />
-                  <span>Thuật toán đề xuất: Người dùng có điểm ưu tiên này được quyền ưu tiên chiếm ca nếu phòng lab đầy và nhận <strong>+4h Bonus Quota</strong> đền bù ca hoán đổi.</span>
+                <div style={{ background: "rgba(56, 189, 248, 0.1)", padding: 12, borderRadius: 6, fontSize: "0.8rem", color: "var(--cyan)", border: "1px solid rgba(56, 189, 248, 0.2)" }}>
+                  <strong>Cơ chế phân bổ:</strong> Nếu xảy ra tranh chấp ở cùng khung giờ, request nào có P_total cao hơn sẽ được tự động xếp lịch hoặc có quyền gửi yêu cầu "Swap Ca" tới request đối thủ.
                 </div>
               </div>
-            ) : <p className="empty-state">Bấm nút tính để xem kết quả thuật toán</p>}
+            ) : (
+              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Nhập tham số và tính điểm.</div>
+            )}
           </div>
         </div>
       )}
 
-      {/* TAB 2: GREEN AI ESTIMATOR */}
+      {/* GREEN AI TAB */}
       {activeSubTab === "green" && (
-        <div className="split-layout">
-          <div className="card">
-            <div className="card-header">
-              <Leaf size={18} className="text-success" />
-              <strong>Bộ Ước Tính Công Suất & Khí Thải Carbon (Green Computing)</strong>
-            </div>
-
-            <div className="form-stack" style={{ gap: 12, marginTop: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+            <h3 style={{ fontSize: "1.05rem", color: "var(--text-primary)", margin: "0 0 16px 0", borderBottom: "1px solid var(--line)", paddingBottom: 12, fontFamily: "var(--font-heading)" }}>
+              Dự Tính Huấn Luyện AI
+            </h3>
+            <div style={{ display: "grid", gap: 14 }}>
               <label>
-                <span>Loại hình công việc AI:</span>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>Kiểu Mô Hình</div>
                 <select
                   value={estimatorInputs.modelType}
                   onChange={(e) => setEstimatorInputs({ ...estimatorInputs, modelType: e.target.value })}
+                  style={{ width: "100%", background: "var(--surface-strong)", border: "1px solid var(--line)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: 6, outline: "none" }}
                 >
-                  <option value="LLM_FINETUNE">Fine-tune LLM (Llama / Mistral / DeepSeek)</option>
-                  <option value="VISION_TRAINING">Huấn luyện Vision Model (YOLO / ResNet)</option>
-                  <option value="INFERENCE_BENCHMARK">Chạy Benchmark & Inference Test</option>
-                  <option value="EMBEDDED_COMPUTE">Tính toán nhúng Raspberry Pi / Jetson</option>
+                  <option value="LLM_FINETUNE">Fine-tune LLM (Llama, Mistral)</option>
+                  <option value="CNN_TRAIN">Train CNN từ đầu (ResNet, YOLO)</option>
+                  <option value="REINFORCEMENT">Học tăng cường (RL / PPO)</option>
                 </select>
               </label>
 
-              <label>
-                <span>Số lượng GPU hoạt động:</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="16"
-                  value={estimatorInputs.gpuCount}
-                  onChange={(e) => setEstimatorInputs({ ...estimatorInputs, gpuCount: parseInt(e.target.value) })}
-                />
-              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <label>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>Thời gian (Giờ)</div>
+                  <input
+                    type="number"
+                    value={estimatorInputs.durationHours}
+                    onChange={(e) => setEstimatorInputs({ ...estimatorInputs, durationHours: parseFloat(e.target.value) || 0 })}
+                    style={{ width: "100%", background: "var(--surface-strong)", border: "1px solid var(--line)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: 6, outline: "none" }}
+                  />
+                </label>
+                <label>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>Số lượng GPU</div>
+                  <input
+                    type="number"
+                    value={estimatorInputs.gpuCount}
+                    onChange={(e) => setEstimatorInputs({ ...estimatorInputs, gpuCount: parseInt(e.target.value) || 0 })}
+                    style={{ width: "100%", background: "var(--surface-strong)", border: "1px solid var(--line)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: 6, outline: "none" }}
+                  />
+                </label>
+              </div>
 
-              <label>
-                <span>Thời gian dự kiến chạy (Giờ):</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={estimatorInputs.durationHours}
-                  onChange={(e) => setEstimatorInputs({ ...estimatorInputs, durationHours: parseInt(e.target.value) })}
-                />
-              </label>
-
-              <button className="btn btn-primary" onClick={calculateEstimate}>Mô Phỏng Tải & Carbon Footprint</button>
+              <button className="btn btn-primary" onClick={calculateEstimate} style={{ background: "var(--green)", color: "#14161A", fontWeight: 700, marginTop: 8 }}>
+                Ước Tính Phát Thải
+              </button>
             </div>
           </div>
 
-          <div className="card">
-            <div className="card-header">
-              <Zap size={18} className="text-warning" />
-              <strong>Chỉ Số Tiêu Thụ Năng Lượng & Môi Trường</strong>
-            </div>
-
+          <div style={{ background: "var(--surface-strong)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+            <h3 style={{ fontSize: "1.05rem", color: "var(--text-primary)", margin: "0 0 16px 0", borderBottom: "1px solid var(--line)", paddingBottom: 12, fontFamily: "var(--font-heading)" }}>
+              Báo Cáo Green AI
+            </h3>
             {estimatorResult ? (
-              <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-                <div className="metric-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                  <div className="card" style={{ background: "rgba(198, 123, 21, 0.08)", border: "none" }}>
-                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>ĐIỆN NĂNG TIÊU THỤ</div>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: "var(--amber)" }}>{estimatorResult.energyKwh} kWh</div>
-                    <small>Tổng công suất: {estimatorResult.totalPowerWatts} W</small>
+              <div style={{ display: "grid", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ background: "var(--surface)", border: "1px solid var(--line)", padding: 16, borderRadius: 8 }}>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", marginBottom: 4 }}>DỰ KIẾN TIÊU THỤ</div>
+                    <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "var(--cyan)", fontFamily: "var(--font-mono)" }}>{estimatorResult.totalKwh.toFixed(1)} <span style={{ fontSize: "0.9rem" }}>kWh</span></div>
                   </div>
-
-                  <div className="card" style={{ background: "rgba(7, 150, 132, 0.08)", border: "none" }}>
-                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>DẤU CHÂN CARBON (CO2)</div>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: "var(--teal)" }}>{estimatorResult.carbonFootprintKg} kg CO₂</div>
-                    <small>Chi phí điện: {new Intl.NumberFormat("vi-VN").format(estimatorResult.estimatedCostVnd)} VNĐ</small>
+                  <div style={{ background: "var(--surface)", border: "1px solid var(--line)", padding: 16, borderRadius: 8 }}>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", marginBottom: 4 }}>CARBON EQUIVALENT</div>
+                    <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "var(--green)", fontFamily: "var(--font-mono)" }}>{estimatorResult.carbonEmissionsKg.toFixed(1)} <span style={{ fontSize: "0.9rem" }}>kgCO2</span></div>
                   </div>
                 </div>
 
-                <div className="alert success" style={{ marginTop: 8 }}>
-                  🌱 <strong>Green Recommendation:</strong> {estimatorResult.greenRecommendation.offPeakSuggestion} Giúp giảm <strong>{estimatorResult.greenRecommendation.potentialCarbonSavingsKg} kg CO₂</strong> phát thải.
+                <div style={{ background: "rgba(95, 167, 119, 0.1)", border: "1px solid rgba(95, 167, 119, 0.3)", padding: 16, borderRadius: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--green)", fontWeight: 700, marginBottom: 8 }}>
+                    <Calculator size={18} /> Gợi Ý Tối Ưu Lịch (Carbon-Aware Scheduling)
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-primary)", lineHeight: 1.5 }}>
+                    Nếu dịch chuyển tác vụ này vào khung giờ <strong>22:00 - 06:00</strong> (Giờ lưới điện thấp điểm, tỷ trọng năng lượng tái tạo cao), bạn có thể giảm phát thải xuống còn <strong style={{ color: "var(--green)" }}>{estimatorResult.optimizedCarbonKg.toFixed(1)} kgCO2</strong>, và tiết kiệm <strong>{estimatorResult.costSavingsVnd.toLocaleString()} đ</strong> chi phí Chargeback.
+                  </div>
                 </div>
               </div>
-            ) : <p className="empty-state">Bấm nút mô phỏng để tính toán</p>}
+            ) : (
+              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Nhập thông số huấn luyện để phân tích.</div>
+            )}
           </div>
         </div>
       )}
 
-      {/* TAB 3: PREDICTIVE MAINTENANCE */}
-      {activeSubTab === "predictive" && (
-        <div className="card">
-          <div className="card-header" style={{ justifyContent: "space-between" }}>
-            <div className="row" style={{ gap: 8 }}>
-              <ShieldAlert size={18} className="text-danger" />
-              <strong>Phân Tích Dự Đoán Phân Hóa Nhiệt & Bảo Trì Dự Báo IoT (RUL Index)</strong>
-            </div>
-            <button className="btn btn-sm btn-ghost" onClick={fetchPredictiveMaintenance} disabled={loadingHealth}>
-              <RefreshCw size={14} className={loadingHealth ? "spin" : ""} /> Cập nhật
+      {/* MAINTENANCE TAB */}
+      {activeSubTab === "maintenance" && (
+        <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--line)", paddingBottom: 12 }}>
+            <h3 style={{ fontSize: "1.05rem", color: "var(--text-primary)", margin: 0, fontFamily: "var(--font-heading)" }}>
+              Phân Tích Sức Khỏe Thiết Bị Dự Đoán (Predictive Health)
+            </h3>
+            <button className="btn btn-sm btn-ghost" onClick={fetchPredictiveMaintenance}>
+              <RefreshCw size={14} className={loadingHealth ? "spin" : ""} style={{ marginRight: 6 }} /> Làm mới
             </button>
           </div>
 
-          <div className="card-list" style={{ marginTop: 16 }}>
-            {loadingHealth && <p className="empty-state">⏳ Đang tải dữ liệu telemetry phân tích...</p>}
-            {!loadingHealth && healthLoaded && maintenanceReports.length === 0 && (
-              <p className="empty-state">📊 Chưa có dữ liệu telemetry. Các thiết bị chưa gửi thông số giám sát.</p>
-            )}
-            {!loadingHealth && !healthLoaded && maintenanceReports.length === 0 && (
-              <p className="empty-state">Nhấn "Cập nhật" để tải dữ liệu phân tích sức khoẻ thiết bị.</p>
-            )}
-            {maintenanceReports.map((r) => {
-              const h = r.predictiveHealth;
-              return (
-                <div key={r.resourceId} className="card" style={{ borderLeft: `4px solid ${h.healthIndex > 75 ? "var(--green)" : h.healthIndex > 50 ? "var(--amber)" : "var(--red)"}` }}>
-                  <div className="card-header">
-                    <div>
-                      <strong>{r.name} ({r.code})</strong>
-                      <span className="badge info" style={{ marginLeft: 8 }}>{r.type}</span>
-                    </div>
-                    <span className={`badge ${h.healthIndex > 75 ? "success" : h.healthIndex > 50 ? "warning" : "danger"}`}>
-                      Sức khỏe RUL: {h.healthIndex}/100
-                    </span>
-                  </div>
-
-                  <div className="details-grid" style={{ marginTop: 8, fontSize: 13 }}>
-                    <div>Nhiệt độ TB: <strong>{h.metrics.avgTemp}°C</strong> (Độ lệch σ: {h.metrics.tempStdDev})</div>
-                    <div>Công suất TB: <strong>{h.metrics.avgPowerWatts} W</strong></div>
-                    <div>Ước tính RUL: <strong>{h.estimatedRulDays} ngày</strong></div>
-                    <div>Mức nhiệt tích tụ: <strong style={{ color: h.thermalStressLevel === "HIGH" ? "var(--red)" : "var(--green)" }}>{h.thermalStressLevel}</strong></div>
-                  </div>
-
-                  <p className="card-text" style={{ marginTop: 8, fontSize: 12, background: "rgba(0,0,0,0.03)", padding: 8, borderRadius: 6 }}>
-                    📋 <strong>Khuyến nghị bảo trì:</strong> {h.recommendation}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+          {loadingHealth && !healthLoaded ? (
+            <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: 20 }}>Đang phân tích telemetry...</div>
+          ) : maintenanceReports.length === 0 ? (
+            <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Không có dữ liệu thiết bị.</div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--line-strong)", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                    <th style={{ padding: "12px 10px", fontWeight: 600 }}>THIẾT BỊ</th>
+                    <th style={{ padding: "12px 10px", fontWeight: 600 }}>RỦI RO</th>
+                    <th style={{ padding: "12px 10px", fontWeight: 600 }}>NGUYÊN NHÂN / GỢI Ý</th>
+                    <th style={{ padding: "12px 10px", fontWeight: 600 }}>HÀNH ĐỘNG</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {maintenanceReports.map((r, i) => {
+                    const health = r.predictiveHealth;
+                    const isHighRisk = health.riskLevel === "CRITICAL" || health.riskLevel === "HIGH";
+                    const isMediumRisk = health.riskLevel === "WARNING";
+                    const tone = isHighRisk ? "var(--red)" : isMediumRisk ? "var(--amber)" : "var(--green)";
+                    
+                    return (
+                      <tr key={i} style={{ borderBottom: "1px solid var(--line)" }}>
+                        <td style={{ padding: "12px 10px", color: "var(--text-primary)" }}>
+                          <strong style={{ display: "block" }}>{r.code}</strong>
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{r.name}</span>
+                        </td>
+                        <td style={{ padding: "12px 10px" }}>
+                          <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", padding: "4px 8px", borderRadius: 4, background: `color-mix(in srgb, ${tone} 15%, transparent)`, color: tone, border: `1px solid color-mix(in srgb, ${tone} 30%, transparent)` }}>
+                            {health.riskLevel}
+                          </span>
+                        </td>
+                        <td style={{ padding: "12px 10px", color: "var(--text-primary)" }}>
+                          <div style={{ marginBottom: 4 }}>{health.analysis}</div>
+                          {health.recommendation && <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}><ArrowRightLeft size={10} style={{ display: "inline" }}/> {health.recommendation}</div>}
+                        </td>
+                        <td style={{ padding: "12px 10px" }}>
+                          {isHighRisk && (
+                            <button className="btn btn-sm" style={{ background: "rgba(193, 80, 63, 0.1)", color: "var(--red)", border: "1px solid var(--red)", fontSize: "0.75rem" }}>
+                              Block & Inspect
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,41 +1,53 @@
 :root {
   color-scheme: dark;
   font-family:
-    "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #f8fafc;
-  background: #0b0e14;
+  color: #ECE7DE;
+  background: #14161A;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --font-heading: "Outfit", "Plus Jakarta Sans", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
-  --surface: #111620;
-  --surface-strong: #161b26;
-  --surface-muted: #0e121a;
+
+  /* ── Typography ── */
+  --font-heading: "Space Grotesk", "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", monospace;
+
+  /* ── Graphite palette (warm dark) ── */
+  --surface: #1C1F24;
+  --surface-strong: #262A31;
+  --surface-muted: #14161A;
   --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.16);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --blue: #3b82f6;
-  --blue-hover: #2563eb;
-  --cyan: #06b6d4;
-  --teal: #0d9488;
-  --green: #10b981;
-  --amber: #f59e0b;
-  --red: #ef4444;
-  --violet: #8b5cf6;
-  --ink: #f8fafc;
-  --shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
-  --shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.35);
-  --shadow-hover: 0 12px 28px rgba(6, 182, 212, 0.12);
-  --focus-ring: 0 0 0 2px rgba(6, 182, 212, 0.4);
-  --glow-cyan: 0 0 20px rgba(6, 182, 212, 0.25);
-  --glow-green: 0 0 20px rgba(16, 185, 129, 0.25);
-  --glow-amber: 0 0 20px rgba(245, 158, 11, 0.25);
-  --glow-red: 0 0 20px rgba(239, 68, 68, 0.25);
+  --line-strong: rgba(255, 255, 255, 0.14);
+
+  /* ── Text ── */
+  --text-primary: #ECE7DE;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+  --ink: #ECE7DE;
+
+  /* ── Signal colors (calibration-inspired) ── */
+  --blue: #6B8AFD;
+  --blue-hover: #5474E8;
+  --cyan: #38BDF8;
+  --teal: #2DD4BF;
+  --green: #5FA777;
+  --amber: #E3A23C;
+  --red: #C1503F;
+  --violet: #A78BFA;
+
+  /* ── Shadows & effects (subtle, no glow) ── */
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.35);
+  --focus-ring: 0 0 0 2px rgba(227, 162, 60, 0.4);
+
+  /* ── Status strip accents ── */
+  --status-ok: #5FA777;
+  --status-warning: #E3A23C;
+  --status-critical: #C1503F;
+  --status-info: #6B8AFD;
 }
 
 * {
@@ -46,8 +58,8 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  color: #f8fafc;
-  background: #0b0e14;
+  color: #ECE7DE;
+  background: #14161A;
 }
 
 #root {
@@ -82,10 +94,10 @@ input,
 select,
 textarea {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--ink);
+  background: var(--surface-strong);
+  color: var(--text-primary);
   padding: 10px 12px;
   outline: none;
   transition:
@@ -103,7 +115,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--blue);
-  background: #fff;
+  background: var(--surface);
   box-shadow: var(--focus-ring);
 }
 
@@ -118,40 +130,22 @@ p {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: 100vh;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.42)),
-    radial-gradient(circle at 92% 8%, rgba(19, 165, 111, 0.13), transparent 28%),
-    radial-gradient(circle at 42% 0%, rgba(36, 107, 254, 0.1), transparent 34%);
+  background: #14161A;
 }
 
 .sidebar {
   position: sticky;
   top: 0;
-  isolation: isolate;
   display: flex;
   flex-direction: column;
   gap: 22px;
   height: 100vh;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   border-right: 1px solid var(--line);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(244, 248, 252, 0.88)),
-    rgba(255, 255, 255, 0.88);
+  background: var(--surface);
   padding: 24px 18px;
-  box-shadow: 12px 0 42px rgba(20, 32, 51, 0.07);
-  backdrop-filter: blur(18px);
-}
-
-.sidebar::before {
-  position: absolute;
-  inset: auto 0 0;
-  z-index: -1;
-  height: 230px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.9)),
-    url("./assets/ai-lab-command-center.webp") center bottom / cover;
-  content: "";
-  opacity: 0.13;
+  box-shadow: 1px 0 0 var(--line);
 }
 
 .brand {
@@ -203,7 +197,7 @@ p {
   gap: 10px;
   min-height: 42px;
   border-radius: 8px;
-  color: #44516a;
+  color: var(--text-secondary);
   background: transparent;
   padding: 0 12px;
   text-align: left;
@@ -225,10 +219,8 @@ p {
 .nav-button:hover,
 .nav-button.is-active {
   color: var(--blue);
-  background:
-    linear-gradient(90deg, rgba(36, 107, 254, 0.11), rgba(14, 165, 217, 0.05)),
-    rgba(255, 255, 255, 0.78);
-  box-shadow: inset 0 0 0 1px rgba(36, 107, 254, 0.08);
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.08);
 }
 
 .nav-button:hover::before,
@@ -244,11 +236,8 @@ p {
   margin-top: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(232, 243, 252, 0.82)),
-    var(--surface-muted);
+  background: var(--surface-strong);
   padding: 12px;
-  box-shadow: var(--shadow-soft);
 }
 
 .avatar {
@@ -273,19 +262,18 @@ p {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 24px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
   padding: 16px 20px;
-  backdrop-filter: blur(20px);
 }
 
 .topbar h1 {
   font-family: var(--font-heading);
   font-size: 26px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-primary);
   line-height: 1.2;
 }
 
@@ -364,15 +352,7 @@ p {
   gap: 16px;
 }
 
-.card {
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.88);
-  padding: 20px 24px;
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.02);
-  backdrop-filter: blur(16px);
-  transition: all 0.2s ease;
-}
+/* .card duplicate removed — canonical definition at line ~2268 */
 
 .metric,
 .panel,

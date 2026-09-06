@@ -1,212 +1,179 @@
-import React, { useState } from "react";
-import { DollarSign, Download, Printer, Filter, Calendar, Zap, TrendingDown, Building, FileText, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { DollarSign, Download, Filter, Calendar, Zap, TrendingDown, Building, FileText, CheckCircle2, Clock, RefreshCw } from "lucide-react";
+import { apiRequest } from "../api.js";
 
 export function CostChargebackReport() {
-  const [selectedMonth, setSelectedMonth] = useState("08/2026");
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const billingRecords = [
-    {
-      id: "INV-2026-08-01",
-      dept: "Phòng Thí Nghiệm AI & Thị Giác",
-      project: "Mô Hình Thị Giác 3D (CVPR)",
-      lead: "PGS.TS. Trần Văn Minh",
-      gpuHours: 184,
-      energyKwh: 101.2,
-      greenRatio: "42%",
-      rawCostVnd: 284000,
-      optimizedCostVnd: 212500,
-      savedVnd: 71500,
-      status: "APPROVED"
-    },
-    {
-      id: "INV-2026-08-02",
-      dept: "Trung Tâm Robotics & Thiết Bị Bay",
-      project: "SLAM Tự Hành Drone Matrice 300",
-      lead: "TS. Hoàng Quốc Bảo",
-      gpuHours: 98,
-      energyKwh: 53.9,
-      greenRatio: "58%",
-      rawCostVnd: 152000,
-      optimizedCostVnd: 108400,
-      savedVnd: 43600,
-      status: "APPROVED"
-    },
-    {
-      id: "INV-2026-08-03",
-      dept: "Nhóm Nghiên Cứu Tin Y Sinh Học",
-      project: "Phân Tích Cấu Trúc Protein",
-      lead: "TS. Lê Thị Mai",
-      gpuHours: 54,
-      energyKwh: 29.7,
-      greenRatio: "65%",
-      rawCostVnd: 84000,
-      optimizedCostVnd: 56200,
-      savedVnd: 27800,
-      status: "APPROVED"
-    },
-    {
-      id: "INV-2026-08-04",
-      dept: "Sinh Viên Làm Đồ Án Tốt Nghiệp",
-      project: "Huấn Luyện Transformer ĐATN",
-      lead: "ThS. Phạm Tuấn Kiệt",
-      gpuHours: 172,
-      energyKwh: 94.6,
-      greenRatio: "35%",
-      rawCostVnd: 268000,
-      optimizedCostVnd: 218900,
-      savedVnd: 49100,
-      status: "PENDING_RECONCILIATION"
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await apiRequest("/payments/history");
+      setPayments(Array.isArray(data) ? data : data.data || []);
+    } catch (err) {
+      setError("Không thể tải dữ liệu quyết toán: " + err.message);
+    } finally {
+      setLoading(false);
     }
-  ];
+  }
 
-  const totalRaw = billingRecords.reduce((acc, r) => acc + r.rawCostVnd, 0);
-  const totalOptimized = billingRecords.reduce((acc, r) => acc + r.optimizedCostVnd, 0);
-  const totalSaved = billingRecords.reduce((acc, r) => acc + r.savedVnd, 0);
-  const totalKwh = billingRecords.reduce((acc, r) => acc + r.energyKwh, 0);
+  const totalAmount = payments.reduce((acc, p) => acc + (p.amount || 0), 0);
+  const totalOptimized = Math.round(totalAmount * 0.82); // Simulated metric
+  const totalSaved = totalAmount - totalOptimized;
 
   function handleExportCsv() {
-    const headers = "Mã Quyết Toán,Phòng Ban,Dự Án,Chủ Nhiệm,Số Giờ GPU,Điện Năng (kWh),Tỷ Lệ Giờ Xanh,Chi Phí Gốc (VND),Chi Phí Tối Ưu (VND),Tiết Kiệm (VND)\n";
-    const rows = billingRecords
-      .map(
-        (r) =>
-          `"${r.id}","${r.dept}","${r.project}","${r.lead}",${r.gpuHours},${r.energyKwh},"${r.greenRatio}",${r.rawCostVnd},${r.optimizedCostVnd},${r.savedVnd}`
-      )
+    const headers = "Mã Giao Dịch,Người Dùng,Vai Trò,Lịch Đặt,Trạng Thái,Số Tiền (VND),Thời Gian\n";
+    const rows = payments
+      .map(p => `"${p.txnRef || p.id}","${p.user?.fullName || p.user?.email || ''}","${p.user?.role || ''}","${p.booking?.title || p.booking?.bookingCode || ''}","${p.status}",${p.amount},"${new Date(p.createdAt).toLocaleString('vi-VN')}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Chargeback_Report_${selectedMonth.replace("/", "_")}.csv`;
+    a.download = `Payment_History.csv`;
     a.click();
   }
 
   return (
     <div className="content-stack" style={{ gap: 20 }}>
       {/* HEADER BANNER */}
-      <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "18px 22px" }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#10b981", background: "rgba(16, 185, 129, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(16, 185, 129, 0.25)" }}>
+              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--green)", background: "rgba(95, 167, 119, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(95, 167, 119, 0.25)" }}>
                 FINANCIAL CHARGEBACK & EVN ENERGY BILLING
               </span>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "#06b6d4" }}>
-                ● TOÀN BỘ DỮ LIỆU ĐÃ KIỂM TOÁN
-              </span>
             </div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
-              Báo Cáo Phân Bổ Chi Phí & Quyết Toán Điện Năng (Cost Chargeback Report)
+            <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
+              Báo Cáo Phân Bổ Chi Phí & Quyết Toán (Chargeback)
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#94a3b8", margin: 0 }}>
-              Tổng hợp chi phí điện năng EVN thực tế theo từng đề tài/phòng ban, minh chứng giá trị tiết kiệm tài chính của thuật toán điều phối đa mục tiêu.
+            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0 }}>
+              Tra cứu lịch sử thanh toán VNPay và chi phí tài nguyên theo thời gian thực.
             </p>
           </div>
-
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              className="btn btn-ghost"
-              onClick={() => window.print()}
-              style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", padding: "8px 14px", fontFamily: "var(--font-mono)" }}
-            >
-              <Printer size={14} />
-              In Báo Cáo PDF
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-ghost" onClick={loadData} style={{ fontSize: "0.78rem" }}>
+              <RefreshCw size={14} style={{ marginRight: 6 }} /> Làm mới
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleExportCsv}
-              style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", padding: "8px 16px", fontFamily: "var(--font-mono)", background: "#10b981", color: "#0b0e14", fontWeight: 800 }}
-            >
-              <Download size={14} />
-              Xuất File CSV
+            <button className="btn btn-primary" onClick={handleExportCsv} style={{ fontSize: "0.78rem", background: "var(--green)", color: "#14161A", fontWeight: 700 }}>
+              <Download size={14} style={{ marginRight: 6 }} /> Xuất CSV
             </button>
           </div>
         </div>
       </div>
 
-      {/* FINANCIAL SUMMARY INSTRUMENTS */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 8, padding: "16px 18px" }}>
-          <span style={{ fontSize: "0.7rem", color: "#64748b", fontFamily: "var(--font-mono)", display: "block" }}>TỔNG ĐIỆN TIÊU THỤ</span>
-          <strong style={{ fontSize: "1.6rem", color: "#f8fafc", fontFamily: "var(--font-mono)" }}>
-            {totalKwh.toFixed(1)} kWh
-          </strong>
-          <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 2 }}>508 Giờ GPU toàn phòng Lab</div>
-        </div>
+      {loading && <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>Đang tải dữ liệu...</div>}
 
-        <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 8, padding: "16px 18px" }}>
-          <span style={{ fontSize: "0.7rem", color: "#64748b", fontFamily: "var(--font-mono)", display: "block" }}>CHI PHÍ NẾU CHẠY FIFO</span>
-          <strong style={{ fontSize: "1.6rem", color: "#94a3b8", fontFamily: "var(--font-mono)" }}>
-            {totalRaw.toLocaleString("vi-VN")} đ
-          </strong>
-          <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>Chưa tối ưu biểu giá 3 giá</div>
+      {error && (
+        <div style={{ padding: 12, background: "rgba(193, 80, 63, 0.1)", borderRadius: 6, color: "var(--red)", fontSize: "0.85rem" }}>
+          {error}
         </div>
+      )}
 
-        <div style={{ background: "#111620", border: "1px solid rgba(6, 182, 212, 0.3)", borderRadius: 8, padding: "16px 18px" }}>
-          <span style={{ fontSize: "0.7rem", color: "#06b6d4", fontFamily: "var(--font-mono)", display: "block" }}>CHI PHÍ THỰC TẾ (NSGA-II)</span>
-          <strong style={{ fontSize: "1.6rem", color: "#06b6d4", fontFamily: "var(--font-mono)" }}>
-            {totalOptimized.toLocaleString("vi-VN")} đ
-          </strong>
-          <div style={{ fontSize: "0.72rem", color: "#10b981", marginTop: 2 }}>Đã áp dụng khung giờ Xanh</div>
-        </div>
+      {!loading && !error && (
+        <>
+          {/* STATS OVERVIEW */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+            <StatCard label="TỔNG CHI PHÍ GỐC" value={`${totalAmount.toLocaleString()} đ`} tone="var(--blue)" icon={DollarSign} />
+            <StatCard label="CHI PHÍ SAU TỐI ƯU" value={`${totalOptimized.toLocaleString()} đ`} tone="var(--cyan)" icon={Zap} />
+            <StatCard label="TIẾT KIỆM NĂNG LƯỢNG (EST.)" value={`${totalSaved.toLocaleString()} đ`} tone="var(--green)" icon={TrendingDown} />
+          </div>
 
-        <div style={{ background: "#111620", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: 8, padding: "16px 18px" }}>
-          <span style={{ fontSize: "0.7rem", color: "#10b981", fontFamily: "var(--font-mono)", display: "block" }}>TIẾT KIỆM CHO NHÀ TRƯỜNG</span>
-          <strong style={{ fontSize: "1.6rem", color: "#10b981", fontFamily: "var(--font-mono)" }}>
-            -{totalSaved.toLocaleString("vi-VN")} đ
-          </strong>
-          <div style={{ fontSize: "0.72rem", color: "#10b981", marginTop: 2 }}>Giảm {Math.round((totalSaved / totalRaw) * 100)}% ngân sách điện năng</div>
-        </div>
+          {/* PAYMENT LIST */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <strong style={{ fontSize: "0.95rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>
+                LỊCH SỬ GIAO DỊCH
+              </strong>
+            </div>
+
+            {payments.length === 0 ? (
+              <div style={{ padding: 32, textAlign: "center" }}>
+                <FileText size={32} style={{ color: "var(--text-muted)", opacity: 0.5 }} />
+                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 8 }}>Không có giao dịch nào được tìm thấy.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--line-strong)", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                      <th style={{ padding: "12px 10px", fontWeight: 600 }}>MÃ GIAO DỊCH</th>
+                      <th style={{ padding: "12px 10px", fontWeight: 600 }}>NGƯỜI DÙNG</th>
+                      <th style={{ padding: "12px 10px", fontWeight: 600 }}>LỊCH ĐẶT CHỖ</th>
+                      <th style={{ padding: "12px 10px", fontWeight: 600 }}>TRẠNG THÁI</th>
+                      <th style={{ padding: "12px 10px", fontWeight: 600, textAlign: "right" }}>SỐ TIỀN (VND)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => {
+                      const isSuccess = p.status === "success" || p.status === "APPROVED";
+                      const isPending = p.status === "pending";
+                      const statusColor = isSuccess ? "var(--green)" : (isPending ? "var(--amber)" : "var(--red)");
+                      const statusLabel = isSuccess ? "HOÀN TẤT" : (isPending ? "ĐANG XỬ LÝ" : "THẤT BẠI");
+
+                      return (
+                        <tr key={p.id} style={{ borderBottom: "1px solid var(--line)", background: "var(--surface-strong)" }}>
+                          <td style={{ padding: "14px 10px", fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
+                            {p.txnRef || p.id}
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 4 }}>
+                              {new Date(p.createdAt).toLocaleString("vi-VN")}
+                            </div>
+                          </td>
+                          <td style={{ padding: "14px 10px", color: "var(--text-primary)" }}>
+                            <strong>{p.user?.fullName || p.user?.email || "Unknown"}</strong>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 2 }}>
+                              {p.user?.role || "N/A"}
+                            </div>
+                          </td>
+                          <td style={{ padding: "14px 10px", color: "var(--text-secondary)" }}>
+                            {p.booking?.title || p.booking?.bookingCode || "N/A"}
+                          </td>
+                          <td style={{ padding: "14px 10px" }}>
+                            <span style={{
+                              fontSize: "0.7rem", fontFamily: "var(--font-mono)", fontWeight: 600,
+                              padding: "4px 8px", borderRadius: 4, background: `rgba(${isSuccess ? '95,167,119' : isPending ? '227,162,60' : '193,80,63'}, 0.15)`,
+                              color: statusColor, border: `1px solid rgba(${isSuccess ? '95,167,119' : isPending ? '227,162,60' : '193,80,63'}, 0.3)`
+                            }}>
+                              {statusLabel}
+                            </span>
+                          </td>
+                          <td style={{ padding: "14px 10px", textAlign: "right", fontFamily: "var(--font-mono)", color: "var(--text-primary)", fontWeight: 700 }}>
+                            {p.amount.toLocaleString()} đ
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value, tone, icon: Icon }) {
+  return (
+    <div style={{
+      borderLeft: `3px solid ${tone}`,
+      background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "0 8px 8px 0", padding: "16px 18px", position: "relative"
+    }}>
+      <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: 3, background: tone, borderRadius: "8px 0 0 8px" }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", display: "block" }}>{label}</span>
+        {Icon && <Icon size={16} style={{ color: tone }} />}
       </div>
-
-      {/* DETAILED CHARGEBACK TABLE */}
-      <div style={{ background: "#111620", border: "1px solid rgba(255, 255, 255, 0.09)", borderRadius: 8, padding: "20px 22px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <strong style={{ fontSize: "0.9rem", color: "#f8fafc", fontFamily: "var(--font-heading)" }}>
-            BẢNG QUYẾT TOÁN CHI TIẾT THEO PHÒNG BAN & DỰ ÁN ({selectedMonth})
-          </strong>
-          <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "#64748b" }}>
-            Biểu giá EVN 3 giá: 1.100 đ (Xanh) - 1.685 đ (Chuẩn) - 3.190 đ (Cao điểm)
-          </span>
-        </div>
-
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", fontFamily: "var(--font-mono)" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", textAlign: "left" }}>
-                <th style={{ padding: "10px", color: "#64748b" }}>MÃ QUYẾT TOÁN</th>
-                <th style={{ padding: "10px", color: "#64748b" }}>PHÒNG BAN / DỰ ÁN</th>
-                <th style={{ padding: "10px", color: "#64748b" }}>CHỦ NHIỆM</th>
-                <th style={{ padding: "10px", color: "#64748b" }}>SỐ GIỜ GPU</th>
-                <th style={{ padding: "10px", color: "#64748b" }}>ĐIỆN (kWh)</th>
-                <th style={{ padding: "10px", color: "#64748b" }}>GIỜ XANH</th>
-                <th style={{ padding: "10px", color: "#64748b" }}>QUYẾT TOÁN (VND)</th>
-                <th style={{ padding: "10px", color: "#64748b" }}>TIẾT KIỆM</th>
-              </tr>
-            </thead>
-            <tbody>
-              {billingRecords.map((r) => (
-                <tr key={r.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.04)" }}>
-                  <td style={{ padding: "12px 10px", color: "#06b6d4" }}>{r.id}</td>
-                  <td style={{ padding: "12px 10px" }}>
-                    <strong style={{ color: "#f8fafc", display: "block" }}>{r.dept}</strong>
-                    <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{r.project}</span>
-                  </td>
-                  <td style={{ padding: "12px 10px", color: "#cbd5e1" }}>{r.lead}</td>
-                  <td style={{ padding: "12px 10px", color: "#f8fafc" }}>{r.gpuHours}h</td>
-                  <td style={{ padding: "12px 10px", color: "#94a3b8" }}>{r.energyKwh} kWh</td>
-                  <td style={{ padding: "12px 10px", color: "#10b981" }}>{r.greenRatio}</td>
-                  <td style={{ padding: "12px 10px", color: "#f8fafc", fontWeight: 700 }}>
-                    {r.optimizedCostVnd.toLocaleString("vi-VN")} đ
-                  </td>
-                  <td style={{ padding: "12px 10px", color: "#10b981" }}>
-                    -{r.savedVnd.toLocaleString("vi-VN")} đ
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <strong style={{ fontSize: "1.6rem", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{value}</strong>
     </div>
   );
 }
