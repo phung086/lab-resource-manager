@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Bot, Send, Sparkles, X, ChevronRight, Zap } from "lucide-react";
+import { apiRequest } from "../api";
 
 export function AiCopilotDrawer({ isOpen, onClose, onActionTrigger }) {
   const [messages, setMessages] = useState([
@@ -29,17 +30,10 @@ export function AiCopilotDrawer({ isOpen, onClose, onActionTrigger }) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("lrm_token");
-      const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-      const res = await fetch(`http://${host}:8000/assistant/chat`, {
+      const data = await apiRequest("/assistant/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify({ message: textToSend, locale: "vi" })
       });
-      const data = await res.json();
 
       const aiMsg = {
         id: (Date.now() + 1).toString(),

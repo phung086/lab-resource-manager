@@ -125,7 +125,7 @@ export function QuotaFairnessDashboard() {
       {!loading && !error && (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
-            <StatCard label="TỔNG SỐ LƯỢT ĐẶT" value={analytics?.bookings?.total || 0} tone="var(--blue)" icon={BarChart2} />
+            <StatCard label="TỔNG SỐ LƯỢT ĐẶT" value={analytics?.bookings?.total || 0} tone="var(--amber)" icon={BarChart2} />
             <StatCard label="TỶ LỆ NO-SHOW (BỎ LỊCH)" value={`${((analytics?.bookings?.noShowRate || 0) * 100).toFixed(1)}%`} tone="var(--amber)" icon={AlertTriangle} />
             <StatCard label="LƯỢT ĐẶT HOÀN THÀNH" value={analytics?.bookings?.completed || 0} tone="var(--green)" icon={CheckCircle2} />
           </div>
@@ -135,7 +135,7 @@ export function QuotaFairnessDashboard() {
             <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Sliders size={18} style={{ color: "var(--cyan)" }} />
+                  <Sliders size={18} style={{ color: "var(--amber)" }} />
                   <strong style={{ fontSize: "0.95rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>
                     ĐỊNH MỨC THEO ĐƠN VỊ CẤP BỘ MÔN
                   </strong>

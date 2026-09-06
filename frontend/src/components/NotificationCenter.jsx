@@ -78,7 +78,7 @@ export function NotificationCenter({ notifications = [], onChanged }) {
 
       {/* STATS */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
-        <StatCard label="TỔNG THÔNG BÁO" value={notifications.length} sub={`${unreadNotifs.length} chưa đọc`} tone="var(--blue)" />
+        <StatCard label="TỔNG THÔNG BÁO" value={notifications.length} sub={`${unreadNotifs.length} chưa đọc`} tone="var(--amber)" />
         <StatCard label="SỰ CỐ ĐANG MỞ" value={openEscalations.length} sub="Cần xử lý" tone="var(--amber)" />
         <StatCard label="ĐÃ GIẢI QUYẾT" value={resolvedEscalations.length} sub="Tháng này" tone="var(--green)" />
       </div>
@@ -157,7 +157,7 @@ export function NotificationCenter({ notifications = [], onChanged }) {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                    <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--blue)", fontWeight: 600 }}>
+                    <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--amber)", fontWeight: 600 }}>
                       #{esc.id}
                     </span>
                     <strong style={{ fontSize: "0.92rem", color: "var(--text-primary)" }}>
@@ -198,7 +198,7 @@ export function NotificationCenter({ notifications = [], onChanged }) {
                     <button
                       className="btn btn-primary"
                       onClick={() => handleResolve(esc.id, "APPROVE")}
-                      style={{ fontSize: "0.78rem", padding: "6px 16px", fontFamily: "var(--font-mono)", background: "var(--green)", color: "#14161A", fontWeight: 700 }}
+                      style={{ fontSize: "0.78rem", padding: "6px 16px", fontFamily: "var(--font-mono)", background: "var(--green)", color: "var(--bg)", fontWeight: 700 }}
                     >
                       Phê Duyệt
                     </button>

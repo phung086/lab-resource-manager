@@ -94,7 +94,7 @@ export function PolicyRulesConfig() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--cyan)", background: "rgba(56, 189, 248, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(56, 189, 248, 0.25)" }}>
+              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--amber)", background: "color-mix(in srgb, var(--amber) 12%, transparent)", padding: "2px 8px", borderRadius: 4, border: "1px solid color-mix(in srgb, var(--amber) 25%, transparent)" }}>
                 DYNAMIC POLICY ENGINE
               </span>
             </div>
@@ -110,7 +110,7 @@ export function PolicyRulesConfig() {
             className="btn btn-primary"
             onClick={handleSave}
             disabled={saving || !policy}
-            style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", padding: "10px 20px", fontFamily: "var(--font-mono)", background: "var(--green)", color: "#14161A", fontWeight: 700, opacity: (saving || !policy) ? 0.6 : 1 }}
+            style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", padding: "10px 20px", fontFamily: "var(--font-mono)", background: "var(--green)", color: "var(--bg)", fontWeight: 700, opacity: (saving || !policy) ? 0.6 : 1 }}
           >
             <Save size={14} />
             <span>{saving ? "Đang lưu..." : (saved ? "Đã Lưu!" : "Lưu Thay Đổi")}</span>
@@ -119,13 +119,13 @@ export function PolicyRulesConfig() {
       </div>
 
       {error && (
-        <div style={{ background: "rgba(193, 80, 63, 0.1)", border: "1px solid var(--red)", borderRadius: 6, padding: "12px 16px", color: "var(--red)", fontSize: "0.85rem" }}>
+        <div style={{ background: "color-mix(in srgb, var(--red) 12%, transparent)", border: "1px solid var(--red)", borderRadius: 6, padding: "12px 16px", color: "var(--red)", fontSize: "0.85rem" }}>
           {error}
         </div>
       )}
 
       {saved && (
-        <div style={{ background: "rgba(95, 167, 119, 0.15)", border: "1px solid var(--green)", borderRadius: 6, padding: "12px 16px", display: "flex", alignItems: "center", gap: 8, color: "var(--green)", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}>
+        <div style={{ background: "color-mix(in srgb, var(--green) 12%, transparent)", border: "1px solid var(--green)", borderRadius: 6, padding: "12px 16px", display: "flex", alignItems: "center", gap: 8, color: "var(--green)", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}>
           <CheckCircle2 size={16} />
           Chính sách đã được lưu thành công.
         </div>
@@ -155,7 +155,7 @@ export function PolicyRulesConfig() {
               {/* QUOTA CONFIG */}
               <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, borderBottom: "1px solid var(--line)", paddingBottom: 10 }}>
-                  <Sliders size={16} style={{ color: "var(--blue)" }} />
+                  <Sliders size={16} style={{ color: "var(--amber)" }} />
                   <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>
                     GIỚI HẠN ĐẶT LỊCH
                   </strong>
@@ -180,7 +180,7 @@ export function PolicyRulesConfig() {
               {/* SCHEDULE CONFIG */}
               <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, borderBottom: "1px solid var(--line)", paddingBottom: 10 }}>
-                  <Zap size={16} style={{ color: "var(--cyan)" }} />
+                  <Zap size={16} style={{ color: "var(--green)" }} />
                   <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>
                     THỜI GIAN HOẠT ĐỘNG
                   </strong>

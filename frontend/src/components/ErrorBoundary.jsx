@@ -19,22 +19,20 @@ export class ErrorBoundary extends React.Component {
       return (
         <div style={{
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          minHeight: "100vh", padding: 40, textAlign: "center", color: "#f8fafc", background: "#0b0e14"
+          minHeight: "100vh", padding: 40, textAlign: "center", color: "var(--text-primary)", background: "var(--bg)"
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Đã xảy ra lỗi không mong đợi</h2>
-          <p style={{ color: "#94a3b8", maxWidth: 480, marginBottom: 24, lineHeight: 1.6 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, fontFamily: "var(--font-heading)" }}>Đã xảy ra lỗi không mong đợi</h2>
+          <p style={{ color: "var(--text-secondary)", maxWidth: 480, marginBottom: 24, lineHeight: 1.6 }}>
             {this.state.error?.message || "Một component đã gặp lỗi khi render. Vui lòng tải lại trang."}
           </p>
           <button
             onClick={() => window.location.reload()}
             style={{
               padding: "12px 28px", borderRadius: 8, border: "none",
-              background: "#3b82f6", color: "#fff", fontSize: 14,
-              fontWeight: 600, cursor: "pointer", transition: "background 0.18s ease"
+              background: "var(--amber)", color: "var(--bg)", fontSize: 14,
+              fontWeight: 600, cursor: "pointer", transition: "opacity 0.18s ease"
             }}
-            onMouseOver={e => e.currentTarget.style.background = "#2563eb"}
-            onMouseOut={e => e.currentTarget.style.background = "#3b82f6"}
           >
             Tải lại trang
           </button>

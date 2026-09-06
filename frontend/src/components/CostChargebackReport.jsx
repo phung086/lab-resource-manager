@@ -63,8 +63,8 @@ export function CostChargebackReport() {
             <button className="btn btn-ghost" onClick={loadData} style={{ fontSize: "0.78rem" }}>
               <RefreshCw size={14} style={{ marginRight: 6 }} /> Làm mới
             </button>
-            <button className="btn btn-primary" onClick={handleExportCsv} style={{ fontSize: "0.78rem", background: "var(--green)", color: "#14161A", fontWeight: 700 }}>
-              <Download size={14} style={{ marginRight: 6 }} /> Xuất CSV
+            <button className="btn btn-primary" onClick={handleExportCsv} style={{ fontSize: "0.78rem", background: "var(--green)", color: "var(--bg)", fontWeight: 700 }}>
+              <Download size={14} style={{ marginRight: 6 }} /> Xuất CSV Báo Cáo
             </button>
           </div>
         </div>
@@ -82,8 +82,8 @@ export function CostChargebackReport() {
         <>
           {/* STATS OVERVIEW */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
-            <StatCard label="TỔNG CHI PHÍ GỐC" value={`${totalAmount.toLocaleString()} đ`} tone="var(--blue)" icon={DollarSign} />
-            <StatCard label="CHI PHÍ SAU TỐI ƯU" value={`${totalOptimized.toLocaleString()} đ`} tone="var(--cyan)" icon={Zap} />
+            <StatCard label="TỔNG CHI PHÍ GỐC" value={`${totalAmount.toLocaleString()} đ`} tone="var(--amber)" icon={DollarSign} />
+            <StatCard label="CHI PHÍ SAU TỐI ƯU" value={`${totalOptimized.toLocaleString()} đ`} tone="var(--purple)" icon={Zap} />
             <StatCard label="TIẾT KIỆM NĂNG LƯỢNG (EST.)" value={`${totalSaved.toLocaleString()} đ`} tone="var(--green)" icon={TrendingDown} />
           </div>
 

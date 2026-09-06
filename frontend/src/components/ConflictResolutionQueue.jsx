@@ -115,7 +115,7 @@ export function ConflictResolutionQueue() {
       {/* STATS */}
       {stats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
-          <StatCard label="TỔNG YÊU CẦU" value={stats.totalRequests} tone="var(--blue)" />
+          <StatCard label="TỔNG YÊU CẦU" value={stats.totalRequests} tone="var(--amber)" />
           <StatCard label="BỊ TỪ CHỐI" value={stats.rejectedBookings} tone="var(--red)" />
           <StatCard label="TỶ LỆ XUNG ĐỘT" value={`${(stats.conflictRate * 100).toFixed(1)}%`} tone={stats.conflictRate > 0.1 ? "var(--red)" : "var(--green)"} />
           <StatCard label="ĐANG CHỜ XỬ LÝ" value={conflicts.filter(c => c.status === "PENDING").length} tone="var(--amber)" />
@@ -136,7 +136,7 @@ export function ConflictResolutionQueue() {
             style={{
               fontSize: "0.78rem", padding: "6px 14px", fontFamily: "var(--font-mono)",
               background: filter === tab.key ? "var(--amber)" : "transparent",
-              color: filter === tab.key ? "#14161A" : "var(--text-secondary)",
+              color: filter === tab.key ? "var(--bg)" : "var(--text-secondary)",
               fontWeight: filter === tab.key ? 700 : 400
             }}
           >
@@ -189,7 +189,7 @@ export function ConflictResolutionQueue() {
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--blue)", fontWeight: 600 }}>
+                    <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--amber)", fontWeight: 600 }}>
                       {conf.id}
                     </span>
                     <span style={{ fontSize: "0.78rem", fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
@@ -241,7 +241,7 @@ export function ConflictResolutionQueue() {
                       Từ Chối
                     </button>
                     <button className="btn btn-primary" onClick={() => handleApprove(conf.id)}
-                      style={{ fontSize: "0.78rem", padding: "6px 16px", fontFamily: "var(--font-mono)", background: "var(--green)", color: "#14161A", fontWeight: 700 }}>
+                      style={{ fontSize: "0.78rem", padding: "6px 16px", fontFamily: "var(--font-mono)", background: "var(--green)", color: "var(--bg)", fontWeight: 700 }}>
                       Phê Duyệt
                     </button>
                   </div>

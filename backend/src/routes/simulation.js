@@ -436,4 +436,32 @@ router.post("/research/benchmark", async (req, res, next) => {
   }
 });
 
+// ─── 9. CONCURRENCY STRESS TEST ENDPOINT ────────────────────────────────────
+router.post("/concurrency-stress", async (req, res, next) => {
+  try {
+    const { runConcurrencyStressTest, runMultiResourceConcurrencyStressTest } =
+      await import("../research/concurrencyBenchmark.js");
+
+    const { concurrencyLevel = 250, multiResourceCount = 500, nodeCount = 20 } = req.body;
+
+    const singleResult = await runConcurrencyStressTest({
+      concurrencyLevel: Math.min(500, Math.max(10, concurrencyLevel))
+    });
+
+    const multiResult = await runMultiResourceConcurrencyStressTest({
+      requestCount: Math.min(1000, Math.max(10, multiResourceCount)),
+      resourceCount: Math.min(50, Math.max(2, nodeCount))
+    });
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      singleResource: singleResult,
+      multiResource: multiResult
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

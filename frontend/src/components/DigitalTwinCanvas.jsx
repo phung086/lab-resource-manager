@@ -39,7 +39,7 @@ export function DigitalTwinCanvas() {
   function getHeatColor(temp) {
     if (temp >= 85) return "var(--red)"; // Red
     if (temp >= 72) return "var(--amber)"; // Amber
-    if (temp >= 55) return "var(--blue)"; // Blue
+    if (temp >= 55) return "var(--amber)"; // Warm Amber
     return "var(--green)"; // Cool Green
   }
 
@@ -64,16 +64,16 @@ export function DigitalTwinCanvas() {
             <button
               className={`btn btn-sm ${viewMode === "isometric" ? "btn-primary" : "btn-ghost"}`}
               onClick={() => setViewMode("isometric")}
-              style={{ fontSize: "0.8rem", padding: "4px 10px", background: viewMode === "isometric" ? "var(--green)" : "transparent", color: viewMode === "isometric" ? "#14161A" : "var(--text-primary)", fontWeight: viewMode === "isometric" ? 700 : 500 }}
+              style={{ fontSize: "0.8rem", padding: "4px 10px", background: viewMode === "isometric" ? "var(--green)" : "transparent", color: viewMode === "isometric" ? "var(--bg)" : "var(--text-primary)", fontWeight: viewMode === "isometric" ? 700 : 500 }}
             >
-              Mô hình 2D Racks
+              2D Grid
             </button>
             <button
               className={`btn btn-sm ${viewMode === "heatmap" ? "btn-primary" : "btn-ghost"}`}
               onClick={() => setViewMode("heatmap")}
-              style={{ fontSize: "0.8rem", padding: "4px 10px", background: viewMode === "heatmap" ? "var(--green)" : "transparent", color: viewMode === "heatmap" ? "#14161A" : "var(--text-primary)", fontWeight: viewMode === "heatmap" ? 700 : 500 }}
+              style={{ fontSize: "0.8rem", padding: "4px 10px", background: viewMode === "heatmap" ? "var(--green)" : "transparent", color: viewMode === "heatmap" ? "var(--bg)" : "var(--text-primary)", fontWeight: viewMode === "heatmap" ? 700 : 500 }}
             >
-              Bản đồ nhiệt Thermal Matrix
+              Heatmap Nhiệt
             </button>
           </div>
 
@@ -96,7 +96,7 @@ export function DigitalTwinCanvas() {
       {matrixData && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 8, background: "rgba(56, 189, 248, 0.15)", color: "var(--cyan)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 42, height: 42, borderRadius: 8, background: "color-mix(in srgb, var(--amber) 15%, transparent)", color: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Server size={22} />
             </div>
             <div>
@@ -151,9 +151,9 @@ export function DigitalTwinCanvas() {
                     key={node.resourceId}
                     onClick={() => setSelectedNode(node)}
                     style={{
-                      background: "var(--surface)", border: `2px solid ${selectedNode?.resourceId === node.resourceId ? "var(--cyan)" : "var(--line)"}`,
+                      background: "var(--surface)", border: `2px solid ${selectedNode?.resourceId === node.resourceId ? "var(--amber)" : "var(--line)"}`,
                       borderRadius: 6, padding: 12, cursor: "pointer",
-                      boxShadow: selectedNode?.resourceId === node.resourceId ? "0 0 15px rgba(56, 189, 248, 0.2)" : "none",
+                      boxShadow: selectedNode?.resourceId === node.resourceId ? "0 0 15px color-mix(in srgb, var(--amber) 30%, transparent)" : "none",
                       position: "relative",
                       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                       transition: "all 0.2s ease",
@@ -178,14 +178,14 @@ export function DigitalTwinCanvas() {
                     ) : (
                       /* HEATMAP MODE */
                       <div style={{ width: "100%", height: 60, background: getHeatColor(node.metrics.temperatureC), borderRadius: 4, display: "grid", placeItems: "center" }}>
-                        <strong style={{ color: "#14161A", fontSize: "1.2rem", textShadow: "0 1px 2px rgba(255,255,255,0.3)" }}>
+                        <strong style={{ color: "var(--bg)", fontSize: "1.2rem", textShadow: "0 1px 2px rgba(255,255,255,0.3)" }}>
                           {node.metrics.temperatureC}°C
                         </strong>
                       </div>
                     )}
 
                     {node.isCriticalAnomaly && (
-                      <div style={{ position: "absolute", top: -8, right: -8, background: "var(--red)", color: "#14161A", borderRadius: "50%", padding: 4 }}>
+                      <div style={{ position: "absolute", top: -8, right: -8, background: "var(--red)", color: "var(--bg)", borderRadius: "50%", padding: 4 }}>
                         <AlertOctagon size={16} />
                       </div>
                     )}
@@ -211,7 +211,7 @@ export function DigitalTwinCanvas() {
               {/* NODE IDENTITY */}
               <div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>THIẾT BỊ</div>
-                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--cyan)", fontFamily: "var(--font-mono)" }}>{selectedNode.resourceCode}</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--amber)", fontFamily: "var(--font-mono)" }}>{selectedNode.resourceCode}</div>
                 <div style={{ fontSize: "0.85rem", color: "var(--text-primary)", marginTop: 2 }}>{selectedNode.resourceName}</div>
               </div>
 
@@ -240,7 +240,7 @@ export function DigitalTwinCanvas() {
                 <div style={{ background: "var(--surface)", border: "1px solid var(--line)", padding: 12, borderRadius: 6 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>QUẠT LÀM MÁT</span>
-                    <Fan size={14} style={{ color: "var(--blue)" }} />
+                    <Fan size={14} style={{ color: "var(--teal)" }} />
                   </div>
                   <div style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
                     {selectedNode.metrics.fanSpeedRpm}

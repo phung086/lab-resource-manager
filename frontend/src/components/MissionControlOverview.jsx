@@ -24,7 +24,7 @@ export function MissionControlOverview({ dashboard, resources = [], onNavigate }
       label: "TỔNG TÀI NGUYÊN",
       value: totalResources,
       subtext: `${Object.keys(stats.resourcesByType || {}).length} loại thiết bị`,
-      tone: "var(--blue)",
+      tone: "var(--amber)",
       icon: Server
     },
     {
@@ -48,7 +48,7 @@ export function MissionControlOverview({ dashboard, resources = [], onNavigate }
       label: "THÔNG BÁO CHƯA ĐỌC",
       value: unreadNotifications,
       subtext: "Từ hệ thống",
-      tone: "var(--blue)",
+      tone: "var(--purple)",
       icon: Zap
     }
   ];
@@ -120,7 +120,7 @@ export function MissionControlOverview({ dashboard, resources = [], onNavigate }
       <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "20px 22px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--line)", paddingBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Server size={18} style={{ color: "var(--blue)" }} />
+            <Server size={18} style={{ color: "var(--amber)" }} />
             <strong style={{ fontSize: "0.95rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)", letterSpacing: "0.02em" }}>
               MA TRẬN GIÁM SÁT THIẾT BỊ
             </strong>
