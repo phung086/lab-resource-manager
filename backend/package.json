@@ -14,11 +14,10 @@
     "db:deploy": "prisma migrate deploy && node prisma/applyBookingGuard.js && node prisma/seedAdmin.js",
     "db:seed:admin": "node prisma/seedAdmin.js",
     "import:resources": "node scripts/importResources.js",
-    "agent:system": "node agents/systemMetricsAgent.js",
+    "db:seed": "node prisma/seedBookingPlatform.js",
     "test": "node --test"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
     "@prisma/client": "^6.1.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -29,7 +28,6 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
-    "mqtt": "^5.15.2",
     "nodemailer": "^6.10.1",
     "openai": "^6.49.0",
     "prom-client": "^15.1.3",

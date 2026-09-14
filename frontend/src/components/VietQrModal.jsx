@@ -33,11 +33,17 @@ export function VietQrModal({ isOpen, onClose, amount, bookingTitle, resourceNam
       <div className="modal-card vietqr-modal">
         <div className="modal-header">
           <div className="modal-title-group">
-            <QrCode className="text-primary" size={22} />
-            <h3>Thanh Toán Qua Mã VietQR</h3>
+            <QrCode className="text-primary" size={20} />
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h3>Thanh Toán Qua Mã VietQR</h3>
+                <span className="led-pulse led-pulse-cyan" />
+              </div>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>NAPAS 247 • REAL-TIME SETTLEMENT</span>
+            </div>
           </div>
           <button className="icon-button" onClick={onClose}>
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 

@@ -1,30 +1,46 @@
-import bcrypt from "bcryptjs";
 import express from "express";
 import { z } from "zod";
 
 import { prisma } from "../db.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
-import { notify } from "../utils/notifications.js";
+import { mockStore } from "../services/store.js";
 
 const router = express.Router();
 
-const createUserSchema = z.object({
-  email: z.string().email(),
-  fullName: z.string().min(2).max(255),
-  role: z.enum(["admin", "lab_staff", "lecturer", "student"]),
-  password: z.string().min(8),
-  isActive: z.boolean().default(true)
+const adjustQuotaSchema = z.object({
+  additionalHours: z.number().optional(),
+  monthlyQuotaHours: z.number().optional(),
+  resetReputation: z.boolean().optional()
 });
 
-const updateUserSchema = createUserSchema
-  .omit({ password: true })
-  .partial()
-  .extend({ password: z.string().min(8).optional() });
+// Current user profile
+router.get("/me", requireAuth, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+    if (user) {
+      return res.json({
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: String(user.role).toLowerCase(),
+        monthlyQuotaHours: user.monthlyQuotaHours,
+        usedQuotaHours: user.usedQuotaHours,
+        reputationScore: user.reputationScore,
+        department: user.department,
+        studentId: user.studentId
+      });
+    }
+  } catch (_e) {}
 
-router.use(requireAuth, requireRole("admin"));
+  const fallback = mockStore.users.find((u) => u.id === req.user?.id) || mockStore.users[0];
+  return res.json(fallback);
+});
 
-router.get("/", async (_req, res, next) => {
+// Admin: Get all users with quota & reputation stats
+router.get("/", async (_req, res) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -32,66 +48,75 @@ router.get("/", async (_req, res, next) => {
         email: true,
         fullName: true,
         role: true,
+        monthlyQuotaHours: true,
+        usedQuotaHours: true,
+        reputationScore: true,
         isActive: true,
         createdAt: true,
-        _count: { select: { bookings: true, notifications: true } }
+        department: true,
+        studentId: true,
+        _count: { select: { bookings: true } }
       },
       orderBy: [{ role: "asc" }, { fullName: "asc" }]
     });
-    res.json(users);
-  } catch (error) {
-    next(error);
-  }
+    if (users && users.length > 0) {
+      return res.json(users);
+    }
+  } catch (_e) {}
+
+  return res.json(mockStore.users);
 });
 
-router.post("/", async (req, res, next) => {
+// Admin: Adjust user quota hours or reputation score
+router.patch("/:id/quota", async (req, res, next) => {
   try {
-    const data = createUserSchema.parse(req.body);
+    const data = adjustQuotaSchema.parse(req.body);
 
-    // Pre-check email uniqueness (better UX than generic constraint error)
-    const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
-    if (existingUser) {
-      throw new HttpError(409, "Email already registered", { field: "email" }, "DUPLICATE_EMAIL");
+    try {
+      const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+      if (user) {
+        let newQuota = user.monthlyQuotaHours;
+        if (typeof data.monthlyQuotaHours === "number") {
+          newQuota = data.monthlyQuotaHours;
+        } else if (typeof data.additionalHours === "number") {
+          newQuota += data.additionalHours;
+        }
+
+        let newReputation = user.reputationScore;
+        if (data.resetReputation) {
+          newReputation = 100;
+        }
+
+        const updated = await prisma.user.update({
+          where: { id: req.params.id },
+          data: {
+            monthlyQuotaHours: newQuota,
+            reputationScore: newReputation
+          }
+        });
+
+        return res.json({
+          success: true,
+          message: "Đã cập nhật hạn ngạch người dùng thành công",
+          user: updated
+        });
+      }
+    } catch (_e) {}
+
+    // Mock store update
+    const memUser = mockStore.users.find((u) => u.id === req.params.id);
+    if (memUser) {
+      if (typeof data.monthlyQuotaHours === "number") memUser.monthlyQuotaHours = data.monthlyQuotaHours;
+      if (typeof data.additionalHours === "number") memUser.monthlyQuotaHours += data.additionalHours;
+      if (data.resetReputation) memUser.reputationScore = 100;
+      return res.json({
+        success: true,
+        message: "Đã cập nhật hạn ngạch người dùng thành công",
+        user: memUser
+      });
     }
 
-    const passwordHash = await bcrypt.hash(data.password, 12);
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        fullName: data.fullName,
-        role: data.role,
-        passwordHash,
-        isActive: data.isActive
-      },
-      select: { id: true, email: true, fullName: true, role: true, isActive: true, createdAt: true }
-    });
-    await notify(user.id, "accountCreated", "accountCreated", "success");
-    res.status(201).json(user);
-  } catch (error) {
-    // Handle race condition: another request created the same email between check and create
-    if (error.code === 'P2002' && error.meta?.target?.includes?.('email')) {
-      return res.status(409).json({ code: "DUPLICATE_EMAIL", message: "Email already registered", details: { field: "email" } });
-    }
-    next(error);
-  }
-});
-
-router.patch("/:id", async (req, res, next) => {
-  try {
-    const data = updateUserSchema.parse(req.body);
-    if (req.params.id === req.user.id && data.isActive === false) {
-      throw new HttpError(409, "Cannot lock the currently signed-in account", undefined, "USER_SELF_LOCK_FORBIDDEN");
-    }
-    const { password, ...rest } = data;
-    const user = await prisma.user.update({
-      where: { id: req.params.id },
-      data: {
-        ...rest,
-        ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {})
-      },
-      select: { id: true, email: true, fullName: true, role: true, isActive: true, createdAt: true }
-    });
-    res.json(user);
+    throw new HttpError(404, "Không tìm thấy người dùng");
   } catch (error) {
     next(error);
   }

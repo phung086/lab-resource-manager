@@ -91,34 +91,35 @@ export function ConflictResolutionQueue() {
   return (
     <div className="content-stack" style={{ gap: 20 }}>
       {/* HEADER */}
-      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px" }}>
+      <div className="card" style={{ background: "var(--surface-card)", backdropFilter: "blur(16px)", padding: "18px 22px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--amber)", background: "rgba(227, 162, 60, 0.12)", padding: "2px 8px", borderRadius: 4, border: "1px solid rgba(227, 162, 60, 0.25)" }}>
-                CONFLICT RESOLUTION ENGINE
+              <span className="badge warning" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span className="led-pulse led-pulse-warn" />
+                <span>CONFLICT RESOLUTION ENGINE</span>
               </span>
             </div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
+            <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--text-primary)", margin: "6px 0 2px 0" }}>
               Hàng Đợi Xử Lý Xung Đột & Phân Xử Ưu Tiên
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0 }}>
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0 }}>
               Phát hiện, phân loại và giải quyết xung đột tài nguyên real-time theo chính sách ưu tiên đa mục tiêu.
             </p>
           </div>
-          <button className="btn btn-ghost" onClick={loadData} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.78rem" }}>
-            <RefreshCw size={14} /> Làm mới
+          <button className="btn" onClick={loadData} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "12px" }}>
+            <RefreshCw size={14} className={loading ? "spin" : ""} /> Làm mới
           </button>
         </div>
       </div>
 
-      {/* STATS */}
+      {/* STATS (HERO LEVEL 1 CARDS) */}
       {stats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
-          <StatCard label="TỔNG YÊU CẦU" value={stats.totalRequests} tone="var(--amber)" />
-          <StatCard label="BỊ TỪ CHỐI" value={stats.rejectedBookings} tone="var(--red)" />
-          <StatCard label="TỶ LỆ XUNG ĐỘT" value={`${(stats.conflictRate * 100).toFixed(1)}%`} tone={stats.conflictRate > 0.1 ? "var(--red)" : "var(--green)"} />
-          <StatCard label="ĐANG CHỜ XỬ LÝ" value={conflicts.filter(c => c.status === "PENDING").length} tone="var(--amber)" />
+          <StatCard label="TỔNG YÊU CẦU" value={stats.totalRequests} tone="var(--cyan-core)" pulse="led-pulse-cyan" />
+          <StatCard label="BỊ TỪ CHỐI" value={stats.rejectedBookings} tone="var(--rose-alert)" pulse="led-pulse-alert" />
+          <StatCard label="TỶ LỆ XUNG ĐỘT" value={`${(stats.conflictRate * 100).toFixed(1)}%`} tone={stats.conflictRate > 0.1 ? "var(--rose-alert)" : "var(--emerald-safe)"} pulse={stats.conflictRate > 0.1 ? "led-pulse-alert" : "led-pulse-safe"} />
+          <StatCard label="ĐANG CHỜ XỬ LÝ" value={conflicts.filter(c => c.status === "PENDING").length} tone="var(--amber-warn)" pulse="led-pulse-warn" />
         </div>
       )}
 
@@ -134,10 +135,9 @@ export function ConflictResolutionQueue() {
             className={`btn ${filter === tab.key ? "btn-primary" : "btn-ghost"}`}
             onClick={() => setFilter(tab.key)}
             style={{
-              fontSize: "0.78rem", padding: "6px 14px", fontFamily: "var(--font-mono)",
-              background: filter === tab.key ? "var(--amber)" : "transparent",
-              color: filter === tab.key ? "var(--bg)" : "var(--text-secondary)",
-              fontWeight: filter === tab.key ? 700 : 400
+              fontSize: "12px",
+              padding: "6px 14px",
+              fontFamily: "var(--font-mono)"
             }}
           >
             {tab.label} ({tab.count})
@@ -171,77 +171,83 @@ export function ConflictResolutionQueue() {
         <div style={{ display: "grid", gap: 14 }}>
           {filtered.map((conf) => {
             const isPending = conf.status === "PENDING";
-            const stripColor = isPending ? "var(--status-warning)" : "var(--status-ok)";
+            const stripColor = isPending ? "var(--amber-warn)" : "var(--emerald-safe)";
+            const pulseClass = isPending ? "led-pulse-warn" : "led-pulse-safe";
 
             return (
               <div
                 key={conf.id}
                 style={{
+                  position: "relative",
                   borderLeft: `3px solid ${stripColor}`,
-                  background: "var(--surface-strong)",
-                  border: isPending ? "1px solid rgba(227, 162, 60, 0.3)" : "1px solid var(--line)",
-                  borderRadius: "0 8px 8px 0",
+                  background: "rgba(14, 19, 31, 0.75)",
+                  border: isPending ? "1px solid rgba(245, 158, 11, 0.35)" : "1px solid var(--line)",
+                  borderRadius: "8px",
                   padding: "16px 18px",
-                  position: "relative"
+                  transition: "all 150ms ease"
                 }}
               >
-                <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: 3, background: stripColor, borderRadius: "8px 0 0 8px" }} />
-
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--amber)", fontWeight: 600 }}>
+                    <span className={`led-pulse ${pulseClass}`} />
+                    <span className="font-mono" style={{ fontSize: "13px", color: "var(--cyan-core)", fontWeight: 700 }}>
                       {conf.id}
                     </span>
-                    <span style={{ fontSize: "0.78rem", fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
+                    <span className="font-mono" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                       {conf.resourceCode}
                     </span>
-                    <span style={{ fontSize: "0.82rem", color: "var(--text-primary)" }}>
+                    <span style={{ fontSize: "13px", color: "var(--text-primary)", fontWeight: 600 }}>
                       {conf.resourceName}
                     </span>
                   </div>
-                  <span style={{
-                    fontSize: "0.7rem", fontWeight: 600, fontFamily: "var(--font-mono)", padding: "2px 8px", borderRadius: 4,
-                    background: isPending ? "rgba(227, 162, 60, 0.15)" : "rgba(95, 167, 119, 0.15)",
-                    color: isPending ? "var(--amber)" : "var(--green)",
-                    border: `1px solid ${isPending ? "rgba(227, 162, 60, 0.3)" : "rgba(95, 167, 119, 0.3)"}`
-                  }}>
+                  <span className={`badge ${isPending ? "warning" : "success"}`}>
                     {conf.statusLabel}
                   </span>
                 </div>
 
-                <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>
-                  <Clock size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
-                  {conf.timeSlot}
+                <div className="font-mono" style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Clock size={13} style={{ color: "var(--text-muted)" }} />
+                  <span>{conf.timeSlot}</span>
                 </div>
-                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 8 }}>
+                <div style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: 10 }}>
                   {conf.conflictReason}
                 </div>
 
                 {conf.requestA && (
-                  <div style={{ background: "var(--surface-muted)", borderRadius: 6, padding: "10px 12px", marginBottom: 8 }}>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-primary)" }}>
+                  <div style={{ background: "rgba(21, 28, 44, 0.6)", borderRadius: 6, padding: "10px 14px", marginBottom: 10, border: "1px solid var(--line)" }}>
+                    <div style={{ fontSize: "13px", color: "var(--text-primary)" }}>
                       <strong>{conf.requestA.userName}</strong>
-                      {conf.requestA.userRole && <span style={{ color: "var(--text-muted)", marginLeft: 8, fontSize: "0.72rem" }}>{conf.requestA.userRole}</span>}
+                      {conf.requestA.userRole && (
+                        <span className="badge info" style={{ marginLeft: 8, fontSize: "11px" }}>
+                          {conf.requestA.userRole.toUpperCase()}
+                        </span>
+                      )}
                     </div>
                     {conf.requestA.project && (
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>{conf.requestA.project}</div>
+                      <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: 4 }}>{conf.requestA.project}</div>
                     )}
                     {conf.requestA.priorityScore !== null && (
-                      <div style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--amber)", marginTop: 4 }}>
-                        Priority Score: {conf.requestA.priorityScore}
+                      <div className="font-mono" style={{ fontSize: "12px", color: "var(--cyan-core)", marginTop: 4 }}>
+                        PRIORITY SCORE: {conf.requestA.priorityScore}
                       </div>
                     )}
                   </div>
                 )}
 
                 {isPending && (
-                  <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-                    <button className="btn btn-ghost" onClick={() => handleReject(conf.id)}
-                      style={{ fontSize: "0.78rem", padding: "6px 14px", fontFamily: "var(--font-mono)", color: "var(--red)" }}>
+                  <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 10 }}>
+                    <button
+                      className="btn"
+                      onClick={() => handleReject(conf.id)}
+                      style={{ fontSize: "12px", color: "var(--rose-alert)" }}
+                    >
                       Từ Chối
                     </button>
-                    <button className="btn btn-primary" onClick={() => handleApprove(conf.id)}
-                      style={{ fontSize: "0.78rem", padding: "6px 16px", fontFamily: "var(--font-mono)", background: "var(--green)", color: "var(--bg)", fontWeight: 700 }}>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => handleApprove(conf.id)}
+                      style={{ fontSize: "12px" }}
+                    >
                       Phê Duyệt
                     </button>
                   </div>
@@ -255,14 +261,23 @@ export function ConflictResolutionQueue() {
   );
 }
 
-function StatCard({ label, value, tone }) {
+function StatCard({ label, value, tone, pulse }) {
   return (
-    <div style={{
-      borderLeft: `3px solid ${tone}`,
-      background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "0 8px 8px 0", padding: "16px 18px"
-    }}>
-      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", display: "block" }}>{label}</span>
-      <strong style={{ fontSize: "1.6rem", color: tone, fontFamily: "var(--font-mono)" }}>{value}</strong>
+    <div
+      className="card"
+      style={{
+        borderLeft: `3px solid ${tone}`,
+        background: "var(--surface-card)",
+        backdropFilter: "blur(16px)",
+        padding: "16px 18px",
+        position: "relative"
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <span className="font-mono" style={{ fontSize: "11px", color: "var(--text-muted)", letterSpacing: "0.06em" }}>{label}</span>
+        {pulse && <span className={`led-pulse ${pulse}`} />}
+      </div>
+      <strong className="font-mono" style={{ fontSize: "24px", color: tone, lineHeight: 1.1 }}>{value}</strong>
     </div>
   );
 }

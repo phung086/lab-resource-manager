@@ -35,11 +35,17 @@ export function QrCheckinModal({ isOpen, onClose, booking, onCheckinSuccess }) {
       <div className="modal-card checkin-qr-modal">
         <div className="modal-header">
           <div className="modal-title-group">
-            <QrCode className="text-primary" size={22} />
-            <h3>Mã QR Check-in Phòng Thí Nghiệm</h3>
+            <QrCode className="text-primary" size={20} />
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h3>Mã QR Check-in Phòng Thí Nghiệm</h3>
+                <span className="led-pulse led-pulse-cyan" />
+              </div>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>OPTICAL ACCESS SCANNER • 2026</span>
+            </div>
           </div>
           <button className="icon-button" onClick={onClose}>
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 

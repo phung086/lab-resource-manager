@@ -52,6 +52,7 @@ export function ParetoFrontierExplorer() {
   const [runtimeMs, setRuntimeMs] = useState(0);
   const [datasetSize, setDatasetSize] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [manualPointId, setManualPointId] = useState(null);
 
   useEffect(() => {
     fetchParetoFrontier();
@@ -69,6 +70,7 @@ export function ParetoFrontierExplorer() {
         setHypervolume(res.data.hypervolume || 0);
         setRuntimeMs(res.data.runtimeMs || 0);
         setDatasetSize(res.data.datasetSize || 0);
+        setManualPointId(null);
       }
     } catch (_err) {}
     finally {
@@ -76,10 +78,14 @@ export function ParetoFrontierExplorer() {
     }
   }
 
-  // Compute selected point based on sliders
+  // Compute selected point based on sliders or manual click
   const selectedPoint = useMemo(() => {
+    if (manualPointId) {
+      const manual = paretoFrontier.find((p) => p.id === manualPointId);
+      if (manual) return manual;
+    }
     return selectParetoPointByWeights(weights, paretoFrontier);
-  }, [weights, paretoFrontier]);
+  }, [weights, paretoFrontier, manualPointId]);
 
   // Dynamic SVG Chart bounds from real dataset
   const bounds = useMemo(() => {
@@ -108,26 +114,28 @@ export function ParetoFrontierExplorer() {
   return (
     <div className="content-stack" style={{ gap: 20 }}>
       {/* HEADER BANNER */}
-      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px" }}>
+      <div className="card" style={{ background: "var(--surface-card)", backdropFilter: "blur(16px)", padding: "18px 22px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--amber)", background: "color-mix(in srgb, var(--amber) 12%, transparent)", padding: "2px 8px", borderRadius: 4, border: "1px solid color-mix(in srgb, var(--amber) 25%, transparent)" }}>
-                {algorithm === "MOEAD" ? "MOEA/D DECOMPOSITION SOLVER" : "NSGA-II MULTI-OBJECTIVE SOLVER"}
+              <span className="badge ai" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span className="led-pulse led-pulse-ai" />
+                <span>{algorithm === "MOEAD" ? "MOEA/D DECOMPOSITION SOLVER" : "NSGA-II MULTI-OBJECTIVE SOLVER"}</span>
               </span>
-              <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--green)" }}>
-                ● 4D HYPERVOLUME HV = {hypervolume > 0 ? hypervolume.toFixed(4) : "Đang tính..."}
+              <span className="font-mono badge success" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span className="led-pulse led-pulse-safe" />
+                <span>4D HYPERVOLUME HV = {hypervolume > 0 ? hypervolume.toFixed(4) : "Đang tính..."}</span>
               </span>
               {runtimeMs > 0 && (
-                <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
-                  ● Thời gian giải: {runtimeMs}ms (N={datasetSize} tác vụ)
+                <span className="font-mono badge" style={{ color: "var(--text-muted)", border: "1px solid var(--line)" }}>
+                  Thời gian: {runtimeMs}ms (N={datasetSize})
                 </span>
               )}
             </div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-heading)", margin: "6px 0 2px 0" }}>
+            <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--text-primary)", margin: "6px 0 2px 0" }}>
               Không Gian Nghiệm Pareto & Khảo Sát Trade-off Đa Mục Tiêu
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0 }}>
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0 }}>
               Biên Pareto được tính toán trực tiếp từ thuật toán tiến hóa đa mục tiêu ({algorithm}). Kéo các thanh trượt trọng số để hệ thống tự động tối ưu hóa hàm thỏa dụng và định vị nghiệm đánh đổi tương ứng.
             </p>
           </div>
@@ -182,7 +190,10 @@ export function ParetoFrontierExplorer() {
                 type="range"
                 min="0" max="100"
                 value={weights.wait}
-                onChange={(e) => setWeights({ ...weights, wait: parseInt(e.target.value) || 0 })}
+                onChange={(e) => {
+                  setManualPointId(null);
+                  setWeights({ ...weights, wait: parseInt(e.target.value) || 0 });
+                }}
                 style={{ accentColor: "var(--amber)" }}
               />
             </label>
@@ -196,7 +207,10 @@ export function ParetoFrontierExplorer() {
                 type="range"
                 min="0" max="100"
                 value={weights.energy}
-                onChange={(e) => setWeights({ ...weights, energy: parseInt(e.target.value) || 0 })}
+                onChange={(e) => {
+                  setManualPointId(null);
+                  setWeights({ ...weights, energy: parseInt(e.target.value) || 0 });
+                }}
                 style={{ accentColor: "var(--green)" }}
               />
             </label>
@@ -210,7 +224,10 @@ export function ParetoFrontierExplorer() {
                 type="range"
                 min="0" max="100"
                 value={weights.fairness}
-                onChange={(e) => setWeights({ ...weights, fairness: parseInt(e.target.value) || 0 })}
+                onChange={(e) => {
+                  setManualPointId(null);
+                  setWeights({ ...weights, fairness: parseInt(e.target.value) || 0 });
+                }}
                 style={{ accentColor: "var(--purple)" }}
               />
             </label>
@@ -222,7 +239,7 @@ export function ParetoFrontierExplorer() {
           </div>
 
           <div style={{ marginTop: 14, fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.4 }}>
-            Phương pháp chọn nghiệm: Chuẩn hóa không gian mục tiêu về đoạn [0, 1] và cực tiểu hóa hàm tổn thất thỏa dụng w_i &times; norm(f_i).
+            Phương pháp chọn nghiệm: Chuẩn hóa không gian mục tiêu về đoạn [0, 1] và cực tiểu hóa hàm tổn thất thỏa dụng w_i &times; norm(f_i). Bấm vào điểm bất kỳ trên đồ thị để khảo sát chi tiết.
           </div>
         </div>
 
@@ -277,7 +294,12 @@ export function ParetoFrontierExplorer() {
                     const cx = toSvgX(p.objectives.energyCostVnd);
                     const cy = toSvgY(p.objectives.waitingTimeHours);
                     return (
-                      <g key={p.id}>
+                      <g
+                        key={p.id}
+                        onClick={() => setManualPointId(p.id)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <title>{`${p.name} (${p.tag}): ${Math.round(p.objectives.energyCostVnd).toLocaleString()} đ, ${p.objectives.waitingTimeHours.toFixed(1)}h chờ, Jain's: ${p.objectives.jainsFairnessIndex.toFixed(2)}`}</title>
                         {isSelected && (
                           <circle cx={cx} cy={cy} r="16" fill="color-mix(in srgb, var(--amber) 25%, transparent)" />
                         )}
@@ -288,7 +310,7 @@ export function ParetoFrontierExplorer() {
                           fill={isSelected ? "var(--amber)" : "var(--line-strong)"}
                           stroke={isSelected ? "var(--bg)" : "none"}
                           strokeWidth="2"
-                          style={{ transition: "all 0.3s ease", cursor: "pointer" }}
+                          style={{ transition: "all 0.3s ease" }}
                         />
                       </g>
                     );

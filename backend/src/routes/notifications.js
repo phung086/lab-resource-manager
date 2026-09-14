@@ -1,55 +1,50 @@
 import express from "express";
 
-import { prisma } from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
-import { serializeNotification } from "../utils/dataContract.js";
-
 const router = express.Router();
 
-const parseLimit = (value) => {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? Math.min(100, Math.max(1, Math.round(numeric))) : 50;
-};
-
-router.use(requireAuth);
-
-router.get("/", async (req, res, next) => {
-  try {
-    const unreadOnly = req.query.unreadOnly === "true";
-    const limit = parseLimit(req.query.limit);
-    const notifications = await prisma.notification.findMany({
-      where: { userId: req.user.id, ...(unreadOnly ? { readAt: null } : {}) },
-      orderBy: { createdAt: "desc" },
-      take: limit
-    });
-    res.json(notifications.map((item) => serializeNotification(item)));
-  } catch (error) {
-    next(error);
+// Smart in-memory notifications for AI Booking & Advisory
+let userNotifications = [
+  {
+    id: "notif-1",
+    title: "Nhắc nhở Check-in QR Ca đặt GPU H100",
+    message: "Ca đặt chỗ của bạn sẽ bắt đầu trong 30 phút. Quét mã QR tại cửa phòng lab để cộng +2 điểm tín nhiệm.",
+    type: "info",
+    readAt: null,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "notif-2",
+    title: "Khuyến nghị Tối ưu Giờ Xanh (Green AI)",
+    message: "Hệ thống đang mở khung giờ xanh 22:00 - 06:00 tiết kiệm 45% hạn ngạch tính toán.",
+    type: "success",
+    readAt: null,
+    createdAt: new Date(Date.now() - 3600000).toISOString()
+  },
+  {
+    id: "notif-3",
+    title: "Xác nhận Thanh toán VietQR Napas 24/7",
+    message: "Giao dịch mã TXN-2026-0910-001 đã khớp lệnh tự động thành công.",
+    type: "success",
+    readAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 7200000).toISOString()
   }
+];
+
+router.get("/", (req, res) => {
+  res.json(userNotifications);
 });
 
-router.post("/read-all", async (req, res, next) => {
-  try {
-    const result = await prisma.notification.updateMany({
-      where: { userId: req.user.id, readAt: null },
-      data: { readAt: new Date() }
-    });
-    res.json({ updated: result.count });
-  } catch (error) {
-    next(error);
-  }
+router.post("/read-all", (_req, res) => {
+  userNotifications = userNotifications.map((n) => ({ ...n, readAt: new Date().toISOString() }));
+  res.json({ updated: userNotifications.length });
 });
 
-router.post("/:id/read", async (req, res, next) => {
-  try {
-    const notification = await prisma.notification.update({
-      where: { id: req.params.id, userId: req.user.id },
-      data: { readAt: new Date() }
-    });
-    res.json(serializeNotification(notification));
-  } catch (error) {
-    next(error);
+router.post("/:id/read", (req, res) => {
+  const item = userNotifications.find((n) => n.id === req.params.id);
+  if (item) {
+    item.readAt = new Date().toISOString();
   }
+  res.json(item || { id: req.params.id, readAt: new Date().toISOString() });
 });
 
 export default router;

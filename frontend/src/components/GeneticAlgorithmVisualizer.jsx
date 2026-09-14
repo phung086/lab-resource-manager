@@ -60,31 +60,26 @@ export function GeneticAlgorithmVisualizer() {
   return (
     <div className="content-stack" style={{ gap: 20 }}>
       {/* HEADER */}
-      <div style={{
-        background: "var(--surface)", border: "1px solid var(--line)",
-        borderRadius: 8, padding: "18px 22px",
+      <div className="card" style={{
+        background: "var(--surface-card)", backdropFilter: "blur(16px)",
+        padding: "18px 22px",
         display: "flex", justifyContent: "space-between", alignItems: "center",
         flexWrap: "wrap", gap: 16
       }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{
-              fontSize: "0.72rem", fontFamily: "var(--font-mono)",
-              color: "var(--amber)",
-              background: "color-mix(in srgb, var(--amber) 12%, transparent)",
-              padding: "2px 8px", borderRadius: 4,
-              border: "1px solid color-mix(in srgb, var(--amber) 25%, transparent)"
-            }}>
-              NSGA-II SOLVER
+            <span className="badge ai" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span className="led-pulse led-pulse-ai" />
+              <span>NSGA-II MULTI-OBJECTIVE ENGINE</span>
             </span>
           </div>
           <h2 style={{
-            margin: "6px 0 2px 0", fontSize: "1.3rem",
-            color: "var(--text-primary)", fontFamily: "var(--font-heading)", fontWeight: 700
+            margin: "6px 0 2px 0", fontSize: "18px",
+            color: "var(--text-primary)", fontWeight: 700
           }}>
             Bộ Giải Thuật Toán Di Truyền Xếp Lịch Đa Mục Tiêu
           </h2>
-          <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+          <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "13px" }}>
             Giải bài toán phân bổ tài nguyên đa mục tiêu (MORSP): tối đa giá trị ưu tiên, tối thiểu chi phí điện EVN, đảm bảo không xung đột.
           </p>
         </div>
@@ -93,12 +88,12 @@ export function GeneticAlgorithmVisualizer() {
           type="button"
           onClick={runSolver}
           disabled={loading}
+          className="btn-ai"
           style={{
             display: "flex", alignItems: "center", gap: 8,
-            background: "var(--amber)", color: "var(--bg)",
             fontWeight: 700, padding: "10px 20px", border: "none",
-            borderRadius: 6, cursor: loading ? "wait" : "pointer",
-            fontSize: "0.85rem", fontFamily: "var(--font-heading)"
+            borderRadius: 7, cursor: loading ? "wait" : "pointer",
+            fontSize: "13px"
           }}
         >
           {loading ? <RefreshCw size={16} className="spin" /> : <Play size={16} />}

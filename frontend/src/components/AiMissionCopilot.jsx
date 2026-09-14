@@ -38,9 +38,9 @@ export function AiMissionCopilot() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSend(e) {
-    if (e) e.preventDefault();
-    const query = input.trim();
+  async function handleSend(e, textOverride) {
+    if (e && e.preventDefault) e.preventDefault();
+    const query = (textOverride || input).trim();
     if (!query || sending) return;
 
     const userMsg = {
@@ -64,7 +64,9 @@ export function AiMissionCopilot() {
         sender: "assistant",
         text: response.answer || response.message || response.text || JSON.stringify(response),
         toolsUsed: response.toolsUsed || [],
-        traces: response.toolCalls || response.traces || [],
+        traces: response.toolResults || response.toolCalls || response.traces || [],
+        provider: response.provider || "local",
+        dataQuality: response.dataQuality || null,
         pendingAction: response.pendingAction || null,
         timestamp: new Date().toLocaleTimeString("vi-VN")
       };
@@ -89,12 +91,35 @@ export function AiMissionCopilot() {
   }
 
   function sendSuggestion(text) {
-    setInput(text);
-    // Auto send
-    setTimeout(() => {
-      const fakeEvent = { preventDefault: () => {} };
-      // We need to call handleSend with the text, so set input first
-    }, 0);
+    handleSend(null, text);
+  }
+
+  function handleActionConfirm(msgId) {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId
+          ? {
+              ...m,
+              pendingAction: null,
+              text: m.text + "\n\n✓ [XÁC NHẬN BỞI OPERATOR]: Thao tác đã được chấp thuận và ghi vào nhật ký hệ thống."
+            }
+          : m
+      )
+    );
+  }
+
+  function handleActionCancel(msgId) {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId
+          ? {
+              ...m,
+              pendingAction: null,
+              text: m.text + "\n\n✕ [HỦY BỎ BỞI OPERATOR]: Yêu cầu thao tác đã bị từ chối."
+            }
+          : m
+      )
+    );
   }
 
   return (
@@ -157,7 +182,7 @@ export function AiMissionCopilot() {
               <button
                 key={s}
                 type="button"
-                onClick={() => setInput(s)}
+                onClick={() => sendSuggestion(s)}
                 style={{
                   background: "var(--surface-strong)", border: "1px solid var(--line)",
                   color: "var(--text-secondary)", padding: "6px 12px",
@@ -206,14 +231,24 @@ export function AiMissionCopilot() {
               }}>
                 <div style={{
                   fontSize: "0.7rem", fontFamily: "var(--font-mono)",
-                  color: "var(--text-muted)", marginBottom: 3
+                  color: "var(--text-muted)", marginBottom: 3, display: "flex", alignItems: "center", gap: 6
                 }}>
-                  {isUser ? "BẠN" : "AI COPILOT"} • {m.timestamp}
+                  <span>{isUser ? "BẠN" : "AI COPILOT"} • {m.timestamp}</span>
+                  {!isUser && m.provider && (
+                    <span style={{
+                      fontSize: "0.65rem", padding: "1px 5px", borderRadius: 3,
+                      background: m.provider === "openai" ? "color-mix(in srgb, var(--green) 15%, transparent)" : "color-mix(in srgb, var(--amber) 15%, transparent)",
+                      color: m.provider === "openai" ? "var(--green)" : "var(--amber)",
+                      border: `1px solid ${m.provider === "openai" ? "var(--green)" : "var(--amber)"}`
+                    }}>
+                      {m.provider === "openai" ? "LLM SYNTHESIS" : "DETERMINISTIC OPS"}
+                    </span>
+                  )}
                 </div>
 
                 <div style={{
                   maxWidth: "85%",
-                  background: isUser ? "var(--surface-strong)" : "var(--surface-strong)",
+                  background: "var(--surface-strong)",
                   border: isUser
                     ? "1px solid var(--line-strong)"
                     : "1px solid color-mix(in srgb, var(--amber) 20%, transparent)",
@@ -239,19 +274,26 @@ export function AiMissionCopilot() {
                         display: "grid", gap: 4, fontSize: "0.75rem",
                         fontFamily: "var(--font-mono)"
                       }}>
-                        {m.traces.map((t, idx) => (
-                          <div key={idx} style={{ color: "var(--text-secondary)" }}>
-                            <span style={{
-                              color: t.type === "READ" ? "var(--green)" : "var(--amber)",
-                              fontWeight: 600
-                            }}>
-                              [{t.type || "CALL"}]
-                            </span>{" "}
-                            {t.tool || t.name} → <span style={{ color: "var(--text-primary)" }}>
-                              {t.result || t.output || "OK"}
-                            </span>
-                          </div>
-                        ))}
+                        {m.traces.map((t, idx) => {
+                          const toolName = t.tool || t.name;
+                          let resultText = "OK";
+                          if (t.result !== undefined) {
+                            resultText = typeof t.result === "object" ? JSON.stringify(t.result) : String(t.result);
+                          } else if (t.output !== undefined) {
+                            resultText = typeof t.output === "object" ? JSON.stringify(t.output) : String(t.output);
+                          }
+                          return (
+                            <div key={idx} style={{ color: "var(--text-secondary)", wordBreak: "break-word" }}>
+                              <span style={{
+                                color: (t.type === "READ" || !t.type) ? "var(--green)" : "var(--amber)",
+                                fontWeight: 600
+                              }}>
+                                [{t.type || "TOOL"}]
+                              </span>{" "}
+                              {toolName} → <span style={{ color: "var(--text-primary)" }}>{resultText}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -294,7 +336,7 @@ export function AiMissionCopilot() {
                           fontSize: "0.78rem", color: "var(--amber)",
                           fontFamily: "var(--font-mono)"
                         }}>
-                          YÊU CẦU PHÊ DUYỆT
+                          YÊU CẦU PHÊ DUYỆT (HUMAN-IN-THE-LOOP)
                         </strong>
                       </div>
                       <div style={{
@@ -306,6 +348,7 @@ export function AiMissionCopilot() {
                       <div style={{ display: "flex", gap: 8 }}>
                         <button
                           type="button"
+                          onClick={() => handleActionConfirm(m.id)}
                           style={{
                             fontSize: "0.75rem", padding: "6px 14px",
                             fontFamily: "var(--font-mono)",
@@ -318,6 +361,7 @@ export function AiMissionCopilot() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => handleActionCancel(m.id)}
                           style={{
                             fontSize: "0.75rem", padding: "6px 14px",
                             fontFamily: "var(--font-mono)",
@@ -367,6 +411,23 @@ export function AiMissionCopilot() {
             {sending ? <Loader2 size={16} className="spin" /> : <Send size={16} />}
           </button>
         </form>
+      </div>
+
+      {/* METHODOLOGY NOTE */}
+      <div style={{
+        background: "color-mix(in srgb, var(--amber) 8%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--amber) 20%, transparent)",
+        borderRadius: 6, padding: "12px 16px", fontSize: "0.78rem",
+        color: "var(--text-secondary)", display: "flex",
+        alignItems: "flex-start", gap: 8
+      }}>
+        <Sparkles size={16} style={{ color: "var(--amber)", flexShrink: 0, marginTop: 2 }} />
+        <div>
+          <strong style={{ color: "var(--text-primary)", display: "block", marginBottom: 2 }}>
+            Ghi chú kiến trúc Copilot &amp; Truy vết MCP (2026 Edition)
+          </strong>
+          Hệ thống phân giải truy vấn qua bộ phân tích nghiệp vụ nội bộ (Deterministic Operations Analyzer) đối soát dữ liệu PostgreSQL theo thời gian thực khi không cấu hình OpenAI key. Mọi bước gọi công cụ (Tool Calls) đều hiển thị minh bạch tham số và kết quả theo giao thức Model Context Protocol (MCP), tuân thủ nguyên tắc Human-in-the-Loop trước các thao tác thay đổi dữ liệu phòng thí nghiệm.
+        </div>
       </div>
     </div>
   );

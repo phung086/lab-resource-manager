@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Server, Activity, Thermometer, Zap, ShieldCheck, AlertOctagon, RefreshCw, Cpu, Fan, Radio, Play } from "lucide-react";
 import { apiRequest } from "../api.js";
+import { DigitalTwinHeatmap } from "./DigitalTwinHeatmap.tsx";
 
 export function DigitalTwinCanvas() {
   const [matrixData, setMatrixData] = useState(null);
@@ -46,15 +47,15 @@ export function DigitalTwinCanvas() {
   return (
     <div className="content-stack" style={{ gap: 20 }}>
       {/* HEADER COMMAND BAR */}
-      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "18px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+      <div className="card" style={{ background: "var(--surface-card)", backdropFilter: "blur(16px)", padding: "18px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span className="live-indicator" style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: "var(--green)", boxShadow: "0 0 10px var(--green)" }} />
-            <h2 style={{ margin: 0, fontSize: "1.25rem", color: "var(--text-primary)", fontFamily: "var(--font-heading)", fontWeight: 700 }}>
+            <span className="led-pulse led-pulse-safe" />
+            <h2 style={{ margin: 0, fontSize: "18px", color: "var(--text-primary)", fontWeight: 700 }}>
               Phòng Lab Số Hóa & Bản Đồ Nhiệt Thời Gian Thực (Digital Twin & Live Heatmap)
             </h2>
           </div>
-          <p style={{ margin: "4px 0 0 0", color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+          <p style={{ margin: "4px 0 0 0", color: "var(--text-secondary)", fontSize: "13px" }}>
             Mô hình Bản sao số (Digital Twin) theo dõi tải nhiệt độ, công suất và telemetry cảm biến IoT thực tế tại Phòng Lab B603.
           </p>
         </div>
@@ -64,14 +65,14 @@ export function DigitalTwinCanvas() {
             <button
               className={`btn btn-sm ${viewMode === "isometric" ? "btn-primary" : "btn-ghost"}`}
               onClick={() => setViewMode("isometric")}
-              style={{ fontSize: "0.8rem", padding: "4px 10px", background: viewMode === "isometric" ? "var(--green)" : "transparent", color: viewMode === "isometric" ? "var(--bg)" : "var(--text-primary)", fontWeight: viewMode === "isometric" ? 700 : 500 }}
+              style={{ fontSize: "12px", padding: "4px 12px" }}
             >
               2D Grid
             </button>
             <button
               className={`btn btn-sm ${viewMode === "heatmap" ? "btn-primary" : "btn-ghost"}`}
               onClick={() => setViewMode("heatmap")}
-              style={{ fontSize: "0.8rem", padding: "4px 10px", background: viewMode === "heatmap" ? "var(--green)" : "transparent", color: viewMode === "heatmap" ? "var(--bg)" : "var(--text-primary)", fontWeight: viewMode === "heatmap" ? 700 : 500 }}
+              style={{ fontSize: "12px", padding: "4px 12px" }}
             >
               Heatmap Nhiệt
             </button>
@@ -80,13 +81,14 @@ export function DigitalTwinCanvas() {
           <button
             className="btn btn-sm"
             onClick={() => setAutoRefresh(!autoRefresh)}
-            style={{ fontSize: "0.8rem", display: "flex", alignItems: "center", gap: 6, background: autoRefresh ? "rgba(95, 167, 119, 0.15)" : "var(--surface-strong)", color: autoRefresh ? "var(--green)" : "var(--text-secondary)", border: `1px solid ${autoRefresh ? "var(--green)" : "var(--line)"}` }}
+            style={{ fontSize: "12px", display: "flex", alignItems: "center", gap: 8, border: `1px solid ${autoRefresh ? "var(--cyan-core)" : "var(--line)"}`, color: autoRefresh ? "var(--cyan-core)" : "var(--text-secondary)" }}
           >
+            {autoRefresh && <span className="led-pulse led-pulse-cyan" />}
             <Radio size={14} className={autoRefresh ? "spin" : ""} />
             {autoRefresh ? "Live Stream (3s)" : "Đã tạm dừng"}
           </button>
 
-          <button className="btn btn-sm btn-ghost" onClick={fetchLiveMatrix} title="Làm mới ngay" style={{ color: "var(--text-secondary)" }}>
+          <button className="icon-button" onClick={fetchLiveMatrix} title="Làm mới ngay">
             <RefreshCw size={14} />
           </button>
         </div>
@@ -95,33 +97,33 @@ export function DigitalTwinCanvas() {
       {/* LAB SUMMARY KPI STRIP */}
       {matrixData && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 8, background: "color-mix(in srgb, var(--amber) 15%, transparent)", color: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Server size={22} />
+          <div className="card" style={{ background: "var(--surface-card)", backdropFilter: "blur(16px)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, background: "rgba(0, 229, 255, 0.12)", color: "var(--cyan-core)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Server size={20} />
             </div>
             <div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>ACTIVE NODES</div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{matrixData.summary.totalNodesOnline} Nodes</div>
+              <div className="font-mono" style={{ fontSize: "11px", color: "var(--text-muted)", letterSpacing: "0.06em" }}>ACTIVE NODES</div>
+              <div className="font-mono" style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-primary)" }}>{matrixData.summary.totalNodesOnline} Nodes</div>
             </div>
           </div>
 
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 8, background: "rgba(227, 162, 60, 0.15)", color: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Zap size={22} />
+          <div className="card" style={{ background: "var(--surface-card)", backdropFilter: "blur(16px)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, background: "rgba(245, 158, 11, 0.12)", color: "var(--amber-warn)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Zap size={20} />
             </div>
             <div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>LAB TOTAL POWER</div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{matrixData.summary.totalPowerConsumptionKw} kW</div>
+              <div className="font-mono" style={{ fontSize: "11px", color: "var(--text-muted)", letterSpacing: "0.06em" }}>LAB TOTAL POWER</div>
+              <div className="font-mono" style={{ fontSize: "22px", fontWeight: 700, color: "var(--amber-warn)" }}>{matrixData.summary.totalPowerConsumptionKw} kW</div>
             </div>
           </div>
 
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 8, background: "rgba(193, 80, 63, 0.15)", color: "var(--red)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <AlertOctagon size={22} />
+          <div className="card" style={{ background: "var(--surface-card)", backdropFilter: "blur(16px)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, background: "rgba(239, 68, 68, 0.12)", color: "var(--rose-alert)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <AlertOctagon size={20} />
             </div>
             <div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>CRITICAL ANOMALIES</div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--red)", fontFamily: "var(--font-mono)" }}>{matrixData.summary.criticalAnomalies}</div>
+              <div className="font-mono" style={{ fontSize: "11px", color: "var(--text-muted)", letterSpacing: "0.06em" }}>CRITICAL ANOMALIES</div>
+              <div className="font-mono" style={{ fontSize: "22px", fontWeight: 700, color: "var(--rose-alert)" }}>{matrixData.summary.criticalAnomalies}</div>
             </div>
           </div>
         </div>
@@ -130,70 +132,14 @@ export function DigitalTwinCanvas() {
       {/* MAIN CANVAS */}
       <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
         
-        {/* LEFT PANE: 2D VISUALIZATION */}
-        <div style={{ flex: 2, minWidth: 400, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: 20, minHeight: 450, position: "relative", overflow: "hidden" }}>
-          {!matrixData ? (
-            <div style={{ display: "grid", placeItems: "center", height: "100%", color: "var(--text-muted)" }}>
-              Khởi tạo kết nối IoT Stream...
-            </div>
-          ) : (
-            <>
-              {/* Floor Plan Layout Mock */}
-              <div style={{
-                position: "absolute", top: 20, left: 20, bottom: 20, right: 20,
-                border: "2px dashed var(--line)", borderRadius: 12,
-                display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, padding: 24,
-                background: "repeating-linear-gradient(45deg, var(--surface-strong), var(--surface-strong) 10px, transparent 10px, transparent 20px)",
-                backgroundSize: "28px 28px"
-              }}>
-                {matrixData.nodes.map(node => (
-                  <div
-                    key={node.resourceId}
-                    onClick={() => setSelectedNode(node)}
-                    style={{
-                      background: "var(--surface)", border: `2px solid ${selectedNode?.resourceId === node.resourceId ? "var(--amber)" : "var(--line)"}`,
-                      borderRadius: 6, padding: 12, cursor: "pointer",
-                      boxShadow: selectedNode?.resourceId === node.resourceId ? "0 0 15px color-mix(in srgb, var(--amber) 30%, transparent)" : "none",
-                      position: "relative",
-                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                      transition: "all 0.2s ease",
-                      height: 120
-                    }}
-                  >
-                    <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-primary)", marginBottom: 8, textAlign: "center" }}>
-                      {node.resourceName}
-                    </div>
-                    
-                    {viewMode === "isometric" ? (
-                      <div style={{ position: "relative", width: 60, height: 60 }}>
-                        <div style={{ position: "absolute", inset: 0, border: "2px solid var(--line-strong)", borderRadius: 4, background: "var(--surface-strong)" }}></div>
-                        {/* Fake Rack Blinking Lights */}
-                        <div style={{ position: "absolute", top: 6, right: 6, display: "flex", gap: 3 }}>
-                          <div style={{ width: 4, height: 4, borderRadius: 2, background: "var(--green)" }} className={autoRefresh ? "pulse" : ""}></div>
-                          <div style={{ width: 4, height: 4, borderRadius: 2, background: node.isCriticalAnomaly ? "var(--red)" : "var(--line)" }} className={node.isCriticalAnomaly ? "pulse" : ""}></div>
-                        </div>
-                        {node.type === "GPU" && <Cpu size={24} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "var(--text-secondary)" }} />}
-                        {node.type === "DRONE" && <Fan size={24} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "var(--text-secondary)" }} />}
-                      </div>
-                    ) : (
-                      /* HEATMAP MODE */
-                      <div style={{ width: "100%", height: 60, background: getHeatColor(node.metrics.temperatureC), borderRadius: 4, display: "grid", placeItems: "center" }}>
-                        <strong style={{ color: "var(--bg)", fontSize: "1.2rem", textShadow: "0 1px 2px rgba(255,255,255,0.3)" }}>
-                          {node.metrics.temperatureC}°C
-                        </strong>
-                      </div>
-                    )}
-
-                    {node.isCriticalAnomaly && (
-                      <div style={{ position: "absolute", top: -8, right: -8, background: "var(--red)", color: "var(--bg)", borderRadius: "50%", padding: 4 }}>
-                        <AlertOctagon size={16} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+        {/* LEFT PANE: 2D BLUEPRINT & HEATMAP VISUALIZATION */}
+        <div style={{ flex: 2, minWidth: 400 }}>
+          <DigitalTwinHeatmap
+            onSelectNode={(nodeId) => {
+              const found = matrixData?.nodes?.find((n) => n.resourceCode === nodeId || n.resourceId === nodeId);
+              if (found) setSelectedNode(found);
+            }}
+          />
         </div>
 
         {/* RIGHT PANE: SELECTED NODE DETAILS */}

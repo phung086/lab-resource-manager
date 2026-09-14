@@ -29,10 +29,13 @@ function publicUser(user) {
     id: user.id,
     email: user.email,
     fullName: user.fullName,
-    role: user.role,
+    role: String(user.role).toLowerCase(),
     isActive: user.isActive,
     studentId: user.studentId,
-    department: user.department
+    department: user.department,
+    monthlyQuotaHours: user.monthlyQuotaHours || 40.0,
+    usedQuotaHours: user.usedQuotaHours || 0.0,
+    reputationScore: user.reputationScore ?? 100
   };
 }
 

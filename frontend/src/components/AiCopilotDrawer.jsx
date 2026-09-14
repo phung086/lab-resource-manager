@@ -61,12 +61,15 @@ export function AiCopilotDrawer({ isOpen, onClose, onActionTrigger }) {
               <Sparkles size={16} />
             </div>
             <div>
-              <h3>AI Lab Copilot 2026</h3>
-              <span className="copilot-subtitle">Trợ lý vận hành phòng lab thông minh</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <h3 style={{ fontSize: "14px", fontWeight: 600 }}>AI Lab Copilot 2026</h3>
+                <span className="led-pulse led-pulse-ai" />
+              </div>
+              <span className="copilot-subtitle">DeepSeek & RAG Telemetry Orchestration</span>
             </div>
           </div>
-          <button className="icon-button" onClick={onClose}>
-            <X size={18} />
+          <button className="icon-button" onClick={onClose} title="Đóng Copilot">
+            <X size={16} />
           </button>
         </div>
 
