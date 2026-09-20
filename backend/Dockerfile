@@ -20,6 +20,8 @@ CMD ["sh", "-c", "npm run db:migrate && npm run db:seed:admin && npm run dev"]
 
 FROM node:22-alpine AS runner
 
+RUN apk add --no-cache postgresql-client
+
 WORKDIR /app
 
 ENV NODE_ENV=production
