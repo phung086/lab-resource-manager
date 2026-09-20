@@ -25,14 +25,19 @@ const createBookingSchema = z.object({
 
 const optionalReason = z.string().trim().max(1000).optional().transform((value) => value || undefined);
 const approveSchema = z.object({ reason: optionalReason }).strict();
-const rejectSchema = z.object({ reason: z.string().trim().min(3).max(1000) }).strict();
+// Evidence fields stay syntactically bounded here but are semantically required
+// inside transitionBooking *after* current-state validation. This preserves a
+// stable 409 BOOKING_INVALID_TRANSITION for illegal state changes, while valid
+// transitions with missing/blank evidence still fail 400 VALIDATION_ERROR.
+const optionalEvidence = (max) => z.string().trim().max(max).optional().transform((value) => value || undefined);
+const rejectSchema = z.object({ reason: optionalEvidence(1000) }).strict();
 const checkOutSchema = z.object({
   reason: optionalReason,
-  conditionBefore: z.string().trim().min(1).max(2000)
+  conditionBefore: optionalEvidence(2000)
 }).strict();
 const returnSchema = z.object({
   reason: optionalReason,
-  conditionAfter: z.string().trim().min(1).max(2000)
+  conditionAfter: optionalEvidence(2000)
 }).strict();
 const completeSchema = z.object({ reason: optionalReason }).strict();
 const cancelSchema = z.object({ reason: optionalReason }).strict();
