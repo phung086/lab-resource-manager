@@ -28,14 +28,18 @@ export const resourceLaboratorySelect = {
 };
 
 export function currentInterval(now = new Date()) {
-  return { startAt: now, endAt: new Date(now.getTime() + 1) };
+  return {
+    startAt: now,
+    endAt: new Date(now.getTime() + 1),
+    isCurrent: true
+  };
 }
 
 export function resourceAvailability(resource, interval = null) {
   let state = "AVAILABLE";
   let source = "resource";
 
-  const isCurrentQuery = interval == null;
+  const isCurrentQuery = interval == null || interval?.isCurrent === true;
   const { startAt, endAt } = interval || currentInterval();
   const now = new Date();
   const intervalIncludesNow = startAt <= now && endAt > now;
