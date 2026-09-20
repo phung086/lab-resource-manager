@@ -100,7 +100,7 @@ try {
   await staffPage.getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
   const dashboardText = await staffPage.locator("main").innerText();
   for (const state of ["HEALTHY", "WARNING", "STALE", "UNAVAILABLE", "NO_DATA"]) {
-    assert.ok(dashboardText.includes(state), \`Dashboard must show \${state}\`);
+    assert.ok(dashboardText.includes(state), `Dashboard must show ${state}`);
   }
   assert.ok(dashboardText.includes("Thiết bị chưa có telemetry"));
   assert.ok(dashboardText.includes("Không có mẫu telemetry được chấp nhận"));

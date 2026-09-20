@@ -50,7 +50,7 @@ export function deriveTelemetryState(resource, sample, now = new Date()) {
   for (const key of ["cpuPercent", "gpuPercent", "gpuMemoryPercent", "ramPercent", "diskPercent"]) {
     const value = sample[key];
     if (value !== null && value !== undefined && value >= utilizationWarningPercent) {
-      reasons.push(\`\${key.toUpperCase()}_THRESHOLD\`);
+      reasons.push(`${key.toUpperCase()}_THRESHOLD`);
     }
   }
 

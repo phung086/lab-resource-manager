@@ -17,6 +17,37 @@ export function incidentScopeWhere(user) {
   return { reportedById: user.id };
 }
 
+async function assertIncidentAssigneeScope(tx, incident, assigneeId) {
+  const assignee = await tx.user.findUnique({
+    where: { id: assigneeId },
+    select: { id: true, role: true, isActive: true }
+  });
+  if (!assignee?.isActive || ![ADMIN, LAB_STAFF].includes(assignee.role)) {
+    throw new HttpError(400, "Assignee must be an active ADMIN or LAB_STAFF user", { field: "assigneeId" }, "VALIDATION_ERROR");
+  }
+  if (assignee.role === ADMIN) return;
+
+  const resource = await tx.resource.findUnique({
+    where: { id: incident.resourceId },
+    select: { laboratoryId: true }
+  });
+  if (!resource?.laboratoryId) {
+    throw new HttpError(400, "Cannot assign LAB_STAFF because the incident resource has no laboratory", { field: "assigneeId" }, "VALIDATION_ERROR");
+  }
+  const assignment = await tx.userLabAssignment.findUnique({
+    where: {
+      userId_laboratoryId: {
+        userId: assignee.id,
+        laboratoryId: resource.laboratoryId
+      }
+    },
+    select: { userId: true }
+  });
+  if (!assignment) {
+    throw new HttpError(400, "Assignee is not assigned to the incident laboratory", { field: "assigneeId" }, "VALIDATION_ERROR");
+  }
+}
+
 async function assertIncidentOperatorScope(tx, incident, actor) {
   if (actor.role === ADMIN) return;
   if (actor.role !== LAB_STAFF) {
@@ -124,7 +155,7 @@ export async function transitionIncident(tx, {
   resolution = null,
   assigneeId = null
 }) {
-  await tx.$queryRaw\`SELECT id FROM incidents WHERE id = \${incidentId} FOR UPDATE\`;
+  await tx.$queryRaw`SELECT id FROM incidents WHERE id = ${incidentId} FOR UPDATE`;
   const incident = await tx.incident.findUnique({ where: { id: incidentId } });
   if (!incident) throw new HttpError(404, "Incident not found", undefined, "NOT_FOUND");
 
@@ -136,7 +167,10 @@ export async function transitionIncident(tx, {
 
   if (action === "triage") {
     if (!["reported", "triaged"].includes(incident.status)) {
-      throw new HttpError(409, \`Cannot triage incident from status \${incident.status}\`, undefined, "INCIDENT_INVALID_TRANSITION");
+      throw new HttpError(409, `Cannot triage incident from status ${incident.status}`, undefined, "INCIDENT_INVALID_TRANSITION");
+    }
+    if (assigneeId) {
+      await assertIncidentAssigneeScope(tx, incident, assigneeId);
     }
     data = {
       status: assigneeId ? "assigned" : "triaged",
@@ -145,13 +179,13 @@ export async function transitionIncident(tx, {
     message = "incident.triaged";
   } else if (action === "investigate") {
     if (!["triaged", "assigned", "investigating"].includes(incident.status)) {
-      throw new HttpError(409, \`Cannot investigate incident from status \${incident.status}\`, undefined, "INCIDENT_INVALID_TRANSITION");
+      throw new HttpError(409, `Cannot investigate incident from status ${incident.status}`, undefined, "INCIDENT_INVALID_TRANSITION");
     }
     data = { status: "investigating", assignedToId: incident.assignedToId || actor.id };
     message = "incident.investigating";
   } else if (action === "resolve") {
     if (!["reported", "triaged", "assigned", "investigating"].includes(incident.status)) {
-      throw new HttpError(409, \`Cannot resolve incident from status \${incident.status}\`, undefined, "INCIDENT_INVALID_TRANSITION");
+      throw new HttpError(409, `Cannot resolve incident from status ${incident.status}`, undefined, "INCIDENT_INVALID_TRANSITION");
     }
     if (!String(resolution || "").trim()) {
       throw new HttpError(400, "Resolution is required", { field: "resolution" }, "VALIDATION_ERROR");

@@ -22,7 +22,7 @@ const isolated = isolatedBatch6Client(databaseUrl);
 const marker = crypto.randomUUID();
 const id = () => crypto.randomUUID();
 const password = "Batch6!Pass";
-const bearer = (token) => ({ Authorization: \`Bearer \${token}\` });
+const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 const telemetryKey = process.env.TELEMETRY_API_KEY;
 
 const fixture = {
@@ -55,17 +55,17 @@ function futureWindow(days = 2, hour = 9, durationMinutes = 60) {
 }
 
 async function seed() {
-  const identity = await isolated.$queryRaw\`SELECT current_database() AS database, current_setting('server_version') AS version\`;
+  const identity = await isolated.$queryRaw`SELECT current_database() AS database, current_setting('server_version') AS version`;
   assert.equal(identity[0].database, database);
   assert.match(identity[0].version, /^16\./);
 
   const passwordHash = await bcrypt.hash(password, 4);
-  await isolated.campus.create({ data: { id: fixture.campus, code: \`B6C-\${marker}\`, name: "Batch 6 Campus" } });
-  await isolated.building.create({ data: { id: fixture.building, campusId: fixture.campus, code: \`B6B-\${marker}\`, name: "Batch 6 Building" } });
+  await isolated.campus.create({ data: { id: fixture.campus, code: `B6C-${marker}`, name: "Batch 6 Campus" } });
+  await isolated.building.create({ data: { id: fixture.building, campusId: fixture.campus, code: `B6B-${marker}`, name: "Batch 6 Building" } });
 
   for (const [laboratoryId, code, name] of [
-    [fixture.labs.assigned, \`B6LA-\${marker}\`, "Assigned Monitoring Lab"],
-    [fixture.labs.foreign, \`B6LF-\${marker}\`, "Foreign Monitoring Lab"]
+    [fixture.labs.assigned, `B6LA-${marker}`, "Assigned Monitoring Lab"],
+    [fixture.labs.foreign, `B6LF-${marker}`, "Foreign Monitoring Lab"]
   ]) {
     await isolated.laboratory.create({
       data: {
@@ -100,8 +100,8 @@ async function seed() {
   await isolated.user.createMany({
     data: users.map(([key, role]) => ({
       id: fixture.users[key],
-      email: \`\${key.toLowerCase()}-\${marker}@example.test\`,
-      fullName: \`Batch 6 \${key}\`,
+      email: `${key.toLowerCase()}-${marker}@example.test`,
+      fullName: `Batch 6 ${key}`,
       role,
       passwordHash,
       isActive: true
@@ -132,7 +132,7 @@ async function seed() {
     ].map(([resourceId, laboratoryId, suffix, name, specs]) => ({
       id: resourceId,
       laboratoryId,
-      code: \`B6-\${suffix}-\${marker}\`,
+      code: `B6-${suffix}-${marker}`,
       name,
       subtype: "OTHER",
       category: "EQUIPMENT",
@@ -146,7 +146,7 @@ async function seed() {
 
 async function login(key) {
   const response = await request(app).post("/api/auth/login").send({
-    email: \`\${key.toLowerCase()}-\${marker}@example.test\`,
+    email: `${key.toLowerCase()}-${marker}@example.test`,
     password
   });
   assert.equal(response.status, 200);
@@ -191,7 +191,7 @@ test("Batch 6 notifications, incidents, dashboard and telemetry", { timeout: 180
     const reminders = await isolated.notification.findMany({
       where: {
         userId: fixture.users.studentA,
-        dedupeKey: { startsWith: \`booking:\${response.body.id}:\` }
+        dedupeKey: { startsWith: `booking:${response.body.id}:` }
       },
       orderBy: { type: "asc" }
     });
@@ -204,7 +204,7 @@ test("Batch 6 notifications, incidents, dashboard and telemetry", { timeout: 180
     assert.equal(hidden.body.some((row) => row.type === "BOOKING_UPCOMING"), false);
 
     await isolated.notification.update({
-      where: { dedupeKey: \`booking:\${response.body.id}:BOOKING_UPCOMING\` },
+      where: { dedupeKey: `booking:${response.body.id}:BOOKING_UPCOMING` },
       data: { scheduledAt: new Date(Date.now() - 1000) }
     });
     const delivered = await request(app).get("/api/notifications").set(bearer(tokens.studentA));
@@ -212,13 +212,13 @@ test("Batch 6 notifications, incidents, dashboard and telemetry", { timeout: 180
     assert.equal(delivered.body.some((row) => row.type === "BOOKING_UPCOMING" && row.sentAt), true);
 
     const cancelled = await request(app)
-      .post(\`/api/bookings/\${response.body.id}/cancel\`)
+      .post(`/api/bookings/${response.body.id}/cancel`)
       .set(bearer(tokens.studentA))
       .send({ reason: "Batch 6 cancellation test" });
     assert.equal(cancelled.status, 200);
     assert.equal(
       await isolated.notification.count({
-        where: { dedupeKey: \`booking:\${response.body.id}:RETURN_REMINDER\`, sentAt: null }
+        where: { dedupeKey: `booking:${response.body.id}:RETURN_REMINDER`, sentAt: null }
       }),
       0
     );
@@ -234,7 +234,7 @@ test("Batch 6 notifications, incidents, dashboard and telemetry", { timeout: 180
         message: "Only student A can read this",
         severity: "info",
         sentAt: new Date(),
-        dedupeKey: \`scope:\${marker}\`
+        dedupeKey: `scope:${marker}`
       }
     });
     const studentA = await request(app).get("/api/notifications").set(bearer(tokens.studentA));
@@ -270,19 +270,19 @@ test("Batch 6 notifications, incidents, dashboard and telemetry", { timeout: 180
     assert.equal(foreign.body.some((row) => row.id === incidentId), false);
 
     assert.equal(
-      (await request(app).post(\`/api/incidents/\${incidentId}/resolve\`).set(bearer(tokens.foreignStaff)).send({ resolution: "Không hợp lệ" })).status,
+      (await request(app).post(`/api/incidents/${incidentId}/resolve`).set(bearer(tokens.foreignStaff)).send({ resolution: "Không hợp lệ" })).status,
       403
     );
     assert.equal(
-      (await request(app).post(\`/api/incidents/\${incidentId}/resolve\`).set(bearer(tokens.staff)).send({ resolution: "   " })).status,
+      (await request(app).post(`/api/incidents/${incidentId}/resolve`).set(bearer(tokens.staff)).send({ resolution: "   " })).status,
       400
     );
 
-    const triaged = await request(app).post(\`/api/incidents/\${incidentId}/triage\`).set(bearer(tokens.staff)).send({});
+    const triaged = await request(app).post(`/api/incidents/${incidentId}/triage`).set(bearer(tokens.staff)).send({});
     assert.equal(triaged.status, 200);
     assert.ok(["triaged", "assigned"].includes(triaged.body.status));
 
-    const resolved = await request(app).post(\`/api/incidents/\${incidentId}/resolve\`).set(bearer(tokens.staff)).send({
+    const resolved = await request(app).post(`/api/incidents/${incidentId}/resolve`).set(bearer(tokens.staff)).send({
       resolution: "Đã kiểm tra cơ khí, siết lại cụm quạt và xác nhận thiết bị hoạt động ổn định."
     });
     assert.equal(resolved.status, 200);

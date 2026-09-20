@@ -47,11 +47,11 @@ export async function scheduleBookingReminders(tx, booking, now = new Date()) {
       endAt: booking.endAt.toISOString()
     };
     const message = definition.type === "BOOKING_UPCOMING"
-      ? \`Lịch \${booking.title} sẽ bắt đầu lúc \${booking.startAt.toISOString()}.\`
-      : \`Lịch \${booking.title} dự kiến kết thúc lúc \${booking.endAt.toISOString()}.\`;
+      ? `Lịch ${booking.title} sẽ bắt đầu lúc ${booking.startAt.toISOString()}.`
+      : `Lịch ${booking.title} dự kiến kết thúc lúc ${booking.endAt.toISOString()}.`;
 
     await tx.notification.upsert({
-      where: { dedupeKey: \`booking:\${booking.id}:\${definition.type}\` },
+      where: { dedupeKey: `booking:${booking.id}:${definition.type}` },
       create: {
         id: crypto.randomUUID(),
         userId: booking.requestedById,
@@ -65,7 +65,7 @@ export async function scheduleBookingReminders(tx, booking, now = new Date()) {
         channel: "in_app",
         scheduledAt: definition.scheduledAt,
         sentAt: definition.scheduledAt <= now ? now : null,
-        dedupeKey: \`booking:\${booking.id}:\${definition.type}\`
+        dedupeKey: `booking:${booking.id}:${definition.type}`
       },
       update: {
         title: definition.title,
@@ -82,14 +82,17 @@ export async function scheduleBookingReminders(tx, booking, now = new Date()) {
   }
 }
 
-export async function cancelPendingBookingReminders(tx, bookingId) {
-  await tx.notification.deleteMany({
+export async function cancelPendingBookingReminders(tx, bookingId, types = REMINDER_TYPES) {
+  const selectedTypes = types.filter((type) => REMINDER_TYPES.includes(type));
+  if (!selectedTypes.length) return 0;
+  const result = await tx.notification.deleteMany({
     where: {
-      type: { in: REMINDER_TYPES },
+      type: { in: selectedTypes },
       sentAt: null,
-      dedupeKey: { in: REMINDER_TYPES.map((type) => \`booking:\${bookingId}:\${type}\`) }
+      dedupeKey: { in: selectedTypes.map((type) => `booking:${bookingId}:${type}`) }
     }
   });
+  return result.count;
 }
 
 export async function dispatchDueNotifications(client = prisma, now = new Date(), userId = null) {

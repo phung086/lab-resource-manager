@@ -1,5 +1,5 @@
 import React from "react";
-import { Activity, AlertTriangle, Clock3, RadioOff, Server, Thermometer, WifiOff } from "lucide-react";
+import { Activity, AlertTriangle, Clock3, Radio, Server, Thermometer, WifiOff } from "lucide-react";
 import type { TelemetryResourceView, TelemetryState } from "../../../types/telemetry";
 
 const stateMeta: Record<TelemetryState, { label: string; icon: React.ElementType }> = {
@@ -7,7 +7,7 @@ const stateMeta: Record<TelemetryState, { label: string; icon: React.ElementType
   WARNING: { label: "Cảnh báo", icon: AlertTriangle },
   STALE: { label: "Dữ liệu cũ", icon: Clock3 },
   UNAVAILABLE: { label: "Không khả dụng", icon: WifiOff },
-  NO_DATA: { label: "Chưa có dữ liệu", icon: RadioOff }
+  NO_DATA: { label: "Chưa có dữ liệu", icon: Radio }
 };
 
 export const TelemetryStatusGrid: React.FC<{ telemetry: TelemetryResourceView[] }> = ({ telemetry }) => {

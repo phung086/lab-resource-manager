@@ -274,7 +274,7 @@ try {
     }
   });
 
-  console.log(\`Seeded Batch 6 E2E fixtures in \${database}\`);
+  console.log(`Seeded Batch 6 E2E fixtures in ${database}`);
 } finally {
   await prisma.$disconnect();
 }

@@ -18,7 +18,7 @@ export async function configureBatch6TestEnvironment(database) {
   const env = parse(await readFile(path.join(backend, ".env")));
   const url = new URL(env.DATABASE_URL);
   assert.ok(["localhost", "127.0.0.1"].includes(url.hostname), "Only local PostgreSQL is allowed");
-  url.pathname = \`/\${database}\`;
+  url.pathname = `/${database}`;
   url.searchParams.set("schema", "public");
   process.env.NODE_ENV = "test";
   process.env.DATABASE_URL = url.toString();
