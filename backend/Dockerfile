@@ -16,7 +16,7 @@ COPY scripts ./scripts
 COPY agents ./agents
 
 EXPOSE 8000
-CMD ["sh", "-c", "npm run db:push && npm run db:guard && npm run db:seed:admin && npm run dev"]
+CMD ["sh", "-c", "npm run db:migrate && npm run db:seed:admin && npm run dev"]
 
 FROM node:22-alpine AS runner
 
