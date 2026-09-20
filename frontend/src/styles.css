@@ -6027,3 +6027,441 @@ td {
   width: 3px !important;
   background: linear-gradient(180deg, #8B5CF6, #3B82F6) !important;
 }
+
+
+/* Batch 6 — real notifications, incidents, dashboard and telemetry */
+.page-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.page-section-header h1 {
+  margin: 4px 0 6px;
+  color: var(--text-primary);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  line-height: 1.2;
+}
+
+.section-description {
+  max-width: 760px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.operational-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.operational-summary-card {
+  display: grid;
+  gap: 7px;
+  min-height: 92px;
+  padding: 16px;
+}
+
+.operational-summary-card > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.operational-summary-card > strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 1.55rem;
+}
+
+.booking-queue-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.operational-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.operational-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.operational-card-header h2 {
+  margin: 5px 0 2px;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.operational-card-header p,
+.operational-card > p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.operational-card-header time {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.operational-card-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.operational-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.operational-evidence-grid > div {
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 9px;
+}
+
+.operational-evidence-grid dt {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.operational-evidence-grid dd {
+  margin: 4px 0 0;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.operational-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.status-badge.status-critical,
+.status-badge.notification-severity-danger {
+  border-color: rgba(239, 68, 68, 0.32);
+  background: rgba(239, 68, 68, 0.10);
+  color: #fca5a5;
+}
+
+.status-badge.status-high,
+.status-badge.notification-severity-warning {
+  border-color: rgba(245, 158, 11, 0.32);
+  background: rgba(245, 158, 11, 0.10);
+  color: #fcd34d;
+}
+
+.status-badge.status-medium,
+.status-badge.notification-severity-info {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.10);
+  color: #93c5fd;
+}
+
+.status-badge.status-low,
+.status-badge.notification-severity-success {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.10);
+  color: #6ee7b7;
+}
+
+.dashboard-data-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-data-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+}
+
+.panel-heading h2 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.data-source-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.telemetry-summary-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.telemetry-summary-row > div {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px;
+  background: var(--surface-raised);
+}
+
+.telemetry-summary-row strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+}
+
+.telemetry-summary-row span {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  overflow-wrap: anywhere;
+}
+
+.telemetry-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 12px;
+}
+
+.telemetry-status-card {
+  display: grid;
+  gap: 13px;
+  padding: 16px;
+}
+
+.telemetry-status-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.telemetry-status-card__header h3 {
+  margin: 3px 0 0;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.telemetry-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.telemetry-state--healthy {
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.28);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.telemetry-state--warning {
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.telemetry-state--stale {
+  color: #c4b5fd;
+  border-color: rgba(139, 92, 246, 0.28);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.telemetry-state--unavailable {
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.28);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.telemetry-state--no_data {
+  color: var(--text-muted);
+}
+
+.telemetry-reading-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.telemetry-reading-grid > div {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 9px;
+  background: var(--surface-raised);
+}
+
+.telemetry-reading-grid dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 0.67rem;
+}
+
+.telemetry-reading-grid dd {
+  margin: 5px 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.telemetry-sample-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.telemetry-no-data {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.telemetry-reasons {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.dashboard-booking-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.dashboard-booking-row > div {
+  display: grid;
+  gap: 3px;
+}
+
+.dashboard-booking-row > div:last-child {
+  text-align: right;
+}
+
+.dashboard-booking-row strong {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+.dashboard-booking-row span,
+.dashboard-booking-row time {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.notification-card {
+  padding: 15px 17px;
+}
+
+.notification-card.is-unread {
+  border-left: 3px solid var(--amber-warn);
+}
+
+.notification-card.is-read {
+  opacity: 0.78;
+}
+
+.notification-card__body {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.notification-card h2 {
+  margin: 7px 0 4px;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.notification-card p {
+  margin: 0 0 7px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.notification-card time {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.content-stack.compact {
+  gap: 8px;
+}
+
+@media (max-width: 760px) {
+  .operational-card-header,
+  .notification-card__body,
+  .dashboard-booking-row {
+    flex-direction: column;
+  }
+
+  .operational-card-header time {
+    white-space: normal;
+  }
+
+  .operational-evidence-grid,
+  .dashboard-data-grid,
+  .telemetry-reading-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-summary-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-booking-row > div:last-child {
+    text-align: left;
+  }
+
+  .operational-card-actions {
+    justify-content: stretch;
+  }
+
+  .operational-card-actions .btn {
+    flex: 1 1 140px;
+  }
+}
