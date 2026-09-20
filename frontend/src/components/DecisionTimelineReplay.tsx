@@ -55,7 +55,7 @@ export const DecisionTimelineReplay: React.FC = () => {
   const [currentIdx, setCurrentIdx] = useState<number>(8); // Default to 14:15 anomaly
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
-  const playTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const playTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const currentFrame = GENERATED_FRAMES[currentIdx] || GENERATED_FRAMES[0];
 
