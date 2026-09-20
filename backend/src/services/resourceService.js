@@ -12,7 +12,6 @@ import { BLOCKING_MAINTENANCE_STATUSES } from "./availabilityService.js";
 import { normalizeSpecs } from "../utils/dataContract.js";
 
 export const BLOCKING_OPERATIONAL_STATUSES = new Set([
-  "IN_USE",
   "MAINTENANCE",
   "CALIBRATION",
   "BROKEN",
