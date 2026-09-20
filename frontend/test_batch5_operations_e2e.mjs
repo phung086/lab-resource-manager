@@ -87,6 +87,7 @@ try {
   card = await cardFor(staffPage, "Batch 5 lifecycle booking");
   await card.getByRole("button", { name: "Lịch sử" }).click();
   dialog = staffPage.getByRole("dialog");
+  await dialog.getByText("Tạo yêu cầu", { exact: true }).waitFor({ timeout: 5000 });
   const historyText = await dialog.innerText();
   for (const label of ["Tạo yêu cầu", "Duyệt booking", "Bàn giao tài nguyên", "Tiếp nhận hoàn trả", "Hoàn tất workflow"]) {
     assert.ok(historyText.includes(label), `Timeline must include ${label}`);
