@@ -4,6 +4,7 @@ import { Header } from "./Header.tsx";
 import { AiCopilotDrawer, FloatingCopilotFab } from "./AiCopilotDrawer.tsx";
 import { KeyRound, X, Check, ShieldAlert } from "lucide-react";
 import { apiRequest } from "../api.js";
+import { RESEARCH_FEATURES_ENABLED } from "../config/featureFlags";
 
 export interface AppLayoutProps {
   activeTab: string;
@@ -40,7 +41,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onLogout,
   children
 }) => {
-  const researchFeaturesEnabled = import.meta.env.VITE_ENABLE_RESEARCH_FEATURES === "true";
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -151,7 +151,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         </main>
       </div>
 
-      {researchFeaturesEnabled && (
+      {RESEARCH_FEATURES_ENABLED && (
         <>
           <FloatingCopilotFab
             isOpen={copilotOpen}
