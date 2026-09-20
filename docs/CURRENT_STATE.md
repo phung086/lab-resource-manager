@@ -11,7 +11,8 @@ merged to `main` at `a9589d9940c7984324152f8a5636f5f67189b322`.
 Approval, rejection, handover/check-out,
 condition-before evidence, return, condition-after evidence, completion,
 persisted history, notifications, physical-state synchronization, concurrency
-safety, and full-stack E2E have passed. Batch 6 is NOT authorized.
+safety, and full-stack E2E have passed. Batch 6 - Notifications, Incidents, Dashboard & Real Telemetry is complete and
+verified on `batch6-notifications-incidents-dashboard`. Batch 7 is NOT authorized.
 
 ## Completed Core Work
 
@@ -77,12 +78,18 @@ derived from resource state, bookings, maintenance windows, and policy.
 - Batch 2/3/4 frontend E2E regressions: PASS again inside the Batch 5 full-stack gate.
 - Batch 5 runtime smoke: health, readiness, allowed-origin CORS, and Helmet headers PASS.
 - Latest verified Batch 5 full-stack Vite production build: PASS in 2.65s.
+- Batch 6 notifications/incidents/dashboard/telemetry integration: 11/11 PASS.
+- Batch 6 backend regression: PASS across core + Batch 1 + Batch 1E + Batch 2 + Batch 3 + Batch 4/4.1 + Batch 5 + Batch 6.
+- Batch 6 full-stack E2E: PASS with real backend, real frontend, isolated PostgreSQL 16, and headless Chromium.
+- Batch 2/3/4/5 frontend E2E regressions: PASS again inside the Batch 6 full-stack gate.
+- Batch 6 runtime health/readiness/CORS/Helmet smoke: PASS.
+- Latest verified Batch 6 full-stack Vite production build: PASS in 1.59s.
 
 The latest Batch 4.1 verification on 2026-09-20 passed all backend core tests (27/27), policy unit tests (16/16), Batch 4 integration subtests (14/14), Batch 1/1E/2/3 regressions, all 3 frontend E2E suites, and the frontend production build.
 
 ## Current Core Blockers
 
-None known through the verified Batch 5 required-core boundary.
+None known through the verified Batch 6 required-core boundary.
 
 ## Known Non-Blocking Debt
 
@@ -102,8 +109,8 @@ None known through the verified Batch 5 required-core boundary.
 
 No next batch is currently authorized.
 
-Batch 4/4.1 and Batch 5 are complete and verified. Batch 6 may be planned only
-after explicit user authorization. Before any future batch, read:
+Batch 4/4.1, Batch 5 and Batch 6 are complete and verified. Batch 7 may be
+planned only after explicit user authorization. Before any future batch, read:
 
 1. `AGENTS.md`
 2. `.agent/PROJECT_RULES.md`
@@ -112,7 +119,10 @@ after explicit user authorization. Before any future batch, read:
 5. `docs/DECISIONS.md`
 6. `docs/BATCH4_BOOKING_CALENDAR_REPORT.md`
 7. `docs/BATCH5_OPERATIONAL_WORKFLOW_REPORT.md`
-8. the relevant booking and persistence reports
+8. `docs/BATCH5_WALKTHROUGH.md`
+9. `docs/BATCH6_NOTIFICATIONS_INCIDENTS_DASHBOARD_REPORT.md`
+10. `docs/BATCH6_WALKTHROUGH.md`
+11. the relevant booking, persistence, monitoring, and incident reports
 
 ## Do Not Work On Without Explicit Approval
 
