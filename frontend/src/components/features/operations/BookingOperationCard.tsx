@@ -1,0 +1,56 @@
+import React from "react";
+import { CalendarClock, ClipboardCheck, History, PackageCheck, RotateCcw, ShieldCheck, XCircle } from "lucide-react";
+import { BookingStatusBadge } from "../../BookingStatusBadge.js";
+import type { BookingAction, BookingRecord } from "../../../types/booking.js";
+import { formatVietnamDateTime } from "../../../utils/timezone.js";
+
+export interface BookingOperationCardProps {
+  booking: BookingRecord;
+  isStaff: boolean;
+  busy?: boolean;
+  onAction: (action: BookingAction, booking: BookingRecord) => void;
+  onOpenHistory: (booking: BookingRecord) => void;
+  onCancel?: (booking: BookingRecord) => void;
+}
+
+export const BookingOperationCard: React.FC<BookingOperationCardProps> = ({
+  booking, isStaff, busy = false, onAction, onOpenHistory, onCancel
+}) => (
+  <article className="operation-card">
+    <header className="operation-card-header">
+      <div className="operation-card-title-group">
+        <span className="operation-resource-code">{booking.resource?.code || "RESOURCE"}</span>
+        <h3>{booking.title}</h3>
+        <p>{booking.resource?.name}</p>
+      </div>
+      <BookingStatusBadge status={booking.status} />
+    </header>
+
+    <div className="operation-card-grid">
+      <div><span className="operation-label">Người đặt</span><strong>{booking.requestedBy?.fullName || "—"}</strong><small>{booking.requestedBy?.role || ""}</small></div>
+      <div><span className="operation-label">Lịch dự kiến</span><strong>{formatVietnamDateTime(booking.startAt)}</strong><small>đến {formatVietnamDateTime(booking.endAt)}</small></div>
+      <div><span className="operation-label">Phòng lab</span><strong>{booking.resource?.laboratory?.name || "Chưa gán"}</strong><small>{booking.resource?.laboratory?.code || ""}</small></div>
+    </div>
+
+    {(booking.handoverCondition || booking.returnCondition || booking.actualStartAt || booking.actualEndAt) && (
+      <div className="operation-evidence-grid">
+        {booking.handoverCondition && <div><span>Tình trạng trước sử dụng</span><p>{booking.handoverCondition}</p>{booking.actualStartAt && <time dateTime={booking.actualStartAt}>Bàn giao: {formatVietnamDateTime(booking.actualStartAt)}</time>}</div>}
+        {booking.returnCondition && <div><span>Tình trạng sau sử dụng</span><p>{booking.returnCondition}</p>{booking.actualEndAt && <time dateTime={booking.actualEndAt}>Hoàn trả: {formatVietnamDateTime(booking.actualEndAt)}</time>}</div>}
+      </div>
+    )}
+
+    {booking.physicalStateWarning && <div className="alert warning" role="status">{booking.physicalStateWarning}</div>}
+
+    <footer className="operation-card-actions">
+      <button type="button" className="btn btn-secondary" onClick={() => onOpenHistory(booking)} disabled={busy}><History size={15} /> Lịch sử</button>
+      {isStaff && booking.status === "PENDING_APPROVAL" && <>
+        <button type="button" className="btn btn-primary" onClick={() => onAction("APPROVE", booking)} disabled={busy}><ShieldCheck size={15} /> Duyệt</button>
+        <button type="button" className="btn btn-danger" onClick={() => onAction("REJECT", booking)} disabled={busy}><XCircle size={15} /> Từ chối</button>
+      </>}
+      {isStaff && booking.status === "CONFIRMED" && <button type="button" className="btn btn-primary" onClick={() => onAction("CHECK_OUT", booking)} disabled={busy}><ClipboardCheck size={15} /> Bàn giao</button>}
+      {isStaff && booking.status === "CHECKED_OUT" && <button type="button" className="btn btn-primary" onClick={() => onAction("RETURN", booking)} disabled={busy}><RotateCcw size={15} /> Nhận hoàn trả</button>}
+      {isStaff && booking.status === "RETURNED" && <button type="button" className="btn btn-primary" onClick={() => onAction("COMPLETE", booking)} disabled={busy}><PackageCheck size={15} /> Hoàn tất</button>}
+      {!isStaff && onCancel && ["PENDING_APPROVAL", "CONFIRMED"].includes(booking.status) && <button type="button" className="btn btn-secondary" onClick={() => onCancel(booking)} disabled={busy}><CalendarClock size={15} /> Hủy booking</button>}
+    </footer>
+  </article>
+);
