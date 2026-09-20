@@ -6,8 +6,9 @@ Last synchronized: 2026-09-20
 
 Batch 4 & 4.1 - Booking Calendar and Required Booking Workflow is complete and verified.
 
-Batch 5 is NOT currently authorized. No agent may begin Batch 5 until the user
-explicitly requests it.
+Batch 5 is explicitly authorized and implemented on branch
+`batch5-operational-workflow`. Runtime verification is still pending, so Batch
+5 is NOT yet marked complete. Batch 6 is NOT authorized.
 
 ## Completed Core Work
 
@@ -72,7 +73,9 @@ The latest Batch 4.1 verification on 2026-09-20 passed all backend core tests (2
 
 ## Current Core Blockers
 
-None reported by the verified Batch 3 report.
+No pre-Batch-5 core blocker is known. Batch 5 itself remains verification-pending
+until its isolated PostgreSQL integration, frontend E2E, build, runtime smoke,
+and required regression gates have actual PASS evidence.
 
 ## Known Non-Blocking Debt
 
@@ -90,9 +93,13 @@ None reported by the verified Batch 3 report.
 
 ## Next Authorized Task
 
-No implementation batch is currently authorized.
+Finish verification of the already-authorized Batch 5 implementation. Do not
+start Batch 6.
 
-Batch 4 is complete and verified. The next task in the project roadmap (e.g. Batch 5 - Operational Workflows, Handover & Incident Management) may only be started after explicit user authorization. Before starting any future batch, read:
+Batch 4/4.1 remains complete and verified. Batch 5 implementation adds the
+canonical approval, handover/check-out, return, condition evidence, completion,
+audit/history and physical-state synchronization workflow. Before resuming
+verification or any future batch, read:
 
 1. `AGENTS.md`
 2. `.agent/PROJECT_RULES.md`
@@ -100,6 +107,7 @@ Batch 4 is complete and verified. The next task in the project roadmap (e.g. Bat
 4. `docs/CURRENT_STATE.md`
 5. `docs/DECISIONS.md`
 6. `docs/BATCH4_BOOKING_CALENDAR_REPORT.md`
+7. `docs/BATCH5_OPERATIONAL_WORKFLOW_REPORT.md`
 7. the relevant booking and persistence reports
 
 ## Do Not Work On Without Explicit Approval
