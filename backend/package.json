@@ -11,7 +11,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:guard": "node prisma/applyBookingGuard.js",
-    "db:deploy": "prisma migrate deploy && node prisma/applyBookingGuard.js && node prisma/seedAdmin.js",
+    "db:deploy": "prisma migrate deploy && node prisma/seedAdmin.js",
     "db:seed:admin": "node prisma/seedAdmin.js",
     "import:resources": "node scripts/importResources.js",
     "db:seed": "node prisma/seedBookingPlatform.js",
@@ -19,6 +19,7 @@
     "test:core": "node --test test/bookingOverlap.test.js test/dataContract.test.js test/batch1e/bookingStateMachine.test.js test/batch1e/dataContract.test.js test/batch1e/errors.test.js test/batch1e/labScope.test.js test/batch1e/mockSafety.test.js test/batch1e/roleConstants.test.js",
     "test:batch2": "node --test test/batch2.auth-rbac.integration.test.js",
     "test:batch3": "node --test test/batch3.resource-management.integration.test.js",
+    "test:batch4": "node --test test/batch4/bookingPolicy.test.js test/batch4.booking-calendar.integration.test.js",
     "test:all": "node --test"
   },
   "dependencies": {

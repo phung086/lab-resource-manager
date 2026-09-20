@@ -65,6 +65,38 @@ export async function requireAuth(req, res, next) {
 }
 
 /**
+ * Optional authentication: populates req.user if a valid token is present,
+ * but does not reject unauthenticated requests.
+ */
+export async function optionalAuth(req, res, next) {
+  const header = req.headers.authorization || "";
+  const match = /^Bearer ([^\s]+)$/.exec(header);
+  const token = match?.[1] || "";
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const payload = jwt.verify(token, config.jwtSecret, { algorithms: ["HS256"] });
+    if (payload?.sub) {
+      const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+      if (user && user.isActive && isCanonicalRole(user.role)) {
+        req.user = user;
+      } else {
+        req.user = null;
+      }
+    } else {
+      req.user = null;
+    }
+  } catch {
+    req.user = null;
+  }
+  next();
+}
+
+/**
  * Requires the authenticated user to have one of the specified canonical roles.
  * Role comparison uses exact canonical uppercase values only.
  */
@@ -79,3 +111,4 @@ export function requireRole(...roles) {
     next();
   };
 }
+

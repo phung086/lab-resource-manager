@@ -11,6 +11,11 @@ import {
 } from "../constants/bookingStatus.js";
 import { ADMIN, LAB_STAFF } from "../constants/roles.js";
 import { assertLabStaffResourceAccess } from "../middleware/labScope.js";
+import {
+  getResourceAvailability,
+  assertResourceAvailable,
+  checkLabPolicyCompliance
+} from "./availabilityService.js";
 
 /**
  * Application-level slot conflict check using canonical fields.
@@ -62,7 +67,10 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
   }
 
   return prisma.$transaction(async (tx) => {
-    const resource = await tx.resource.findUnique({ where: { id: resourceId } });
+    const resource = await tx.resource.findUnique({
+      where: { id: resourceId },
+      include: { laboratory: { include: { labPolicy: true } } }
+    });
     if (!resource) {
       throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
     }
@@ -72,17 +80,24 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
       throw new HttpError(400, "Resource is not available for booking", undefined, "RESOURCE_UNAVAILABLE");
     }
 
-    const conflict = await checkSlotConflict(resourceId, start, end, null, tx);
-    if (conflict) {
-      throw new HttpError(
-        409,
-        "Time slot conflicts with an existing booking",
-        { conflictingBookingId: conflict.id },
-        "BOOKING_CONFLICT"
-      );
+    if (resource.laboratory?.labPolicy) {
+      checkLabPolicyCompliance({
+        policy: resource.laboratory.labPolicy,
+        startAt: start,
+        endAt: end
+      });
     }
 
-    const initialStatus = resource.requiresApproval ? PENDING_APPROVAL : CONFIRMED;
+    const availability = await getResourceAvailability(tx, {
+      resourceId,
+      startAt: start,
+      endAt: end,
+      resource
+    });
+
+    assertResourceAvailable(availability);
+
+    const initialStatus = (resource.requiresApproval || resource.laboratory?.labPolicy?.requiresApproval) ? PENDING_APPROVAL : CONFIRMED;
     const booking = await tx.booking.create({
       data: {
         id: crypto.randomUUID(),

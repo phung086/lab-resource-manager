@@ -11,6 +11,7 @@ import {
   getUserBookings,
   transitionBooking
 } from "../services/bookingService.js";
+import { getResourceAvailability } from "../services/availabilityService.js";
 import { ADMIN, LAB_STAFF, STAFF_ROLES } from "../constants/roles.js";
 import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
 
@@ -81,6 +82,36 @@ router.get("/my-bookings", requireAuth, async (req, res, next) => {
   try {
     const bookings = await getUserBookings(req.user.id);
     res.json(bookings);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /availability - Pre-check availability for a resource and time window
+router.get("/availability", requireAuth, async (req, res, next) => {
+  try {
+    const { resourceId, startAt, endAt } = req.query;
+    if (!resourceId || !startAt || !endAt) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "resourceId, startAt, and endAt are required" }
+      });
+    }
+
+    const start = new Date(startAt);
+    const end = new Date(endAt);
+    if (start >= end) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "startAt must be before endAt" }
+      });
+    }
+
+    const availability = await getResourceAvailability(prisma, {
+      resourceId: String(resourceId),
+      startAt: start,
+      endAt: end
+    });
+
+    res.json(availability);
   } catch (error) {
     next(error);
   }

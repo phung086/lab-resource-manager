@@ -4,10 +4,9 @@ Last synchronized: 2026-09-20
 
 ## Current Boundary
 
-Batch 3 - Canonical Resource Management is complete and verified.
+Batch 4 - Booking Calendar and Required Booking Workflow is complete and verified.
 
-Batch 4 - Booking Calendar and Required Booking Workflow is approved to start,
-but it is not currently authorized. No agent may begin Batch 4 until the user
+Batch 5 is NOT currently authorized. No agent may begin Batch 5 until the user
 explicitly requests it.
 
 ## Completed Core Work
@@ -20,6 +19,10 @@ explicitly requests it.
 - Batch 2.5 governance bootstrap: repository rules, instructor baseline,
   workflow, project-local compliance skill, SRS, conventions, and engineering
   guidelines.
+- Batch 4: unified availability & maintenance enforcement in `bookingService`,
+  enforced `LabPolicy` rules, calendar privacy contract separating public availability
+  from private booker identity, dynamic Day/Week/Month calendar views, and real
+  `QuickBookingModal` decoupled from fake payment.
 
 ## Canonical Stack
 
@@ -53,17 +56,17 @@ derived from resource state, bookings, maintenance windows, and policy.
 ## Latest Verified Gates
 
 - Backend core tests: 27/27 PASS.
-- Batch 1E isolated runtime: PASS.
-- Batch 1 canonical persistence and real concurrency: 2/2 PASS.
-- Batch 2 auth/RBAC integration: 10/10 PASS.
-- Batch 3 resource integration: 9/9 PASS.
-- Batch 2 auth frontend E2E: PASS for unauthenticated access and all four roles.
-- Batch 3 resource frontend E2E: PASS for all four roles.
-- Frontend production build: PASS.
-- Production readiness/CORS/Helmet smoke: PASS.
+- Batch 4 booking policy tests: 10/10 PASS (`test/batch4/bookingPolicy.test.js`).
+- Batch 4 booking calendar integration suite: 12/12 PASS (`test/batch4.booking-calendar.integration.test.js`).
+- Batch 1E isolated runtime: 11/11 subtests PASS (`test/batch1e/integration.runtime.test.js`).
+- Batch 1 canonical persistence and real concurrency: 2/2 PASS (`bookingConcurrency.db.test.js`, `persistenceMigration.test.js`).
+- Batch 2 auth/RBAC integration: 10/10 PASS (`test/batch2.auth-rbac.integration.test.js`).
+- Batch 3 resource integration: 9/9 PASS (`test/batch3.resource-management.integration.test.js`).
+- Batch 4 frontend calendar Playwright E2E: PASS for STUDENT (Day/Week/Month, booking, reload persistence, cancellation), LECTURER (booking workflow), LAB_STAFF (assigned-lab scope), ADMIN (global visibility), real 409 conflict handling, maintenance blocks, and responsive mobile.
+- Frontend production build: PASS (Vite 6, 0 errors).
+- Production readiness / health / CORS / Helmet smoke: PASS (`GET /health` 200, `GET /health/ready` 200).
 
-The latest governance-only verification on 2026-09-20 also passed backend
-core tests (27/27) and the frontend production build.
+The latest Batch 4 verification on 2026-09-20 passed all backend core tests (27/27), policy unit tests (10/10), Batch 4 integration subtests (12/12), Batch 1/1E/2/3 regressions, and the frontend production build.
 
 ## Current Core Blockers
 
@@ -87,15 +90,14 @@ None reported by the verified Batch 3 report.
 
 No implementation batch is currently authorized.
 
-The next recommended task is Batch 4 - Booking Calendar and Required Booking
-Workflow, only after an explicit user instruction. Before starting, read:
+Batch 4 is complete and verified. The next task in the project roadmap (e.g. Batch 5 - Operational Workflows, Handover & Incident Management) may only be started after explicit user authorization. Before starting any future batch, read:
 
 1. `AGENTS.md`
 2. `.agent/PROJECT_RULES.md`
 3. `.agent/DEVELOPMENT_WORKFLOW.md`
 4. `docs/CURRENT_STATE.md`
 5. `docs/DECISIONS.md`
-6. `docs/BATCH3_RESOURCE_MANAGEMENT_REPORT.md`
+6. `docs/BATCH4_BOOKING_CALENDAR_REPORT.md`
 7. the relevant booking and persistence reports
 
 ## Do Not Work On Without Explicit Approval

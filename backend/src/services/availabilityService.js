@@ -25,8 +25,92 @@ export function maintenanceOverlapWhere({ resourceId, startAt, endAt, excludeMai
   };
 }
 
+export function checkLabPolicyCompliance({ policy, startAt, endAt, now = new Date() }) {
+  if (!policy) return;
+
+  const start = new Date(startAt);
+  const end = new Date(endAt);
+
+  if (start < now) {
+    throw new HttpError(400, "Booking cannot be made in the past", undefined, "POLICY_VIOLATION");
+  }
+
+  const durationMinutes = Math.round((end.getTime() - start.getTime()) / 60_000);
+
+  if (policy.minBookingMinutes && durationMinutes < policy.minBookingMinutes) {
+    throw new HttpError(
+      400,
+      `Booking duration (${durationMinutes}m) is less than the minimum required (${policy.minBookingMinutes}m)`,
+      { minBookingMinutes: policy.minBookingMinutes, durationMinutes },
+      "POLICY_VIOLATION"
+    );
+  }
+
+  if (policy.maxBookingMinutes && durationMinutes > policy.maxBookingMinutes) {
+    throw new HttpError(
+      400,
+      `Booking duration (${durationMinutes}m) exceeds the maximum allowed (${policy.maxBookingMinutes}m)`,
+      { maxBookingMinutes: policy.maxBookingMinutes, durationMinutes },
+      "POLICY_VIOLATION"
+    );
+  }
+
+  if (policy.maxAdvanceBookingDays) {
+    const maxAdvanceMs = policy.maxAdvanceBookingDays * 24 * 60 * 60 * 1000;
+    if (start.getTime() - now.getTime() > maxAdvanceMs) {
+      throw new HttpError(
+        400,
+        `Booking cannot be made more than ${policy.maxAdvanceBookingDays} days in advance`,
+        { maxAdvanceBookingDays: policy.maxAdvanceBookingDays },
+        "POLICY_VIOLATION"
+      );
+    }
+  }
+
+  if (policy.allowWeekend === false) {
+    const startDay = start.getDay();
+    const endDay = end.getDay();
+    if (startDay === 0 || startDay === 6 || endDay === 0 || endDay === 6) {
+      throw new HttpError(
+        400,
+        "Weekend bookings are not permitted by laboratory policy",
+        { allowWeekend: false },
+        "POLICY_VIOLATION"
+      );
+    }
+  }
+
+  if (policy.workDayStartHour != null) {
+    const startHour = start.getHours();
+    if (startHour < policy.workDayStartHour) {
+      throw new HttpError(
+        400,
+        `Booking start time (${startHour}:00) is earlier than laboratory opening hour (${policy.workDayStartHour}:00)`,
+        { workDayStartHour: policy.workDayStartHour, startHour },
+        "POLICY_VIOLATION"
+      );
+    }
+  }
+
+  if (policy.workDayEndHour != null) {
+    const endHour = end.getHours();
+    const endMinutes = end.getMinutes();
+    if (endHour > policy.workDayEndHour || (endHour === policy.workDayEndHour && endMinutes > 0)) {
+      throw new HttpError(
+        400,
+        `Booking end time (${endHour}:${String(endMinutes).padStart(2, "0")}) is later than laboratory closing hour (${policy.workDayEndHour}:00)`,
+        { workDayEndHour: policy.workDayEndHour, endHour, endMinutes },
+        "POLICY_VIOLATION"
+      );
+    }
+  }
+}
+
 export async function getResourceAvailability(client, { resourceId, startAt, endAt, excludeBookingId, resource = null }) {
-  const selectedResource = resource || await client.resource.findUnique({ where: { id: resourceId } });
+  const selectedResource = resource || await client.resource.findUnique({
+    where: { id: resourceId },
+    include: { laboratory: { include: { labPolicy: true } } }
+  });
   if (!selectedResource) {
     throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
   }
@@ -229,9 +313,9 @@ function buildResourceStatusConflict(resource, startAt, endAt) {
 }
 
 function getAvailabilityErrorCode(conflicts) {
-  if (conflicts.some((conflict) => conflict.type === "EQUIPMENT_CONFLICT")) return "BOOKING_CONFLICT";
-  if (conflicts.some((conflict) => conflict.type === "CALIBRATION_CONFLICT")) return "CALIBRATION_CONFLICT";
-  if (conflicts.some((conflict) => conflict.type === "MAINTENANCE_CONFLICT")) return "MAINTENANCE_CONFLICT";
+  if (conflicts.some((conflict) => ["EQUIPMENT_CONFLICT", "CALIBRATION_CONFLICT", "MAINTENANCE_CONFLICT"].includes(conflict.type))) {
+    return "BOOKING_CONFLICT";
+  }
   return "RESOURCE_UNAVAILABLE";
 }
 

@@ -298,6 +298,7 @@ function App() {
       {/* CORE 2026 PILLARS: SMART BOOKING, AI ANALYTICS, ADVISORY & ADMIN */}
       {activeTab === "smart_calendar" && (
         <SmartCalendarView
+          user={user}
           onOpenBooking={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
         />
       )}
@@ -342,26 +343,11 @@ function App() {
       <QuickBookingModal
         isOpen={activeGlobalModal?.type === "quick_booking"}
         onClose={() => setActiveGlobalModal(null)}
-        selectedSlot={activeGlobalModal?.payload}
+        initialSlot={activeGlobalModal?.payload}
+        resources={resources}
         onConfirmBooking={(bookingData) => {
-          setActiveGlobalModal({
-            type: "vietqr",
-            payload: {
-              amount: bookingData?.amount || 360000,
-              title: bookingData?.purpose || "Đặt chỗ tài nguyên AI",
-              resourceName: bookingData?.resourceName || "Cụm GPU NVIDIA DGX H100"
-            }
-          });
-        }}
-        onProceedPayment={(bookingData) => {
-          setActiveGlobalModal({
-            type: "vietqr",
-            payload: {
-              amount: bookingData?.amount || 150000,
-              title: bookingData?.purpose || "Đặt chỗ tài nguyên AI",
-              resourceName: bookingData?.resourceName || "Cụm GPU NVIDIA DGX H100"
-            }
-          });
+          loadData();
+          setActiveGlobalModal(null);
         }}
       />
 
@@ -843,7 +829,7 @@ function BookingView({ resources, bookings, user, isStaff, onChanged }) {
           busyId={busyId}
           onAction={setAction}
           onOpenQrCheckin={setQrBooking}
-          onOpenVietQr={setVietQrBooking}
+          onOpenVietQr={import.meta.env.VITE_ENABLE_RESEARCH_FEATURES === "true" ? setVietQrBooking : undefined}
         />
       </section>
 
@@ -866,14 +852,16 @@ function BookingView({ resources, bookings, user, isStaff, onChanged }) {
         onCheckinSuccess={() => onChanged()}
       />
 
-      <VietQrPaymentModal
-        isOpen={Boolean(vietQrBooking)}
-        onClose={() => setVietQrBooking(null)}
-        amount={150000}
-        bookingTitle={vietQrBooking?.title}
-        resourceName={vietQrBooking?.resource?.name}
-        onPaidSuccess={() => onChanged()}
-      />
+      {import.meta.env.VITE_ENABLE_RESEARCH_FEATURES === "true" && (
+        <VietQrPaymentModal
+          isOpen={Boolean(vietQrBooking)}
+          onClose={() => setVietQrBooking(null)}
+          amount={150000}
+          bookingTitle={vietQrBooking?.title}
+          resourceName={vietQrBooking?.resource?.name}
+          onPaidSuccess={() => onChanged()}
+        />
+      )}
     </div>
   );
 }
