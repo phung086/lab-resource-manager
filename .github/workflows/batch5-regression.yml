@@ -1,0 +1,100 @@
+name: Batch 5 Backend Regression
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/batch5-regression.yml"
+  workflow_dispatch:
+
+jobs:
+  backend-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Configure guarded local test base URL
+        shell: bash
+        run: |
+          cat > .env <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres?schema=public
+          JWT_SECRET=batch5-ci-base-secret-at-least-32-characters
+          CORS_ORIGINS=http://127.0.0.1:5177
+          PORT=5002
+          EOF
+
+      - name: Create isolated PostgreSQL 16 databases
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          for db in             lab_resources_b1d_ci             lab_resources_b1e_ci             lab_resources_b2_auth_ci             lab_resources_b3_resource_ci             lab_resources_b4_booking_ci             lab_resources_b5_operations_ci
+          do
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";"
+          done
+
+      - name: Apply immutable migration history to every isolated database
+        shell: bash
+        run: |
+          set -euo pipefail
+          for db in             lab_resources_b1d_ci             lab_resources_b1e_ci             lab_resources_b2_auth_ci             lab_resources_b3_resource_ci             lab_resources_b4_booking_ci             lab_resources_b5_operations_ci
+          do
+            echo "::group::migrate:$db"
+            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npx prisma migrate deploy
+            echo "::endgroup::"
+          done
+
+      - name: Core tests
+        run: npm run test:core
+
+      - name: Batch 1 persistence and concurrency
+        shell: bash
+        run: |
+          set -euo pipefail
+          BATCH1D_DATABASES=lab_resources_b1d_ci node --test test/bookingConcurrency.db.test.js
+          BATCH1D_DATABASES=lab_resources_b1d_ci node --test test/persistenceMigration.test.js
+
+      - name: Batch 1E runtime regression
+        run: BATCH1E_DATABASE=lab_resources_b1e_ci node --test test/batch1e/integration.runtime.test.js
+
+      - name: Batch 2 auth/RBAC regression
+        run: BATCH2_DATABASE=lab_resources_b2_auth_ci npm run test:batch2
+
+      - name: Batch 3 resource regression
+        run: BATCH3_DATABASE=lab_resources_b3_resource_ci npm run test:batch3
+
+      - name: Batch 4 and 4.1 booking/calendar regression
+        run: BATCH4_DATABASE=lab_resources_b4_booking_ci npm run test:batch4
+
+      - name: Batch 5 operational workflow
+        run: BATCH5_DATABASE=lab_resources_b5_operations_ci npm run test:batch5
