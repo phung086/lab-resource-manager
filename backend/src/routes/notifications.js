@@ -27,6 +27,12 @@ router.get("/", async (req, res, next) => {
       title: n.title,
       message: n.message,
       severity: n.severity,
+      titleKey: n.titleKey,
+      messageKey: n.messageKey,
+      messageParams: n.messageParams,
+      channel: n.channel,
+      scheduledAt: n.scheduledAt,
+      sentAt: n.sentAt,
       readAt: n.readAt,
       createdAt: n.createdAt,
       isUnread: !n.readAt
