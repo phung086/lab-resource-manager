@@ -627,8 +627,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
       }
     });
 
-    const concStart = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000);
-    concStart.setHours(13, 0, 0, 0);
+    const concStart = futureVietnamTime(6, 13);
     const concEnd = new Date(concStart.getTime() + 90 * 60 * 1000);
 
     // 12a. Exactly two concurrent requests
@@ -668,8 +667,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     assert.equal(persistedTwo.length, 1, "Exactly 1 booking must be persisted in PostgreSQL");
 
     // 12b. Five simultaneous identical attempts
-    const conc5Start = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000);
-    conc5Start.setHours(15, 0, 0, 0);
+    const conc5Start = futureVietnamTime(6, 15);
     const conc5End = new Date(conc5Start.getTime() + 60 * 60 * 1000);
 
     const fiveResults = await Promise.all(
