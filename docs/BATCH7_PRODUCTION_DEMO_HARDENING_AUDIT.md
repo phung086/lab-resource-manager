@@ -48,8 +48,11 @@ Disposition:
 
 - remove automatic `db push`;
 - preserve migration history;
-- normalize migration SQL checkout bytes with `.gitattributes`;
-- prove raw clean `prisma migrate deploy` on Linux/PostgreSQL 16.
+- keep migration checkout bytes deterministic where possible;
+- use a fail-closed canonical deployment bridge for the known verified Batch 1
+  checksum-snapshot portability problem;
+- prove clean migration deployment on Linux/PostgreSQL 16 without editing
+  tracked migration SQL or `_prisma_migrations` manually.
 
 ### First admin seed — BLOCKER
 
