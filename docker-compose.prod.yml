@@ -33,6 +33,10 @@ services:
       JSON_BODY_LIMIT: ${JSON_BODY_LIMIT:-1mb}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-180}
+      REMINDER_SCHEDULER_ENABLED: ${REMINDER_SCHEDULER_ENABLED:-true}
+      BOOKING_UPCOMING_REMINDER_MINUTES: ${BOOKING_UPCOMING_REMINDER_MINUTES:-60}
+      RETURN_REMINDER_MINUTES: ${RETURN_REMINDER_MINUTES:-15}
+      LOG_FORMAT: ${LOG_FORMAT:-combined}
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,6 +56,7 @@ services:
         VITE_API_BASE_URL: /api
         VITE_APP_NAME: ${VITE_APP_NAME}
         VITE_APP_SUBTITLE: ${VITE_APP_SUBTITLE}
+        VITE_ENABLE_RESEARCH_FEATURES: ${VITE_ENABLE_RESEARCH_FEATURES:-false}
     restart: unless-stopped
     ports:
       - "${APP_PORT:-80}:80"

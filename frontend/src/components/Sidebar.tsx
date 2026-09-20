@@ -1,4 +1,5 @@
 import React from "react";
+import { RESEARCH_FEATURES_ENABLED, isTabEnabled } from "../config/featureFlags";
 import {
   CalendarCheck,
   Clock,
@@ -84,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: "ai_zone",
-      title: "2. AI HIỆU SUẤT & TƯ VẤN",
+      title: "NGHIÊN CỨU / DEMO (TÙY CHỌN)",
       items: [
         {
           id: "ai_analytics",
@@ -165,14 +166,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Navigation Sections */}
       <nav className="sidebar-nav-container-2026" aria-label="Main Navigation">
-        {navSections.filter((section) => section.id !== "ai_zone" || import.meta.env.VITE_ENABLE_RESEARCH_FEATURES === "true").map((section) => ({
-          ...section,
-          items: section.items.filter((item) => {
-            if (["logs", "users"].includes(item.id)) return user?.role === "ADMIN";
-            if (["admin_management", "dashboard", "monitoring", "maintenance"].includes(item.id)) return ["ADMIN", "LAB_STAFF"].includes(user?.role || "");
-            return true;
-          })
-        })).filter((section) => section.items.length > 0).map((section) => (
+        {navSections
+          .filter((section) => section.id !== "ai_zone" || RESEARCH_FEATURES_ENABLED)
+          .map((section) => ({
+            ...section,
+            items: section.items.filter((item) => {
+              if (!isTabEnabled(item.id)) return false;
+              if (["logs", "users"].includes(item.id)) return user?.role === "ADMIN";
+              if (["admin_management", "dashboard", "monitoring", "maintenance"].includes(item.id)) {
+                return ["ADMIN", "LAB_STAFF"].includes(user?.role || "");
+              }
+              return true;
+            })
+          }))
+          .filter((section) => section.items.length > 0)
+          .map((section) => (
           <div key={section.id} className="nav-section-group-2026">
             <div className="nav-section-title-2026">
               <span>{section.title}</span>

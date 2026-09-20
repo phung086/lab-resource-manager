@@ -13,12 +13,13 @@ WORKDIR /app
 
 COPY src ./src
 COPY scripts ./scripts
-COPY agents ./agents
 
 EXPOSE 8000
-CMD ["sh", "-c", "npm run db:push && npm run db:guard && npm run db:seed:admin && npm run dev"]
+CMD ["sh", "-c", "npm run db:migrate && npm run db:seed:admin && npm run dev"]
 
 FROM node:22-alpine AS runner
+
+RUN apk add --no-cache postgresql-client
 
 WORKDIR /app
 
@@ -30,7 +31,6 @@ COPY package*.json ./
 COPY prisma ./prisma
 COPY src ./src
 COPY scripts ./scripts
-COPY agents ./agents
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD wget -qO- http://127.0.0.1:8000/health || exit 1

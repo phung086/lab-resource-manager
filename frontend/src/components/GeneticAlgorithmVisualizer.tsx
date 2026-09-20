@@ -45,7 +45,7 @@ export const GeneticAlgorithmVisualizer: React.FC = () => {
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [currentGen, setCurrentGen] = useState<number>(25);
   const [displayedHistory, setDisplayedHistory] = useState<GenerationPoint[]>(DEFAULT_CONVERGENCE_HISTORY);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Trigger simulated generation-by-generation evolution
   function handleRunGA() {

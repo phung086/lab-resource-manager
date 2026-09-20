@@ -29,6 +29,8 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_FULL_NAME: ${ADMIN_FULL_NAME:-}
       CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      REMINDER_SCHEDULER_ENABLED: ${REMINDER_SCHEDULER_ENABLED:-true}
+      LOG_FORMAT: ${LOG_FORMAT:-dev}
     ports:
       - "8000:8000"
     volumes:
@@ -45,6 +47,7 @@ services:
       target: dev
     environment:
       VITE_API_BASE_URL: http://localhost:8000
+      VITE_ENABLE_RESEARCH_FEATURES: ${VITE_ENABLE_RESEARCH_FEATURES:-false}
     ports:
       - "5173:5173"
     volumes:

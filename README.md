@@ -1,44 +1,66 @@
 # Lab Resource Manager
 
-Hệ thống web đặt lịch và giám sát tài nguyên phòng thí nghiệm cho GPU server, Raspberry Pi, UAV, camera, phòng thực hành và thiết bị dùng chung.
+Hệ thống quản lý, đặt lịch và giám sát tài nguyên phòng thí nghiệm phục vụ đồ án tốt nghiệp.
 
-## Trạng thái hiện tại
+## Phạm vi sản phẩm
 
-Project đã được nâng lên hướng deployable:
+Luồng REQUIRED CORE hiện tập trung vào:
 
-- Local dev dùng admin đầu tiên từ biến môi trường, giống production.
-- Production không tự tạo dữ liệu giả.
-- Production tạo admin đầu tiên từ biến môi trường.
-- Tài nguyên thật được nhập qua UI hoặc CSV.
-- Telemetry thật được gửi từ agent hoặc exporter.
-- Backend có health/readiness, Prometheus metrics và ràng buộc chống trùng lịch.
-- Trợ lý AI/MCP đọc dữ liệu thật để gợi ý lịch trống, kiểm tra lịch trùng, tìm tài nguyên, tìm thông báo và trả lời câu hỏi vận hành.
+`Quản lý tài nguyên -> Đặt lịch -> Chống trùng -> Phê duyệt -> Bàn giao -> Hoàn trả -> Thông báo -> Sự cố -> Dashboard/Telemetry`
 
-## Công nghệ
+Kiến trúc chuẩn:
 
-- Frontend: React + Vite + JavaScript
-- Backend: Node.js + Express + JavaScript
-- ORM/database: Prisma + PostgreSQL
-- Monitoring: Prometheus, Node Exporter, tùy chọn NVIDIA DCGM Exporter
-- AI/MCP: Assistant REST API, MCP Streamable HTTP, OpenAI SDK tùy chọn
-- Deployment: Docker Compose production stack
+- Frontend: React 19 + Vite 6
+- Backend: Node.js + Express
+- ORM: Prisma 6
+- Database: PostgreSQL 16
+- Backend layering: route -> middleware -> service -> Prisma
+- Backend authorization là nguồn quyết định cuối cùng
 
-## Chạy local để phát triển
+AI, Digital Twin, Pareto, GA/NSGA-II, mô phỏng, payment/VietQR và các màn hình nghiên cứu khác là OPTIONAL/RESEARCH. Chúng không phải điều kiện để luồng đồ án cốt lõi hoạt động và mặc định bị ẩn khỏi production/demo bằng `VITE_ENABLE_RESEARCH_FEATURES=false`.
+
+## Trạng thái kiểm thử
+
+Các Batch đã merge và xác minh trước Batch 7:
+
+- Batch 1: persistence + PostgreSQL concurrency
+- Batch 2: authentication + RBAC
+- Batch 3: resource management
+- Batch 4/4.1: calendar + conflict-safe booking
+- Batch 5: approval + handover + return + condition evidence
+- Batch 6: notifications + incidents + real dashboard + telemetry contract
+
+Trạng thái chính xác mới nhất luôn nằm trong:
+
+- `docs/CURRENT_STATE.md`
+- các `docs/BATCH*_REPORT.md`
+- các `docs/BATCH*_WALKTHROUGH.md`
+
+Không coi một tính năng là verified chỉ vì UI hiển thị hoặc build thành công.
+
+## Chạy local
+
+Tạo môi trường:
 
 ```bash
 cp .env.example .env
+```
+
+Điền tối thiểu tài khoản admin phát triển nếu cần, sau đó:
+
+```bash
 docker compose up --build
 ```
+
+Mặc định:
 
 - Frontend: http://localhost:5173
 - Backend health: http://localhost:8000/health
 - Backend readiness: http://localhost:8000/health/ready
 - Backend metrics: http://localhost:8000/metrics
-- Assistant tools: http://localhost:8000/assistant/tools
-- MCP endpoint: http://localhost:8000/mcp
 - Prometheus: http://localhost:9090
 
-Trước khi chạy, điền `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_FULL_NAME` trong `.env` để tạo tài khoản quản trị đầu tiên.
+Local container sử dụng Prisma migration, không dùng `prisma db push` để tự thay đổi schema.
 
 ## Deploy production
 
@@ -46,64 +68,106 @@ Trước khi chạy, điền `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_FULL_NAME` 
 cp .env.production.example .env.production
 ```
 
-Điền secret thật trong `.env.production`, sau đó chạy:
+Thay toàn bộ giá trị mẫu bằng secret/domain thật. Các biến quan trọng:
+
+- `POSTGRES_PASSWORD`
+- `JWT_SECRET`
+- `TELEMETRY_API_KEY`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_FULL_NAME`
+- `CORS_ORIGINS`
+- `VITE_ENABLE_RESEARCH_FEATURES=false`
+
+Production backend fail closed nếu secret/admin/CORS quan trọng không hợp lệ.
+
+Clean deployment uses the repository's canonical migration bridge. The bridge preserves tracked historical SQL, reconciles the verified Batch 1 checksum snapshot through an ephemeral copy, records the reconciliation via Prisma's supported `migrate resolve`, then returns to normal `prisma migrate deploy`. It never edits `_prisma_migrations` manually.
+
+Kiểm tra cấu hình Compose:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml config
+```
+
+Khởi động:
 
 ```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
 
-Xem chi tiết trong [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
-
-## Nhập dữ liệu thật
-
-Chuẩn bị CSV theo mẫu:
-
-```text
-data/resource-inventory.template.csv
-```
-
-Nếu cần bộ inventory khởi tạo sát thực tế cho phòng lab AI, có thể dùng:
-
-```text
-data/ai-lab-inventory.realistic.csv
-```
-
-Import vào backend sau khi điền inventory thật:
+Sau đó kiểm tra:
 
 ```bash
-cd backend
-npm run import:resources -- ../data/resource-inventory.template.csv
+curl -f http://SERVER/health
+curl -f http://SERVER/api/health/ready
 ```
 
-Khi deploy bằng Docker, xem lệnh copy/import trong [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Xem chi tiết tại `docs/DEPLOYMENT.md`.
 
-## Telemetry agent
+## Graduation demo
 
-Agent đọc CPU/RAM từ máy thật và đọc GPU qua `nvidia-smi` nếu có:
+Kịch bản bảo vệ chính thức được mô tả tại:
 
-```bash
-cd backend
-LRM_API_BASE_URL=http://localhost:8000 \
-LRM_TELEMETRY_API_KEY=<TELEMETRY_API_KEY> \
-LRM_RESOURCE_CODE=<MA_TAI_SAN_THUC> \
-npm run agent:system
-```
+`docs/GRADUATION_DEMO_RUNBOOK.md`
+
+Kịch bản cốt lõi chứng minh 10 bước từ tạo user/resource, đặt lịch, tranh chấp PostgreSQL, duyệt, bàn giao, hoàn trả, notification, history/dashboard tới incident.
+
+Demo infrastructure bootstrap chỉ được phép trên database có marker `_demo` và khi `DEMO_MODE=true`. Script đó không được dùng để tạo dữ liệu giả trong production.
+
+## Dữ liệu tài nguyên
+
+Tài nguyên REQUIRED CORE phải được tạo/persist bằng API/UI chuẩn hoặc quy trình onboarding đã được xác minh.
+
+`backend/scripts/importResources.js` và một số CSV cũ là legacy từ kiến trúc trước; chúng **không phải** production onboarding path cho tới khi được reconciliation với canonical resource schema. Không dùng chúng để thay thế UI/API cốt lõi.
+
+## Telemetry
+
+Batch 6 cung cấp contract telemetry tối thiểu có xác thực và persistence thật. Thiếu mẫu đo phải hiển thị `NO_DATA`; nguồn offline là `UNAVAILABLE`; hệ thống không tự sinh telemetry giả.
+
+Tích hợp sensor/camera/hardware thực thuộc Smart Laboratory Monitoring extension và không được coi là production-ready nếu chưa qua Batch tương ứng.
 
 ## Kiểm thử
 
+Backend required-core:
+
 ```bash
 cd backend
+npm run lint
+npm run verify:prod-config
 npm test
+```
 
-cd ../frontend
+Frontend:
+
+```bash
+cd frontend
+npm run lint
+npm run typecheck
 npm run build
 ```
 
-## Tài liệu
+Các integration/E2E Batch sử dụng PostgreSQL database riêng có guard. Không chạy destructive test trên database phát triển/chia sẻ.
 
-- [docs/PROJECT_DIRECTION.md](docs/PROJECT_DIRECTION.md)
-- [docs/TECH_STACK_OPTIONS.md](docs/TECH_STACK_OPTIONS.md)
-- [docs/REAL_DATA_RUNBOOK.md](docs/REAL_DATA_RUNBOOK.md)
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
-- [docs/AI_RESOURCE_MONITORING.md](docs/AI_RESOURCE_MONITORING.md)
-- [docs/AI_ASSISTANT_MCP.md](docs/AI_ASSISTANT_MCP.md)
+## Tài liệu quan trọng
+
+- `AGENTS.md`
+- `.agent/PROJECT_RULES.md`
+- `.agent/INSTRUCTOR_BASELINE.md`
+- `docs/srs.md`
+- `docs/PROJECT_STRUCTURE.md`
+- `docs/CURRENT_STATE.md`
+- `docs/DECISIONS.md`
+- `docs/DEPLOYMENT.md`
+- `docs/GRADUATION_DEMO_RUNBOOK.md`
+- `docs/BATCH5_WALKTHROUGH.md`
+- `docs/BATCH6_WALKTHROUGH.md`
+
+## Safety
+
+Không:
+
+- chạy `prisma db push` trên development/shared database;
+- sửa historical applied migrations;
+- sửa tay `_prisma_migrations`;
+- biến mock/research UI thành REQUIRED CORE;
+- khai báo fake telemetry/audit/runtime evidence là dữ liệu thật.

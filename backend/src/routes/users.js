@@ -1,10 +1,12 @@
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import express from "express";
 import { z } from "zod";
 
 import { prisma } from "../db.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
-import { ADMIN, LAB_STAFF } from "../constants/roles.js";
+import { ADMIN, CANONICAL_ROLES, LAB_STAFF } from "../constants/roles.js";
 
 const router = express.Router();
 
@@ -66,6 +68,45 @@ router.get("/", requireAuth, requireRole(ADMIN), async (req, res, next) => {
 
     return res.json(users);
   } catch (error) {
+    next(error);
+  }
+});
+
+
+const createUserSchema = z.object({
+  email: z.string().trim().email().transform((value) => value.toLowerCase()),
+  password: z.string().min(12).max(128),
+  fullName: z.string().trim().min(2).max(255),
+  role: z.enum(CANONICAL_ROLES).default("STUDENT"),
+  isActive: z.boolean().default(true),
+  studentId: z.string().trim().max(50).optional(),
+  department: z.string().trim().max(100).optional(),
+  phone: z.string().trim().max(20).optional()
+}).strict();
+
+router.post("/", requireAuth, requireRole(ADMIN), async (req, res, next) => {
+  try {
+    const data = createUserSchema.parse(req.body);
+    const passwordHash = await bcrypt.hash(data.password, 12);
+    const created = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: data.email,
+        fullName: data.fullName,
+        role: data.role,
+        passwordHash,
+        isActive: data.isActive,
+        studentId: data.studentId || null,
+        department: data.department || null,
+        phone: data.phone || null
+      },
+      select: safeUserSelect
+    });
+    res.status(201).json(created);
+  } catch (error) {
+    if (error?.code === "P2002") {
+      return next(new HttpError(409, "Email already registered", { field: "email" }, "DUPLICATE_EMAIL"));
+    }
     next(error);
   }
 });

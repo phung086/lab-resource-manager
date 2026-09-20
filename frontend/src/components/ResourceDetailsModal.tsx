@@ -89,9 +89,9 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
   );
 };
 
-function Detail({ label, value }: { label: string; value: string }) {
-  return <div><dt>{label}</dt><dd>{value}</dd></div>;
-}
+const Detail: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div><dt>{label}</dt><dd>{value}</dd></div>
+);
 
 function formatDate(value: string) {
   if (!value) return "Không xác định";
