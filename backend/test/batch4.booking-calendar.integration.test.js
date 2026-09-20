@@ -25,6 +25,20 @@ const marker = crypto.randomUUID();
 const id = () => crypto.randomUUID();
 const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 
+const VIETNAM_OFFSET_HOURS = 7;
+function futureVietnamTime(daysAhead, hour, minute = 0) {
+  const vnReference = new Date(Date.now() + VIETNAM_OFFSET_HOURS * 60 * 60 * 1000);
+  return new Date(Date.UTC(
+    vnReference.getUTCFullYear(),
+    vnReference.getUTCMonth(),
+    vnReference.getUTCDate() + daysAhead,
+    hour - VIETNAM_OFFSET_HOURS,
+    minute,
+    0,
+    0
+  ));
+}
+
 const fixture = {
   campus: id(),
   building: id(),
@@ -142,8 +156,7 @@ async function seed() {
   });
 
   // Maintenance window on maintenanceTarget
-  const mStart = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
-  mStart.setHours(10, 0, 0, 0);
+  const mStart = futureVietnamTime(2, 10);
   const mEnd = new Date(mStart.getTime() + 4 * 60 * 60 * 1000);
 
   await isolated.maintenanceWindow.create({
@@ -177,9 +190,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     studentB: tokenFor(fixture.users.studentB, "STUDENT")
   };
 
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  tomorrow.setHours(9, 0, 0, 0);
-  const slot1Start = new Date(tomorrow);
+  const slot1Start = futureVietnamTime(1, 9);
   const slot1End = new Date(slot1Start.getTime() + 2 * 60 * 60 * 1000); // 2 hours
 
   let bookingImmediateId;
@@ -415,8 +426,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
       }
     });
 
-    const futureSlotStart = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-    futureSlotStart.setHours(10, 0, 0, 0);
+    const futureSlotStart = futureVietnamTime(3, 10);
     const futureSlotEnd = new Date(futureSlotStart.getTime() + 2 * 60 * 60 * 1000);
 
     const inUseBookingRes = await request(app)
@@ -481,8 +491,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
       }
     });
 
-    const baseTime = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
-    baseTime.setHours(8, 0, 0, 0);
+    const baseTime = futureVietnamTime(4, 8);
 
     const testStatuses = ["PENDING_APPROVAL", "CONFIRMED", "CHECKED_OUT", "RETURNED"];
     const createdBookingIds = [];
@@ -774,8 +783,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     assert.equal(getRes.body.labPolicy?.requiresApproval, true);
 
     // 14b: Booking creation must result in PENDING_APPROVAL
-    const testStart = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    testStart.setHours(10, 0, 0, 0);
+    const testStart = futureVietnamTime(7, 10);
     const testEnd = new Date(testStart.getTime() + 60 * 60 * 1000);
 
     const bookingRes = await request(app)
