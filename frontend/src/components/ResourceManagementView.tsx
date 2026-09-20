@@ -107,7 +107,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
   function queryString() {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(filters)) {
-      if (value && !(key === "classification" && value === "ALL")) params.set(key, value);
+      if (value && !(key === "classification" && value === "ALL")) params.set(key, String(value));
     }
     return params.toString();
   }
