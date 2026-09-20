@@ -100,7 +100,7 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
         </>
       }
     >
-      <form id="booking-operation-form" onSubmit={submit} className="booking-operation-form">
+      <form id="booking-operation-form" onSubmit={submit} className="booking-operation-form" noValidate>
         <div className="operation-modal-resource">
           <div>
             <span className="operation-resource-code">{booking.resource?.code}</span>
