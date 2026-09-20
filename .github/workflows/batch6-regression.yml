@@ -67,7 +67,6 @@ jobs:
             lab_resources_b3_resource_ci \
             lab_resources_b4_booking_ci \
             lab_resources_b5_operations_ci \
-            lab_resources_b6_monitoring_ci \
             lab_resources_b6_monitoring_ci
           do
             psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";"
