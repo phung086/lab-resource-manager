@@ -52,7 +52,7 @@ try {
   assert.equal(await studentPage.getByText("Batch 6 sự cố phòng B").count(), 1);
   await studentPage.getByRole("button", { name: "Báo cáo sự cố" }).click();
   let dialog = studentPage.getByRole("dialog");
-  await dialog.getByLabel("Tài nguyên").selectOption({ label: /B6-E2E-NODATA/ });
+  await dialog.getByLabel("Tài nguyên").selectOption("b6000000-0000-4000-8000-000000000025");
   await dialog.getByLabel("Mức độ").selectOption("medium");
   await dialog.getByLabel("Nhóm sự cố").fill("usage");
   await dialog.getByLabel("Tiêu đề").fill("Batch 6 báo cáo từ sinh viên");
