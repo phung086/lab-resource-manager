@@ -65,7 +65,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     digital_twin: "🌐 Bản Sao Số & Heatmap",
     what_if: "🔮 Studio Mô Phỏng What-If",
     resources: "Danh mục tài nguyên phòng thí nghiệm",
-    bookings: "📅 Lịch Đặt Chỗ & Chiếm Dụng",
+    bookings: "Booking & Bàn Giao Tài Nguyên",
     maintenance: "🔧 Phiếu Yêu Cầu Bảo Trì",
     pareto: "📐 Khảo Sát Pareto Frontier",
     timeline: "⏱️ Replay Tái Tối Ưu Hóa",
