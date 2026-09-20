@@ -11,6 +11,7 @@ const port = parsePort(process.env.PORT || 8000);
 const jsonBodyLimit = process.env.JSON_BODY_LIMIT || "1mb";
 const rateLimitWindowMs = parsePositiveInteger(process.env.RATE_LIMIT_WINDOW_MS, 60_000);
 const rateLimitMax = parsePositiveInteger(process.env.RATE_LIMIT_MAX, 180);
+const logFormat = parseLogFormat(process.env.LOG_FORMAT || (isProduction ? "combined" : "dev"));
 
 validateRuntimeConfig();
 
@@ -25,7 +26,7 @@ export const config = {
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   openaiModel: process.env.OPENAI_MODEL || "",
   trustProxy: process.env.TRUST_PROXY === "true",
-  logFormat: process.env.LOG_FORMAT || (isProduction ? "combined" : "dev"),
+  logFormat,
   jsonBodyLimit,
   rateLimitWindowMs,
   rateLimitMax
@@ -42,11 +43,34 @@ function validateRuntimeConfig() {
 
   if (isProduction) {
     const failures = [];
-    if (!databaseUrl || !/^postgres(?:ql)?:\/\//i.test(databaseUrl)) failures.push("DATABASE_URL must point to PostgreSQL.");
-    if (!jwtSecret || jwtSecret.length < 32 || isPlaceholder(jwtSecret)) failures.push("JWT_SECRET must be at least 32 characters and not use the example value.");
-    if (!telemetryApiKey || telemetryApiKey.length < 32 || isPlaceholder(telemetryApiKey)) failures.push("TELEMETRY_API_KEY must be at least 32 characters and not use the example value.");
-    if (corsOrigins.some((origin) => origin === "*" || !/^https?:\/\//i.test(origin))) failures.push("CORS_ORIGINS must list explicit HTTP or HTTPS origins.");
-    if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD || !process.env.ADMIN_FULL_NAME) failures.push("ADMIN_EMAIL, ADMIN_PASSWORD, and ADMIN_FULL_NAME are required for first admin setup.");
+    const adminEmail = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+    const adminPassword = String(process.env.ADMIN_PASSWORD || "");
+    const adminFullName = String(process.env.ADMIN_FULL_NAME || "").trim();
+
+    if (!databaseUrl || !/^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
+      failures.push("DATABASE_URL must point to PostgreSQL.");
+    }
+    if (!jwtSecret || jwtSecret.length < 32 || isPlaceholder(jwtSecret)) {
+      failures.push("JWT_SECRET must be at least 32 characters and not use an example value.");
+    }
+    if (!telemetryApiKey || telemetryApiKey.length < 32 || isPlaceholder(telemetryApiKey)) {
+      failures.push("TELEMETRY_API_KEY must be at least 32 characters and not use an example value.");
+    }
+    if (jwtSecret && telemetryApiKey && jwtSecret === telemetryApiKey) {
+      failures.push("JWT_SECRET and TELEMETRY_API_KEY must be different secrets.");
+    }
+    if (corsOrigins.some((origin) => origin === "*" || !/^https?:\/\//i.test(origin))) {
+      failures.push("CORS_ORIGINS must list explicit HTTP or HTTPS origins.");
+    }
+    if (!adminEmail || !/^\S+@\S+\.\S+$/.test(adminEmail)) {
+      failures.push("ADMIN_EMAIL must be a valid email address.");
+    }
+    if (adminFullName.length < 2) {
+      failures.push("ADMIN_FULL_NAME is required.");
+    }
+    if (adminPassword.length < 12 || isPlaceholder(adminPassword)) {
+      failures.push("ADMIN_PASSWORD must be at least 12 characters and not use an example value.");
+    }
 
     if (failures.length) {
       throw new Error(`Production configuration is invalid: ${failures.join(" ")}`);
@@ -69,6 +93,15 @@ function parsePort(value) {
 function parsePositiveInteger(value, fallback) {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : fallback;
+}
+
+function parseLogFormat(value) {
+  const normalized = String(value || "").trim();
+  const allowed = new Set(["combined", "common", "dev", "short", "tiny"]);
+  if (!allowed.has(normalized)) {
+    throw new Error("LOG_FORMAT must be one of: combined, common, dev, short, tiny.");
+  }
+  return normalized;
 }
 
 function isPlaceholder(value) {
