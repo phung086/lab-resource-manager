@@ -42,6 +42,51 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
 
+      - name: Verify canonical historical migration bytes
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { readFile, writeFile } from "node:fs/promises";
+          import path from "node:path";
+
+          const baseline = JSON.parse(await readFile("../docs/BATCH1B_VERIFICATION.json", "utf8"));
+          const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+
+          for (const [name, expected] of Object.entries(baseline.migrationFiles)) {
+            const file = path.join("prisma", "migrations", name, "migration.sql");
+            const current = await readFile(file);
+            const currentHash = sha256(current);
+
+            if (currentHash === expected) {
+              console.log(`migration hash OK: ${name} ${currentHash}`);
+              continue;
+            }
+
+            // Historical migration checksums were captured on the verified
+            // Batch 1 Windows workspace. Git can materialize text files with
+            // LF on Linux runners. Normalize only the ephemeral CI working
+            // tree when and only when the canonical CRLF byte representation
+            // reproduces the recorded verified checksum exactly.
+            const text = current.toString("utf8").replace(/\r\n/g, "\n");
+            const canonicalCrlf = Buffer.from(text.replace(/\n/g, "\r\n"), "utf8");
+            const canonicalCrlfHash = sha256(canonicalCrlf);
+
+            if (canonicalCrlfHash !== expected) {
+              throw new Error(
+                `Historical migration checksum mismatch for ${name}: current=${currentHash}, crlf=${canonicalCrlfHash}, expected=${expected}`
+              );
+            }
+
+            await writeFile(file, canonicalCrlf);
+            const finalHash = sha256(await readFile(file));
+            if (finalHash !== expected) {
+              throw new Error(`Failed to materialize canonical bytes for ${name}`);
+            }
+            console.log(`migration EOL normalized in CI working tree: ${name} ${finalHash}`);
+          }
+          NODE
+
       - name: Configure guarded local test base URL
         shell: bash
         run: |
@@ -58,7 +103,13 @@ jobs:
           PGPASSWORD: postgres
         run: |
           set -euo pipefail
-          for db in             lab_resources_b1d_ci             lab_resources_b1e_ci             lab_resources_b2_auth_ci             lab_resources_b3_resource_ci             lab_resources_b4_booking_ci             lab_resources_b5_operations_ci
+          for db in \
+            lab_resources_b1d_ci \
+            lab_resources_b1e_ci \
+            lab_resources_b2_auth_ci \
+            lab_resources_b3_resource_ci \
+            lab_resources_b4_booking_ci \
+            lab_resources_b5_operations_ci
           do
             psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";"
           done
@@ -67,7 +118,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for db in             lab_resources_b1d_ci             lab_resources_b1e_ci             lab_resources_b2_auth_ci             lab_resources_b3_resource_ci             lab_resources_b4_booking_ci             lab_resources_b5_operations_ci
+          for db in \
+            lab_resources_b1d_ci \
+            lab_resources_b1e_ci \
+            lab_resources_b2_auth_ci \
+            lab_resources_b3_resource_ci \
+            lab_resources_b4_booking_ci \
+            lab_resources_b5_operations_ci
           do
             echo "::group::migrate:$db"
             DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npx prisma migrate deploy
