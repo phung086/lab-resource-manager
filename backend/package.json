@@ -27,7 +27,8 @@
     "verify:prod-config": "node scripts/verifyProductionConfig.mjs",
     "demo:seed-infrastructure": "node scripts/seedGraduationDemoInfrastructure.mjs",
     "test:required": "npm run test:core",
-    "test:research": "node --test test/concurrency.test.js test/conflictForecasting.test.js test/geneticScheduler.test.js test/hybridDispatch.test.js test/integrations.test.js test/mqttTelemetry.test.js test/multiObjectiveAndBenchmark.test.js test/optimization.test.js test/orchestrationV2.test.js test/reputationScore.test.js test/services.test.js test/smartBookingPlatform.test.js"
+    "test:research": "node --test test/concurrency.test.js test/conflictForecasting.test.js test/geneticScheduler.test.js test/hybridDispatch.test.js test/integrations.test.js test/mqttTelemetry.test.js test/multiObjectiveAndBenchmark.test.js test/optimization.test.js test/orchestrationV2.test.js test/reputationScore.test.js test/services.test.js test/smartBookingPlatform.test.js",
+    "test:batch7": "node --test test/batch7.production-demo-hardening.integration.test.js"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
