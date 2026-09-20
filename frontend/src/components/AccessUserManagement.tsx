@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { RefreshCw, ShieldCheck, UserCheck, UserX } from "lucide-react";
+import { Plus, RefreshCw, ShieldCheck, UserCheck, UserX, X } from "lucide-react";
 
 import { apiRequest } from "../api.js";
 
@@ -25,6 +25,14 @@ export function AccessUserManagement() {
   const [selectedLabs, setSelectedLabs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    role: "STUDENT" as Role
+  });
 
   async function load() {
     setLoading(true);
@@ -98,6 +106,34 @@ export function AccessUserManagement() {
     }
   }
 
+  async function createUser(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    if (!createForm.fullName.trim() || !createForm.email.trim() || createForm.password.length < 12) {
+      setError("Họ tên, email và mật khẩu tối thiểu 12 ký tự là bắt buộc.");
+      return;
+    }
+    setCreating(true);
+    try {
+      await apiRequest("/users", {
+        method: "POST",
+        body: JSON.stringify({
+          fullName: createForm.fullName.trim(),
+          email: createForm.email.trim(),
+          password: createForm.password,
+          role: createForm.role
+        })
+      });
+      setCreateForm({ fullName: "", email: "", password: "", role: "STUDENT" });
+      setShowCreate(false);
+      await load();
+    } catch (requestError: any) {
+      setError(requestError?.message || "Không thể tạo người dùng.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
     <section className="view-section">
       <div className="section-heading">
@@ -105,13 +141,55 @@ export function AccessUserManagement() {
           <span className="eyebrow">RBAC & LAB SCOPE</span>
           <h2>Quản trị người dùng</h2>
         </div>
-        <button className="icon-button" type="button" onClick={load} title="Tải lại" disabled={loading}>
-          <RefreshCw size={16} />
-        </button>
+        <div className="flex gap-2">
+          <button className="btn btn-primary" type="button" onClick={() => setShowCreate(true)}>
+            <Plus size={15} /> Tạo người dùng
+          </button>
+          <button className="icon-button" type="button" onClick={load} title="Tải lại" disabled={loading}>
+            <RefreshCw size={16} />
+          </button>
+        </div>
       </div>
 
       {error && <div className="alert danger">{error}</div>}
       {loading && <p className="empty-state">Đang tải dữ liệu thật...</p>}
+      {showCreate && (
+        <div className="modal-backdrop-2026" role="presentation">
+          <div className="modal-container-2026" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+            <div className="modal-header-2026">
+              <h3 id="create-user-title">Tạo người dùng</h3>
+              <button className="icon-button" type="button" aria-label="Đóng" onClick={() => setShowCreate(false)}>
+                <X size={16} />
+              </button>
+            </div>
+            <form className="booking-operation-form" onSubmit={createUser} noValidate>
+              <label>
+                Họ và tên
+                <input value={createForm.fullName} onChange={(event) => setCreateForm({ ...createForm, fullName: event.target.value })} maxLength={255} />
+              </label>
+              <label>
+                Email
+                <input type="email" value={createForm.email} onChange={(event) => setCreateForm({ ...createForm, email: event.target.value })} />
+              </label>
+              <label>
+                Mật khẩu ban đầu
+                <input type="password" value={createForm.password} onChange={(event) => setCreateForm({ ...createForm, password: event.target.value })} minLength={12} maxLength={128} autoComplete="new-password" />
+              </label>
+              <label>
+                Vai trò
+                <select value={createForm.role} onChange={(event) => setCreateForm({ ...createForm, role: event.target.value as Role })}>
+                  {ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+                </select>
+              </label>
+              <div className="modal-actions">
+                <button className="btn btn-secondary" type="button" onClick={() => setShowCreate(false)}>Hủy</button>
+                <button className="btn btn-primary" type="submit" disabled={creating}>{creating ? "Đang tạo..." : "Tạo người dùng"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {!loading && (
         <div className="table-wrap">
           <table>
