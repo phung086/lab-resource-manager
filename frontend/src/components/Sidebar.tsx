@@ -11,6 +11,9 @@ import {
   LayoutDashboard,
   Users,
   Wrench,
+  Bell,
+  ShieldAlert,
+  Activity,
   LucideIcon
 } from "lucide-react";
 
@@ -48,8 +51,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
   user,
+  notifications = [],
+  incidents = [],
   locale = "vi"
 }) => {
+  const unreadNotifications = notifications.filter((notification) => !notification.readAt).length;
+  const openIncidents = incidents.filter((incident) =>
+    ["reported", "triaged", "assigned", "investigating"].includes(incident.status || "")
+  ).length;
   // 3 Streamlined Zones for AI-Powered Smart Booking & Advisory Platform (Linear / Cal.com style)
   const navSections: NavSectionConfig[] = [
     {
@@ -99,6 +108,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon: LayoutDashboard
         },
         {
+          id: "monitoring",
+          label: "Giám Sát Telemetry",
+          icon: Activity
+        },
+        {
+          id: "incidents",
+          label: "Sự Cố Tài Nguyên",
+          icon: ShieldAlert,
+          badge: openIncidents || null,
+          badgeType: "rose"
+        },
+        {
+          id: "escalations",
+          label: "Thông Báo",
+          icon: Bell,
+          badge: unreadNotifications || null,
+          badgeType: "amber"
+        },
+        {
           id: "maintenance",
           label: "Lịch Bảo Trì",
           icon: Wrench
@@ -141,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ...section,
           items: section.items.filter((item) => {
             if (["logs", "users"].includes(item.id)) return user?.role === "ADMIN";
-            if (["admin_management", "dashboard", "maintenance"].includes(item.id)) return ["ADMIN", "LAB_STAFF"].includes(user?.role || "");
+            if (["admin_management", "dashboard", "monitoring", "maintenance"].includes(item.id)) return ["ADMIN", "LAB_STAFF"].includes(user?.role || "");
             return true;
           })
         })).filter((section) => section.items.length > 0).map((section) => (
