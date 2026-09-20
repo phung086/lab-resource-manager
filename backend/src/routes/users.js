@@ -1,5 +1,3 @@
-import bcrypt from "bcryptjs";
-import crypto from "crypto";
 import express from "express";
 import { z } from "zod";
 
@@ -7,20 +5,9 @@ import { prisma } from "../db.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { ADMIN, CANONICAL_ROLES, LAB_STAFF } from "../constants/roles.js";
+import { createManagedUser, safeUserSelect } from "../services/userService.js";
 
 const router = express.Router();
-
-const safeUserSelect = {
-  id: true,
-  email: true,
-  fullName: true,
-  role: true,
-  isActive: true,
-  createdAt: true,
-  department: true,
-  studentId: true,
-  phone: true
-};
 
 /**
  * GET /me — Current user profile.
@@ -87,21 +74,7 @@ const createUserSchema = z.object({
 router.post("/", requireAuth, requireRole(ADMIN), async (req, res, next) => {
   try {
     const data = createUserSchema.parse(req.body);
-    const passwordHash = await bcrypt.hash(data.password, 12);
-    const created = await prisma.user.create({
-      data: {
-        id: crypto.randomUUID(),
-        email: data.email,
-        fullName: data.fullName,
-        role: data.role,
-        passwordHash,
-        isActive: data.isActive,
-        studentId: data.studentId || null,
-        department: data.department || null,
-        phone: data.phone || null
-      },
-      select: safeUserSelect
-    });
+    const created = await createManagedUser(prisma, data);
     res.status(201).json(created);
   } catch (error) {
     if (error?.code === "P2002") {

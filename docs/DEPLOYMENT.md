@@ -72,29 +72,17 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 The backend production container runs:
 
 ```text
-canonical migration deployment bridge
+Prisma migrate deploy
 -> Prisma migration status verification
 -> canonical first-admin seed
 -> start API
 ```
 
-The bridge exists because the verified Batch 1 reconciliation migration contains
-checksum preconditions captured from the original Windows workspace, while the
-repository can materialize those older migration files with different byte
-checksums on another platform. It:
-
-1. deploys the immutable predecessor migrations through Prisma;
-2. creates an ephemeral copy of the verified reconciliation SQL with only the
-   known checksum-precondition literals translated to the checksums Prisma
-   actually recorded;
-3. executes that verified reconciliation body;
-4. records the reconciliation through `prisma migrate resolve --applied`;
-5. resumes normal `prisma migrate deploy`.
-
-Tracked historical migration SQL is never edited and `_prisma_migrations` is
-never edited manually.
-
-It does not run `prisma db push`.
+Batch 7 finalization reconfirmed ordinary tracked `prisma migrate deploy` on a
+clean PostgreSQL 16 database in both the host environment and the Linux
+production image. The temporary checksum-compatibility bridge is retired.
+Tracked historical migration SQL is never edited, `_prisma_migrations` is never
+edited manually, and production does not run `prisma db push`.
 
 ## 4. Verify runtime
 

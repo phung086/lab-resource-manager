@@ -1,20 +1,16 @@
 # Current Project State
 
-Last synchronized: 2026-09-20
+Last synchronized: 2026-09-21
 
 ## Current Boundary
 
-Batch 4 & 4.1 - Booking Calendar and Required Booking Workflow is complete and verified.
-
-Batch 5 - Canonical Operational Booking Workflow is complete, verified, and
-merged to `main` at `a9589d9940c7984324152f8a5636f5f67189b322`.
-Approval, rejection, handover/check-out,
-condition-before evidence, return, condition-after evidence, completion,
-persisted history, notifications, physical-state synchronization, concurrency
-safety, and full-stack E2E have passed. Batch 6 - Notifications, Incidents, Dashboard & Real Telemetry is complete,
-verified, and merged to `main` at
-`2dd67ca6f3076849760cecd066ab8eebfdc841d8`. Batch 7 is explicitly authorized
-and is the current implementation boundary.
+Batch 7 - Production Demo Hardening is complete and verified on branch
+`final-graduation-hardening`, synchronized from
+`71da1683fc1c8bf842d2fc5b1313b45ac15499c1`. The required-core regression
+matrix, clean PostgreSQL 16 migration deployment, production-like Compose
+startup, security smoke, prior frontend E2E suites, and official 10-step
+graduation demo all pass. Batch 8 - Smart Monitoring Extension is explicitly
+authorized and is the current implementation boundary.
 
 ## Completed Core Work
 
@@ -30,6 +26,14 @@ and is the current implementation boundary.
   enforced `LabPolicy` rules, calendar privacy contract separating public availability
   from private booker identity, dynamic Day/Week/Month calendar views, and real
   `QuickBookingModal` decoupled from fake payment.
+- Batch 5: canonical approval, rejection, handover, condition evidence, return,
+  completion, history, notifications, physical-state synchronization, and
+  concurrency safety.
+- Batch 6: durable notifications, scoped incidents, real operational dashboard,
+  and persisted telemetry with deterministic five-state classification.
+- Batch 7: ordinary clean migration deployment, production startup hardening,
+  research-feature isolation, local quality tooling, production dependency
+  remediation, and reproducible graduation demo.
 
 ## Canonical Stack
 
@@ -86,18 +90,28 @@ derived from resource state, bookings, maintenance windows, and policy.
 - Batch 2/3/4/5 frontend E2E regressions: PASS again inside the Batch 6 full-stack gate.
 - Batch 6 runtime health/readiness/CORS/Helmet smoke: PASS.
 - Latest verified Batch 6 full-stack Vite production build: PASS in 1.59s.
+- Batch 7 backend hardening integration: 6/6 PASS.
+- Batch 7 backend regression: core 27/27, Batch 1 2/2, Batch 1E 11/11,
+  Batch 2 10/10, Batch 3 9/9, Batch 4/4.1 30/30, Batch 5 13/13, Batch 6
+  11/11, and Batch 7 6/6 PASS.
+- Batch 2/3/4/5/6 frontend E2E regressions: PASS on isolated PostgreSQL 16.
+- Batch 7 official production-like 10-step graduation demo: PASS.
+- Production-like proxy/API/readiness/CORS/Helmet/migration-status smoke: PASS.
+- Backend and frontend production dependency audits: 0 vulnerabilities.
+- Frontend lint, typecheck, and production build: PASS; default entry chunk is
+  approximately 392 kB minified after optional research code splitting.
 
 The latest Batch 4.1 verification on 2026-09-20 passed all backend core tests (27/27), policy unit tests (16/16), Batch 4 integration subtests (14/14), Batch 1/1E/2/3 regressions, all 3 frontend E2E suites, and the frontend production build.
 
 ## Current Core Blockers
 
-None known through the verified Batch 6 required-core boundary.
+None known through the verified Batch 7 required-core boundary.
 
 ## Known Non-Blocking Debt
 
 - Resource list uses a 250-row hard cap instead of cursor pagination.
-- Main Vite bundle is approximately 641 kB minified and triggers the existing
-  bundle-size warning.
+- Existing frontend hook/fast-refresh findings are warnings and remain scoped
+  refactoring debt; lint has zero errors.
 - Five resources remain intentionally unclassified pending an authoritative
   review decision.
 - Dedicated durable audit models are not yet available for every admin and
@@ -109,8 +123,10 @@ None known through the verified Batch 6 required-core boundary.
 
 ## Next Authorized Task
 
-Batch 7 - Production Demo Hardening is explicitly authorized. Do not start
-Batch 8 automatically after Batch 7. Before any future batch, read:
+Batch 8 - Smart Monitoring Extension is explicitly authorized by the current
+finalization request. Before implementation, use the Batch 7 report and
+walkthrough as the new verified baseline. Do not start Batch 9 or Batch 10.
+Before any future session, read:
 
 1. `AGENTS.md`
 2. `.agent/PROJECT_RULES.md`
@@ -122,7 +138,9 @@ Batch 8 automatically after Batch 7. Before any future batch, read:
 8. `docs/BATCH5_WALKTHROUGH.md`
 9. `docs/BATCH6_NOTIFICATIONS_INCIDENTS_DASHBOARD_REPORT.md`
 10. `docs/BATCH6_WALKTHROUGH.md`
-11. the relevant booking, persistence, monitoring, and incident reports
+11. `docs/BATCH7_PRODUCTION_DEMO_HARDENING_REPORT.md`
+12. `docs/BATCH7_WALKTHROUGH.md`
+13. the relevant booking, persistence, monitoring, and incident reports
 
 ## Do Not Work On Without Explicit Approval
 

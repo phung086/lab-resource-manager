@@ -40,7 +40,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - run: npm ci
-      - run: npx prisma generate
+      - run: npm run db:generate
 
       - name: Configure guarded local test base URL
         shell: bash
@@ -69,42 +69,11 @@ jobs:
             psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";"
           done
 
-      - name: Prepare canonical schema on isolated databases
+      - name: Deploy canonical migrations to isolated regression databases
         shell: bash
-        env:
-          PGPASSWORD: postgres
+        working-directory: backend
         run: |
           set -euo pipefail
-
-          # Batch 1D already verified the canonical reconciliation migration on
-          # PostgreSQL 16. The repository's oldest migration blobs currently
-          # materialize with SHA-256 values that differ from the Windows
-          # verification snapshot embedded in 1C, so a raw Linux
-          # `prisma migrate deploy` aborts before runtime tests start.
-          #
-          # Do NOT edit historical migrations or _prisma_migrations. For this
-          # disposable CI harness only, deploy the first seven tracked
-          # migrations normally, then execute an ephemeral copy of 1C whose
-          # checksum *precondition literals only* are translated from the
-          # verified snapshot hashes to the hashes Prisma just recorded.
-          # The canonical DDL/body is otherwise byte-for-byte sourced from the
-          # checked-in 1C migration. This is runtime-regression bootstrap, NOT
-          # new migration verification evidence.
-
-          B1C_DIR="prisma/migrations/20260917000100_reconcile_canonical_persistence"
-          B1C_HIDDEN="$RUNNER_TEMP/20260917000100_reconcile_canonical_persistence"
-          B1C_SQL="$RUNNER_TEMP/batch1c-ci-runtime-bootstrap.sql"
-
-          test -d "$B1C_DIR"
-          rm -rf "$B1C_HIDDEN"
-          mv "$B1C_DIR" "$B1C_HIDDEN"
-          restore_b1c() {
-            if [ -d "$B1C_HIDDEN" ] && [ ! -d "$B1C_DIR" ]; then
-              mv "$B1C_HIDDEN" "$B1C_DIR"
-            fi
-          }
-          trap restore_b1c EXIT
-
           for db in \
             lab_resources_b1d_ci \
             lab_resources_b1e_ci \
@@ -113,78 +82,10 @@ jobs:
             lab_resources_b4_booking_ci \
             lab_resources_b5_operations_ci
           do
-            echo "::group::deploy-first-seven:$db"
-            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npx prisma migrate deploy
+            echo "::group::migrate:$db"
+            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npm run db:migrate
             echo "::endgroup::"
           done
-
-          mv "$B1C_HIDDEN" "$B1C_DIR"
-          trap - EXIT
-
-          node --input-type=module <<'NODE'
-          import { createHash } from "node:crypto";
-          import { readFile, writeFile } from "node:fs/promises";
-          import path from "node:path";
-
-          const baseline = JSON.parse(await readFile("../docs/BATCH1B_VERIFICATION.json", "utf8"));
-          const migrationRoot = path.join("prisma", "migrations");
-          const b1cPath = path.join(
-            migrationRoot,
-            "20260917000100_reconcile_canonical_persistence",
-            "migration.sql"
-          );
-          const sha256 = (value) => createHash("sha256").update(value).digest("hex");
-          let sql = await readFile(b1cPath, "utf8");
-          let replacements = 0;
-
-          for (const [name, verifiedHash] of Object.entries(baseline.migrationFiles)) {
-            const currentBytes = await readFile(path.join(migrationRoot, name, "migration.sql"));
-            const currentHash = sha256(currentBytes);
-            const occurrences = sql.split(verifiedHash).length - 1;
-            if (occurrences !== 1) {
-              throw new Error(
-                `Expected exactly one checksum literal for ${name}; found ${occurrences}`
-              );
-            }
-            sql = sql.replace(verifiedHash, currentHash);
-            replacements += 1;
-            console.log(
-              `CI checksum precondition translation: ${name} verified=${verifiedHash} checkout=${currentHash}`
-            );
-          }
-
-          if (replacements !== Object.keys(baseline.migrationFiles).length) {
-            throw new Error("Incomplete migration checksum precondition translation");
-          }
-
-          // Fail closed: only known checksum literals may change. The tracked
-          // migration file itself remains untouched.
-          const tracked = await readFile(b1cPath, "utf8");
-          let reconstructed = sql;
-          for (const [name, verifiedHash] of Object.entries(baseline.migrationFiles)) {
-            const currentBytes = await readFile(path.join(migrationRoot, name, "migration.sql"));
-            reconstructed = reconstructed.replace(sha256(currentBytes), verifiedHash);
-          }
-          if (reconstructed !== tracked) {
-            throw new Error("Ephemeral Batch 1C copy changed beyond checksum precondition literals");
-          }
-
-          await writeFile(process.env.RUNNER_TEMP + "/batch1c-ci-runtime-bootstrap.sql", sql, "utf8");
-          NODE
-
-          for db in \
-            lab_resources_b1d_ci \
-            lab_resources_b1e_ci \
-            lab_resources_b2_auth_ci \
-            lab_resources_b3_resource_ci \
-            lab_resources_b4_booking_ci \
-            lab_resources_b5_operations_ci
-          do
-            echo "::group::canonical-reconcile:$db"
-            psql -h 127.0.0.1 -U postgres -d "$db" -v ON_ERROR_STOP=1 -f "$B1C_SQL"
-            echo "::endgroup::"
-          done
-
           git diff --exit-code -- prisma/migrations
 
       - name: Core tests
@@ -194,11 +95,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BATCH1D_DATABASES=lab_resources_b1d_ci node --test test/bookingConcurrency.db.test.js
-          BATCH1D_DATABASES=lab_resources_b1d_ci node --test test/persistenceMigration.test.js
+          BATCH1D_DATABASES=lab_resources_b1d_ci npm run test:batch1:concurrency
+          BATCH1D_DATABASES=lab_resources_b1d_ci npm run test:batch1:persistence
 
       - name: Batch 1E runtime regression
-        run: BATCH1E_DATABASE=lab_resources_b1e_ci node --test test/batch1e/integration.runtime.test.js
+        run: BATCH1E_DATABASE=lab_resources_b1e_ci npm run test:batch1e-runtime
 
       - name: Batch 2 auth/RBAC regression
         run: BATCH2_DATABASE=lab_resources_b2_auth_ci npm run test:batch2

@@ -1,6 +1,15 @@
 name: Batch 7 Graduation Demo
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "docker-compose.prod.yml"
+      - ".env.production.example"
+      - ".gitattributes"
+      - ".github/workflows/batch7-graduation-demo.yml"
   pull_request:
     paths:
       - "backend/**"
@@ -74,6 +83,7 @@ jobs:
           ready=0
           for i in {1..120}; do
             if curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1 &&
+               curl -fsS http://127.0.0.1:8080/api/health | grep -q '"ok":true' &&
                curl -fsS http://127.0.0.1:8080/api/health/ready | grep -q '"database":"ready"'; then
               ready=1
               break
@@ -88,6 +98,7 @@ jobs:
           fi
 
           curl -fsS http://127.0.0.1:8080/health | grep -q '^ok'
+          curl -fsS http://127.0.0.1:8080/api/health | grep -q '"ok":true'
           curl -fsS http://127.0.0.1:8080/api/health/ready | grep -q '"database":"ready"'
 
       - name: Bootstrap guarded physical demo infrastructure
@@ -121,7 +132,7 @@ jobs:
 
       - name: Verify database migrations are clean
         run: |
-          docker compose --env-file .env.batch7.ci -f docker-compose.prod.yml exec -T backend npx prisma migrate status
+          docker compose --env-file .env.batch7.ci -f docker-compose.prod.yml exec -T backend npm run db:status
 
       - name: Upload graduation demo screenshots
         if: always()

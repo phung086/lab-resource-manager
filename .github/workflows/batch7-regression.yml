@@ -1,6 +1,12 @@
 name: Batch 7 Backend Regression
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".gitattributes"
+      - ".github/workflows/batch7-regression.yml"
   pull_request:
     paths:
       - "backend/**"
@@ -41,7 +47,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - run: npm ci
-      - run: npx prisma generate
+      - run: npm run db:generate
 
       - name: Backend lint
         run: npm run lint
@@ -96,7 +102,7 @@ jobs:
             lab_resources_b7_demo_ci
           do
             echo "::group::migrate:$db"
-            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npm run db:migrate:canonical
+            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npm run db:migrate
             echo "::endgroup::"
           done
           git diff --exit-code -- prisma/migrations
@@ -108,11 +114,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BATCH1D_DATABASES=lab_resources_b1d_ci node --test test/bookingConcurrency.db.test.js
-          BATCH1D_DATABASES=lab_resources_b1d_ci node --test test/persistenceMigration.test.js
+          BATCH1D_DATABASES=lab_resources_b1d_ci npm run test:batch1:concurrency
+          BATCH1D_DATABASES=lab_resources_b1d_ci npm run test:batch1:persistence
 
       - name: Batch 1E runtime regression
-        run: BATCH1E_DATABASE=lab_resources_b1e_ci node --test test/batch1e/integration.runtime.test.js
+        run: BATCH1E_DATABASE=lab_resources_b1e_ci npm run test:batch1e-runtime
 
       - name: Batch 2 auth/RBAC regression
         run: BATCH2_DATABASE=lab_resources_b2_auth_ci npm run test:batch2

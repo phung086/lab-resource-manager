@@ -37,35 +37,13 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import { ApiError, apiRequest, getCurrentUser, hasStoredSession, login, logout, register } from "./api.js";
 import { SmartCalendarView } from "./components/SmartCalendarView.tsx";
-import { EfficiencyAnalyticsView } from "./components/EfficiencyAnalyticsView.tsx";
-import { SmartAdvisoryView } from "./components/SmartAdvisoryView.tsx";
 import { AdminResourceManagementView } from "./components/AdminResourceManagementView.tsx";
 import { ResourceManagementView } from "./components/ResourceManagementView.tsx";
 import { BookingOperationsPage } from "./pages/operations/BookingOperationsPage.tsx";
 import { QuickBookingModal } from "./components/QuickBookingModal.tsx";
-import { VietQrPaymentModal } from "./components/VietQrPaymentModal.tsx";
-import { QrCheckInModal } from "./components/QrCheckInModal.tsx";
-import { SafetyQuizModal } from "./components/SafetyQuizModal.tsx";
 import { AuthLoginView } from "./components/AuthLoginView.tsx";
 import { AuthRegisterView } from "./components/AuthRegisterView.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
-import { OptimizationHubView } from "./components/OptimizationHubView.tsx";
-import { DigitalTwinCanvas } from "./components/DigitalTwinCanvas.jsx";
-import { ScenarioSimulationStudio } from "./components/ScenarioSimulationStudio.jsx";
-import { GeneticAlgorithmVisualizer } from "./components/GeneticAlgorithmVisualizer.tsx";
-import { AiDiagnosticStudio } from "./components/AiDiagnosticStudio.jsx";
-import { OrchestrationWizard } from "./components/OrchestrationWizard.tsx";
-import { WhatIfSimulationStudio } from "./components/WhatIfSimulationStudio.tsx";
-import { ParetoFrontierExplorer } from "./components/ParetoFrontierExplorer.tsx";
-import { DecisionTimelineReplay } from "./components/DecisionTimelineReplay.tsx";
-import { AiMissionCopilot } from "./components/AiMissionCopilot.jsx";
-import { ConcurrencyStressMonitor } from "./components/ConcurrencyStressMonitor.tsx";
-import { ConflictResolutionQueue } from "./components/ConflictResolutionQueue.tsx";
-import { QuotaFairnessDashboard } from "./components/QuotaFairnessDashboard.tsx";
-import { CostChargebackReport } from "./components/CostChargebackReport.tsx";
-import { PolicyRulesConfig } from "./components/PolicyRulesConfig.tsx";
-import { EscalationsView } from "./components/EscalationsView.tsx";
-import { AuditLogsView } from "./components/AuditLogsView.tsx";
 import { AccessUserManagement } from "./components/AccessUserManagement.tsx";
 import { NotificationCenter } from "./components/NotificationCenter.jsx";
 import { IncidentsPage } from "./pages/incidents/IncidentsPage.tsx";
@@ -80,36 +58,30 @@ import { defaultLocale, getDictionary, interpolate, localeOptions, localeStorage
 import { buildMonitoringRows, getMonitoringSummary, toBarWidth } from "./monitoring.js";
 import { classNames, formatDateTime, formatPercent } from "./utils.js";
 import { RESEARCH_FEATURES_ENABLED, isTabEnabled } from "./config/featureFlags";
+import {
+  AiDiagnosticStudio,
+  AiMissionCopilot,
+  AuditLogsView,
+  ConcurrencyStressMonitor,
+  ConflictResolutionQueue,
+  CostChargebackReport,
+  DecisionTimelineReplay,
+  DigitalTwinCanvas,
+  EfficiencyAnalyticsView,
+  GeneticAlgorithmVisualizer,
+  OptimizationHubView,
+  OrchestrationWizard,
+  ParetoFrontierExplorer,
+  PolicyRulesConfig,
+  QrCheckInModal,
+  QuotaFairnessDashboard,
+  SafetyQuizModal,
+  SmartAdvisoryView,
+  VietQrPaymentModal,
+  WhatIfSimulationStudio
+} from "./research/ResearchFeatureRegistry";
 
 let copy = getDictionary(defaultLocale);
-
-function buildNavItems(activeCopy) {
-  return [
-    // 1. Core Operations & Conflict Management (Top Priority)
-    { id: "conflict_queue", label: "⚡ Xử Lý Xung Đột Real-Time", icon: AlertTriangle, section: "QUẢN TRỊ VẬN HÀNH & XỬ LÝ XUNG ĐỘT" },
-    { id: "quota_fairness", label: "📊 Hạn Ngạch & Công Bằng Nhóm", icon: Users, section: "QUẢN TRỊ VẬN HÀNH & XỬ LÝ XUNG ĐỘT" },
-    { id: "chargeback", label: "💰 Quyết Toán & Tiền Điện EVN", icon: Zap, section: "QUẢN TRỊ VẬN HÀNH & XỬ LÝ XUNG ĐỘT" },
-    { id: "policy_config", label: "⚙️ Chính Sách & Ràng Buộc Lab", icon: Sliders, section: "QUẢN TRỊ VẬN HÀNH & XỬ LÝ XUNG ĐỘT" },
-    { id: "escalations", label: "🚨 Cảnh Báo & Escalation", icon: Bell, section: "QUẢN TRỊ VẬN HÀNH & XỬ LÝ XUNG ĐỘT" },
-    { id: "allocations", label: "🎯 Điều Phối Yêu Cầu Mới", icon: Sparkles, section: "QUẢN TRỊ VẬN HÀNH & XỬ LÝ XUNG ĐỘT" },
-
-    // 2. Real-Time Telemetry & Monitoring
-    { id: "dashboard", label: "🖥️ Mission Control Thiết Bị", icon: LayoutDashboard, section: "GIÁM SÁT THỜI GIAN THỰC & BẢN SAO SỐ" },
-    { id: "digital_twin", label: "🌐 Bản Sao Số & Heatmap", icon: Radio, section: "GIÁM SÁT THỜI GIAN THỰC & BẢN SAO SỐ" },
-    { id: "what_if", label: "🔮 Studio Mô Phỏng What-If", icon: Play, section: "GIÁM SÁT THỜI GIAN THỰC & BẢN SAO SỐ" },
-    { id: "resources", label: activeCopy.nav.resources, icon: Server, section: "GIÁM SÁT THỜI GIAN THỰC & BẢN SAO SỐ" },
-    { id: "bookings", label: activeCopy.nav.bookings, icon: CalendarCheck, section: "GIÁM SÁT THỜI GIAN THỰC & BẢN SAO SỐ" },
-    { id: "maintenance", label: activeCopy.nav.maintenance, icon: Wrench, section: "GIÁM SÁT THỜI GIAN THỰC & BẢN SAO SỐ" },
-
-    // 3. Technical Engines & Audit Provenance (Advanced / Technical)
-    { id: "pareto", label: "📐 Khảo Sát Pareto Frontier", icon: Sliders, section: "CÔNG CỤ KỸ THUẬT & TRUY VẾT" },
-    { id: "timeline", label: "⏱️ Replay Tái Tối Ưu Hóa", icon: Clock, section: "CÔNG CỤ KỸ THUẬT & TRUY VẾT" },
-    { id: "concurrency", label: "🔒 Giám Sát Tranh Chấp GiST", icon: ShieldCheck, section: "CÔNG CỤ KỸ THUẬT & TRUY VẾT" },
-    { id: "assistant", label: "🤖 AI Copilot & MCP Trace", icon: Bot, section: "CÔNG CỤ KỸ THUẬT & TRUY VẾT" },
-    { id: "logs", label: activeCopy.nav.logs, icon: ClipboardCheck, section: "CÔNG CỤ KỸ THUẬT & TRUY VẾT" },
-    { id: "users", label: activeCopy.nav.users, icon: Users, section: "CÔNG CỤ KỸ THUẬT & TRUY VẾT" }
-  ];
-}
 
 function getInitialLocale() {
   return normalizeLocale(localStorage.getItem(localeStorageKey) || defaultLocale);
@@ -184,7 +156,6 @@ function App() {
     setLocale(normalized);
   }
 
-  useMemo(() => buildNavItems(copy), [locale]);
   const isStaff = user && ["ADMIN", "LAB_STAFF"].includes(user.role);
   const researchFeaturesEnabled = RESEARCH_FEATURES_ENABLED;
 
@@ -299,50 +270,47 @@ function App() {
     >
       {error && <div className="alert danger">{error}</div>}
 
-      {/* CORE 2026 PILLARS: SMART BOOKING, AI ANALYTICS, ADVISORY & ADMIN */}
+      {/* REQUIRED CORE */}
       {activeTab === "smart_calendar" && (
         <SmartCalendarView
           user={user}
           onOpenBooking={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
         />
       )}
-      {activeTab === "ai_analytics" && (
-        <EfficiencyAnalyticsView
-          onOpenBookingModal={() => setActiveGlobalModal({ type: "quick_booking" })}
-        />
-      )}
-      {activeTab === "ai_advisor" && (
-        <SmartAdvisoryView
-          onApplyRecommendation={(action) => setActiveTab("smart_calendar")}
-        />
-      )}
       {activeTab === "admin_management" && <AdminResourceManagementView user={user} />}
-
-      {/* LEGACY & SUB-MODULE COMPATIBILITY */}
-      {activeTab === "conflict_queue" && <ConflictResolutionQueue />}
-      {activeTab === "quota_fairness" && <QuotaFairnessDashboard />}
-      {activeTab === "chargeback" && <CostChargebackReport />}
-      {activeTab === "policy_config" && <PolicyRulesConfig />}
       {activeTab === "escalations" && <NotificationCenter notifications={notifications} onChanged={loadData} />}
       {activeTab === "dashboard" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {activeTab === "allocations" && <OrchestrationWizard onAllocated={loadData} />}
-      {activeTab === "pareto" && <ParetoFrontierExplorer />}
-      {activeTab === "timeline" && <DecisionTimelineReplay />}
-      {activeTab === "digital_twin" && <DigitalTwinCanvas />}
-      {activeTab === "what_if" && <WhatIfSimulationStudio />}
-      {activeTab === "concurrency" && <ConcurrencyStressMonitor />}
-      {activeTab === "ga_solver" && <GeneticAlgorithmVisualizer />}
-      {activeTab === "ai_rca" && <AiDiagnosticStudio />}
-      {activeTab === "assistant" && <AiMissionCopilot />}
       {activeTab === "resources" && <ResourceManagementView user={user} />}
       {activeTab === "bookings" && <BookingOperationsPage user={user} onChanged={loadData} />}
-      {activeTab === "optimization" && <OptimizationHubView />}
       {activeTab === "maintenance" && <MaintenanceView resources={resources} maintenance={maintenance} isStaff={isStaff} onChanged={loadData} />}
       {activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
-      {activeTab === "training" && <TrainingView courses={trainings.courses} certifications={trainings.certifications} resources={resources} user={user} isStaff={isStaff} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {activeTab === "logs" && <AuditLogsView />}
       {activeTab === "users" && <AccessUserManagement />}
+
+      {researchFeaturesEnabled && (
+        <React.Suspense fallback={<p className="empty-state">Đang tải khu vực nghiên cứu...</p>}>
+          {activeTab === "ai_analytics" && <EfficiencyAnalyticsView />}
+          {activeTab === "ai_advisor" && (
+            <SmartAdvisoryView onApplyRecommendation={() => setActiveTab("smart_calendar")} />
+          )}
+          {activeTab === "conflict_queue" && <ConflictResolutionQueue />}
+          {activeTab === "quota_fairness" && <QuotaFairnessDashboard />}
+          {activeTab === "chargeback" && <CostChargebackReport />}
+          {activeTab === "policy_config" && <PolicyRulesConfig />}
+          {activeTab === "allocations" && <OrchestrationWizard onAllocated={loadData} />}
+          {activeTab === "pareto" && <ParetoFrontierExplorer />}
+          {activeTab === "timeline" && <DecisionTimelineReplay />}
+          {activeTab === "digital_twin" && <DigitalTwinCanvas />}
+          {activeTab === "what_if" && <WhatIfSimulationStudio />}
+          {activeTab === "concurrency" && <ConcurrencyStressMonitor />}
+          {activeTab === "ga_solver" && <GeneticAlgorithmVisualizer />}
+          {activeTab === "ai_rca" && <AiDiagnosticStudio />}
+          {activeTab === "assistant" && <AiMissionCopilot />}
+          {activeTab === "optimization" && <OptimizationHubView />}
+          {activeTab === "training" && <TrainingView courses={trainings.courses} certifications={trainings.certifications} resources={resources} user={user} isStaff={isStaff} onChanged={loadData} />}
+          {activeTab === "logs" && <AuditLogsView />}
+        </React.Suspense>
+      )}
 
       <QuickBookingModal
         isOpen={activeGlobalModal?.type === "quick_booking"}
@@ -355,7 +323,7 @@ function App() {
       />
 
       {researchFeaturesEnabled && (
-        <>
+        <React.Suspense fallback={null}>
           <VietQrPaymentModal
             isOpen={activeGlobalModal?.type === "vietqr"}
             onClose={() => setActiveGlobalModal(null)}
@@ -370,16 +338,13 @@ function App() {
             booking={activeGlobalModal?.payload}
             onCheckinSuccess={() => loadData()}
           />
-        </>
-      )}
-
-      {researchFeaturesEnabled && (
-        <SafetyQuizModal
+          <SafetyQuizModal
           isOpen={activeGlobalModal?.type === "safety_quiz"}
           onClose={() => setActiveGlobalModal(null)}
           courseTitle={activeGlobalModal?.payload?.title || "Research safety quiz demo"}
           onPassed={() => loadData()}
-        />
+          />
+        </React.Suspense>
       )}
 
     </AppLayout>

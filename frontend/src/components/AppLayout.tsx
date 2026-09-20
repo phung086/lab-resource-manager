@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
 import { Header } from "./Header.tsx";
-import { AiCopilotDrawer, FloatingCopilotFab } from "./AiCopilotDrawer.tsx";
 import { KeyRound, X, Check, ShieldAlert } from "lucide-react";
 import { apiRequest } from "../api.js";
 import { RESEARCH_FEATURES_ENABLED } from "../config/featureFlags";
+import { AiCopilotDrawer, FloatingCopilotFab } from "../research/ResearchFeatureRegistry";
 
 export interface AppLayoutProps {
   activeTab: string;
@@ -152,7 +152,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       </div>
 
       {RESEARCH_FEATURES_ENABLED && (
-        <>
+        <React.Suspense fallback={null}>
           <FloatingCopilotFab
             isOpen={copilotOpen}
             onClick={() => setCopilotOpen(true)}
@@ -166,7 +166,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               }
             }}
           />
-        </>
+        </React.Suspense>
       )}
 
       {/* 5. Modal Đổi Mật Khẩu (Level 3 Depth) */}

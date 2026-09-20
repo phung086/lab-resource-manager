@@ -126,3 +126,15 @@ A more serious authoritative physical state such as `BROKEN`, `MAINTENANCE`,
 `CALIBRATION`, `RETIRED`, or `OFFLINE` is never silently overwritten by
 the return workflow. Real physical changes must be recorded in
 `ResourceStatusHistory`.
+
+## ADR-015 - Production Uses Ordinary Prisma Migration Deployment
+
+Status: Accepted
+
+Production and clean release environments run the repository's tracked
+`prisma migrate deploy`, verify `prisma migrate status`, then seed only the
+configured first administrator. Batch 7 finalization verified the complete
+migration history on clean PostgreSQL 16 in the Linux production image. The
+temporary checksum-compatibility bridge is retired because it is no longer
+needed and its cross-filesystem move failed closed during production startup.
+Historical migration SQL and `_prisma_migrations` remain immutable.
