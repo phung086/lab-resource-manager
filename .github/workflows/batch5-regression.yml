@@ -68,28 +68,41 @@ jobs:
             // LF on Linux runners. Normalize only the ephemeral CI working
             // tree when and only when the canonical CRLF byte representation
             // reproduces the recorded verified checksum exactly.
-            const text = current.toString("utf8").replace(/\r\n/g, "\n");
-            const lf = Buffer.from(text, "utf8");
-            const crlf = Buffer.from(text.replace(/\n/g, "\r\n"), "utf8");
-            const withoutFinalLf = Buffer.from(text.replace(/\n$/, ""), "utf8");
-            const withoutFinalCrlf = Buffer.from(text.replace(/\n$/, "").replace(/\n/g, "\r\n"), "utf8");
+            const originalText = current.toString("utf8");
+            const normalizedLf = originalText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
             const bom = Buffer.from([0xef, 0xbb, 0xbf]);
-            const candidates = [
-              ["lf", lf],
-              ["crlf", crlf],
-              ["lf-no-final-newline", withoutFinalLf],
-              ["crlf-no-final-newline", withoutFinalCrlf],
-              ["bom-lf", Buffer.concat([bom, lf])],
-              ["bom-crlf", Buffer.concat([bom, crlf])],
-              ["bom-lf-no-final-newline", Buffer.concat([bom, withoutFinalLf])],
-              ["bom-crlf-no-final-newline", Buffer.concat([bom, withoutFinalCrlf])]
-            ];
+            const candidates = [];
+
+            function addCandidate(label, text, useBom = false) {
+              const bytes = Buffer.from(text, "utf8");
+              candidates.push([label, useBom ? Buffer.concat([bom, bytes]) : bytes]);
+            }
+
+            for (const eol of ["lf", "crlf"]) {
+              const separator = eol === "lf" ? "\n" : "\r\n";
+              const baseLines = normalizedLf.replace(/\n+$/, "").split("\n");
+              for (let finalNewlines = 0; finalNewlines <= 4; finalNewlines += 1) {
+                const rendered = baseLines.join(separator) + separator.repeat(finalNewlines);
+                addCandidate(`${eol}-final-${finalNewlines}`, rendered, false);
+                addCandidate(`bom-${eol}-final-${finalNewlines}`, rendered, true);
+              }
+
+              const trimmedLines = baseLines.map((line) => line.replace(/[ \t]+$/g, ""));
+              for (let finalNewlines = 0; finalNewlines <= 4; finalNewlines += 1) {
+                const rendered = trimmedLines.join(separator) + separator.repeat(finalNewlines);
+                addCandidate(`${eol}-trim-trailing-final-${finalNewlines}`, rendered, false);
+                addCandidate(`bom-${eol}-trim-trailing-final-${finalNewlines}`, rendered, true);
+              }
+            }
+
             const canonical = candidates.find(([, bytes]) => sha256(bytes) === expected);
 
             if (!canonical) {
-              const variants = candidates.map(([label, bytes]) => `${label}=${sha256(bytes)}`).join(", ");
+              const samples = candidates.slice(0, 12)
+                .map(([label, bytes]) => `${label}=${sha256(bytes)}`)
+                .join(", ");
               throw new Error(
-                `Historical migration checksum mismatch for ${name}: current=${currentHash}, expected=${expected}; variants: ${variants}`
+                `Historical migration checksum mismatch for ${name}: current=${currentHash}, expected=${expected}; no safe EOL/BOM/trailing-whitespace representation matched. Samples: ${samples}`
               );
             }
 
