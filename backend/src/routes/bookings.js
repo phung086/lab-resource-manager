@@ -4,7 +4,6 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { assertBookingAccess, assertLabStaffResourceAccess, requireBookingLabAccess } from "../middleware/labScope.js";
-import { HttpError } from "../middleware/errors.js";
 import {
   cancelBooking,
   createBooking,
@@ -13,7 +12,6 @@ import {
 } from "../services/bookingService.js";
 import { getResourceAvailability } from "../services/availabilityService.js";
 import { ADMIN, LAB_STAFF, STAFF_ROLES } from "../constants/roles.js";
-import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
 
 const router = express.Router();
 
@@ -25,11 +23,34 @@ const createBookingSchema = z.object({
   endAt: z.string().or(z.date())
 }).strict();
 
-const transitionSchema = z.object({
-  reason: z.string().max(1000).optional(),
-  conditionBefore: z.string().max(2000).optional(),
-  conditionAfter: z.string().max(2000).optional()
+const optionalReason = z.string().trim().max(1000).optional().transform((value) => value || undefined);
+const approveSchema = z.object({ reason: optionalReason }).strict();
+// Evidence fields stay syntactically bounded here but are semantically required
+// inside transitionBooking *after* current-state validation. This preserves a
+// stable 409 BOOKING_INVALID_TRANSITION for illegal state changes, while valid
+// transitions with missing/blank evidence still fail 400 VALIDATION_ERROR.
+const optionalEvidence = (max) => z.string().trim().max(max).optional().transform((value) => value || undefined);
+const rejectSchema = z.object({ reason: optionalEvidence(1000) }).strict();
+const checkOutSchema = z.object({
+  reason: optionalReason,
+  conditionBefore: optionalEvidence(2000)
 }).strict();
+const returnSchema = z.object({
+  reason: optionalReason,
+  conditionAfter: optionalEvidence(2000)
+}).strict();
+const completeSchema = z.object({ reason: optionalReason }).strict();
+const cancelSchema = z.object({ reason: optionalReason }).strict();
+
+const bookingInclude = {
+  resource: {
+    include: {
+      laboratory: { select: { id: true, code: true, name: true } }
+    }
+  },
+  requestedBy: { select: { id: true, fullName: true, email: true, role: true } },
+  approvedBy: { select: { id: true, fullName: true, email: true, role: true } }
+};
 
 // GET / - List bookings with optional filters
 router.get("/", requireAuth, async (req, res, next) => {
@@ -62,13 +83,9 @@ router.get("/", requireAuth, async (req, res, next) => {
 
     const bookings = await prisma.booking.findMany({
       where,
-      include: {
-        resource: true,
-        requestedBy: { select: { id: true, fullName: true, email: true, role: true } },
-        approvedBy: { select: { id: true, fullName: true, email: true, role: true } }
-      },
-      orderBy: { startAt: "desc" },
-      take: 50
+      include: bookingInclude,
+      orderBy: [{ startAt: "desc" }, { createdAt: "desc" }],
+      take: 100
     });
 
     res.json(bookings);
@@ -99,9 +116,9 @@ router.get("/availability", requireAuth, async (req, res, next) => {
 
     const start = new Date(startAt);
     const end = new Date(endAt);
-    if (start >= end) {
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= end) {
       return res.status(400).json({
-        error: { code: "VALIDATION_ERROR", message: "startAt must be before endAt" }
+        error: { code: "VALIDATION_ERROR", message: "startAt must be a valid timestamp before endAt" }
       });
     }
 
@@ -117,16 +134,72 @@ router.get("/availability", requireAuth, async (req, res, next) => {
   }
 });
 
+// GET /:id/history - Persisted booking workflow timeline only.
+router.get("/:id/history", requireAuth, async (req, res, next) => {
+  try {
+    await assertBookingAccess(req.user, req.params.id);
+    const booking = await prisma.booking.findUnique({
+      where: { id: req.params.id },
+      include: bookingInclude
+    });
+    if (!booking) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Booking not found" } });
+    }
+
+    const rows = await prisma.usageLog.findMany({
+      where: { bookingId: booking.id },
+      include: { user: { select: { id: true, fullName: true, role: true } } },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+    });
+
+    res.json({
+      booking: {
+        id: booking.id,
+        bookingCode: booking.bookingCode,
+        resourceId: booking.resourceId,
+        requestedById: booking.requestedById,
+        approvedById: booking.approvedById,
+        title: booking.title,
+        purpose: booking.purpose,
+        status: booking.status,
+        resource: booking.resource,
+        requestedBy: booking.requestedBy,
+        approvedBy: booking.approvedBy,
+        startAt: booking.startAt,
+        endAt: booking.endAt,
+        approvedAt: booking.approvedAt,
+        actualStartAt: booking.actualStartAt,
+        actualEndAt: booking.actualEndAt,
+        returnedAt: booking.returnedAt,
+        completedAt: booking.completedAt,
+        handoverCondition: booking.handoverCondition,
+        returnCondition: booking.returnCondition
+      },
+      timeline: rows.map((row) => ({
+        id: row.id,
+        bookingId: row.bookingId,
+        action: row.action,
+        fromStatus: row.fromStatus,
+        toStatus: row.toStatus,
+        reason: row.reason,
+        conditionBefore: row.conditionBefore,
+        conditionAfter: row.conditionAfter,
+        actor: row.user,
+        metadata: row.metadata || {},
+        createdAt: row.createdAt
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/:id", requireAuth, async (req, res, next) => {
   try {
     await assertBookingAccess(req.user, req.params.id);
     const booking = await prisma.booking.findUnique({
       where: { id: req.params.id },
-      include: {
-        resource: true,
-        requestedBy: { select: { id: true, fullName: true, email: true, role: true } },
-        approvedBy: { select: { id: true, fullName: true, email: true, role: true } }
-      }
+      include: bookingInclude
     });
     res.json(booking);
   } catch (error) {
@@ -153,102 +226,83 @@ router.post("/", requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /:id/approve - PENDING_APPROVAL → CONFIRMED
+// PENDING_APPROVAL -> CONFIRMED
 router.post("/:id/approve", requireAuth, requireRole(ADMIN, LAB_STAFF), requireBookingLabAccess(), async (req, res, next) => {
   try {
-    const { reason } = transitionSchema.parse(req.body || {});
-    const booking = await transitionBooking({
+    const { reason } = approveSchema.parse(req.body || {});
+    res.json(await transitionBooking({
       bookingId: req.params.id,
       toStatus: "CONFIRMED",
       actorId: req.user.id,
       actorRole: req.user.role,
       reason
-    });
-    res.json(booking);
-  } catch (error) {
-    next(error);
-  }
+    }));
+  } catch (error) { next(error); }
 });
 
-// POST /:id/reject - PENDING_APPROVAL → REJECTED
+// PENDING_APPROVAL -> REJECTED
 router.post("/:id/reject", requireAuth, requireRole(ADMIN, LAB_STAFF), requireBookingLabAccess(), async (req, res, next) => {
   try {
-    const { reason } = transitionSchema.parse(req.body || {});
-    const booking = await transitionBooking({
+    const { reason } = rejectSchema.parse(req.body || {});
+    res.json(await transitionBooking({
       bookingId: req.params.id,
       toStatus: "REJECTED",
       actorId: req.user.id,
       actorRole: req.user.role,
-      reason: reason || "Rejected by operator"
-    });
-    res.json(booking);
-  } catch (error) {
-    next(error);
-  }
+      reason
+    }));
+  } catch (error) { next(error); }
 });
 
-// POST /:id/check-out - CONFIRMED → CHECKED_OUT
+// CONFIRMED -> CHECKED_OUT
 router.post("/:id/check-out", requireAuth, requireRole(ADMIN, LAB_STAFF), requireBookingLabAccess(), async (req, res, next) => {
   try {
-    const { reason, conditionBefore } = transitionSchema.parse(req.body || {});
-    const booking = await transitionBooking({
+    const { reason, conditionBefore } = checkOutSchema.parse(req.body || {});
+    res.json(await transitionBooking({
       bookingId: req.params.id,
       toStatus: "CHECKED_OUT",
       actorId: req.user.id,
       actorRole: req.user.role,
       reason,
       conditionBefore
-    });
-    res.json(booking);
-  } catch (error) {
-    next(error);
-  }
+    }));
+  } catch (error) { next(error); }
 });
 
-// POST /:id/return - CHECKED_OUT → RETURNED
+// CHECKED_OUT -> RETURNED
 router.post("/:id/return", requireAuth, requireRole(ADMIN, LAB_STAFF), requireBookingLabAccess(), async (req, res, next) => {
   try {
-    const { reason, conditionAfter } = transitionSchema.parse(req.body || {});
-    const booking = await transitionBooking({
+    const { reason, conditionAfter } = returnSchema.parse(req.body || {});
+    res.json(await transitionBooking({
       bookingId: req.params.id,
       toStatus: "RETURNED",
       actorId: req.user.id,
       actorRole: req.user.role,
       reason,
       conditionAfter
-    });
-    res.json(booking);
-  } catch (error) {
-    next(error);
-  }
+    }));
+  } catch (error) { next(error); }
 });
 
-// POST /:id/complete - RETURNED → COMPLETED
+// RETURNED -> COMPLETED
 router.post("/:id/complete", requireAuth, requireRole(ADMIN, LAB_STAFF), requireBookingLabAccess(), async (req, res, next) => {
   try {
-    const { reason } = transitionSchema.parse(req.body || {});
-    const booking = await transitionBooking({
+    const { reason } = completeSchema.parse(req.body || {});
+    res.json(await transitionBooking({
       bookingId: req.params.id,
       toStatus: "COMPLETED",
       actorId: req.user.id,
       actorRole: req.user.role,
       reason
-    });
-    res.json(booking);
-  } catch (error) {
-    next(error);
-  }
+    }));
+  } catch (error) { next(error); }
 });
 
-// POST /:id/cancel - Cancel booking
 router.post("/:id/cancel", requireAuth, async (req, res, next) => {
   try {
-    const { reason } = transitionSchema.parse(req.body || {});
-    const booking = await cancelBooking(req.params.id, req.user.id, req.user.role, reason);
-    res.json(booking);
-  } catch (error) {
-    next(error);
-  }
+    const { reason } = cancelSchema.parse(req.body || {});
+    res.json(await cancelBooking(req.params.id, req.user.id, req.user.role, reason));
+  } catch (error) { next(error); }
 });
 
 export default router;

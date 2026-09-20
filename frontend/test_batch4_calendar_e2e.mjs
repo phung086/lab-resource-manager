@@ -10,6 +10,13 @@ if (!fs.existsSync(screenshotDir)) {
   fs.mkdirSync(screenshotDir, { recursive: true });
 }
 
+const VIETNAM_OFFSET_HOURS = 7;
+function vietnamDateString(daysAhead = 0) {
+  const vn = new Date(Date.now() + VIETNAM_OFFSET_HOURS * 60 * 60 * 1000);
+  const date = new Date(Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), vn.getUTCDate() + daysAhead));
+  return date.toISOString().slice(0, 10);
+}
+
 const browser = await chromium.launch({ headless: true });
 
 async function login(page, email) {
@@ -99,8 +106,7 @@ try {
   await studentPage.getByLabel(/Tiêu đề buổi làm việc/).fill(bookingTitle);
   await studentPage.getByLabel(/Mục đích sử dụng/).fill("Kiểm thử tự động quy trình đặt lịch sinh viên");
 
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  const tomorrowStr = tomorrow.toISOString().split("T")[0];
+  const tomorrowStr = vietnamDateString(1);
   await studentPage.getByLabel(/Ngày đặt/).fill(tomorrowStr);
   await studentPage.getByLabel(/Giờ bắt đầu/).fill("14:00");
   await studentPage.getByLabel(/Giờ kết thúc/).fill("16:00");
@@ -189,9 +195,7 @@ try {
   await lecturerPage.getByLabel(/Tiêu đề buổi làm việc/).fill(lecturerTitle);
   await lecturerPage.getByLabel(/Mục đích sử dụng/).fill("Buổi thí nghiệm mẫu của giảng viên");
 
-  const futureDate = new Date();
-  futureDate.setDate(futureDate.getDate() + 2);
-  const futureDateStr = futureDate.toISOString().split("T")[0];
+  const futureDateStr = vietnamDateString(2);
 
   await lecturerPage.getByLabel(/Ngày đặt/).fill(futureDateStr);
   await lecturerPage.getByLabel(/Giờ bắt đầu/).fill("10:00");
@@ -264,9 +268,7 @@ try {
   await maintPage.getByRole("button", { name: "Đặt Khung Giờ Mới" }).click();
   await maintPage.getByRole("dialog").waitFor();
 
-  const maintTomorrow = new Date();
-  maintTomorrow.setDate(maintTomorrow.getDate() + 1);
-  const maintTomorrowStr = maintTomorrow.toISOString().split("T")[0];
+  const maintTomorrowStr = vietnamDateString(1);
 
   const spectroVal = await maintPage.locator('#booking-resource-select option', { hasText: 'B4-E2E-SPECTRO-01' }).getAttribute('value');
   await maintPage.locator('#booking-resource-select').selectOption(spectroVal);
@@ -325,7 +327,7 @@ try {
   const approvalBadge = approvalModal.locator("label", { hasText: "Thiết bị / Phòng thí nghiệm" }).getByText("Cần duyệt");
   assert.ok(await approvalBadge.isVisible(), "Effective requires approval must display 'Cần duyệt' due to labPolicy.requiresApproval = true");
 
-  const cncDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const cncDate = vietnamDateString(3);
   await adminPage.getByLabel(/Tiêu đề buổi làm việc/).fill(`CNC Policy Approval Booking ${Date.now()}`);
   await adminPage.getByLabel(/Mục đích sử dụng/).fill("Testing effective approval requirement under labPolicy");
   await adminPage.getByLabel(/Ngày đặt/).fill(cncDate);

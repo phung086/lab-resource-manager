@@ -12,7 +12,6 @@ import { BLOCKING_MAINTENANCE_STATUSES } from "./availabilityService.js";
 import { normalizeSpecs } from "../utils/dataContract.js";
 
 export const BLOCKING_OPERATIONAL_STATUSES = new Set([
-  "IN_USE",
   "MAINTENANCE",
   "CALIBRATION",
   "BROKEN",
@@ -29,15 +28,27 @@ export const resourceLaboratorySelect = {
 };
 
 export function currentInterval(now = new Date()) {
-  return { startAt: now, endAt: new Date(now.getTime() + 1) };
+  return {
+    startAt: now,
+    endAt: new Date(now.getTime() + 1),
+    isCurrent: true
+  };
 }
 
-export function resourceAvailability(resource, { startAt, endAt } = currentInterval()) {
+export function resourceAvailability(resource, interval = null) {
   let state = "AVAILABLE";
   let source = "resource";
 
+  const isCurrentQuery = interval == null || interval?.isCurrent === true;
+  const { startAt, endAt } = interval || currentInterval();
+  const now = new Date();
+  const intervalIncludesNow = startAt <= now && endAt > now;
+
   if (BLOCKING_OPERATIONAL_STATUSES.has(resource.operationalStatus)) {
     state = resource.operationalStatus;
+    source = "operational_status";
+  } else if (resource.operationalStatus === "IN_USE" && (isCurrentQuery || intervalIncludesNow)) {
+    state = "IN_USE";
     source = "operational_status";
   } else if (resource.bookingState !== "bookable") {
     state = resource.bookingState === "restricted" ? "RESTRICTED" : "UNAVAILABLE";
@@ -95,67 +106,104 @@ export function serializeCanonicalResource(resource, interval) {
   };
 }
 
-export async function changeOperationalStatus({ resourceId, operationalStatus, reason, actor, client = prisma }) {
-  const normalizedReason = String(reason || "").trim() || null;
+function normalizeReason(reason) {
+  return String(reason || "").trim() || null;
+}
+
+/**
+ * Apply one authoritative physical-status mutation inside an existing transaction.
+ * The caller owns transaction boundaries and any wider booking/resource locks.
+ */
+export async function applyOperationalStatusChange(
+  tx,
+  {
+    resourceId,
+    operationalStatus,
+    reason,
+    actor,
+    bookingId = null,
+    message = "resource.operational_status.changed",
+    lockResource = true
+  }
+) {
+  const normalizedReason = normalizeReason(reason);
   if (STATUS_REASON_REQUIRED.has(operationalStatus) && !normalizedReason) {
     throw new HttpError(400, "A reason is required for this operational status", { field: "reason" }, "VALIDATION_ERROR");
   }
 
-  return client.$transaction(async (tx) => {
+  if (lockResource) {
     await tx.$queryRaw`SELECT id FROM resources WHERE id = ${resourceId} FOR UPDATE`;
-    const current = await tx.resource.findUnique({ where: { id: resourceId } });
-    if (!current) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
+  }
 
-    if (current.operationalStatus === "RETIRED" && operationalStatus !== "RETIRED") {
-      if (actor.role !== ADMIN) {
-        throw new HttpError(403, "Only ADMIN can restore a retired resource", undefined, "FORBIDDEN");
-      }
-      if (!normalizedReason) {
-        throw new HttpError(400, "A restoration reason is required", { field: "reason" }, "VALIDATION_ERROR");
+  const current = await tx.resource.findUnique({ where: { id: resourceId } });
+  if (!current) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
+
+  if (current.operationalStatus === "RETIRED" && operationalStatus !== "RETIRED") {
+    if (actor.role !== ADMIN) {
+      throw new HttpError(403, "Only ADMIN can restore a retired resource", undefined, "FORBIDDEN");
+    }
+    if (!normalizedReason) {
+      throw new HttpError(400, "A restoration reason is required", { field: "reason" }, "VALIDATION_ERROR");
+    }
+  }
+
+  if (current.operationalStatus === operationalStatus) {
+    return { resource: current, changed: false };
+  }
+
+  const updated = await tx.resource.update({
+    where: { id: resourceId },
+    data: {
+      operationalStatus,
+      status: compatibilityStatusFor(operationalStatus),
+      version: { increment: 1 }
+    }
+  });
+
+  await tx.resourceStatusHistory.create({
+    data: {
+      id: crypto.randomUUID(),
+      resourceId,
+      fromStatus: current.operationalStatus,
+      toStatus: operationalStatus,
+      reason: normalizedReason,
+      changedById: actor.id
+    }
+  });
+
+  await tx.usageLog.create({
+    data: {
+      id: crypto.randomUUID(),
+      resourceId,
+      bookingId,
+      userId: actor.id,
+      actorType: "USER",
+      action: "STATUS_CHANGE",
+      message,
+      reason: normalizedReason,
+      metadata: {
+        fromOperationalStatus: current.operationalStatus,
+        toOperationalStatus: operationalStatus,
+        ...(bookingId ? { bookingId } : {})
       }
     }
-
-    if (current.operationalStatus === operationalStatus) return current;
-
-    const updated = await tx.resource.update({
-      where: { id: resourceId },
-      data: {
-        operationalStatus,
-        status: compatibilityStatusFor(operationalStatus),
-        version: { increment: 1 }
-      }
-    });
-
-    await Promise.all([
-      tx.resourceStatusHistory.create({
-        data: {
-          id: crypto.randomUUID(),
-          resourceId,
-          fromStatus: current.operationalStatus,
-          toStatus: operationalStatus,
-          reason: normalizedReason,
-          changedById: actor.id
-        }
-      }),
-      tx.usageLog.create({
-        data: {
-          id: crypto.randomUUID(),
-          resourceId,
-          userId: actor.id,
-          actorType: "USER",
-          action: "STATUS_CHANGE",
-          message: "resource.operational_status.changed",
-          reason: normalizedReason,
-          metadata: {
-            fromOperationalStatus: current.operationalStatus,
-            toOperationalStatus: operationalStatus
-          }
-        }
-      })
-    ]);
-
-    return updated;
   });
+
+  return { resource: updated, changed: true };
+}
+
+export async function changeOperationalStatus({ resourceId, operationalStatus, reason, actor, client = prisma }) {
+  const work = (tx) => applyOperationalStatusChange(tx, {
+    resourceId,
+    operationalStatus,
+    reason,
+    actor
+  }).then((result) => result.resource);
+
+  if (typeof client.$transaction === "function") {
+    return client.$transaction(work);
+  }
+  return work(client);
 }
 
 export async function auditResourceMutation(tx, { resourceId, actorId, message, reason = null, metadata = {} }) {

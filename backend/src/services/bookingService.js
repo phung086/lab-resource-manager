@@ -4,6 +4,10 @@ import { HttpError } from "../middleware/errors.js";
 import {
   PENDING_APPROVAL,
   CONFIRMED,
+  CHECKED_OUT,
+  RETURNED,
+  COMPLETED,
+  REJECTED,
   CANCELLED,
   ACTIVE_BOOKING_STATUSES,
   isValidTransition,
@@ -16,6 +20,86 @@ import {
   assertResourceAvailable,
   checkLabPolicyCompliance
 } from "./availabilityService.js";
+import { applyOperationalStatusChange } from "./resourceService.js";
+
+const HARD_UNAVAILABLE_RESOURCE_STATES = new Set([
+  "MAINTENANCE",
+  "CALIBRATION",
+  "BROKEN",
+  "RETIRED",
+  "OFFLINE"
+]);
+
+const STAFF_OPERATION_TARGETS = new Set([
+  CONFIRMED,
+  REJECTED,
+  CHECKED_OUT,
+  RETURNED,
+  COMPLETED
+]);
+
+const bookingInclude = {
+  resource: {
+    include: {
+      laboratory: {
+        select: { id: true, code: true, name: true }
+      }
+    }
+  },
+  requestedBy: { select: { id: true, fullName: true, email: true, role: true } },
+  approvedBy: { select: { id: true, fullName: true, email: true, role: true } }
+};
+
+function normalizeText(value) {
+  return String(value || "").trim() || null;
+}
+
+async function assertStaffScopeInTransaction(tx, { actorId, actorRole, resource }) {
+  if (actorRole === ADMIN) return;
+  if (actorRole !== LAB_STAFF) {
+    throw new HttpError(403, "Only ADMIN or LAB_STAFF can perform this booking operation", undefined, "FORBIDDEN");
+  }
+  if (!resource.laboratoryId) {
+    throw new HttpError(403, "LAB_STAFF cannot operate bookings for resources without a laboratory assignment", undefined, "FORBIDDEN");
+  }
+  const assignment = await tx.userLabAssignment.findUnique({
+    where: { userId_laboratoryId: { userId: actorId, laboratoryId: resource.laboratoryId } },
+    select: { userId: true }
+  });
+  if (!assignment) {
+    throw new HttpError(403, "Access denied: you are not assigned to this resource's laboratory", undefined, "FORBIDDEN");
+  }
+}
+
+async function createApprovalNotification(tx, booking, toStatus, now) {
+  if (![CONFIRMED, REJECTED].includes(toStatus)) return;
+  const approved = toStatus === CONFIRMED;
+  const type = approved ? "BOOKING_APPROVED" : "BOOKING_REJECTED";
+  const messageParams = {
+    bookingId: booking.id,
+    title: booking.title,
+    resourceCode: booking.resource.code,
+    resourceName: booking.resource.name
+  };
+  await tx.notification.create({
+    data: {
+      id: crypto.randomUUID(),
+      userId: booking.requestedById,
+      type,
+      title: approved ? "Yêu cầu đặt lịch đã được duyệt" : "Yêu cầu đặt lịch đã bị từ chối",
+      message: approved
+        ? `Lịch ${booking.title} cho ${booking.resource.code} đã được xác nhận.`
+        : `Lịch ${booking.title} cho ${booking.resource.code} đã bị từ chối.`,
+      titleKey: approved ? "booking.approved.title" : "booking.rejected.title",
+      messageKey: approved ? "booking.approved.message" : "booking.rejected.message",
+      messageParams,
+      severity: approved ? "success" : "danger",
+      channel: "in_app",
+      sentAt: now,
+      dedupeKey: `booking:${booking.id}:${type}`
+    }
+  });
+}
 
 /**
  * Application-level slot conflict check using canonical fields.
@@ -75,8 +159,7 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
       throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
     }
 
-    const blockedStatuses = ["MAINTENANCE", "CALIBRATION", "BROKEN", "RETIRED", "OFFLINE"];
-    if (blockedStatuses.includes(resource.operationalStatus)) {
+    if (HARD_UNAVAILABLE_RESOURCE_STATES.has(resource.operationalStatus)) {
       throw new HttpError(400, "Resource is not available for booking", undefined, "RESOURCE_UNAVAILABLE");
     }
 
@@ -109,12 +192,7 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
         endAt: end,
         status: initialStatus
       },
-      include: {
-        resource: true,
-        requestedBy: {
-          select: { id: true, fullName: true, email: true, role: true }
-        }
-      }
+      include: bookingInclude
     });
 
     await tx.usageLog.create({
@@ -151,16 +229,20 @@ export async function transitionBooking({
   conditionBefore = null,
   conditionAfter = null
 }) {
+  const normalizedReason = normalizeText(reason);
+  const normalizedConditionBefore = normalizeText(conditionBefore);
+  const normalizedConditionAfter = normalizeText(conditionAfter);
+
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
-    const booking = await tx.booking.findUnique({
-      where: { id: bookingId },
-      include: { resource: true }
-    });
+    const booking = await tx.booking.findUnique({ where: { id: bookingId }, include: bookingInclude });
 
-    if (!booking) {
-      throw new HttpError(404, "Booking not found", undefined, "NOT_FOUND");
+    if (!booking) throw new HttpError(404, "Booking not found", undefined, "NOT_FOUND");
+
+    if (STAFF_OPERATION_TARGETS.has(toStatus)) {
+      await assertStaffScopeInTransaction(tx, { actorId, actorRole, resource: booking.resource });
     }
+
     if (!isValidTransition(booking.status, toStatus)) {
       throw new HttpError(
         409,
@@ -170,38 +252,89 @@ export async function transitionBooking({
       );
     }
 
+    if (toStatus === REJECTED && !normalizedReason) {
+      throw new HttpError(400, "Rejection reason is required", { field: "reason" }, "VALIDATION_ERROR");
+    }
+    if (toStatus === CHECKED_OUT && !normalizedConditionBefore) {
+      throw new HttpError(400, "Condition before handover is required", { field: "conditionBefore" }, "VALIDATION_ERROR");
+    }
+    if (toStatus === RETURNED && !normalizedConditionAfter) {
+      throw new HttpError(400, "Condition after return is required", { field: "conditionAfter" }, "VALIDATION_ERROR");
+    }
+
+    const now = new Date();
+    let physicalStateWarning = null;
+
+    if (toStatus === CHECKED_OUT) {
+      await tx.$queryRaw`SELECT id FROM resources WHERE id = ${booking.resourceId} FOR UPDATE`;
+      const physical = await tx.resource.findUnique({ where: { id: booking.resourceId } });
+      if (!physical) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
+      if (physical.operationalStatus !== "AVAILABLE") {
+        throw new HttpError(
+          409,
+          `Resource cannot be handed over while operational status is ${physical.operationalStatus}`,
+          { operationalStatus: physical.operationalStatus },
+          "RESOURCE_STATE_CONFLICT"
+        );
+      }
+      await applyOperationalStatusChange(tx, {
+        resourceId: booking.resourceId,
+        operationalStatus: "IN_USE",
+        reason: `Booking ${booking.id} checked out`,
+        actor: { id: actorId, role: actorRole },
+        bookingId: booking.id,
+        message: "booking.resource.checked_out",
+        lockResource: false
+      });
+    }
+
+    if (toStatus === RETURNED) {
+      await tx.$queryRaw`SELECT id FROM resources WHERE id = ${booking.resourceId} FOR UPDATE`;
+      const physical = await tx.resource.findUnique({ where: { id: booking.resourceId } });
+      if (!physical) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
+      if (physical.operationalStatus === "IN_USE") {
+        await applyOperationalStatusChange(tx, {
+          resourceId: booking.resourceId,
+          operationalStatus: "AVAILABLE",
+          reason: `Booking ${booking.id} returned`,
+          actor: { id: actorId, role: actorRole },
+          bookingId: booking.id,
+          message: "booking.resource.returned",
+          lockResource: false
+        });
+      } else if (HARD_UNAVAILABLE_RESOURCE_STATES.has(physical.operationalStatus)) {
+        physicalStateWarning = `Resource remains ${physical.operationalStatus}; return was recorded without overriding the physical state.`;
+      }
+    }
+
     const updateData = { status: toStatus };
     if (toStatus === CONFIRMED && booking.status === PENDING_APPROVAL) {
       updateData.approvedById = actorId;
-      updateData.approvedAt = new Date();
+      updateData.approvedAt = now;
     }
-    if (toStatus === "RETURNED") updateData.returnedAt = new Date();
-    if (toStatus === "COMPLETED") updateData.completedAt = new Date();
-    if (toStatus === "CHECKED_OUT") updateData.actualStartAt = new Date();
-    if (conditionBefore) updateData.handoverCondition = conditionBefore;
-    if (conditionAfter) updateData.returnCondition = conditionAfter;
+    if (toStatus === CHECKED_OUT) {
+      updateData.actualStartAt = now;
+      updateData.handoverCondition = normalizedConditionBefore;
+    }
+    if (toStatus === RETURNED) {
+      updateData.returnedAt = now;
+      updateData.actualEndAt = now;
+      updateData.returnCondition = normalizedConditionAfter;
+    }
+    if (toStatus === COMPLETED) updateData.completedAt = now;
 
     const actionMap = {
-      CONFIRMED: booking.status === PENDING_APPROVAL ? "APPROVE" : "STATUS_CHANGE",
-      REJECTED: "REJECT",
-      CANCELLED: "CANCEL",
-      CHECKED_OUT: "CHECK_OUT",
-      RETURNED: "RETURN",
-      COMPLETED: "COMPLETE"
+      [CONFIRMED]: booking.status === PENDING_APPROVAL ? "APPROVE" : "STATUS_CHANGE",
+      [REJECTED]: "REJECT",
+      [CANCELLED]: "CANCEL",
+      [CHECKED_OUT]: "CHECK_OUT",
+      [RETURNED]: "RETURN",
+      [COMPLETED]: "COMPLETE"
     };
     const action = actionMap[toStatus] || "STATUS_CHANGE";
 
-    const result = await tx.booking.update({
-      where: { id: bookingId },
-      data: updateData,
-      include: {
-        resource: true,
-        requestedBy: { select: { id: true, fullName: true, email: true, role: true } },
-        approvedBy: { select: { id: true, fullName: true, email: true, role: true } }
-      }
-    });
+    const result = await tx.booking.update({ where: { id: bookingId }, data: updateData, include: bookingInclude });
 
-    // Create audit log entry
     await tx.usageLog.create({
       data: {
         id: crypto.randomUUID(),
@@ -212,29 +345,28 @@ export async function transitionBooking({
         action,
         fromStatus: booking.status,
         toStatus,
-        reason: reason || null,
-        conditionBefore: conditionBefore || null,
-        conditionAfter: conditionAfter || null,
+        reason: normalizedReason,
+        conditionBefore: toStatus === CHECKED_OUT ? normalizedConditionBefore : null,
+        conditionAfter: toStatus === RETURNED ? normalizedConditionAfter : null,
         message: `Booking transitioned from ${booking.status} to ${toStatus}`,
-        messageKey: `booking_${action.toLowerCase()}`
+        messageKey: `booking_${action.toLowerCase()}`,
+        metadata: physicalStateWarning ? { physicalStateWarning } : {}
       }
     });
 
-    return result;
+    if (booking.status === PENDING_APPROVAL && [CONFIRMED, REJECTED].includes(toStatus)) {
+      await createApprovalNotification(tx, booking, toStatus, now);
+    }
+
+    return physicalStateWarning ? { ...result, physicalStateWarning } : result;
   });
 }
 
-/**
- * Returns bookings for the specified user (own bookings).
- * No mockStore fallback.
- */
+/** Returns bookings for the specified user (own bookings). */
 export async function getUserBookings(userId) {
   return prisma.booking.findMany({
     where: { requestedById: userId },
-    include: {
-      resource: true,
-      requestedBy: { select: { id: true, fullName: true, email: true, role: true } }
-    },
+    include: bookingInclude,
     orderBy: { startAt: "desc" }
   });
 }

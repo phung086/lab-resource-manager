@@ -41,10 +41,10 @@ import { EfficiencyAnalyticsView } from "./components/EfficiencyAnalyticsView.ts
 import { SmartAdvisoryView } from "./components/SmartAdvisoryView.tsx";
 import { AdminResourceManagementView } from "./components/AdminResourceManagementView.tsx";
 import { ResourceManagementView } from "./components/ResourceManagementView.tsx";
+import { BookingOperationsPage } from "./pages/operations/BookingOperationsPage.tsx";
 import { QuickBookingModal } from "./components/QuickBookingModal.tsx";
 import { VietQrPaymentModal } from "./components/VietQrPaymentModal.tsx";
 import { QrCheckInModal } from "./components/QrCheckInModal.tsx";
-import { BookingActionModal } from "./components/BookingActionModal.tsx";
 import { SafetyQuizModal } from "./components/SafetyQuizModal.tsx";
 import { AuthLoginView } from "./components/AuthLoginView.tsx";
 import { AuthRegisterView } from "./components/AuthRegisterView.tsx";
@@ -184,6 +184,7 @@ function App() {
 
   useMemo(() => buildNavItems(copy), [locale]);
   const isStaff = user && ["ADMIN", "LAB_STAFF"].includes(user.role);
+  const researchFeaturesEnabled = import.meta.env.VITE_ENABLE_RESEARCH_FEATURES === "true";
 
   async function loadData() {
     if (!user) return;
@@ -331,7 +332,7 @@ function App() {
       {activeTab === "ai_rca" && <AiDiagnosticStudio />}
       {activeTab === "assistant" && <AiMissionCopilot />}
       {activeTab === "resources" && <ResourceManagementView user={user} />}
-      {activeTab === "bookings" && <BookingView resources={resources} bookings={bookings} user={user} isStaff={isStaff} onChanged={loadData} />}
+      {activeTab === "bookings" && <BookingOperationsPage user={user} onChanged={loadData} />}
       {activeTab === "optimization" && <OptimizationHubView />}
       {activeTab === "maintenance" && <MaintenanceView resources={resources} maintenance={maintenance} isStaff={isStaff} onChanged={loadData} />}
       {activeTab === "incidents" && <IncidentManagementView />}
@@ -350,30 +351,24 @@ function App() {
         }}
       />
 
-      <VietQrPaymentModal
-        isOpen={activeGlobalModal?.type === "vietqr"}
-        onClose={() => setActiveGlobalModal(null)}
-        amount={activeGlobalModal?.payload?.amount || 150000}
-        bookingTitle={activeGlobalModal?.payload?.title || "Fine-tuning Llama-3 (Paper CVPR)"}
-        resourceName={activeGlobalModal?.payload?.resourceName || "NVIDIA DGX A100 SuperPOD (8x 80GB)"}
-        onPaidSuccess={() => loadData()}
-      />
-
-      <QrCheckInModal
-        isOpen={activeGlobalModal?.type === "qr_checkin"}
-        onClose={() => setActiveGlobalModal(null)}
-        booking={activeGlobalModal?.payload || { bookingCode: "214ae7c1", resource: { code: "GPU-NODE-01", name: "NVIDIA DGX A100" } }}
-        onCheckinSuccess={() => loadData()}
-      />
-
-      <BookingActionModal
-        isOpen={activeGlobalModal?.type === "booking_action"}
-        onClose={() => setActiveGlobalModal(null)}
-        actionTitle={activeGlobalModal?.payload?.actionTitle || "Nghiệm Thu & Xác Nhận Bàn Giao Thiết Bị"}
-        resourceCode={activeGlobalModal?.payload?.resourceCode || "UAV-MATRICE-300"}
-        resourceName={activeGlobalModal?.payload?.resourceName || "DJI Matrice 300 RTK Quadcopter (Docked)"}
-        onConfirm={() => loadData()}
-      />
+      {researchFeaturesEnabled && (
+        <>
+          <VietQrPaymentModal
+            isOpen={activeGlobalModal?.type === "vietqr"}
+            onClose={() => setActiveGlobalModal(null)}
+            amount={activeGlobalModal?.payload?.amount || 150000}
+            bookingTitle={activeGlobalModal?.payload?.title || "Research payment demo"}
+            resourceName={activeGlobalModal?.payload?.resourceName || "Research resource"}
+            onPaidSuccess={() => loadData()}
+          />
+          <QrCheckInModal
+            isOpen={activeGlobalModal?.type === "qr_checkin"}
+            onClose={() => setActiveGlobalModal(null)}
+            booking={activeGlobalModal?.payload}
+            onCheckinSuccess={() => loadData()}
+          />
+        </>
+      )}
 
       <SafetyQuizModal
         isOpen={activeGlobalModal?.type === "safety_quiz"}
@@ -706,161 +701,6 @@ function AssistantView({ locale }) {
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function BookingView({ resources, bookings, user, isStaff, onChanged }) {
-  const [form, setForm] = useState(emptyBookingForm);
-  const [action, setAction] = useState(null);
-  const [error, setError] = useState("");
-  const [busyId, setBusyId] = useState("");
-  const [qrBooking, setQrBooking] = useState(null);
-  const [vietQrBooking, setVietQrBooking] = useState(null);
-
-  async function createBooking(event) {
-    event.preventDefault();
-    setError("");
-    if (!form.resourceId) {
-      setError(copy.validation.selectResource);
-      return;
-    }
-    if (!form.startAt || !form.endAt || new Date(form.startAt) >= new Date(form.endAt)) {
-      setError(copy.validation.invalidTime);
-      return;
-    }
-
-    try {
-      await apiRequest("/bookings", {
-        method: "POST",
-        body: JSON.stringify({
-          ...form,
-          title: form.title.trim(),
-          purpose: form.purpose.trim(),
-          startAt: new Date(form.startAt).toISOString(),
-          endAt: new Date(form.endAt).toISOString()
-        })
-      });
-      setForm({ ...emptyBookingForm });
-      onChanged();
-    } catch (requestError) {
-      handleError(requestError, setError, copy);
-    }
-  }
-
-  async function submitAction(note) {
-    if (!action) return;
-    setBusyId(action.booking.id);
-    setError("");
-    try {
-      await apiRequest(`/bookings/${action.booking.id}/${action.endpoint}`, {
-        method: "POST",
-        body: JSON.stringify(action.payloadKey === "condition" ? { condition: note } : { notes: note || undefined })
-      });
-      setAction(null);
-      onChanged();
-    } catch (requestError) {
-      handleError(requestError, setError, copy);
-    } finally {
-      setBusyId("");
-    }
-  }
-
-  return (
-    <div className="split-layout">
-      <section className="panel">
-        <PanelTitle icon={Plus} title={copy.sections.createBooking} />
-        {error && <div className="alert danger">{error}</div>}
-        <form className="booking-form" onSubmit={createBooking}>
-          <label>
-            {copy.fields.resource}
-            <select value={form.resourceId} onChange={(event) => setForm({ ...form, resourceId: event.target.value })} required>
-              <option value="">{copy.options.chooseResource}</option>
-              {resources.map((resource) => (
-                <option key={resource.id} value={resource.id}>
-                  {resource.code} - {resource.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {copy.fields.usageTitle}
-            <input
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-              placeholder={copy.placeholders.usageTitle}
-              required
-            />
-          </label>
-          <label>
-            {copy.fields.usagePurpose}
-            <textarea
-              value={form.purpose}
-              onChange={(event) => setForm({ ...form, purpose: event.target.value })}
-              placeholder={copy.placeholders.usagePurpose}
-              required
-            />
-            <span className="helper-text">{copy.notes.bookingPurpose}</span>
-          </label>
-          <div className="form-grid">
-            <label>
-              {copy.fields.startAt}
-              <input type="datetime-local" value={form.startAt} onChange={(event) => setForm({ ...form, startAt: event.target.value })} required />
-            </label>
-            <label>
-              {copy.fields.endAt}
-              <input type="datetime-local" value={form.endAt} onChange={(event) => setForm({ ...form, endAt: event.target.value })} required />
-            </label>
-          </div>
-          <button className="primary-button" type="submit">
-            <Plus size={18} />
-            <span>{copy.actions.createBooking}</span>
-          </button>
-        </form>
-      </section>
-
-      <section className="panel">
-        <PanelTitle icon={CalendarCheck} title={copy.sections.bookings} />
-        <BookingList
-          bookings={bookings}
-          user={user}
-          isStaff={isStaff}
-          busyId={busyId}
-          onAction={setAction}
-          onOpenQrCheckin={setQrBooking}
-          onOpenVietQr={import.meta.env.VITE_ENABLE_RESEARCH_FEATURES === "true" ? setVietQrBooking : undefined}
-        />
-      </section>
-
-      {action && (
-        <BookingActionModal
-          isOpen={Boolean(action)}
-          actionTitle={action.title}
-          resourceCode={action.booking?.resource?.code}
-          resourceName={action.booking?.resource?.name}
-          onClose={() => setAction(null)}
-          onConfirm={(note) => submitAction(note)}
-          busy={busyId === action.booking.id}
-        />
-      )}
-
-      <QrCheckInModal
-        isOpen={Boolean(qrBooking)}
-        onClose={() => setQrBooking(null)}
-        booking={qrBooking}
-        onCheckinSuccess={() => onChanged()}
-      />
-
-      {import.meta.env.VITE_ENABLE_RESEARCH_FEATURES === "true" && (
-        <VietQrPaymentModal
-          isOpen={Boolean(vietQrBooking)}
-          onClose={() => setVietQrBooking(null)}
-          amount={150000}
-          bookingTitle={vietQrBooking?.title}
-          resourceName={vietQrBooking?.resource?.name}
-          onPaidSuccess={() => onChanged()}
-        />
-      )}
     </div>
   );
 }
@@ -1308,27 +1148,14 @@ function PanelTitle({ icon: Icon, title }) {
   );
 }
 
-function BookingList({
-  bookings,
-  compact = false,
-  user = null,
-  isStaff = false,
-  busyId = "",
-  onAction,
-  onOpenQrCheckin,
-  onOpenVietQr
-}) {
+function BookingList({ bookings, compact = false }) {
   if (!bookings.length) {
     return <p className="empty-state">{copy.empty.bookings}</p>;
   }
 
   return (
     <div className={classNames("booking-list", compact && "compact")}>
-      {bookings.map((booking) => {
-        const isRequester = booking.requestedBy?.id === user?.id;
-        const canOperate = isStaff && !isRequester;
-        const canCancel = !compact && ["pending", "approved"].includes(booking.status) && (isRequester || isStaff);
-        return (
+      {bookings.map((booking) => (
         <article className="booking-item" key={booking.id}>
           <div>
             <span className="eyebrow">{booking.resource?.code}</span>
@@ -1340,203 +1167,39 @@ function BookingList({
               <span>{formatDateTime(booking.endAt, copy.localeCode)}</span>
               <span>{booking.requestedBy?.fullName}</span>
             </div>
-            {!compact && (
-              <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {onOpenQrCheckin && (
-                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => onOpenQrCheckin(booking)}>
-                    <QrCode size={13} /> QR Check-in
-                  </button>
-                )}
-                {onOpenVietQr && (
-                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => onOpenVietQr(booking)}>
-                    <Sparkles size={13} /> VietQR
-                  </button>
-                )}
-              </div>
-            )}
           </div>
           <div className="booking-actions">
             <StatusBadge status={booking.status} />
-            {canOperate && !compact && booking.status === "pending" && (
-              <div className="button-row">
-                <button
-                  disabled={busyId === booking.id}
-                  title={copy.actions.approve}
-                  aria-label={`${copy.aria.bookingAction}: ${copy.actions.approve} ${booking.title}`}
-                  type="button"
-                  onClick={() =>
-                    onAction({
-                      booking,
-                      title: copy.actions.approve,
-                      label: copy.fields.approvalNote,
-                      endpoint: "approve",
-                      payloadKey: "notes",
-                      required: false
-                    })
-                  }
-                >
-                  <Check size={16} />
-                </button>
-                <button
-                  disabled={busyId === booking.id}
-                  title={copy.actions.reject}
-                  aria-label={`${copy.aria.bookingAction}: ${copy.actions.reject} ${booking.title}`}
-                  type="button"
-                  onClick={() =>
-                    onAction({
-                      booking,
-                      title: copy.actions.reject,
-                      label: copy.fields.rejectionReason,
-                      endpoint: "reject",
-                      payloadKey: "notes",
-                      required: true
-                    })
-                  }
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-            {canOperate && !compact && booking.status === "approved" && (
-              <button
-                disabled={busyId === booking.id}
-                title={copy.actions.handover}
-                aria-label={`${copy.aria.bookingAction}: ${copy.actions.handover} ${booking.title}`}
-                type="button"
-                onClick={() =>
-                  onAction({
-                    booking,
-                    title: copy.actions.handover,
-                    label: copy.fields.handoverCondition,
-                    endpoint: "check-out",
-                    payloadKey: "condition",
-                    required: true
-                  })
-                }
-              >
-                <ClipboardCheck size={16} />
-              </button>
-            )}
-            {canOperate && !compact && booking.status === "checked_out" && (
-              <button
-                disabled={busyId === booking.id}
-                title={copy.actions.receiveBack}
-                aria-label={`${copy.aria.bookingAction}: ${copy.actions.receiveBack} ${booking.title}`}
-                type="button"
-                onClick={() =>
-                  onAction({
-                    booking,
-                    title: copy.actions.receiveBack,
-                    label: copy.fields.returnCondition,
-                    endpoint: "check-in",
-                    payloadKey: "condition",
-                    required: true
-                  })
-                }
-              >
-                <Check size={16} />
-              </button>
-            )}
-            {canCancel && (
-              <button
-                disabled={busyId === booking.id}
-                title={copy.actions.cancel}
-                aria-label={`${copy.aria.bookingAction}: ${copy.actions.cancel} ${booking.title}`}
-                type="button"
-                onClick={() =>
-                  onAction({
-                    booking,
-                    title: copy.actions.cancel,
-                    label: copy.fields.approvalNote,
-                    endpoint: "cancel",
-                    payloadKey: "notes",
-                    required: false
-                  })
-                }
-              >
-                <X size={16} />
-              </button>
-            )}
-            {isStaff && isRequester && !compact && ["pending", "approved", "checked_out"].includes(booking.status) && (
-              <span className="workflow-note">{copy.notes.separateOperator}</span>
-            )}
           </div>
         </article>
-      );
-      })}
+      ))}
     </div>
   );
 }
 
 function BookingWorkflow({ status }) {
   const steps = [
-    { key: "pending", label: copy.workflow.requested },
-    { key: "approved", label: copy.workflow.approved },
-    { key: "checked_out", label: copy.workflow.handedOver },
-    { key: "completed", label: copy.workflow.returned }
+    { key: "PENDING_APPROVAL", label: "Yêu cầu" },
+    { key: "CONFIRMED", label: "Đã duyệt" },
+    { key: "CHECKED_OUT", label: "Đã bàn giao" },
+    { key: "RETURNED", label: "Đã hoàn trả" },
+    { key: "COMPLETED", label: "Hoàn tất" }
   ];
-  const terminal = ["rejected", "cancelled"].includes(status);
-  const activeIndex = terminal ? -1 : Math.max(0, steps.findIndex((step) => step.key === status));
-
-  return (
-    <div className={classNames("booking-workflow", terminal && "terminal")}>
-      {terminal ? (
-        <span>{copy.statuses[status] || status}</span>
-      ) : (
-        steps.map((step, index) => (
-          <span key={step.key} className={classNames(index < activeIndex && "done", index === activeIndex && "current")}>
-            {step.label}
-          </span>
-        ))
-      )}
-    </div>
-  );
-}
-
-function ActionModal({ action, onCancel, onConfirm, busy }) {
-  const [note, setNote] = useState("");
-  const [error, setError] = useState("");
-
-  function submit(event) {
-    event.preventDefault();
-    if (action.required && !note.trim()) {
-      setError(copy.validation.actionNoteRequired);
-      return;
-    }
-    onConfirm(note.trim());
+  const terminalLabels = { REJECTED: "Từ chối", CANCELLED: "Đã hủy" };
+  if (terminalLabels[status]) {
+    return <div className="booking-workflow terminal"><span>{terminalLabels[status]}</span></div>;
   }
-
+  const activeIndex = Math.max(0, steps.findIndex((step) => step.key === status));
   return (
-    <div className="modal-backdrop" role="presentation">
-      <form className="modal" onSubmit={submit}>
-        <div>
-          <span className="eyebrow">{action.booking.resource?.code}</span>
-          <h2>{action.title}</h2>
-          <p>{action.booking.title}</p>
-        </div>
-        {error && <div className="alert danger">{error}</div>}
-        <label>
-          {action.label}
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder={copy.placeholders.actionNote}
-            autoFocus
-          />
-        </label>
-        <div className="modal-actions">
-          <button className="secondary-button" type="button" onClick={onCancel}>
-            {copy.actions.cancel}
-          </button>
-          <button className="primary-button" type="submit" disabled={busy}>
-            {copy.actions.confirm}
-          </button>
-        </div>
-      </form>
+    <div className="booking-workflow">
+      {steps.map((step, index) => (
+        <span key={step.key} className={classNames(index < activeIndex && "done", index === activeIndex && "current")}>
+          {step.label}
+        </span>
+      ))}
     </div>
   );
 }
-
 
 function DetailItem({ label, value }) {
   return (

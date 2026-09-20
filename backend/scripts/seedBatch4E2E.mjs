@@ -9,6 +9,19 @@ assert.ok(["localhost", "127.0.0.1"].includes(databaseUrl.hostname), "Only local
 
 const prisma = new PrismaClient();
 const passwordHash = await bcrypt.hash("Batch4E2E!Pass", 4);
+const VIETNAM_OFFSET_HOURS = 7;
+function futureVietnamTime(daysAhead, hour, minute = 0) {
+  const vnReference = new Date(Date.now() + VIETNAM_OFFSET_HOURS * 60 * 60 * 1000);
+  return new Date(Date.UTC(
+    vnReference.getUTCFullYear(),
+    vnReference.getUTCMonth(),
+    vnReference.getUTCDate() + daysAhead,
+    hour - VIETNAM_OFFSET_HOURS,
+    minute,
+    0,
+    0
+  ));
+}
 const ids = {
   campus: "b4000000-0000-4000-8000-000000000001",
   building: "b4000000-0000-4000-8000-000000000002",
@@ -165,9 +178,7 @@ try {
   }
 
   // Maintenance Window on Spectrometer
-  const mStart = new Date();
-  mStart.setDate(mStart.getDate() + 1);
-  mStart.setHours(9, 0, 0, 0);
+  const mStart = futureVietnamTime(1, 9);
   const mEnd = new Date(mStart.getTime() + 4 * 60 * 60 * 1000); // 9:00 - 13:00
 
   await prisma.maintenanceWindow.upsert({

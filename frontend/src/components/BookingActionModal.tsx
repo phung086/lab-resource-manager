@@ -1,152 +1,155 @@
-import React, { useState } from "react";
-import { ClipboardCheck, CheckCircle2, Shield, Wrench, Sparkles, Check } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, ClipboardCheck, ShieldCheck } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026";
+import type { BookingAction, BookingActionPayload, BookingRecord } from "../types/booking.js";
 
 export interface BookingActionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  actionTitle?: string;
-  resourceCode?: string;
-  resourceName?: string;
-  onConfirm?: (note: string) => void;
+  action: BookingAction;
+  booking: BookingRecord;
+  onConfirm: (payload: BookingActionPayload) => Promise<void> | void;
   busy?: boolean;
 }
 
+const ACTION_COPY: Record<BookingAction, { title: string; submit: string; hint: string }> = {
+  APPROVE: { title: "Duyệt yêu cầu đặt lịch", submit: "Duyệt booking", hint: "Xác nhận booking sau khi đã kiểm tra lịch và điều kiện sử dụng." },
+  REJECT: { title: "Từ chối yêu cầu đặt lịch", submit: "Xác nhận từ chối", hint: "Lý do từ chối được lưu vào audit trail và hiển thị cho người đặt." },
+  CHECK_OUT: { title: "Bàn giao / Check-out tài nguyên", submit: "Xác nhận bàn giao", hint: "Ghi nhận tình trạng thực tế trước khi người dùng nhận tài nguyên." },
+  RETURN: { title: "Tiếp nhận hoàn trả tài nguyên", submit: "Xác nhận hoàn trả", hint: "Ghi nhận tình trạng thực tế của tài nguyên tại thời điểm nhận lại." },
+  COMPLETE: { title: "Hoàn tất hồ sơ booking", submit: "Hoàn tất workflow", hint: "Đóng workflow sau khi đã đối soát bàn giao và hoàn trả." }
+};
+
+const CONDITION_SUGGESTIONS = [
+  "Ngoại quan nguyên vẹn",
+  "Phụ kiện được kiểm đếm đầy đủ",
+  "Không phát hiện bất thường khi kiểm tra cơ bản"
+];
+
 export const BookingActionModal: React.FC<BookingActionModalProps> = ({
-  isOpen,
-  onClose,
-  actionTitle = "Nghiệm Thu & Xác Nhận Bàn Giao Thiết Bị",
-  resourceCode = "UAV-MATRICE-300",
-  resourceName = "DJI Matrice 300 RTK Quadcopter (Docked)",
-  onConfirm,
-  busy = false
+  isOpen, onClose, action, booking, onConfirm, busy = false
 }) => {
-  const [note, setNote] = useState("");
-  const [selectedChips, setSelectedChips] = useState<string[]>([
-    "Thiết bị nguyên vẹn",
-    "Đầy đủ phụ kiện cáp nguồn"
-  ]);
-  const [confirmedChecklist, setConfirmedChecklist] = useState(true);
+  const [reason, setReason] = useState("");
+  const [condition, setCondition] = useState("");
+  const [error, setError] = useState("");
 
-  if (!isOpen) return null;
-
-  const quickChips = [
-    "Thiết bị nguyên vẹn",
-    "Đầy đủ phụ kiện cáp nguồn",
-    "Cần vệ sinh lọc bụi",
-    "Cụm cánh quạt không nứt gãy",
-    "Kiểm tra nhiệt độ bình thường",
-    "Pin sạc đầy > 90%"
-  ];
-
-  function toggleChip(chip: string) {
-    if (selectedChips.includes(chip)) {
-      setSelectedChips(selectedChips.filter((c) => c !== chip));
-    } else {
-      setSelectedChips([...selectedChips, chip]);
+  useEffect(() => {
+    if (isOpen) {
+      setReason("");
+      setCondition("");
+      setError("");
     }
+  }, [isOpen, action, booking?.id]);
+
+  const copy = ACTION_COPY[action];
+  const conditionField = action === "CHECK_OUT" ? "conditionBefore" : action === "RETURN" ? "conditionAfter" : null;
+  const reasonRequired = action === "REJECT";
+  const subtitle = useMemo(() => `${booking?.resource?.code || "Tài nguyên"} • ${booking?.title || "Booking"}`, [booking]);
+
+  if (!isOpen || !booking) return null;
+
+  function addSuggestion(value: string) {
+    setCondition((current) => current.trim() ? `${current.trim()}; ${value}` : value);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const fullNote = `${selectedChips.join(", ")}${note.trim() ? `. Ghi chú thêm: ${note.trim()}` : ""}`;
-    if (onConfirm) {
-      onConfirm(fullNote);
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const normalizedReason = reason.trim();
+    const normalizedCondition = condition.trim();
+
+    if (reasonRequired && !normalizedReason) {
+      setError("Vui lòng nhập lý do từ chối.");
+      return;
     }
-    onClose();
+    if (conditionField && !normalizedCondition) {
+      setError(action === "CHECK_OUT"
+        ? "Vui lòng ghi nhận tình trạng tài nguyên trước khi bàn giao."
+        : "Vui lòng ghi nhận tình trạng tài nguyên sau khi hoàn trả.");
+      return;
+    }
+
+    const payload: BookingActionPayload = {};
+    if (normalizedReason) payload.reason = normalizedReason;
+    if (conditionField === "conditionBefore") payload.conditionBefore = normalizedCondition;
+    if (conditionField === "conditionAfter") payload.conditionAfter = normalizedCondition;
+
+    setError("");
+    try {
+      await onConfirm(payload);
+    } catch (requestError: any) {
+      setError(requestError?.message || "Không thể thực hiện thao tác. Vui lòng kiểm tra và thử lại.");
+    }
   }
 
   return (
     <BaseModal2026
       isOpen={isOpen}
-      onClose={onClose}
-      title={actionTitle}
-      subtitle="Biên bản nghiệm thu tình trạng phần cứng trước và sau phiên vận hành thí nghiệm"
+      onClose={busy ? () => {} : onClose}
+      title={copy.title}
+      subtitle={subtitle}
       icon={ClipboardCheck}
       iconColor="text-cyan-400"
-      maxWidth="max-w-lg"
+      maxWidth="max-w-xl"
       footer={
         <>
-          <button
-            type="button"
-            onClick={onClose}
-            className="font-mono text-xs text-slate-400 hover:text-white px-4 py-2 rounded-lg border border-white/10 hover:border-white/25 bg-white/5 cursor-pointer transition-all"
-          >
-            Hủy Bỏ
-          </button>
-          <button
-            type="button"
-            disabled={busy || !confirmedChecklist}
-            onClick={handleSubmit}
-            className="font-mono text-xs btn-cyan-gradient disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2.5 rounded-lg flex items-center gap-2 cursor-pointer shadow-[0_0_18px_rgba(0,229,255,0.4)]"
-          >
-            <CheckCircle2 size={14} />
-            <span>{busy ? "ĐANG LƯU HỒ SƠ..." : "XÁC NHẬN BÀN GIAO THIẾT BỊ"}</span>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>Hủy</button>
+          <button type="submit" form="booking-operation-form" className="btn btn-primary" disabled={busy}>
+            <CheckCircle2 size={15} />
+            <span>{busy ? "Đang lưu..." : copy.submit}</span>
           </button>
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {/* Resource Banner */}
-        <div className="p-3.5 bg-black/40 border border-white/10 rounded-xl flex items-center justify-between">
+      <form id="booking-operation-form" onSubmit={submit} className="booking-operation-form" noValidate>
+        <div className="operation-modal-resource">
           <div>
-            <span className="font-mono text-[10.5px] text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-500/30 font-bold">
-              {resourceCode}
-            </span>
-            <h4 className="text-sm font-bold text-white tracking-wide mt-1">{resourceName}</h4>
+            <span className="operation-resource-code">{booking.resource?.code}</span>
+            <strong>{booking.resource?.name}</strong>
           </div>
-          <Shield size={20} className="text-cyan-400 opacity-70" />
+          <ShieldCheck size={18} aria-hidden="true" />
         </div>
 
-        {/* Quick Suggestion Chips */}
-        <div className="flex flex-col gap-2">
-          <label className="font-mono text-xs text-slate-300">
-            Tình trạng ghi nhận (Chọn nhanh các mục):
+        <p className="operation-modal-hint">{copy.hint}</p>
+        {error && <div className="alert danger" role="alert">{error}</div>}
+
+        {(action === "APPROVE" || action === "REJECT" || action === "COMPLETE") && (
+          <label className="operation-field">
+            <span>{action === "REJECT" ? "Lý do từ chối *" : "Ghi chú / lý do"}</span>
+            <textarea
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder={action === "REJECT" ? "Nêu rõ lý do để người đặt có thể hiểu và xử lý tiếp." : "Ghi chú vận hành (không bắt buộc)"}
+              maxLength={1000}
+              required={reasonRequired}
+              autoFocus
+            />
           </label>
-          <div className="flex flex-wrap gap-2">
-            {quickChips.map((chip) => {
-              const active = selectedChips.includes(chip);
-              return (
-                <button
-                  type="button"
-                  key={chip}
-                  onClick={() => toggleChip(chip)}
-                  className={`quick-chip ${active ? "active" : ""}`}
-                >
-                  {active ? "✓ " : "+ "}
-                  {chip}
+        )}
+
+        {conditionField && (
+          <div className="operation-field">
+            <label htmlFor="booking-condition-evidence">
+              {action === "CHECK_OUT" ? "Tình trạng trước khi sử dụng *" : "Tình trạng sau khi sử dụng *"}
+            </label>
+            <textarea
+              id="booking-condition-evidence"
+              value={condition}
+              onChange={(event) => setCondition(event.target.value)}
+              placeholder="Mô tả những gì cán bộ lab thực tế quan sát/kiểm tra. Không chọn sẵn kết luận."
+              maxLength={2000}
+              required
+              autoFocus
+            />
+            <div className="operation-suggestion-row" aria-label="Gợi ý nhập nhanh, chưa được xác nhận">
+              {CONDITION_SUGGESTIONS.map((suggestion) => (
+                <button key={suggestion} type="button" className="operation-suggestion" onClick={() => addSuggestion(suggestion)}>
+                  + {suggestion}
                 </button>
-              );
-            })}
+              ))}
+            </div>
+            <small>Các gợi ý chỉ hỗ trợ nhập liệu và không được xem là kết quả kiểm tra cho đến khi cán bộ xác nhận.</small>
           </div>
-        </div>
-
-        {/* Note Textarea */}
-        <div className="flex flex-col gap-1.5">
-          <label className="font-mono text-xs text-slate-300">
-            Ghi chú chi tiết thêm của Cán bộ Lab / Người nhận:
-          </label>
-          <textarea
-            rows={3}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="VD: Thiết bị đã được hiệu chuẩn cảm biến IMU, sẵn sàng cho nhiệm vụ ngoài thực địa..."
-            className="bg-black/60 border border-white/15 text-xs text-white rounded-xl p-3 font-sans focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition-all"
-          />
-        </div>
-
-        {/* Verification Checkbox */}
-        <label className="flex items-start gap-2.5 p-3 bg-white/[0.02] border border-white/10 rounded-xl cursor-pointer hover:bg-white/[0.04] transition-all">
-          <input
-            type="checkbox"
-            checked={confirmedChecklist}
-            onChange={(e) => setConfirmedChecklist(e.target.checked)}
-            className="accent-cyan-400 mt-0.5 cursor-pointer"
-          />
-          <span className="text-xs text-slate-300 leading-relaxed font-sans">
-            Tôi xác nhận đã kiểm tra an toàn vật lý và đồng ý chịu trách nhiệm vận hành theo đúng quy chuẩn phòng thí nghiệm AI 2026.
-          </span>
-        </label>
+        )}
       </form>
     </BaseModal2026>
   );

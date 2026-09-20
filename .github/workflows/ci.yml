@@ -10,14 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: lab-resource-manager/backend
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: lab-resource-manager/backend/package-lock.json
+          cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npx prisma generate
       - run: npm test
@@ -26,14 +26,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: lab-resource-manager/frontend
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: lab-resource-manager/frontend/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build
 
@@ -41,4 +41,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose --env-file lab-resource-manager/.env.production.example -f lab-resource-manager/docker-compose.prod.yml config
+      - run: docker compose --env-file .env.production.example -f docker-compose.prod.yml config

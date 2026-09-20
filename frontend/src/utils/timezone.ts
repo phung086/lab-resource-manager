@@ -55,7 +55,16 @@ export function vietnamTimeToIso(dateStr: string, timeStr: string): string {
   const cleanTime = timeStr.trim();
   const timeWithSeconds = cleanTime.length === 5 ? `${cleanTime}:00` : cleanTime;
   const parsed = new Date(`${dateStr.trim()}T${timeWithSeconds}+07:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error("Invalid Vietnam date/time input");
+  }
   return parsed.toISOString();
+}
+
+export function formatVietnamDateTime(dateOrIso: string | Date | null | undefined): string {
+  const parts = parseVietnamParts(dateOrIso);
+  if (!parts) return "—";
+  return `${String(parts.day).padStart(2, "0")}/${String(parts.month).padStart(2, "0")}/${parts.year} ${String(parts.hours).padStart(2, "0")}:${String(parts.minutes).padStart(2, "0")}`;
 }
 
 export function getVietnamTodayDateString(): string {
