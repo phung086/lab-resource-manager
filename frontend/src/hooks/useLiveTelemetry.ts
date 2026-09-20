@@ -100,7 +100,7 @@ export function useLiveTelemetry(pollIntervalMs: number = 2500) {
   const [nodes, setNodes] = useState<TelemetryNode[]>(INITIAL_NODES);
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string>("2026-09-09 00:00:00");
-  const updateTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const updateTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const tickTelemetry = useCallback(() => {
     setIsUpdating(true);
