@@ -20,7 +20,12 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npx prisma generate
-      - run: npm test
+      - name: Backend lint
+        run: npm run lint
+      - name: Production configuration contract
+        run: npm run verify:prod-config
+      - name: Required backend unit tests
+        run: npm test
 
   frontend:
     runs-on: ubuntu-latest
@@ -35,10 +40,16 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - run: npm run build
+      - name: Frontend lint
+        run: npm run lint
+      - name: Incremental TypeScript check
+        run: npm run typecheck
+      - name: Production build
+        run: npm run build
 
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose --env-file .env.production.example -f docker-compose.prod.yml config
+      - name: Production Compose configuration
+        run: docker compose --env-file .env.production.example -f docker-compose.prod.yml config
