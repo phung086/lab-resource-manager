@@ -80,8 +80,8 @@ test("rejects weekend booking when allowWeekend is false", () => {
 test("accepts valid booking matching policy", () => {
   const now = new Date("2026-09-20T10:00:00Z");
   // 2026-09-22 is a Tuesday
-  const startAt = new Date("2026-09-22T10:00:00");
-  const endAt = new Date("2026-09-22T12:00:00");
+  const startAt = new Date("2026-09-22T03:00:00Z"); // 10:00 Vietnam
+  const endAt = new Date("2026-09-22T05:00:00Z");   // 12:00 Vietnam
 
   const policy = {
     minBookingMinutes: 30,
@@ -99,8 +99,8 @@ test("accepts valid booking matching policy", () => {
 
 test("rejects booking starting before workDayStartHour", () => {
   const now = new Date("2026-09-20T10:00:00Z");
-  const startAt = new Date("2026-09-22T06:00:00"); // 6 AM < 8 AM
-  const endAt = new Date("2026-09-22T09:00:00");
+  const startAt = new Date("2026-09-21T23:00:00Z"); // 06:00 Vietnam < 08:00
+  const endAt = new Date("2026-09-22T02:00:00Z");   // 09:00 Vietnam
 
   const policy = { workDayStartHour: 8, workDayEndHour: 18 };
 
