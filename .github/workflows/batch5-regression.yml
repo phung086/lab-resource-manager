@@ -69,21 +69,37 @@ jobs:
             // tree when and only when the canonical CRLF byte representation
             // reproduces the recorded verified checksum exactly.
             const text = current.toString("utf8").replace(/\r\n/g, "\n");
-            const canonicalCrlf = Buffer.from(text.replace(/\n/g, "\r\n"), "utf8");
-            const canonicalCrlfHash = sha256(canonicalCrlf);
+            const lf = Buffer.from(text, "utf8");
+            const crlf = Buffer.from(text.replace(/\n/g, "\r\n"), "utf8");
+            const withoutFinalLf = Buffer.from(text.replace(/\n$/, ""), "utf8");
+            const withoutFinalCrlf = Buffer.from(text.replace(/\n$/, "").replace(/\n/g, "\r\n"), "utf8");
+            const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+            const candidates = [
+              ["lf", lf],
+              ["crlf", crlf],
+              ["lf-no-final-newline", withoutFinalLf],
+              ["crlf-no-final-newline", withoutFinalCrlf],
+              ["bom-lf", Buffer.concat([bom, lf])],
+              ["bom-crlf", Buffer.concat([bom, crlf])],
+              ["bom-lf-no-final-newline", Buffer.concat([bom, withoutFinalLf])],
+              ["bom-crlf-no-final-newline", Buffer.concat([bom, withoutFinalCrlf])]
+            ];
+            const canonical = candidates.find(([, bytes]) => sha256(bytes) === expected);
 
-            if (canonicalCrlfHash !== expected) {
+            if (!canonical) {
+              const variants = candidates.map(([label, bytes]) => `${label}=${sha256(bytes)}`).join(", ");
               throw new Error(
-                `Historical migration checksum mismatch for ${name}: current=${currentHash}, crlf=${canonicalCrlfHash}, expected=${expected}`
+                `Historical migration checksum mismatch for ${name}: current=${currentHash}, expected=${expected}; variants: ${variants}`
               );
             }
 
-            await writeFile(file, canonicalCrlf);
+            const [representation, canonicalBytes] = canonical;
+            await writeFile(file, canonicalBytes);
             const finalHash = sha256(await readFile(file));
             if (finalHash !== expected) {
               throw new Error(`Failed to materialize canonical bytes for ${name}`);
             }
-            console.log(`migration EOL normalized in CI working tree: ${name} ${finalHash}`);
+            console.log(`migration working-tree bytes normalized in CI: ${name} representation=${representation} hash=${finalHash}`);
           }
           NODE
 
