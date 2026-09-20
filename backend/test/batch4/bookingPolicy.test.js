@@ -112,8 +112,8 @@ test("rejects booking starting before workDayStartHour", () => {
 
 test("rejects booking ending after workDayEndHour", () => {
   const now = new Date("2026-09-20T10:00:00Z");
-  const startAt = new Date("2026-09-22T16:00:00");
-  const endAt = new Date("2026-09-22T19:30:00"); // 19:30 > 18:00
+  const startAt = new Date("2026-09-22T09:00:00Z"); // 16:00 VN
+  const endAt = new Date("2026-09-22T12:30:00Z");   // 19:30 VN > 18:00 VN
 
   const policy = { workDayStartHour: 8, workDayEndHour: 18 };
 
@@ -121,4 +121,87 @@ test("rejects booking ending after workDayEndHour", () => {
     () => checkLabPolicyCompliance({ policy, startAt, endAt, now }),
     (err) => err.status === 400 && err.code === "POLICY_VIOLATION" && err.message.includes("closing hour")
   );
+});
+
+// ─── FIX 7: POLICY DURATION PRECISION TESTS ────────────────────────────────
+
+test("Fix 7: 14m31s does NOT satisfy 15-minute minimum (no rounding up)", () => {
+  const now = new Date("2026-09-20T10:00:00Z");
+  const startAt = new Date("2026-09-22T03:00:00Z"); // 10:00 VN
+  const endAt = new Date(startAt.getTime() + (14 * 60 + 31) * 1000); // 14m 31s = 871s
+
+  const policy = { minBookingMinutes: 15, maxBookingMinutes: 240 };
+
+  assert.throws(
+    () => checkLabPolicyCompliance({ policy, startAt, endAt, now }),
+    (err) => err.status === 400 && err.code === "POLICY_VIOLATION" && err.message.includes("less than the minimum")
+  );
+});
+
+test("Fix 7: Exact 15 minutes satisfies 15-minute minimum", () => {
+  const now = new Date("2026-09-20T10:00:00Z");
+  const startAt = new Date("2026-09-22T03:00:00Z"); // 10:00 VN
+  const endAt = new Date(startAt.getTime() + 15 * 60 * 1000); // Exact 15m
+
+  const policy = { minBookingMinutes: 15, maxBookingMinutes: 240 };
+
+  assert.doesNotThrow(() => {
+    checkLabPolicyCompliance({ policy, startAt, endAt, now });
+  });
+});
+
+test("Fix 7: 240m01s exceeds 240-minute maximum", () => {
+  const now = new Date("2026-09-20T10:00:00Z");
+  const startAt = new Date("2026-09-22T03:00:00Z");
+  const endAt = new Date(startAt.getTime() + (240 * 60 + 1) * 1000); // 240m 1s
+
+  const policy = { minBookingMinutes: 15, maxBookingMinutes: 240 };
+
+  assert.throws(
+    () => checkLabPolicyCompliance({ policy, startAt, endAt, now }),
+    (err) => err.status === 400 && err.code === "POLICY_VIOLATION" && err.message.includes("exceeds the maximum")
+  );
+});
+
+// ─── FIX 4: TIMEZONE CONTRACT TESTS (Asia/Ho_Chi_Minh, UTC+07:00) ──────────
+
+test("Fix 4: UTC 01:00 corresponds to 08:00 Vietnam time and satisfies workDayStartHour: 8", () => {
+  const now = new Date("2026-09-20T10:00:00Z");
+  // 2026-09-22T01:00:00Z is 08:00:00 on Tuesday in Vietnam (+07:00)
+  const startAt = new Date("2026-09-22T01:00:00Z");
+  const endAt = new Date("2026-09-22T03:00:00Z"); // 10:00 VN
+
+  const policy = { workDayStartHour: 8, workDayEndHour: 18, allowWeekend: false };
+
+  assert.doesNotThrow(() => {
+    checkLabPolicyCompliance({ policy, startAt, endAt, now });
+  });
+});
+
+test("Fix 4: Friday 22:00 UTC is Saturday 05:00 in Vietnam and is rejected when allowWeekend is false", () => {
+  const now = new Date("2026-09-20T10:00:00Z");
+  // 2026-09-25 (Friday) at 22:30 UTC is 2026-09-26 (Saturday) at 05:30 in Vietnam!
+  const startAt = new Date("2026-09-25T22:30:00Z");
+  const endAt = new Date("2026-09-25T23:30:00Z");
+
+  const policy = { allowWeekend: false };
+
+  assert.throws(
+    () => checkLabPolicyCompliance({ policy, startAt, endAt, now }),
+    (err) => err.status === 400 && err.code === "POLICY_VIOLATION" && err.message.includes("Weekend")
+  );
+});
+
+test("Fix 4: Sunday 23:00 UTC is Monday 06:00 in Vietnam and is NOT considered weekend", () => {
+  const now = new Date("2026-09-20T10:00:00Z");
+  // 2026-09-27 (Sunday) at 23:00 UTC is 2026-09-28 (Monday) at 06:00 in Vietnam!
+  const startAt = new Date("2026-09-27T23:00:00Z");
+  const endAt = new Date("2026-09-28T01:00:00Z"); // Monday 08:00 VN
+
+  const policy = { allowWeekend: false, minBookingMinutes: 30 };
+
+  // Weekend check should NOT trigger (though early hour might if configured)
+  assert.doesNotThrow(() => {
+    checkLabPolicyCompliance({ policy, startAt, endAt, now });
+  });
 });

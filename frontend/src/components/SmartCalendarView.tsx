@@ -7,6 +7,7 @@ import { DaySchedule } from "./calendar/DaySchedule.js";
 import { MonthSchedule } from "./calendar/MonthSchedule.js";
 import { BookingStatusBadge } from "./BookingStatusBadge.js";
 import { X, Clock, Calendar, User } from "lucide-react";
+import { toVietnamDateString, vietnamTimeToIso } from "../utils/timezone.js";
 
 export interface SmartCalendarViewProps {
   onOpenBooking?: (slot?: any) => void;
@@ -14,7 +15,7 @@ export interface SmartCalendarViewProps {
   user?: any;
 }
 
-export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user }) => {
+export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOpenBooking }) => {
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
   const [selectedResourceId, setSelectedResourceId] = useState<string>("");
   const [resources, setResources] = useState<any[]>([]);
@@ -136,17 +137,25 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user }) =>
 
   // Open booking modal prefilled
   const handleOpenSlotBooking = (dateStr: string, timeStr: string) => {
-    const startTimeIso = `${dateStr}T${timeStr}:00`;
     const [h, m] = timeStr.split(":").map(Number);
-    const endH = String(h + 1).padStart(2, "0");
-    const endTimeIso = `${dateStr}T${endH}:${String(m).padStart(2, "0")}:00`;
+    const endH = String((h || 9) + 1).padStart(2, "0");
+    const mStr = String(m || 0).padStart(2, "0");
 
-    setSelectedSlot({
+    const startAt = vietnamTimeToIso(dateStr, timeStr);
+    const endAt = vietnamTimeToIso(dateStr, `${endH}:${mStr}`);
+
+    const slot = {
       resourceId: selectedResourceId,
-      startAt: startTimeIso,
-      endAt: endTimeIso
-    });
-    setBookingModalOpen(true);
+      startAt,
+      endAt
+    };
+
+    if (onOpenBooking) {
+      onOpenBooking(slot);
+    } else {
+      setSelectedSlot(slot);
+      setBookingModalOpen(true);
+    }
   };
 
   // Compute title string
@@ -170,7 +179,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user }) =>
   };
 
   const anchor = getAnchorDate();
-  const currentDateStr = anchor.toISOString().split("T")[0];
+  const currentDateStr = toVietnamDateString(anchor);
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -185,8 +194,13 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user }) =>
         onNext={handleNext}
         onRefresh={loadCalendarData}
         onNewBooking={() => {
-          setSelectedSlot(null);
-          setBookingModalOpen(true);
+          const slot = { resourceId: selectedResourceId };
+          if (onOpenBooking) {
+            onOpenBooking(slot);
+          } else {
+            setSelectedSlot(slot);
+            setBookingModalOpen(true);
+          }
         }}
         resources={resources}
         selectedResourceId={selectedResourceId}

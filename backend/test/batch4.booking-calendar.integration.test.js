@@ -691,6 +691,111 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     });
     assert.equal(persisted5.length, 1, "Exactly 1 active booking must be persisted in PostgreSQL from five attempts");
   });
+
+  await t.test("13. Calendar range validation: rejects >180 days, invalid dates, and inverted ranges with 400 VALIDATION_ERROR", async () => {
+    const base = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+    const validStart = base.toISOString();
+    const beyond180 = new Date(base.getTime() + 181 * 24 * 60 * 60 * 1000).toISOString();
+
+    // 13a: > 180 days
+    const resOver = await request(app)
+      .get(`/api/calendar/events?start=${validStart}&end=${beyond180}`)
+      .set(bearer(tokens.studentA));
+    assert.equal(resOver.status, 400);
+    assert.equal(resOver.body.error?.code, "VALIDATION_ERROR");
+    assert.match(resOver.body.error?.message, /180 days/);
+
+    // 13b: missing parameters
+    const resMissing = await request(app)
+      .get("/api/calendar/events")
+      .set(bearer(tokens.studentA));
+    assert.equal(resMissing.status, 400);
+    assert.equal(resMissing.body.error?.code, "VALIDATION_ERROR");
+
+    // 13c: inverted range (start >= end)
+    const resInverted = await request(app)
+      .get(`/api/calendar/events?start=${beyond180}&end=${validStart}`)
+      .set(bearer(tokens.studentA));
+    assert.equal(resInverted.status, 400);
+    assert.equal(resInverted.body.error?.code, "VALIDATION_ERROR");
+
+    // 13d: invalid date strings
+    const resInvalid = await request(app)
+      .get("/api/calendar/events?start=invalid-date&end=not-a-date")
+      .set(bearer(tokens.studentA));
+    assert.equal(resInvalid.status, 400);
+    assert.equal(resInvalid.body.error?.code, "VALIDATION_ERROR");
+  });
+
+  await t.test("14. Effective approval requirement: labPolicy.requiresApproval=true enforces PENDING_APPROVAL even when resource.requiresApproval=false", async () => {
+    // Create new lab with labPolicy.requiresApproval = true
+    const approvalLabId = id();
+    await isolated.laboratory.create({
+      data: {
+        id: approvalLabId,
+        buildingId: fixture.building,
+        code: `LAB-POL-${marker.slice(0, 6)}`,
+        name: "Policy-Enforced Approval Lab",
+        labPolicy: {
+          create: {
+            id: id(),
+            requiresApproval: true, // Laboratory policy enforces approval!
+            minBookingMinutes: 30,
+            maxBookingMinutes: 480,
+            allowWeekend: true
+          }
+        }
+      }
+    });
+
+    // Create resource with requiresApproval = false in that lab
+    const policyApprovalResourceId = id();
+    await isolated.resource.create({
+      data: {
+        id: policyApprovalResourceId,
+        laboratoryId: approvalLabId,
+        code: `RES-POL-${marker.slice(0, 6)}`,
+        name: "Auto-Approve Candidate Under Policy Lab",
+        subtype: "OTHER",
+        category: "EQUIPMENT",
+        location: "Room 205",
+        operationalStatus: "AVAILABLE",
+        requiresApproval: false // Explicitly false on the resource itself
+      }
+    });
+
+    // 14a: GET /api/resources/:id must serialize effectiveRequiresApproval: true
+    const getRes = await request(app)
+      .get(`/api/resources/${policyApprovalResourceId}`)
+      .set(bearer(tokens.studentA));
+    assert.equal(getRes.status, 200);
+    assert.equal(getRes.body.requiresApproval, false, "Underlying resource flag remains false");
+    assert.equal(getRes.body.effectiveRequiresApproval, true, "Effective requiresApproval must be true due to lab policy");
+    assert.equal(getRes.body.labPolicy?.requiresApproval, true);
+
+    // 14b: Booking creation must result in PENDING_APPROVAL
+    const testStart = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    testStart.setHours(10, 0, 0, 0);
+    const testEnd = new Date(testStart.getTime() + 60 * 60 * 1000);
+
+    const bookingRes = await request(app)
+      .post("/api/bookings")
+      .set(bearer(tokens.studentA))
+      .send({
+        resourceId: policyApprovalResourceId,
+        title: "Booking Subject to Policy Approval",
+        purpose: "Validating effective requiresApproval rule",
+        startAt: testStart.toISOString(),
+        endAt: testEnd.toISOString()
+      });
+
+    assert.equal(bookingRes.status, 201);
+    assert.equal(
+      bookingRes.body.status,
+      "PENDING_APPROVAL",
+      "Persisted status must be PENDING_APPROVAL when lab policy requires approval"
+    );
+  });
 });
 
 test.after(async () => {

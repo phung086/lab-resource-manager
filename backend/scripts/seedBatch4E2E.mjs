@@ -74,10 +74,11 @@ try {
 
   await prisma.labPolicy.upsert({
     where: { laboratoryId: ids.foreignLab },
-    update: { minBookingMinutes: 30, maxBookingMinutes: 240, maxAdvanceBookingDays: 30, allowWeekend: true, workDayStartHour: 8, workDayEndHour: 20 },
+    update: { minBookingMinutes: 30, maxBookingMinutes: 240, maxAdvanceBookingDays: 30, allowWeekend: true, workDayStartHour: 8, workDayEndHour: 20, requiresApproval: true },
     create: {
       id: ids.policyForeign,
       laboratoryId: ids.foreignLab,
+      requiresApproval: true,
       minBookingMinutes: 30,
       maxBookingMinutes: 240,
       maxAdvanceBookingDays: 30,

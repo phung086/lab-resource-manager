@@ -347,7 +347,6 @@ function App() {
         resources={resources}
         onConfirmBooking={(bookingData) => {
           loadData();
-          setActiveGlobalModal(null);
         }}
       />
 

@@ -1,6 +1,7 @@
 import React from "react";
 import { Plus } from "lucide-react";
 import { CalendarEventCard } from "./CalendarEventCard.js";
+import { toVietnamDateString, getVietnamTodayDateString } from "../../utils/timezone.js";
 
 export interface MonthScheduleProps {
   anchorDate: Date;
@@ -24,7 +25,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
   const adjustedFirstDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1; // 0 is Mon
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getVietnamTodayDateString();
 
   const cells = [];
   // Prefix blank cells
@@ -41,10 +42,10 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
     const dayDateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const isToday = dayDateStr === todayStr;
 
-    // Filter events for this day
+    // Filter events for this day in Vietnam time
     const dayEvents = events.filter((ev) => {
-      const evStart = ev.start?.split("T")[0];
-      return evStart === dayDateStr;
+      const evDate = toVietnamDateString(ev.start);
+      return evDate === dayDateStr;
     });
 
     cells.push(

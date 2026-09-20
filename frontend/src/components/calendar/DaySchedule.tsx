@@ -1,6 +1,7 @@
 import React from "react";
 import { Plus, Clock, AlertCircle } from "lucide-react";
 import { CalendarEventCard } from "./CalendarEventCard.js";
+import { toVietnamHour } from "../../utils/timezone.js";
 
 export interface DayScheduleProps {
   currentDateStr: string;
@@ -23,11 +24,11 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
         {HOURS.map((hour) => {
           const hourStr = `${String(hour).padStart(2, "0")}:00`;
 
-          // Match events covering this hour
+          // Match events covering this hour in Vietnam time
           const matchedEvents = events.filter((ev) => {
             if (!ev.start || !ev.end) return false;
-            const startHour = new Date(ev.start).getHours();
-            const endHour = new Date(ev.end).getHours();
+            const startHour = toVietnamHour(ev.start);
+            const endHour = toVietnamHour(ev.end);
             return (hour >= startHour && hour < endHour) || startHour === hour;
           });
 

@@ -25,6 +25,22 @@ export function maintenanceOverlapWhere({ resourceId, startAt, endAt, excludeMai
   };
 }
 
+const VIETNAM_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+export function getVietnamTimeParts(date) {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const vn = new Date(d.getTime() + VIETNAM_OFFSET_MS);
+  return {
+    year: vn.getUTCFullYear(),
+    month: vn.getUTCMonth() + 1,
+    day: vn.getUTCDate(),
+    dayOfWeek: vn.getUTCDay(), // 0 = Sunday, 6 = Saturday
+    hour: vn.getUTCHours(),
+    minute: vn.getUTCMinutes(),
+    second: vn.getUTCSeconds()
+  };
+}
+
 export function checkLabPolicyCompliance({ policy, startAt, endAt, now = new Date() }) {
   if (!policy) return;
 
@@ -35,9 +51,11 @@ export function checkLabPolicyCompliance({ policy, startAt, endAt, now = new Dat
     throw new HttpError(400, "Booking cannot be made in the past", undefined, "POLICY_VIOLATION");
   }
 
-  const durationMinutes = Math.round((end.getTime() - start.getTime()) / 60_000);
+  // Exact duration comparison without Math.round
+  const durationMs = end.getTime() - start.getTime();
+  const durationMinutes = durationMs / 60_000;
 
-  if (policy.minBookingMinutes && durationMinutes < policy.minBookingMinutes) {
+  if (policy.minBookingMinutes != null && durationMinutes < policy.minBookingMinutes) {
     throw new HttpError(
       400,
       `Booking duration (${durationMinutes}m) is less than the minimum required (${policy.minBookingMinutes}m)`,
@@ -46,7 +64,7 @@ export function checkLabPolicyCompliance({ policy, startAt, endAt, now = new Dat
     );
   }
 
-  if (policy.maxBookingMinutes && durationMinutes > policy.maxBookingMinutes) {
+  if (policy.maxBookingMinutes != null && durationMinutes > policy.maxBookingMinutes) {
     throw new HttpError(
       400,
       `Booking duration (${durationMinutes}m) exceeds the maximum allowed (${policy.maxBookingMinutes}m)`,
@@ -67,10 +85,12 @@ export function checkLabPolicyCompliance({ policy, startAt, endAt, now = new Dat
     }
   }
 
+  // Timezone-safe evaluation in Vietnam wall-clock time (UTC+07:00)
+  const startParts = getVietnamTimeParts(start);
+  const endParts = getVietnamTimeParts(end);
+
   if (policy.allowWeekend === false) {
-    const startDay = start.getDay();
-    const endDay = end.getDay();
-    if (startDay === 0 || startDay === 6 || endDay === 0 || endDay === 6) {
+    if (startParts.dayOfWeek === 0 || startParts.dayOfWeek === 6 || endParts.dayOfWeek === 0 || endParts.dayOfWeek === 6) {
       throw new HttpError(
         400,
         "Weekend bookings are not permitted by laboratory policy",
@@ -81,25 +101,22 @@ export function checkLabPolicyCompliance({ policy, startAt, endAt, now = new Dat
   }
 
   if (policy.workDayStartHour != null) {
-    const startHour = start.getHours();
-    if (startHour < policy.workDayStartHour) {
+    if (startParts.hour < policy.workDayStartHour) {
       throw new HttpError(
         400,
-        `Booking start time (${startHour}:00) is earlier than laboratory opening hour (${policy.workDayStartHour}:00)`,
-        { workDayStartHour: policy.workDayStartHour, startHour },
+        `Booking start time (${startParts.hour}:00) is earlier than laboratory opening hour (${policy.workDayStartHour}:00)`,
+        { workDayStartHour: policy.workDayStartHour, startHour: startParts.hour },
         "POLICY_VIOLATION"
       );
     }
   }
 
   if (policy.workDayEndHour != null) {
-    const endHour = end.getHours();
-    const endMinutes = end.getMinutes();
-    if (endHour > policy.workDayEndHour || (endHour === policy.workDayEndHour && endMinutes > 0)) {
+    if (endParts.hour > policy.workDayEndHour || (endParts.hour === policy.workDayEndHour && endParts.minute > 0)) {
       throw new HttpError(
         400,
-        `Booking end time (${endHour}:${String(endMinutes).padStart(2, "0")}) is later than laboratory closing hour (${policy.workDayEndHour}:00)`,
-        { workDayEndHour: policy.workDayEndHour, endHour, endMinutes },
+        `Booking end time (${endParts.hour}:${String(endParts.minute).padStart(2, "0")}) is later than laboratory closing hour (${policy.workDayEndHour}:00)`,
+        { workDayEndHour: policy.workDayEndHour, endHour: endParts.hour, endMinutes: endParts.minute },
         "POLICY_VIOLATION"
       );
     }

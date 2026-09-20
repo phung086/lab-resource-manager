@@ -4,7 +4,7 @@ Last synchronized: 2026-09-20
 
 ## Current Boundary
 
-Batch 4 - Booking Calendar and Required Booking Workflow is complete and verified.
+Batch 4 & 4.1 - Booking Calendar and Required Booking Workflow is complete and verified.
 
 Batch 5 is NOT currently authorized. No agent may begin Batch 5 until the user
 explicitly requests it.
@@ -55,18 +55,20 @@ derived from resource state, bookings, maintenance windows, and policy.
 
 ## Latest Verified Gates
 
-- Backend core tests: 27/27 PASS.
-- Batch 4 booking policy tests: 10/10 PASS (`test/batch4/bookingPolicy.test.js`).
-- Batch 4 booking calendar integration suite: 12/12 PASS (`test/batch4.booking-calendar.integration.test.js`).
+- Backend core tests: 27/27 PASS (`npm run test:core`).
+- Batch 4.1 booking policy tests: 16/16 PASS (`test/batch4/bookingPolicy.test.js`, including boundary precision and timezone invariance).
+- Batch 4.1 booking calendar integration suite: 14/14 PASS (`test/batch4.booking-calendar.integration.test.js`, including >180 days range validation and effective approval requirement).
 - Batch 1E isolated runtime: 11/11 subtests PASS (`test/batch1e/integration.runtime.test.js`).
 - Batch 1 canonical persistence and real concurrency: 2/2 PASS (`bookingConcurrency.db.test.js`, `persistenceMigration.test.js`).
 - Batch 2 auth/RBAC integration: 10/10 PASS (`test/batch2.auth-rbac.integration.test.js`).
 - Batch 3 resource integration: 9/9 PASS (`test/batch3.resource-management.integration.test.js`).
-- Batch 4 frontend calendar Playwright E2E: PASS for STUDENT (Day/Week/Month, booking, reload persistence, cancellation), LECTURER (booking workflow), LAB_STAFF (assigned-lab scope), ADMIN (global visibility), real 409 conflict handling, maintenance blocks, and responsive mobile.
-- Frontend production build: PASS (Vite 6, 0 errors).
+- Batch 2 frontend auth E2E: PASS (`npm run test:e2e:auth`).
+- Batch 3 frontend resource E2E: PASS (`npm run test:e2e:resources`).
+- Batch 4 frontend calendar Playwright E2E: PASS (`npm run test:e2e:calendar`, verifying slot prepopulation, effective approval requirement, dynamic policy, no timer auto-close, conflict 409, maintenance, and mobile responsive).
+- Frontend production build: PASS (Vite 6, 0 errors, 3.23s).
 - Production readiness / health / CORS / Helmet smoke: PASS (`GET /health` 200, `GET /health/ready` 200).
 
-The latest Batch 4 verification on 2026-09-20 passed all backend core tests (27/27), policy unit tests (10/10), Batch 4 integration subtests (12/12), Batch 1/1E/2/3 regressions, and the frontend production build.
+The latest Batch 4.1 verification on 2026-09-20 passed all backend core tests (27/27), policy unit tests (16/16), Batch 4 integration subtests (14/14), Batch 1/1E/2/3 regressions, all 3 frontend E2E suites, and the frontend production build.
 
 ## Current Core Blockers
 

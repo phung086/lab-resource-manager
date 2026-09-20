@@ -42,9 +42,46 @@ try {
   await studentPage.waitForTimeout(300);
   assert.equal(await studentPage.getByText("Thứ 2", { exact: true }).isVisible(), true, "Month grid header must be visible");
 
+  // Test Slot Click -> Modal Contract (Fix 1) in Day View
+  console.log("  Testing Day schedule slot click prepopulation (Fix 1)...");
   await studentPage.getByRole("button", { name: "Ngày", exact: true }).click();
   await studentPage.waitForTimeout(300);
   assert.equal(await studentPage.getByText("08:00").first().isVisible(), true, "Day schedule hour rows must be visible");
+
+  // Click on the 15:00 slot
+  const slotRow15 = studentPage.locator(".bg-slate-850, .bg-slate-900\\/40", { hasText: "15:00" });
+  const openSlot15 = slotRow15.locator("text=Khung giờ trống — Bấm để đặt");
+  await openSlot15.click();
+
+  const slotModal = studentPage.getByRole("dialog");
+  await slotModal.waitFor();
+
+  // Verify Fix 1: Form fields derived from slot, no fallback to tomorrow 09:00
+  const startTimeVal = await studentPage.locator("#booking-start-time").inputValue();
+  const endTimeVal = await studentPage.locator("#booking-end-time").inputValue();
+  const dateVal = await studentPage.locator("#booking-date").inputValue();
+
+  assert.equal(startTimeVal, "15:00", "Start time must prepopulate to 15:00 from clicked slot");
+  assert.equal(endTimeVal, "16:00", "End time must prepopulate to 16:00 from clicked slot");
+  assert.ok(dateVal && dateVal.length === 10, "Date must prepopulate with day date");
+
+  // Verify Fix 3: Dynamic or truthful policy display (no static hardcoded claim)
+  const policyText = await slotModal.locator(".bg-cyan-950\\/20").innerText();
+  assert.ok(!policyText.includes("Vui lòng đặt trước ít nhất 1 giờ"), "Must not contain obsolete static claim");
+  assert.ok(policyText.includes("Chính sách lab:") || policyText.includes("Thời gian đặt phải tuân thủ"), "Must display dynamic or truthful policy");
+
+  // Select GPU-01 (policy max 240m = 4h) and verify dynamic 4 tiếng/ca display
+  const gpuOption = slotModal.locator('#booking-resource-select option', { hasText: 'B4-E2E-GPU-01' });
+  if (await gpuOption.count() > 0) {
+    const gpuVal = await gpuOption.getAttribute('value');
+    await slotModal.locator('#booking-resource-select').selectOption(gpuVal);
+    const gpuPolicyText = await slotModal.locator(".bg-cyan-950\\/20").innerText();
+    assert.ok(gpuPolicyText.includes("tối đa 4 tiếng/ca"), "Dynamic policy must display 4 tiếng/ca for 240m policy");
+  }
+
+  // Close slot modal via Đóng
+  await slotModal.getByRole("button", { name: "Đóng" }).click();
+  await slotModal.waitFor({ state: "hidden" });
 
   await studentPage.getByRole("button", { name: "Tuần", exact: true }).click();
   await studentPage.waitForTimeout(300);
@@ -54,6 +91,9 @@ try {
   await studentPage.getByRole("button", { name: "Đặt Khung Giờ Mới" }).click();
   const modal = studentPage.getByRole("dialog");
   await modal.waitFor();
+
+  const studentGpuOptVal = await studentPage.locator('#booking-resource-select option', { hasText: 'B4-E2E-GPU-01' }).getAttribute('value');
+  await studentPage.locator('#booking-resource-select').selectOption(studentGpuOptVal);
 
   const bookingTitle = `E2E Student Session ${Date.now()}`;
   await studentPage.getByLabel(/Tiêu đề buổi làm việc/).fill(bookingTitle);
@@ -65,19 +105,35 @@ try {
   await studentPage.getByLabel(/Giờ bắt đầu/).fill("14:00");
   await studentPage.getByLabel(/Giờ kết thúc/).fill("16:00");
 
-  await Promise.all([
+  const [bookingRes] = await Promise.all([
     studentPage.waitForResponse((r) => r.url().includes("/api/bookings") && r.request().method() === "POST" && r.status() === 201),
     studentPage.getByRole("button", { name: /Xác Nhận Đặt Lịch/i }).click()
   ]);
+  const bookingJson = await bookingRes.json();
+  assert.equal(bookingJson.status, "CONFIRMED");
 
-  // Modal closes
-  await studentPage.waitForTimeout(600);
+  // Fix 6: Success state is shown, modal does NOT auto close! Real persisted status is shown
+  await studentPage.locator("#created-booking-status").waitFor({ timeout: 3000 });
+  const statusText = await studentPage.locator("#created-booking-status").innerText();
+  assert.ok(statusText.includes("CONFIRMED"), "Success modal must show real persisted status CONFIRMED");
+
+  // Explicit Close button click (Fix 6)
+  await studentPage.locator("#booking-success-close-btn").click();
+  await modal.waitFor({ state: "hidden", timeout: 3000 });
 
   // 1c. Verify persistence after reload
   console.log("  Verifying persistence across page reload...");
   await studentPage.reload({ waitUntil: "networkidle" });
   await openCalendar(studentPage);
   await studentPage.waitForTimeout(600);
+
+  const studentCalSelect = studentPage.locator('select[aria-label="Chọn tài nguyên lịch"]');
+  const gpuCalOption = studentCalSelect.locator('option', { hasText: 'B4-E2E-GPU-01' });
+  if (await gpuCalOption.count() > 0) {
+    const gpuCalVal = await gpuCalOption.getAttribute('value');
+    await studentCalSelect.selectOption(gpuCalVal);
+    await studentPage.waitForTimeout(300);
+  }
 
   // Switch to Day view
   await Promise.all([
@@ -145,7 +201,10 @@ try {
     lecturerPage.waitForResponse((r) => r.url().includes("/api/bookings") && r.request().method() === "POST" && r.status() === 201),
     lecturerPage.getByRole("button", { name: /Xác Nhận Đặt Lịch/i }).click()
   ]);
-  await lecturerPage.waitForTimeout(600);
+  // Fix 6: Modal stays open with success state and closes on button click
+  await lecturerPage.locator("#booking-success-close-btn").waitFor({ timeout: 3000 });
+  await lecturerPage.locator("#booking-success-close-btn").click();
+  await lecturerPage.getByRole("dialog").waitFor({ state: "hidden", timeout: 3000 });
   console.log("  Lecturer booking completed successfully");
   await lecturerContext.close();
 
@@ -252,6 +311,43 @@ try {
   const adminOptions = await adminSelect.locator("option").allInnerTexts();
   assert.ok(adminOptions.some((o) => o.includes("B4-E2E-CNC-01")), "Admin must see resources across all labs");
   console.log("  Admin global visibility: PASS");
+
+  console.log("=== 5B. EFFECTIVE APPROVAL REQUIREMENT & TRUTHFUL POLICY VERIFICATION ===");
+  // B4-E2E-CNC-01 is in foreignLab, where labPolicy.requiresApproval = true and resource.requiresApproval = false
+  await adminSelect.selectOption({ label: "B4-E2E-CNC-01 - Máy CNC độ chính xác cao" });
+  await adminPage.waitForTimeout(400);
+
+  await adminPage.getByRole("button", { name: "Đặt Khung Giờ Mới" }).click();
+  const approvalModal = adminPage.getByRole("dialog");
+  await approvalModal.waitFor();
+
+  // Verify Fix 2: UI displays "Cần duyệt", not "Xác nhận tức thì"
+  const approvalBadge = approvalModal.locator("label", { hasText: "Thiết bị / Phòng thí nghiệm" }).getByText("Cần duyệt");
+  assert.ok(await approvalBadge.isVisible(), "Effective requires approval must display 'Cần duyệt' due to labPolicy.requiresApproval = true");
+
+  const cncDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  await adminPage.getByLabel(/Tiêu đề buổi làm việc/).fill(`CNC Policy Approval Booking ${Date.now()}`);
+  await adminPage.getByLabel(/Mục đích sử dụng/).fill("Testing effective approval requirement under labPolicy");
+  await adminPage.getByLabel(/Ngày đặt/).fill(cncDate);
+  await adminPage.getByLabel(/Giờ bắt đầu/).fill("09:00");
+  await adminPage.getByLabel(/Giờ kết thúc/).fill("10:30");
+
+  const [cncBookingRes] = await Promise.all([
+    adminPage.waitForResponse((r) => r.url().includes("/api/bookings") && r.request().method() === "POST" && r.status() === 201),
+    adminPage.getByRole("button", { name: /Xác Nhận Đặt Lịch/i }).click()
+  ]);
+  const cncBookingData = await cncBookingRes.json();
+  assert.equal(cncBookingData.status, "PENDING_APPROVAL", "Persisted booking status must be PENDING_APPROVAL");
+
+  // Verify Fix 6: Modal stays open with real status PENDING_APPROVAL and closes on button click
+  await adminPage.locator("#created-booking-status").waitFor({ timeout: 3000 });
+  const cncStatusText = await adminPage.locator("#created-booking-status").innerText();
+  assert.ok(cncStatusText.includes("PENDING_APPROVAL"), "Success modal must show real persisted status PENDING_APPROVAL");
+
+  await adminPage.locator("#booking-success-close-btn").click();
+  await approvalModal.waitFor({ state: "hidden", timeout: 3000 });
+  console.log("  Effective approval and success modal verified: PASS");
+
   await adminContext.close();
 
   console.log("=== 6. MOBILE RESPONSIVE PASS ===");

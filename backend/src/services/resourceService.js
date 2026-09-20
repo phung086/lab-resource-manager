@@ -24,7 +24,8 @@ export const resourceLaboratorySelect = {
   id: true,
   code: true,
   name: true,
-  isActive: true
+  isActive: true,
+  labPolicy: true
 };
 
 export function currentInterval(now = new Date()) {
@@ -60,6 +61,11 @@ export function resourceAvailability(resource, { startAt, endAt } = currentInter
 }
 
 export function serializeCanonicalResource(resource, interval) {
+  const labPolicy = resource.laboratory?.labPolicy || null;
+  const effectiveRequiresApproval = Boolean(
+    resource.requiresApproval || labPolicy?.requiresApproval
+  );
+
   return {
     id: resource.id,
     code: resource.code,
@@ -67,6 +73,7 @@ export function serializeCanonicalResource(resource, interval) {
     description: resource.description || null,
     laboratoryId: resource.laboratoryId || null,
     laboratory: resource.laboratory || null,
+    labPolicy,
     category: resource.category || null,
     subtype: resource.subtype,
     operationalStatus: resource.operationalStatus,
@@ -76,6 +83,7 @@ export function serializeCanonicalResource(resource, interval) {
     ownerTeam: resource.ownerTeam || null,
     capacity: resource.capacity,
     requiresApproval: resource.requiresApproval,
+    effectiveRequiresApproval,
     serialNumber: resource.serialNumber || null,
     manufacturer: resource.manufacturer || null,
     model: resource.model || null,

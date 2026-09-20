@@ -243,11 +243,30 @@ router.get("/events", async (req, res, next) => {
     const startInput = start || start_date || startDate;
     const endInput = end || end_date || endDate;
 
-    const fromDate = startInput ? new Date(startInput) : new Date();
-    const toDate = endInput ? new Date(endInput) : new Date(fromDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+    if (!startInput || !endInput) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Both start and end dates are required" } });
+    }
+
+    const fromDate = new Date(startInput);
+    const toDate = new Date(endInput);
+
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid date format for start or end" } });
+    }
 
     if (fromDate >= toDate) {
       return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Start date must precede end date" } });
+    }
+
+    const MAX_RANGE_DAYS = 180;
+    const diffDays = (toDate.getTime() - fromDate.getTime()) / (24 * 60 * 60 * 1000);
+    if (diffDays > MAX_RANGE_DAYS) {
+      return res.status(400).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: `Requested calendar range (${Math.round(diffDays)} days) exceeds maximum allowed limit of ${MAX_RANGE_DAYS} days`
+        }
+      });
     }
 
     const resourceWhere = {};

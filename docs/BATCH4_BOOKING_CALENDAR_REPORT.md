@@ -1,64 +1,96 @@
-# Batch 4 — Canonical Booking Calendar & Required Booking Workflow Report
+# Batch 4 & 4.1 — Canonical Booking Calendar & Required Booking Workflow Report
 
 Ngày hoàn thành & xác minh: 2026-09-20  
-Trạng thái: **COMPLETE & VERIFIED — GO FOR BATCH 5 GATING**  
+Trạng thái: **COMPLETE & VERIFIED (BATCH 4.1 CORRECTNESS HOTFIX INCLUDED) — GO FOR BATCH 5 GATING**  
 Nguồn sự thật: `PRODUCT.md`, `docs/srs.md`, `docs/convention.md`, `.agent/PROJECT_RULES.md`, `.agent/INSTRUCTOR_BASELINE.md`, `AGENTS.md`.
 
 ---
 
 ## A. Bối Cảnh & Mục Tiêu
 
-Batch 4 hiện thực hóa module lịch đặt chỗ phòng thí nghiệm chuẩn tắc (Canonical Booking Calendar) và quy trình đặt chỗ bắt buộc (Required Booking Workflow), thay thế hoàn toàn các thành phần giả lập (mock data, mã đặt `BK-`, `setTimeout`, popup VietQR bắt buộc) bằng các API backend và ràng buộc cơ sở dữ liệu PostgreSQL thực tế.
+Batch 4 và bản sửa lỗi chính xác Batch 4.1 hiện thực hóa module lịch đặt chỗ phòng thí nghiệm chuẩn tắc (Canonical Booking Calendar) và quy trình đặt chỗ bắt buộc (Required Booking Workflow), loại bỏ hoàn toàn các giả định sai lệch, contract lệch chuẩn và các thành phần giả lập (mock data, mã đặt `BK-`, `setTimeout` tự đóng modal, popup VietQR bắt buộc) bằng các API backend và ràng buộc cơ sở dữ liệu PostgreSQL thực tế.
 
 ---
 
-## B. Báo Cáo 12 Hạng Mục Kiểm Tra & Ổn Định Hóa
+## B. Báo Cáo 7 Hạng Mục Sửa Lỗi Chính Xác Batch 4.1 (Correctness Hotfixes)
+
+### 1. Hợp đồng Slot Lịch → Modal Đặt Chỗ (Calendar Slot → Booking Modal Contract)
+- **Vấn đề**: `SmartCalendarView` tạo payload `{ resourceId, startAt, endAt }` trong khi modal trước đó kỳ vọng `{ date, time, resourceId }`, dẫn đến việc click vào ô lịch trống có nguy cơ rơi về fallback ngày mai 09:00.
+- **Khắc phục**:
+  - Chuẩn hóa một hợp đồng duy nhất `{ resourceId, startAt, endAt }` dùng ISO string chuẩn tắc.
+  - `QuickBookingModal` phân giải ngày (`date`), giờ bắt đầu (`startTime`), giờ kết thúc (`endTime`) từ `startAt`/`endAt` theo giờ Việt Nam (UTC+07:00).
+  - Không fallback âm thầm về ngày mai khi nhận được slot hợp lệ.
+  - Đã kiểm chứng qua E2E: click ô 15:00 trong DaySchedule điền chính xác 15:00–16:00 vào modal.
+
+### 2. Yêu Cầu Phê Duyệt Hiệu Lực (Effective Approval Requirement)
+- **Vấn đề**: Trạng thái phê duyệt trên frontend trước đó chỉ kiểm tra `currentResource.requiresApproval`, có thể hiển thị "Xác nhận tức thì" dù phòng lab có `labPolicy.requiresApproval = true` (khiến backend tạo `PENDING_APPROVAL`).
+- **Khắc phục**:
+  - Backend (`resourceService.js`) tự động nạp `labPolicy` của laboratory và tính toán trường chuẩn tắc:
+    `effectiveRequiresApproval = Boolean(resource.requiresApproval || laboratory.labPolicy?.requiresApproval)`
+  - Serializer xuất trường này trong cả danh sách và chi tiết tài nguyên.
+  - Frontend hiển thị huy hiệu "Cần duyệt" vs "Xác nhận tức thì" dựa trên `effectiveRequiresApproval`.
+  - Kiểm thử: `resource.requiresApproval = false` nhưng `labPolicy.requiresApproval = true` hiển thị "Cần duyệt" và lưu trạng thái `PENDING_APPROVAL` (Subtest 14 trong integration test & Step 5B trong Playwright E2E).
+
+### 3. Loại Bỏ Tuyên Bố Chính Sách Cứng (Remove Hardcoded Policy Claim)
+- **Vấn đề**: `QuickBookingModal` trước đây chứa dòng chữ cứng: *"Thời gian đặt tối thiểu 30 phút, tối đa 8 tiếng/lần. Vui lòng đặt trước ít nhất 1 giờ."*, điều này không đúng với các lab có chính sách khác nhau.
+- **Khắc phục**:
+  - Hiển thị động theo chính sách thực tế từ backend: `currentPolicy.minBookingMinutes`, `currentPolicy.maxBookingMinutes / 60`, `workDayStartHour`, `workDayEndHour`, `allowWeekend`.
+  - Nếu tài nguyên chưa có thông tin chính sách, hiển thị thông điệp trung thực: *"Thời gian đặt phải tuân thủ chính sách quy định của phòng thí nghiệm."*
+  - Tuyệt đối không hardcode con số giả định.
+
+### 4. Hợp Đồng Múi Giờ Việt Nam (Timezone Contract - Asia/Ho_Chi_Minh UTC+07:00)
+- **Vấn đề**: Xử lý ngày giờ bằng `Date#getHours()`, `toISOString().split("T")[0]` phụ thuộc vào múi giờ của máy chủ/trình duyệt cục bộ.
+- **Khắc phục**:
+  - Định nghĩa múi giờ chuẩn tắc duy nhất của hệ thống: `Asia/Ho_Chi_Minh` (UTC+07:00, không DST).
+  - Backend: `availabilityService.js` triển khai `getVietnamTimeParts(date)` độc lập với múi giờ máy chủ (`process.env.TZ`), tính toán chính xác Thứ/Ngày/Giờ/Phút cho các ràng buộc `allowWeekend`, `workDayStartHour`, `workDayEndHour`.
+  - Frontend: Xây dựng module tiện ích `frontend/src/utils/timezone.ts` (`toVietnamDateString`, `toVietnamTimeString`, `toVietnamHour`, `vietnamTimeToIso`, `getVietnamTomorrowDateString`).
+  - Đã bổ sung unit test chứng minh: UTC 01:00 = 08:00 VN; Thứ Sáu 22:00 UTC = Thứ Bảy 05:00 VN (bị chặn nếu không cho phép cuối tuần); Chủ Nhật 23:00 UTC = Thứ Hai 06:00 VN (không phải cuối tuần).
+
+### 5. Ràng Buộc Phạm Vi Truy Vấn Lịch (Calendar Range Validation)
+- **Vấn đề**: `GET /api/calendar/events` có nguy cơ bị khai thác với khoảng thời gian quá lớn (vài năm).
+- **Khắc phục**:
+  - Kiểm tra tính hợp lệ của timestamp `start` và `end`.
+  - Bắt buộc `start < end`.
+  - Giới hạn cứng tối đa: **180 ngày** (`MAX_RANGE_DAYS = 180`).
+  - Trả về HTTP 400 `VALIDATION_ERROR` nếu vi phạm.
+  - Đã kiểm chứng qua Subtest 13 trong `batch4.booking-calendar.integration.test.js`.
+
+### 6. Trải Nghiệm Thành Công Trung Thực — Không Tự Động Đóng Bằng Timer (No setTimeout Auto-Close)
+- **Vấn đề**: Modal sau khi đặt lịch thành công vẫn có một timer tự đóng sau 1.6 giây, làm giảm khả năng tiếp cận và không cho người dùng kịp đọc trạng thái thực tế (`CONFIRMED` hay `PENDING_APPROVAL`).
+- **Khắc phục**:
+  - Loại bỏ hoàn toàn `setTimeout` đóng modal.
+  - Giữ nguyên trạng thái thành công với thông tin đầy đủ: trạng thái thực tế, tài nguyên, thời gian (VN), mã ca đặt.
+  - Cung cấp nút bấm "Hoàn tất" (`#booking-success-close-btn`) rõ ràng để người dùng chủ động đóng modal.
+
+### 7. Độ Chính Xác Biên Thời Gian Chính Sách (Policy Duration Precision)
+- **Vấn đề**: `checkLabPolicyCompliance` trước đó dùng `Math.round(...)` khi tính số phút, có thể khiến khoảng thời gian 14m31s bị làm tròn lên 15m và thỏa mãn điều kiện tối thiểu 15 phút.
+- **Khắc phục**:
+  - Tính chính xác thời lượng: `(end.getTime() - start.getTime()) / 60_000` không làm tròn.
+  - So sánh trực tiếp với `minBookingMinutes` và `maxBookingMinutes`.
+  - Đã kiểm chứng: 14m31s thất bại trước mốc 15 phút; 240m01s thất bại trước mốc 240 phút.
+
+---
+
+## C. Báo Cáo Các Hạng Mục Kiểm Tra Nền Tảng Batch 4
 
 ### 1. Ngữ Nghĩa Trạng Thái Vận Hành (Operational Status Semantics)
-- **Quy tắc chuẩn tắc**:
-  - Các trạng thái vật lý chặn cứng (Hard-blocking Physical States): `MAINTENANCE`, `CALIBRATION`, `BROKEN`, `RETIRED`, `OFFLINE` $\rightarrow$ Từ chối tạo lịch đặt với HTTP 400 `RESOURCE_UNAVAILABLE`.
-  - Trạng thái `IN_USE` **không** được phép khóa cứng toàn bộ tài nguyên cho tương lai. Tính khả dụng theo lịch trình (scheduling availability) được xác định dựa trên khoảng thời gian thực tế (`[startAt, endAt)`).
-- **Kiểm thử**: Đã bổ sung subtest 9 trong `test/batch4.booking-calendar.integration.test.js` chứng minh thiết bị `IN_USE` vẫn cho phép đặt ca trong tương lai không chồng lấn, và thiết bị `MAINTENANCE` từ chối đặt với mã `RESOURCE_UNAVAILABLE`.
+- Trạng thái chặn cứng: `MAINTENANCE`, `CALIBRATION`, `BROKEN`, `RETIRED`, `OFFLINE` $\rightarrow$ Chặn đặt lịch với HTTP 400 `RESOURCE_UNAVAILABLE`.
+- Trạng thái `IN_USE`: Không chặn toàn cục trong tương lai; tính khả dụng phụ thuộc vào khoảng thời gian cụ thể `[startAt, endAt)`.
 
-### 2. Tính Trung Thực Về Quyền Riêng Tư Trên Lịch (Calendar Privacy Truthfulness)
-- **Quy tắc chuẩn tắc**:
-  - Không bao giờ bịa đặt trạng thái `status: "CONFIRMED"` cho người dùng khác khi ca đặt thực tế có thể là `PENDING_APPROVAL`, `CHECKED_OUT` hoặc `RETURNED`.
-  - Đối với góc nhìn công khai / sinh viên khác: Sử dụng trường chiếu riêng `occupancy: "BOOKED"` và không gửi trường `status`. Hoàn toàn ẩn danh tính người đặt (`requestedBy`), tiêu đề riêng tư và ghi chú.
-  - Đối với chủ sở hữu (`isMine: true`) và cán bộ quản lý (`LAB_STAFF`, `ADMIN`): Trả về trường `status` chuẩn tắc và đầy đủ thông tin vận hành.
-- **Kiểm thử**: Đã bổ sung subtest 10 kiểm tra tính trung thực quyền riêng tư với cả 4 trạng thái `PENDING_APPROVAL`, `CONFIRMED`, `CHECKED_OUT`, `RETURNED`.
+### 2. Tính Trung Thực Quyền Riêng Tư Trên Lịch
+- Góc nhìn công khai/sinh viên khác: hiển thị `occupancy: "BOOKED"`, tiêu đề "Đã đặt", không hiển thị trường `status`, không lộ danh tính người đặt (`requestedBy`).
+- Chủ ca đặt (`isMine: true`) và cán bộ (`LAB_STAFF`, `ADMIN`): xem trạng thái thực tế và chi tiết vận hành.
 
-### 3. Phân Loại & Thực Thi Chính Sách Phòng Lab (LabPolicy Completeness)
-Toàn bộ 8 trường trong `LabPolicy` được phân loại và xử lý minh bạch:
+### 3. Concurrency Thực Tế Trên PostgreSQL (GiST Constraint)
+- 2 request đồng thời: đúng 1 thắng (201), đúng 1 xung đột (409 `BOOKING_CONFLICT`), đúng 1 bản ghi lưu trong DB.
+- 5 request đồng thời: đúng 1 thắng (201), 4 xung đột (409).
 
-| Trường LabPolicy | Phân loại | Mô tả & Cách thức thực thi |
-|---|---|---|
-| `minBookingMinutes` | `ENFORCED_IN_BATCH4` | Chặn ca đặt ngắn hơn quy định (`400 POLICY_VIOLATION`) |
-| `maxBookingMinutes` | `ENFORCED_IN_BATCH4` | Chặn ca đặt dài hơn quy định (`400 POLICY_VIOLATION`) |
-| `maxAdvanceBookingDays` | `ENFORCED_IN_BATCH4` | Chặn ca đặt quá xa trong tương lai (`400 POLICY_VIOLATION`) |
-| `allowWeekend` | `ENFORCED_IN_BATCH4` | Chặn ca đặt vào Thứ 7/Chủ Nhật nếu chính sách không cho phép (`400 POLICY_VIOLATION`) |
-| `workDayStartHour` | `ENFORCED_IN_BATCH4` | Chặn ca đặt bắt đầu trước giờ mở cửa phòng lab (`400 POLICY_VIOLATION`) |
-| `workDayEndHour` | `ENFORCED_IN_BATCH4` | Chặn ca đặt kết thúc sau giờ đóng cửa phòng lab (`400 POLICY_VIOLATION`) |
-| `requiresApproval` | `ENFORCED_IN_BATCH4` | Thiết bị hoặc LabPolicy yêu cầu phê duyệt $\rightarrow$ tạo trạng thái `PENDING_APPROVAL`; ngược lại $\rightarrow$ `CONFIRMED` |
-| `checkInGraceMinutes` | `NOT_APPLICABLE_TO_CREATION` | Quy định thời gian gia hạn check-in tại thời điểm diễn ra ca đặt; không áp dụng tại bước tạo lịch ban đầu |
-
-Đã xác minh bằng 10 unit tests trong `test/batch4/bookingPolicy.test.js`.
-
-### 4. Kiểm Thử Đồng Thời Thực Tế Trên PostgreSQL (Real Concurrency Integration Test)
-- Thực hiện đua đồng thời thật thông qua `Promise.all` với 2 request cùng tài nguyên, cùng khoảng thời gian từ 2 tài khoản sinh viên khác nhau.
-- **Kết quả**:
-  - Đúng 1 HTTP 201 thành công.
-  - Đúng 1 HTTP 409 `BOOKING_CONFLICT`.
-  - Đúng 1 bản ghi đặt phòng duy nhất được lưu vào PostgreSQL.
-- Đua 5 request đồng thời: Đúng 1 thắng, 4 request còn lại nhận HTTP 409 `BOOKING_CONFLICT`.
-- Kiểm thử tại subtest 12 trong `test/batch4.booking-calendar.integration.test.js`.
-
-### 5. Kiểm Thử Hồi Quy Khoảng Nửa Mở (Half-Open Interval Regression)
-- Hai ca đặt kế tiếp nhau: 09:00–10:00 và 10:00–11:00 trên cùng tài nguyên.
-- **Kết quả**: Cả hai ca đều thành công (HTTP 201), xác nhận quy tắc nửa mở `existing.startAt < requested.endAt AND existing.endAt > requested.startAt` hoạt động chính xác tuyệt đối.
+### 4. Khoảng Nửa Mở (Half-Open Interval)
+- Ca 09:00–10:00 và 10:00–11:00 kề nhau cùng thành công trên một tài nguyên.
 
 ---
 
-## C. Bảng Kết Quả Kiểm Thử Hồi Quy Toàn Diện (Full Regression Gate)
+## D. Bảng Kết Quả Kiểm Thử Hồi Quy Toàn Diện (Full Regression Gate)
 
 | STT | Cổng kiểm thử (Test Gate) | Lệnh thực thi | Kết quả | Chi tiết |
 |---|---|---|---|---|
@@ -68,70 +100,25 @@ Toàn bộ 8 trường trong `LabPolicy` được phân loại và xử lý minh
 | 4 | Batch 1E Isolated Runtime | `node --test test/batch1e/integration.runtime.test.js` | **PASS** | 11/11 subtests pass |
 | 5 | Batch 2 Auth / RBAC | `npm run test:batch2` | **PASS** | 10/10 subtests pass |
 | 6 | Batch 3 Resource Management | `npm run test:batch3` | **PASS** | 9/9 subtests pass |
-| 7 | Batch 4 Integration & Policy | `npm run test:batch4` | **PASS** | 22/22 tests pass (12 integration + 10 policy) |
-| 8 | Frontend Production Build | `npm run build` | **PASS** | Vite bundle built in 2.90s, 0 errors |
-| 9 | Runtime Health & Readiness | `GET /health`, `GET /health/ready` | **PASS** | HTTP 200, Helmet & CORS verified |
-| 10 | Batch 4 Live E2E (Playwright) | `node test_batch4_calendar_e2e.mjs` | **PASS** | 100% pass across all roles & states |
+| 7 | Batch 4 Integration & Policy | `npm run test:batch4` | **PASS** | 30/30 tests pass (14 integration + 16 policy) |
+| 8 | Batch 2 Frontend E2E | `npm run test:e2e:auth` | **PASS** | 5 vai trò (unauth, STUDENT, LAB_STAFF, ADMIN, LECTURER) |
+| 9 | Batch 3 Frontend E2E | `npm run test:e2e:resources` | **PASS** | 4 vai trò (STUDENT, LECTURER, LAB_STAFF, ADMIN) |
+| 10 | Batch 4 Live E2E (Playwright) | `npm run test:e2e:calendar` | **PASS** | 100% pass: Slot prepopulation, Effective Approval, Dynamic Policy, No timer close, Concurrency/Conflict, Maintenance, Responsive |
+| 11 | Frontend Production Build | `npm run build` | **PASS** | Vite 6 bundle built in 3.23s, 0 errors |
+| 12 | Runtime Health & Readiness | `GET /health`, `GET /health/ready` | **PASS** | HTTP 200, DB probe ready, Helmet & CORS verified |
 
 ---
 
-## D. Thực Thi Kiểm Thử Giao Diện Đầu-Cuối (Batch 4 E2E Execution Evidence)
+## E. An Toàn Cơ Sở Dữ Liệu (Database Safety)
 
-Kịch bản Playwright `frontend/test_batch4_calendar_e2e.mjs` được thực thi trực tiếp trên database cô lập `lab_resources_b4_booking_20260920t1745`:
-
-1. **STUDENT Role**:
-   - Chuyển đổi mượt mà giữa các chế độ xem Ngày (Day), Tuần (Week), Tháng (Month).
-   - Đặt lịch thành công ca 3 tiếng ngày mai.
-   - Tải lại trang (reload) $\rightarrow$ Dữ liệu lịch đặt vẫn tồn tại nguyên vẹn.
-   - Kiểm tra tab "🕒 Lịch Đặt Của Tôi" $\rightarrow$ Hiển thị chính xác ca vừa đặt.
-   - Hủy ca đặt thành công $\rightarrow$ Huy hiệu cập nhật sang "ĐÃ HỦY".
-2. **LECTURER Role**: Đăng nhập và thực hiện quy trình đặt tài nguyên giảng dạy thành công.
-3. **LAB_STAFF Role**: Kiểm tra hiển thị tài nguyên thuộc phòng lab được phân công và bảo vệ chặn truy cập phòng lab ngoài phạm vi.
-4. **ADMIN Role**: Giám sát toàn cục tất cả các phòng lab và tài nguyên.
-5. **Xử lý Xung đột (Conflict 409)**:
-   - Thử đặt trùng ca đã có $\rightarrow$ Nhận mã lỗi 409 `BOOKING_CONFLICT` từ backend thật.
-   - Modal hiển thị thông báo cảnh báo lỗi trực quan màu đỏ.
-   - Form giữ nguyên giá trị người dùng đã nhập, không có thông báo thành công giả lập.
-6. **Xử lý Bảo trì (Maintenance Block)**:
-   - Thử đặt trùng khung giờ bảo trì $\rightarrow$ Backend trả về 409 `BOOKING_CONFLICT` (thông báo bảo trì).
-   - Modal hiển thị lỗi chính xác.
-7. **Kiểm tra Responsive Mobile**: Chế độ viewport di động (390x844) co giãn hoàn hảo, thanh toolbar và lưới lịch cuộn tự nhiên.
-
-**Ảnh chụp màn hình minh chứng thực tế lưu tại**:
-- `frontend/screenshots_batch4/student_calendar_desktop.png`
-- `frontend/screenshots_batch4/conflict_state_modal.png`
-- `frontend/screenshots_batch4/maintenance_conflict_modal.png`
-- `frontend/screenshots_batch4/calendar_mobile.png`
+- **Không tạo migration mới**: Giữ nguyên lịch sử 11 migration đã được phê duyệt.
+- **Không chỉnh sửa historical migration**.
+- **Không can thiệp DDL lên database phát triển**: `applyBookingGuard.js` duy trì guard bảo vệ chỉ chạy trên DB kiểm thử cô lập có tiền tố `lab_resources_b4_booking_`.
+- `_prisma_migrations` giữ nguyên vẹn.
 
 ---
 
-## E. Tái Cấu Trúc Kiến Trúc Frontend (Architecture Review)
+## F. Quyết Định Ranh Giới (Boundary Decision)
 
-Đã tách module `SmartCalendarView.tsx` (từ 549 dòng) thành các component chuyên trách, giảm xuống còn **293 dòng**:
-- `frontend/src/components/calendar/CalendarToolbar.tsx`: Điều hướng ngày, chọn chế độ xem (Day/Week/Month), chọn tài nguyên, nút đặt lịch mới.
-- `frontend/src/components/calendar/DaySchedule.tsx`: Lưới lịch theo giờ trong ngày.
-- `frontend/src/components/calendar/WeekSchedule.tsx`: Ma trận 7 ngày x 13 khung giờ.
-- `frontend/src/components/calendar/MonthSchedule.tsx`: Lưới lịch 35 ô theo tháng.
-- `frontend/src/components/calendar/CalendarEventCard.tsx`: Thẻ sự kiện có nhãn trạng thái và thông tin bảo mật.
-- `frontend/src/components/BookingStatusBadge.tsx`: Huy hiệu hiển thị chuẩn tắc cho trạng thái ca đặt (`CONFIRMED`, `PENDING_APPROVAL`, `CHECKED_OUT`, `RETURNED`, `CANCELLED`, `REJECTED`, `COMPLETED`, `BOOKED`).
-
----
-
-## F. Loại Bỏ Tính Năng Giả Lập & Nghiên Cứu (Mock / Fake / Payment Search)
-
-- Không còn `Math.random`, `setTimeout`, mã `BK-`, giá tiền `150000`, chỉ số ảo `98%` trong luồng đặt lịch chuẩn tắc.
-- Modal thanh toán VietQR và nút kích hoạt đã được cô lập hoàn toàn sau biến môi trường `VITE_ENABLE_RESEARCH_FEATURES === "true"`, không còn xuất hiện trong luồng nghiệp vụ thông thường.
-
----
-
-## G. Nợ Kỹ Thuật Còn Lại (Remaining Debt)
-
-1. Lưới lịch tuần hiện hiển thị cố định dải 08:00–20:00 (13 khung giờ tiêu chuẩn). Có thể mở rộng hiển thị động theo `workDayStartHour` và `workDayEndHour` của từng lab trong tương lai nếu có lab hoạt động ca đêm.
-2. Thông báo thời gian thực (Websocket / SSE) cho lịch đặt khi có người khác vừa đặt xong đang ở mức HTTP polling khi người dùng chuyển tuần hoặc tải lại trang.
-
----
-
-## H. Quyết Định Ranh Giới (Boundary Decision)
-
-- **Batch 4: COMPLETE & VERIFIED.**
+- **Batch 4 & Batch 4.1: HOÀN TẤT & ĐÃ XÁC MINH CHÍNH XÁC.**
 - **DỪNG TUYỆT ĐỐI (HARD STOP) — KHÔNG BẮT ĐẦU BATCH 5.** Chờ chỉ thị chính thức từ người dùng.
