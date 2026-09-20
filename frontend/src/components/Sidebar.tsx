@@ -63,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
         {
           id: "bookings",
-          label: "🕒 Lịch Đặt Của Tôi",
+          label: ["ADMIN", "LAB_STAFF"].includes(user?.role || "") ? "Vận Hành Booking" : "Lịch Đặt Của Tôi",
           icon: Clock
         },
         {
@@ -130,8 +130,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <CalendarCheck size={20} className="text-obsidian" />
         </div>
         <div className="brand-info-2026">
-          <strong className="brand-name-2026">SMART AI BOOKING</strong>
-          <span className="brand-tag-2026">ADVISORY PLATFORM 2026</span>
+          <strong className="brand-name-2026">LAB RESOURCE MANAGER</strong>
+          <span className="brand-tag-2026">QUẢN LÝ · ĐẶT LỊCH · GIÁM SÁT</span>
         </div>
       </div>
 
