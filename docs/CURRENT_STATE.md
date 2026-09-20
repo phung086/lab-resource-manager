@@ -6,9 +6,11 @@ Last synchronized: 2026-09-20
 
 Batch 4 & 4.1 - Booking Calendar and Required Booking Workflow is complete and verified.
 
-Batch 5 is explicitly authorized and implemented on branch
-`batch5-operational-workflow`. Runtime verification is still pending, so Batch
-5 is NOT yet marked complete. Batch 6 is NOT authorized.
+Batch 5 - Canonical Operational Booking Workflow is complete and verified on
+`batch5-operational-workflow`. Approval, rejection, handover/check-out,
+condition-before evidence, return, condition-after evidence, completion,
+persisted history, notifications, physical-state synchronization, concurrency
+safety, and full-stack E2E have passed. Batch 6 is NOT authorized.
 
 ## Completed Core Work
 
@@ -68,14 +70,18 @@ derived from resource state, bookings, maintenance windows, and policy.
 - Batch 4 frontend calendar Playwright E2E: PASS (`npm run test:e2e:calendar`, verifying slot prepopulation, effective approval requirement, dynamic policy, no timer auto-close, conflict 409, maintenance, and mobile responsive).
 - Frontend production build: PASS (Vite 6, 0 errors, 3.23s).
 - Production readiness / health / CORS / Helmet smoke: PASS (`GET /health` 200, `GET /health/ready` 200).
+- Batch 5 operational workflow integration: 13/13 PASS (`npm run test:batch5`) on isolated PostgreSQL 16.
+- Batch 5 backend regression workflow: PASS across core + Batch 1 + Batch 1E + Batch 2 + Batch 3 + Batch 4/4.1 + Batch 5.
+- Batch 5 full-stack E2E: PASS with real backend, real Vite frontend, isolated PostgreSQL 16, and headless Chromium.
+- Batch 2/3/4 frontend E2E regressions: PASS again inside the Batch 5 full-stack gate.
+- Batch 5 runtime smoke: health, readiness, allowed-origin CORS, and Helmet headers PASS.
+- Latest verified Batch 5 full-stack Vite production build: PASS in 2.65s.
 
 The latest Batch 4.1 verification on 2026-09-20 passed all backend core tests (27/27), policy unit tests (16/16), Batch 4 integration subtests (14/14), Batch 1/1E/2/3 regressions, all 3 frontend E2E suites, and the frontend production build.
 
 ## Current Core Blockers
 
-No pre-Batch-5 core blocker is known. Batch 5 itself remains verification-pending
-until its isolated PostgreSQL integration, frontend E2E, build, runtime smoke,
-and required regression gates have actual PASS evidence.
+None known through the verified Batch 5 required-core boundary.
 
 ## Known Non-Blocking Debt
 
@@ -93,13 +99,10 @@ and required regression gates have actual PASS evidence.
 
 ## Next Authorized Task
 
-Finish verification of the already-authorized Batch 5 implementation. Do not
-start Batch 6.
+No next batch is currently authorized.
 
-Batch 4/4.1 remains complete and verified. Batch 5 implementation adds the
-canonical approval, handover/check-out, return, condition evidence, completion,
-audit/history and physical-state synchronization workflow. Before resuming
-verification or any future batch, read:
+Batch 4/4.1 and Batch 5 are complete and verified. Batch 6 may be planned only
+after explicit user authorization. Before any future batch, read:
 
 1. `AGENTS.md`
 2. `.agent/PROJECT_RULES.md`
