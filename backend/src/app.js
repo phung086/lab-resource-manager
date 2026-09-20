@@ -47,16 +47,16 @@ export function createApp() {
   app.use(metricsMiddleware);
 
   // Health check endpoints
-  app.get("/health", (_req, res) => {
+  const healthHandler = (_req, res) => {
     res.json({
       ok: true,
       service: "lab-resource-manager-api",
       version: "2026.1",
       architecture: "Canonical Persistence Lab Resource Manager"
     });
-  });
+  };
 
-  app.get("/health/ready", async (_req, res) => {
+  const readinessHandler = async (_req, res) => {
     try {
       await prisma.$queryRaw`SELECT 1`;
       res.json({
@@ -71,7 +71,12 @@ export function createApp() {
         error: "DATABASE_UNAVAILABLE"
       });
     }
-  });
+  };
+
+  app.get("/health", healthHandler);
+  app.get("/api/health", healthHandler);
+  app.get("/health/ready", readinessHandler);
+  app.get("/api/health/ready", readinessHandler);
 
   // Prometheus Metrics
   app.use("/metrics", metricsRouter);
