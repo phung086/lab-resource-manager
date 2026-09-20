@@ -1,6 +1,6 @@
 import express from "express";
 import { prisma } from "../db.js";
-import { mockStore } from "../services/store.js";
+import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
 
 const router = express.Router();
 
@@ -8,25 +8,19 @@ const router = express.Router();
  * GET /slots?start_date=...&end_date=...&resource_id=...
  * Returns weekly time slots (7 Days x 13 Hours, 08:00 to 20:00) with occupancy states
  */
-router.get("/slots", async (req, res) => {
-  const { resource_id } = req.query;
-  const currentUserId = req.user?.id || null;
-
-  let resources = mockStore.resources;
-  let existingBookings = mockStore.bookings;
-
+router.get("/slots", async (req, res, next) => {
   try {
-    const dbResources = await prisma.resource.findMany({
-      where: resource_id ? { id: String(resource_id) } : {},
-      orderBy: { hourlyRateVnd: "desc" }
-    });
-    if (dbResources && dbResources.length > 0) {
-      resources = dbResources;
-    }
-  } catch (_e) {}
+    const { resource_id } = req.query;
 
-  const activeResourceId = resource_id || resources[0]?.id || "NODE-DGX-01";
-  const selectedResource = resources.find((r) => r.id === activeResourceId) || resources[0];
+    const resources = await prisma.resource.findMany({
+      where: resource_id ? { id: String(resource_id) } : {},
+      orderBy: { code: "asc" }
+    });
+    let existingBookings = [];
+    let maintenanceWindows = [];
+
+  const selectedResource = resources.find((r) => r.id === resource_id) || resources[0] || null;
+  const activeResourceId = selectedResource?.id || resource_id || null;
 
   // Compute dates for current week Monday -> Sunday
   const now = new Date();
@@ -51,28 +45,36 @@ router.get("/slots", async (req, res) => {
     return {
       ...d,
       dateStr: `${String(dateObj.getDate()).padStart(2, "0")}/${String(dateObj.getMonth() + 1).padStart(2, "0")}`,
-      fullDate: dateObj.toISOString().slice(0, 10),
+      fullDate: `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}-${String(dateObj.getDate()).padStart(2, "0")}`,
       isToday: dateObj.toDateString() === now.toDateString()
     };
   });
 
-  try {
-    const weekStart = new Date(monday);
-    const weekEnd = new Date(monday);
-    weekEnd.setDate(monday.getDate() + 7);
+    if (activeResourceId) {
+      const weekStart = new Date(monday);
+      const weekEnd = new Date(monday);
+      weekEnd.setDate(monday.getDate() + 7);
 
-    const dbBookings = await prisma.booking.findMany({
-      where: {
-        resourceId: activeResourceId,
-        status: { notIn: ["CANCELLED", "cancelled"] },
-        startTime: { gte: weekStart, lt: weekEnd }
-      },
-      include: { user: true }
-    });
-    if (dbBookings && dbBookings.length > 0) {
-      existingBookings = dbBookings;
+      [existingBookings, maintenanceWindows] = await Promise.all([
+        prisma.booking.findMany({
+          where: {
+            resourceId: activeResourceId,
+            status: { in: ACTIVE_BOOKING_STATUSES },
+            startAt: { lt: weekEnd },
+            endAt: { gt: weekStart }
+          },
+          select: { startAt: true, endAt: true, status: true }
+        }),
+        prisma.maintenanceWindow.findMany({
+          where: {
+            resourceId: activeResourceId,
+            status: { in: ["scheduled", "in_progress"] },
+            startAt: { lt: weekEnd },
+            endAt: { gt: weekStart }
+          }
+        })
+      ]);
     }
-  } catch (_e) {}
 
   const hours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 
@@ -83,7 +85,9 @@ router.get("/slots", async (req, res) => {
       const slotStart = new Date(`${day.fullDate}T${String(hour).padStart(2, "0")}:00:00`);
       const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000);
 
-      if (String(selectedResource?.status).toUpperCase() === "MAINTENANCE") {
+      const opStatus = selectedResource?.operationalStatus || (selectedResource?.status ? String(selectedResource.status).toUpperCase() : "AVAILABLE");
+
+      if (opStatus === "MAINTENANCE" || opStatus === "CALIBRATION") {
         return {
           status: "maintenance",
           label: "BẢO TRÌ ĐỊNH KỲ",
@@ -91,21 +95,39 @@ router.get("/slots", async (req, res) => {
         };
       }
 
+      if (opStatus === "OFFLINE" || opStatus === "BROKEN" || opStatus === "RETIRED") {
+        return {
+          status: "offline",
+          label: "TẠM NGỪNG",
+          details: "Thiết bị không khả dụng"
+        };
+      }
+
+      const maintenance = maintenanceWindows.find((window) => {
+        const windowStart = new Date(window.startAt);
+        const windowEnd = new Date(window.endAt);
+        return slotStart < windowEnd && slotEnd > windowStart;
+      });
+      if (maintenance) {
+        return {
+          status: "maintenance",
+          label: maintenance.kind === "calibration" ? "HIỆU CHUẨN" : "BẢO TRÌ",
+          details: maintenance.title,
+          maintenanceWindowId: maintenance.id
+        };
+      }
+
       // Check booking match
       const match = existingBookings.find((b) => {
-        const bStart = new Date(b.startTime);
-        const bEnd = new Date(b.endTime);
+        const bStart = new Date(b.startAt);
+        const bEnd = new Date(b.endAt);
         return slotStart < bEnd && slotEnd > bStart;
       });
 
       if (match) {
-        const isMine = currentUserId && match.userId === currentUserId;
         return {
-          status: isMine ? "mine" : "booked",
-          bookingId: match.id,
-          label: isMine ? "CA CỦA BẠN" : "ĐÃ ĐẶT",
-          title: match.title,
-          booker: match.user?.fullName || "ThS. Hoàng Long",
+          status: "booked",
+          label: "ĐÃ ĐẶT",
           resourceId: activeResourceId
         };
       }
@@ -114,8 +136,7 @@ router.get("/slots", async (req, res) => {
         status: "available",
         label: "Trống",
         action: "+ Đặt ngay",
-        resourceId: activeResourceId,
-        hourlyRate: selectedResource?.hourlyRateVnd || 180000
+        resourceId: activeResourceId
       };
     });
 
@@ -126,22 +147,33 @@ router.get("/slots", async (req, res) => {
     };
   });
 
-  return res.json({
-    selectedResource: {
-      id: selectedResource?.id,
-      name: selectedResource?.name,
-      hourlyRateVnd: selectedResource?.hourlyRateVnd,
-      status: selectedResource?.status
-    },
+    return res.json({
+    selectedResource: selectedResource
+      ? {
+          id: selectedResource.id,
+          name: selectedResource.name,
+          code: selectedResource.code,
+          type: selectedResource.subtype || selectedResource.type,
+          category: selectedResource.category,
+          status: selectedResource.status,
+          operationalStatus: selectedResource.operationalStatus
+        }
+      : null,
     availableResources: resources.map((r) => ({
       id: r.id,
       name: r.name,
+      code: r.code,
+      type: r.subtype || r.type,
       category: r.category,
-      hourlyRateVnd: r.hourlyRateVnd
+      status: r.status,
+      operationalStatus: r.operationalStatus
     })),
     daysHeader: days,
     grid
-  });
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;

@@ -1,6 +1,8 @@
 export const resourceTypes = ["room", "gpu_server", "raspberry_pi", "uav", "camera", "kit", "material"];
 export const resourceStatuses = ["available", "reserved", "in_use", "maintenance", "offline"];
+export const operationalStatuses = ["AVAILABLE", "IN_USE", "MAINTENANCE", "CALIBRATION", "BROKEN", "RETIRED", "OFFLINE"];
 export const bookingStatuses = ["pending", "approved", "rejected", "cancelled", "checked_out", "completed"];
+export const canonicalBookingStatuses = ["PENDING_APPROVAL", "CONFIRMED", "CHECKED_OUT", "RETURNED", "COMPLETED", "REJECTED", "CANCELLED"];
 export const maintenanceKinds = ["maintenance", "calibration"];
 export const maintenanceStatuses = ["scheduled", "in_progress", "completed", "cancelled"];
 
@@ -114,13 +116,17 @@ export function serializeResource(resource, latestTelemetry = undefined, now = n
   const specs = normalizeSpecs(resource.specs || {});
   const telemetry = serializeTelemetrySample(sample, now);
   const operational = getResourceOperationalState({ ...resource, specs }, telemetry, now);
+  const operationalStatus = resource.operationalStatus || (resource.status ? String(resource.status).toUpperCase() : "AVAILABLE");
 
   return {
     id: resource.id,
+    laboratoryId: resource.laboratoryId || null,
     code: resource.code,
     name: resource.name,
-    type: resource.type,
+    type: resource.subtype || resource.type,
+    category: resource.category || null,
     status: resource.status,
+    operationalStatus,
     location: resource.location,
     ownerTeam: resource.ownerTeam,
     capacity: resource.capacity,
@@ -214,12 +220,14 @@ export function getResourceOperationalState(resource, telemetry, now = new Date(
   let severityRank = 0;
   let score = 100;
 
-  if (resource.status === "maintenance") {
+  const opStatus = resource.operationalStatus || (resource.status ? String(resource.status).toUpperCase() : "AVAILABLE");
+
+  if (opStatus === "MAINTENANCE" || opStatus === "CALIBRATION") {
     reasons.push("maintenance");
     severityRank = Math.max(severityRank, 2);
   }
 
-  if (resource.status === "offline") {
+  if (opStatus === "OFFLINE" || opStatus === "BROKEN" || opStatus === "RETIRED") {
     reasons.push("resource_offline");
     severityRank = Math.max(severityRank, 3);
     score = Math.min(score, 20);
@@ -227,7 +235,7 @@ export function getResourceOperationalState(resource, telemetry, now = new Date(
 
   if (!telemetry) {
     reasons.push("telemetry_missing");
-    score = resource.status === "available" ? Math.min(score, 72) : score;
+    score = opStatus === "AVAILABLE" ? Math.min(score, 72) : score;
     return {
       state: severityRank >= 3 ? "critical" : severityRank >= 2 ? "warning" : "unknown",
       score: severityRank >= 3 ? score : null,
@@ -279,10 +287,13 @@ function serializeBookingResource(resource) {
   if (!resource) return null;
   return {
     id: resource.id,
+    laboratoryId: resource.laboratoryId || null,
     code: resource.code,
     name: resource.name,
-    type: resource.type,
+    type: resource.subtype || resource.type,
+    category: resource.category || null,
     status: resource.status,
+    operationalStatus: resource.operationalStatus || (resource.status ? String(resource.status).toUpperCase() : "AVAILABLE"),
     location: resource.location
   };
 }

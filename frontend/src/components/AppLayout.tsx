@@ -3,6 +3,7 @@ import { Sidebar } from "./Sidebar.tsx";
 import { Header } from "./Header.tsx";
 import { AiCopilotDrawer, FloatingCopilotFab } from "./AiCopilotDrawer.tsx";
 import { KeyRound, X, Check, ShieldAlert } from "lucide-react";
+import { apiRequest } from "../api.js";
 
 export interface AppLayoutProps {
   activeTab: string;
@@ -39,10 +40,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onLogout,
   children
 }) => {
+  const researchFeaturesEnabled = import.meta.env.VITE_ENABLE_RESEARCH_FEATURES === "true";
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState("");
 
@@ -51,7 +54,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     smart_calendar: "📅 Lịch Đặt Khung Giờ Thông Minh (Smart Booking)",
     ai_analytics: "📊 AI Tính Toán Hiệu Suất & Tỷ Lệ Chiếm Dụng",
     ai_advisor: "🧠 AI Cố Vấn Lịch Đặt & Tối Ưu Chi Phí",
-    admin_management: "⚙️ Quản Trị Tài Nguyên, Hạn Ngạch & Sổ Cái VietQR",
+    admin_management: "Quản lý tài nguyên phòng thí nghiệm",
     conflict_queue: "⚡ Xử Lý Xung Đột Real-Time",
     quota_fairness: "📊 Hạn Ngạch & Công Bằng Nhóm",
     chargeback: "💰 Quyết Toán & Tiền Điện EVN",
@@ -61,7 +64,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     dashboard: "🖥️ Mission Control Thiết Bị",
     digital_twin: "🌐 Bản Sao Số & Heatmap",
     what_if: "🔮 Studio Mô Phỏng What-If",
-    resources: "🎛️ Danh Mục Thiết Bị & Node",
+    resources: "Danh mục tài nguyên phòng thí nghiệm",
     bookings: "📅 Lịch Đặt Chỗ & Chiếm Dụng",
     maintenance: "🔧 Phiếu Yêu Cầu Bảo Trì",
     pareto: "📐 Khảo Sát Pareto Frontier",
@@ -76,14 +79,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     users: "👥 Quản Trị Người Dùng"
   };
 
-  const currentTitle = tabTitles[activeTab] || "Smart AI Booking Platform";
+  const currentTitle = tabTitles[activeTab] || "Hệ thống đặt lịch và tài nguyên phòng thí nghiệm";
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
-  function handlePasswordSubmit(e: React.FormEvent) {
+  async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
     setPasswordError("");
-    if (!newPassword || newPassword.length < 6) {
-      setPasswordError("Mật khẩu phải có ít nhất 6 ký tự.");
+    if (!currentPassword) {
+      setPasswordError("Vui lòng nhập mật khẩu hiện tại.");
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordError("Mật khẩu mới phải có ít nhất 8 ký tự.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -91,12 +98,22 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       return;
     }
 
-    setPasswordSuccess(true);
+    try {
+      await apiRequest("/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      setPasswordError(error?.message || "Không thể đổi mật khẩu.");
+      return;
+    }
     setTimeout(() => {
       setPasswordSuccess(false);
       setChangePasswordOpen(false);
-      setNewPassword("");
-      setConfirmPassword("");
     }, 1500);
   }
 
@@ -133,22 +150,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         </main>
       </div>
 
-      {/* 3. Floating AI Copilot FAB (Pill with rotating conic-glow) */}
-      <FloatingCopilotFab
-        isOpen={copilotOpen}
-        onClick={() => setCopilotOpen(true)}
-      />
-
-      {/* 4. AI Copilot Drawer (Slide-in 300ms cubic-bezier transition) */}
-      <AiCopilotDrawer
-        isOpen={copilotOpen}
-        onClose={() => setCopilotOpen(false)}
-        onActionTrigger={(action) => {
-          if (action === "auto_resolve_sla" || action === "thermal_throttle_rebalance") {
-            onSelectTab("conflict_queue");
-          }
-        }}
-      />
+      {researchFeaturesEnabled && (
+        <>
+          <FloatingCopilotFab
+            isOpen={copilotOpen}
+            onClick={() => setCopilotOpen(true)}
+          />
+          <AiCopilotDrawer
+            isOpen={copilotOpen}
+            onClose={() => setCopilotOpen(false)}
+            onActionTrigger={(action) => {
+              if (action === "auto_resolve_sla" || action === "thermal_throttle_rebalance") {
+                onSelectTab("conflict_queue");
+              }
+            }}
+          />
+        </>
+      )}
 
       {/* 5. Modal Đổi Mật Khẩu (Level 3 Depth) */}
       {changePasswordOpen && (
@@ -189,12 +207,25 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               )}
 
               <div>
+                <label className="text-xs text-slate-400 mb-1 block">Mật khẩu hiện tại</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu hiện tại"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+
+              <div>
                 <label className="text-xs text-slate-400 mb-1 block">Mật khẩu mới</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Tối thiểu 6 ký tự"
+                  placeholder="Tối thiểu 8 ký tự"
+                  autoComplete="new-password"
                   required
                 />
               </div>
@@ -206,6 +237,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Nhập lại mật khẩu"
+                  autoComplete="new-password"
                   required
                 />
               </div>

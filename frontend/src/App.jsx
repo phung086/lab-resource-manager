@@ -8,8 +8,6 @@ import {
   ChevronDown,
   ClipboardCheck,
   Clock,
-  Eye,
-  FilterX,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -18,7 +16,6 @@ import {
   Plus,
   QrCode,
   RefreshCw,
-  Search,
   Send,
   Server,
   ShieldCheck,
@@ -38,22 +35,20 @@ import {
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 
-import { ApiError, apiRequest, getStoredUser, login, logout, register } from "./api.js";
+import { ApiError, apiRequest, getCurrentUser, hasStoredSession, login, logout, register } from "./api.js";
 import { SmartCalendarView } from "./components/SmartCalendarView.tsx";
 import { EfficiencyAnalyticsView } from "./components/EfficiencyAnalyticsView.tsx";
 import { SmartAdvisoryView } from "./components/SmartAdvisoryView.tsx";
 import { AdminResourceManagementView } from "./components/AdminResourceManagementView.tsx";
+import { ResourceManagementView } from "./components/ResourceManagementView.tsx";
 import { QuickBookingModal } from "./components/QuickBookingModal.tsx";
 import { VietQrPaymentModal } from "./components/VietQrPaymentModal.tsx";
 import { QrCheckInModal } from "./components/QrCheckInModal.tsx";
 import { BookingActionModal } from "./components/BookingActionModal.tsx";
 import { SafetyQuizModal } from "./components/SafetyQuizModal.tsx";
-import { ResourceDetailsModal } from "./components/ResourceDetailsModal.tsx";
-import { ResourceStatusModal } from "./components/ResourceStatusModal.tsx";
 import { AuthLoginView } from "./components/AuthLoginView.tsx";
 import { AuthRegisterView } from "./components/AuthRegisterView.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
-import { AiCopilotDrawer } from "./components/AiCopilotDrawer.tsx";
 import { OptimizationHubView } from "./components/OptimizationHubView.tsx";
 import { DigitalTwinCanvas } from "./components/DigitalTwinCanvas.jsx";
 import { ScenarioSimulationStudio } from "./components/ScenarioSimulationStudio.jsx";
@@ -73,21 +68,17 @@ import { PolicyRulesConfig } from "./components/PolicyRulesConfig.tsx";
 import { EscalationsView } from "./components/EscalationsView.tsx";
 import { AuditLogsView } from "./components/AuditLogsView.tsx";
 import { IncidentManagementView } from "./components/IncidentManagementView.tsx";
-import { UserRoleManagement } from "./components/UserRoleManagement.tsx";
+import { AccessUserManagement } from "./components/AccessUserManagement.tsx";
 import { NotificationCenter } from "./components/NotificationCenter.jsx";
 import {
-  createResourceStatuses,
   emptyBookingForm,
   emptyMaintenanceForm,
-  emptyResourceForm,
   emptyUserForm,
-  resourceGlyphLabels,
-  resourceStatusActions
+  resourceGlyphLabels
 } from "./constants.js";
 import { defaultLocale, getDictionary, interpolate, localeOptions, localeStorageKey, normalizeLocale } from "./i18n.js";
 import { buildMonitoringRows, getMonitoringSummary, toBarWidth } from "./monitoring.js";
 import { classNames, formatDateTime, formatPercent } from "./utils.js";
-import { mockDashboard, mockResources, mockBookings, mockIncidents, mockTrainings } from "./mockData.js";
 
 let copy = getDictionary(defaultLocale);
 
@@ -123,9 +114,19 @@ function getInitialLocale() {
   return normalizeLocale(localStorage.getItem(localeStorageKey) || defaultLocale);
 }
 
+const ADMIN_ONLY_TABS = new Set(["users", "quota_fairness", "chargeback", "policy_config", "logs"]);
+const STAFF_ONLY_TABS = new Set(["admin_management", "conflict_queue", "escalations", "allocations", "dashboard", "maintenance", "incidents", "monitoring"]);
+
+function canAccessTab(role, tabId) {
+  if (ADMIN_ONLY_TABS.has(tabId)) return role === "ADMIN";
+  if (STAFF_ONLY_TABS.has(tabId)) return role === "ADMIN" || role === "LAB_STAFF";
+  return true;
+}
+
 function App() {
   const [locale, setLocale] = useState(getInitialLocale);
-  const [user, setUser] = useState(getStoredUser());
+  const [user, setUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [activeTab, setActiveTab] = useState("smart_calendar");
   const [dashboard, setDashboard] = useState(null);
   const [resources, setResources] = useState([]);
@@ -138,7 +139,6 @@ function App() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [copilotOpen, setCopilotOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [activeGlobalModal, setActiveGlobalModal] = useState(null);
 
@@ -150,13 +150,30 @@ function App() {
   }, [locale]);
 
   useEffect(() => {
-    window.__setActiveTab = setActiveTab;
-    window.__setCopilotOpen = setCopilotOpen;
-    window.__setAuthMode = setAuthMode;
-    window.__setUser = setUser;
-    window.__openGlobalModal = (type, payload) => setActiveGlobalModal({ type, payload });
-    window.__openBookingModal = (slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot });
-    window.__closeGlobalModal = () => setActiveGlobalModal(null);
+    let active = true;
+    async function bootstrapSession() {
+      if (!hasStoredSession()) {
+        setAuthChecking(false);
+        return;
+      }
+      try {
+        const currentUser = await getCurrentUser();
+        if (active) setUser(currentUser);
+      } catch (requestError) {
+        if (active && requestError?.status !== 401) {
+          setError(requestError?.message || "Không thể xác minh phiên đăng nhập.");
+        }
+      } finally {
+        if (active) setAuthChecking(false);
+      }
+    }
+    const invalidateSession = () => setUser(null);
+    window.addEventListener("lrm:session-invalid", invalidateSession);
+    bootstrapSession();
+    return () => {
+      active = false;
+      window.removeEventListener("lrm:session-invalid", invalidateSession);
+    };
   }, []);
 
   function changeLocale(nextLocale) {
@@ -165,54 +182,68 @@ function App() {
     setLocale(normalized);
   }
 
-  const navItems = useMemo(() => buildNavItems(copy), [locale]);
-  const isStaff = user && ["admin", "lab_staff"].includes(user.role);
-  const visibleNavItems = user?.role === "admin" ? navItems : navItems.filter((item) => item.id !== "users");
+  useMemo(() => buildNavItems(copy), [locale]);
+  const isStaff = user && ["ADMIN", "LAB_STAFF"].includes(user.role);
 
   async function loadData() {
     if (!user) return;
     setLoading(true);
     setError("");
     try {
-      const results = await Promise.allSettled([
-        apiRequest("/dashboard"),
-        apiRequest("/resources"),
-        apiRequest("/bookings"),
-        apiRequest("/maintenance"),
-        apiRequest("/usage-logs"),
-        apiRequest("/notifications"),
-        user.role === "admin" ? apiRequest("/users") : Promise.resolve([]),
-        apiRequest("/incidents").then(r => r.data || r),
-        apiRequest("/training/courses").then(r => r.data || r),
-        apiRequest("/training/certifications/me").then(r => r.data || r)
-      ]);
-      const val = (i, fallback) => (results[i]?.status === "fulfilled" && results[i]?.value) ? results[i].value : fallback;
-      setDashboard(val(0, mockDashboard));
-      setResources(val(1, mockResources));
-      setBookings(val(2, mockBookings));
-      setMaintenance(val(3, []));
-      setLogs(val(4, []));
-      setNotifications(val(5, []));
-      setUsers(val(6, []));
-      setIncidents(val(7, mockIncidents));
-      setTrainings({
-        courses: val(8, mockTrainings.courses),
-        certifications: val(9, mockTrainings.certifications)
-      });
-    } catch (_err) {
-      setDashboard(mockDashboard);
-      setResources(mockResources);
-      setBookings(mockBookings);
-      setIncidents(mockIncidents);
-      setTrainings(mockTrainings);
+      const requests = {
+        resources: apiRequest("/resources"),
+        bookings: apiRequest("/bookings"),
+        maintenance: apiRequest("/maintenance"),
+        notifications: apiRequest("/notifications"),
+        ...(["ADMIN", "LAB_STAFF"].includes(user.role) ? { dashboard: apiRequest("/dashboard") } : {}),
+        ...(user.role === "ADMIN" ? { users: apiRequest("/users") } : {})
+      };
+      const entries = Object.entries(requests);
+      const results = await Promise.allSettled(entries.map(([, promise]) => promise));
+      const data = Object.fromEntries(entries.map(([key], index) => [key, results[index]]));
+      const value = (key, fallback) => data[key]?.status === "fulfilled" ? data[key].value : fallback;
+
+      setDashboard(value("dashboard", null));
+      setResources(value("resources", []));
+      setBookings(value("bookings", []));
+      setMaintenance(value("maintenance", []));
+      setNotifications(value("notifications", []));
+      setUsers(value("users", []));
+      setLogs([]);
+      setIncidents([]);
+      setTrainings({ courses: [], certifications: [] });
+
+      const failed = entries
+        .map(([key], index) => results[index].status === "rejected" ? key : null)
+        .filter(Boolean);
+      if (failed.length) {
+        setError(`Không thể tải dữ liệu thật: ${failed.join(", ")}.`);
+      }
+    } catch (requestError) {
+      setError(requestError?.message || "Không thể tải dữ liệu hệ thống.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
+    if (user) loadData();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user && !canAccessTab(user.role, activeTab)) {
+      setActiveTab("smart_calendar");
+      setError("Bạn không có quyền truy cập khu vực này.");
+    }
+  }, [user?.role, activeTab]);
+
+  useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [user, activeTab]);
+
+  if (authChecking) {
+    return <main className="login-screen"><p className="empty-state">Đang xác minh phiên đăng nhập...</p></main>;
+  }
 
   if (!user) {
     if (authMode === "register") {
@@ -241,17 +272,24 @@ function App() {
   return (
     <AppLayout
       activeTab={activeTab}
-      onSelectTab={setActiveTab}
+      onSelectTab={(tabId) => {
+        if (canAccessTab(user.role, tabId)) {
+          setError("");
+          setActiveTab(tabId);
+        } else {
+          setError("Bạn không có quyền truy cập khu vực này.");
+        }
+      }}
       user={user}
       locale={locale}
       onLocaleChange={changeLocale}
       notifications={notifications}
       incidents={incidents}
-      conflictsCount={2}
+      conflictsCount={0}
       loading={loading}
       onRefresh={loadData}
-      onLogout={() => {
-        logout();
+      onLogout={async () => {
+        await logout();
         setUser(null);
       }}
     >
@@ -261,7 +299,6 @@ function App() {
       {activeTab === "smart_calendar" && (
         <SmartCalendarView
           onOpenBooking={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
-          onOpenAdvisory={() => setActiveTab("ai_advisor")}
         />
       )}
       {activeTab === "ai_analytics" && (
@@ -274,7 +311,7 @@ function App() {
           onApplyRecommendation={(action) => setActiveTab("smart_calendar")}
         />
       )}
-      {activeTab === "admin_management" && <AdminResourceManagementView />}
+      {activeTab === "admin_management" && <AdminResourceManagementView user={user} />}
 
       {/* LEGACY & SUB-MODULE COMPATIBILITY */}
       {activeTab === "conflict_queue" && <ConflictResolutionQueue />}
@@ -292,7 +329,7 @@ function App() {
       {activeTab === "ga_solver" && <GeneticAlgorithmVisualizer />}
       {activeTab === "ai_rca" && <AiDiagnosticStudio />}
       {activeTab === "assistant" && <AiMissionCopilot />}
-      {activeTab === "resources" && <ResourceView resources={resources} isStaff={isStaff} onChanged={loadData} />}
+      {activeTab === "resources" && <ResourceManagementView user={user} />}
       {activeTab === "bookings" && <BookingView resources={resources} bookings={bookings} user={user} isStaff={isStaff} onChanged={loadData} />}
       {activeTab === "optimization" && <OptimizationHubView />}
       {activeTab === "maintenance" && <MaintenanceView resources={resources} maintenance={maintenance} isStaff={isStaff} onChanged={loadData} />}
@@ -300,7 +337,7 @@ function App() {
       {activeTab === "training" && <TrainingView courses={trainings.courses} certifications={trainings.certifications} resources={resources} user={user} isStaff={isStaff} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringView telemetry={dashboard?.telemetry || []} />}
       {activeTab === "logs" && <AuditLogsView />}
-      {activeTab === "users" && <UserRoleManagement />}
+      {activeTab === "users" && <AccessUserManagement />}
 
       <QuickBookingModal
         isOpen={activeGlobalModal?.type === "quick_booking"}
@@ -311,6 +348,16 @@ function App() {
             type: "vietqr",
             payload: {
               amount: bookingData?.amount || 360000,
+              title: bookingData?.purpose || "Đặt chỗ tài nguyên AI",
+              resourceName: bookingData?.resourceName || "Cụm GPU NVIDIA DGX H100"
+            }
+          });
+        }}
+        onProceedPayment={(bookingData) => {
+          setActiveGlobalModal({
+            type: "vietqr",
+            payload: {
+              amount: bookingData?.amount || 150000,
               title: bookingData?.purpose || "Đặt chỗ tài nguyên AI",
               resourceName: bookingData?.resourceName || "Cụm GPU NVIDIA DGX H100"
             }
@@ -350,20 +397,6 @@ function App() {
         onPassed={() => loadData()}
       />
 
-      <ResourceDetailsModal
-        isOpen={activeGlobalModal?.type === "resource_details"}
-        onClose={() => setActiveGlobalModal(null)}
-        resource={activeGlobalModal?.payload || { code: "GPU-NODE-01", name: "NVIDIA DGX A100 SuperPOD (8x 80GB)", location: "Rack R-01 • Phòng Máy Chủ AI Cao Cấp", status: "available" }}
-      />
-
-      <ResourceStatusModal
-        isOpen={activeGlobalModal?.type === "resource_status"}
-        onClose={() => setActiveGlobalModal(null)}
-        resourceCode={activeGlobalModal?.payload?.code || "GPU-NODE-01"}
-        resourceName={activeGlobalModal?.payload?.name || "NVIDIA DGX A100 SuperPOD (8x 80GB)"}
-        targetStatus={activeGlobalModal?.payload?.status || "BẢO TRÌ (MAINTENANCE)"}
-        onConfirm={() => loadData()}
-      />
     </AppLayout>
   );
 }
@@ -688,275 +721,6 @@ function AssistantView({ locale }) {
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function ResourceView({ resources, isStaff, onChanged }) {
-  const [search, setSearch] = useState("");
-  const [type, setType] = useState("all");
-  const [error, setError] = useState("");
-  const [resourceForm, setResourceForm] = useState(emptyResourceForm);
-  const [selectedResource, setSelectedResource] = useState(null);
-  const [statusAction, setStatusAction] = useState(null);
-  const [busyResourceId, setBusyResourceId] = useState("");
-
-  const filtered = resources.filter((resource) => {
-    const matchesType = type === "all" || resource.type === type;
-    const query = search.trim().toLowerCase();
-    const matchesSearch =
-      !query ||
-      [resource.name, resource.code, resource.location, copy.resourceTypes[resource.type]]
-        .join(" ")
-        .toLowerCase()
-        .includes(query);
-    return matchesType && matchesSearch;
-  });
-
-  const hasFilters = Boolean(search.trim()) || type !== "all";
-
-  async function updateStatus(resource, status, changeReason) {
-    setError("");
-    setBusyResourceId(resource.id);
-    try {
-      await apiRequest(`/resources/${resource.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, changeReason })
-      });
-      setStatusAction(null);
-      onChanged();
-    } catch (requestError) {
-      handleError(requestError, setError, copy);
-    } finally {
-      setBusyResourceId("");
-    }
-  }
-
-  async function createResource(event) {
-    event.preventDefault();
-    setError("");
-    const specs = parseSpecsText(resourceForm.specsText);
-    if (!specs.ok) {
-      setError(copy.validation.invalidSpecs);
-      return;
-    }
-
-    try {
-      await apiRequest("/resources", {
-        method: "POST",
-        body: JSON.stringify({
-          code: resourceForm.code.trim(),
-          name: resourceForm.name.trim(),
-          type: resourceForm.type,
-          location: resourceForm.location.trim(),
-          status: resourceForm.status,
-          ownerTeam: resourceForm.ownerTeam.trim(),
-          capacity: Number(resourceForm.capacity),
-          requiresApproval: resourceForm.requiresApproval,
-          specs: specs.value
-        })
-      });
-      setResourceForm({ ...emptyResourceForm });
-      onChanged();
-    } catch (requestError) {
-      handleError(requestError, setError, copy);
-    }
-  }
-
-  function clearFilters() {
-    setSearch("");
-    setType("all");
-  }
-
-  return (
-    <div className="content-stack">
-      <LabFloorplan resources={resources} onSelectResource={setSelectedResource} />
-      {isStaff && (
-        <section className="panel">
-          <PanelTitle icon={Plus} title={copy.sections.addResource} />
-          <form className="booking-form" onSubmit={createResource}>
-            <div className="form-grid">
-              <label>
-                {copy.fields.resourceCode}
-                <input value={resourceForm.code} onChange={(event) => setResourceForm({ ...resourceForm, code: event.target.value })} required />
-              </label>
-              <label>
-                {copy.fields.resourceName}
-                <input value={resourceForm.name} onChange={(event) => setResourceForm({ ...resourceForm, name: event.target.value })} required />
-              </label>
-              <label>
-                {copy.fields.resourceType}
-                <select value={resourceForm.type} onChange={(event) => setResourceForm({ ...resourceForm, type: event.target.value })} required>
-                  <option value="">{copy.options.chooseResourceType}</option>
-                  {Object.entries(copy.resourceTypes).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {copy.fields.resourceStatus}
-                <select value={resourceForm.status} onChange={(event) => setResourceForm({ ...resourceForm, status: event.target.value })} required>
-                  <option value="">{copy.options.chooseResourceStatus}</option>
-                  {createResourceStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {copy.statuses[status]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {copy.fields.location}
-                <input value={resourceForm.location} onChange={(event) => setResourceForm({ ...resourceForm, location: event.target.value })} required />
-              </label>
-              <label>
-                {copy.fields.ownerTeam}
-                <input value={resourceForm.ownerTeam} onChange={(event) => setResourceForm({ ...resourceForm, ownerTeam: event.target.value })} required />
-              </label>
-              <label>
-                {copy.fields.capacity}
-                <input
-                  type="number"
-                  min="1"
-                  value={resourceForm.capacity}
-                  onChange={(event) => setResourceForm({ ...resourceForm, capacity: event.target.value })}
-                  required
-                />
-              </label>
-            </div>
-            <label>
-              {copy.fields.technicalSpecs}
-              <textarea
-                value={resourceForm.specsText}
-                onChange={(event) => setResourceForm({ ...resourceForm, specsText: event.target.value })}
-                placeholder={copy.placeholders.resourceSpecs}
-              />
-              <span className="helper-text">{copy.notes.specsFormat}</span>
-            </label>
-            <label className="check-line">
-              <input
-                type="checkbox"
-                checked={resourceForm.requiresApproval}
-                onChange={(event) => setResourceForm({ ...resourceForm, requiresApproval: event.target.checked })}
-              />
-              {copy.fields.requiresApproval}
-            </label>
-            <p className="helper-text">{copy.notes.requiresApproval}</p>
-            <button className="primary-button" type="submit">
-              <Plus size={18} />
-              <span>{copy.actions.addResource}</span>
-            </button>
-          </form>
-        </section>
-      )}
-
-      <section className="panel">
-        <PanelTitle icon={Server} title={copy.sections.resources} />
-        <div className="toolbar">
-          <label className="search-box">
-            <Search size={18} />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={copy.placeholders.searchResources}
-              aria-label={copy.aria.searchResources}
-            />
-          </label>
-          <select value={type} onChange={(event) => setType(event.target.value)} aria-label={copy.aria.filterResources}>
-            <option value="all">{copy.options.allResourceTypes}</option>
-            {Object.entries(copy.resourceTypes).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <button className="secondary-button toolbar-action" type="button" disabled={!hasFilters} onClick={clearFilters}>
-            <FilterX size={16} />
-            <span>{copy.actions.clearFilters}</span>
-          </button>
-        </div>
-      </section>
-
-      {error && <div className="alert danger">{error}</div>}
-      {!filtered.length ? (
-        <p className="empty-state">{copy.empty.resources}</p>
-      ) : (
-        <section className="resource-grid">
-          {filtered.map((resource) => (
-            <article className="resource-card" key={resource.id}>
-              <div className={classNames("resource-art", resource.type)}>
-                <ResourceGlyph type={resource.type} />
-              </div>
-              <div className="resource-body">
-                <div className="row between">
-                  <div>
-                    <span className="eyebrow">{resource.code}</span>
-                    <h2>{resource.name}</h2>
-                  </div>
-                  <StatusBadge status={resource.status} />
-                </div>
-                <p>{resource.location}</p>
-                <div className="spec-list">
-                  <span>{copy.resourceTypes[resource.type]}</span>
-                  <span>{copy.fields.capacity}: {resource.capacity}</span>
-                  <span>{resource.requiresApproval ? copy.options.approvalRequired : copy.options.approvalNotRequired}</span>
-                </div>
-                <SpecChips specs={resource.specs} />
-                <MonitoringMini sample={resource.latestTelemetry} />
-                <div className="resource-actions">
-                  <button className="table-action" type="button" onClick={() => setSelectedResource(resource)}>
-                    <Eye size={15} />
-                    <span>{copy.actions.viewDetails}</span>
-                  </button>
-                  {isStaff && (
-                    <div className="button-row">
-                      {resourceStatusActions.map((item) => (
-                        <button
-                          key={item.status}
-                          title={copy.actions[item.actionKey]}
-                          aria-label={`${copy.aria.resourceAction}: ${copy.actions[item.actionKey]} ${resource.code}`}
-                          type="button"
-                          disabled={busyResourceId === resource.id || resource.status === item.status}
-                          onClick={() =>
-                            setStatusAction({
-                              resource,
-                              status: item.status,
-                              title: copy.actions[item.actionKey]
-                            })
-                          }
-                        >
-                          {item.status === "available" && <Check size={16} />}
-                          {item.status === "maintenance" && <Wrench size={16} />}
-                          {item.status === "offline" && <X size={16} />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </article>
-          ))}
-        </section>
-      )}
-      {selectedResource && (
-        <ResourceDetailsModal
-          isOpen={Boolean(selectedResource)}
-          resource={selectedResource}
-          onClose={() => setSelectedResource(null)}
-        />
-      )}
-      {statusAction && (
-        <ResourceStatusModal
-          isOpen={Boolean(statusAction)}
-          resourceCode={statusAction.resource?.code}
-          resourceName={statusAction.resource?.name}
-          targetStatus={statusAction.title}
-          busy={busyResourceId === statusAction.resource.id}
-          onClose={() => setStatusAction(null)}
-          onConfirm={(reason) => updateStatus(statusAction.resource, statusAction.status, reason)}
-        />
-      )}
     </div>
   );
 }
@@ -1982,33 +1746,6 @@ function readMessageParams(value) {
   } catch (_error) {
     return {};
   }
-}
-
-function parseSpecsText(text) {
-  const trimmed = text.trim();
-  if (!trimmed) return { ok: true, value: {} };
-
-  const specs = {};
-  for (const rawLine of trimmed.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    const separator = line.includes(":") ? ":" : line.includes("=") ? "=" : "";
-    if (!separator) return { ok: false, value: {} };
-    const [rawKey, ...rest] = line.split(separator);
-    const key = rawKey.trim().replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_.-]/gu, "");
-    const value = rest.join(separator).trim();
-    if (!key || !value) return { ok: false, value: {} };
-    specs[key] = parseSpecPrimitive(value);
-  }
-  return { ok: true, value: specs };
-}
-
-function parseSpecPrimitive(value) {
-  const normalized = value.trim();
-  if (/^(true|yes|enabled|on)$/i.test(normalized)) return true;
-  if (/^(false|no|disabled|off)$/i.test(normalized)) return false;
-  if (/^-?\d+(?:[.,]\d+)?$/.test(normalized)) return Number(normalized.replace(",", "."));
-  return normalized;
 }
 
 function handleError(error, setError, activeCopy = copy) {

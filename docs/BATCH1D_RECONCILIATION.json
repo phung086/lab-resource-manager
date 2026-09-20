@@ -1,0 +1,646 @@
+{
+  "generatedAt": "2026-09-18T03:15:08.659Z",
+  "cleanDatabase": "lab_resources_b1d_clean_20260918t0308",
+  "upgradeDatabase": "lab_resources_b1d_upgrade_20260918t0308",
+  "cleanVsUpgradeCatalogSha256": "f4b0fe5d43dc74a72e7796299851d284d7121d2a85a53a9cec14987ce7e7bb11",
+  "cleanVsUpgradeSchemaEquivalent": true,
+  "rowComparison": [
+    {
+      "table": "_prisma_migrations",
+      "before": 5,
+      "after": 8,
+      "expectedDelta": 3
+    },
+    {
+      "table": "ai_conversations",
+      "before": 0,
+      "after": 0,
+      "expectedDelta": 0
+    },
+    {
+      "table": "ai_messages",
+      "before": 0,
+      "after": 0,
+      "expectedDelta": 0
+    },
+    {
+      "table": "behavior_event_logs",
+      "before": 0,
+      "after": 0,
+      "expectedDelta": 0
+    },
+    {
+      "table": "bookings",
+      "before": 2,
+      "after": 2,
+      "expectedDelta": 0
+    },
+    {
+      "table": "buildings",
+      "before": 1,
+      "after": 1,
+      "expectedDelta": 0
+    },
+    {
+      "table": "campuses",
+      "before": 1,
+      "after": 1,
+      "expectedDelta": 0
+    },
+    {
+      "table": "incident_comments",
+      "before": 0,
+      "after": 0,
+      "expectedDelta": 0
+    },
+    {
+      "table": "incidents",
+      "before": 0,
+      "after": 0,
+      "expectedDelta": 0
+    },
+    {
+      "table": "knowledge_chunks",
+      "before": 8,
+      "after": 8,
+      "expectedDelta": 0
+    },
+    {
+      "table": "knowledge_documents",
+      "before": 4,
+      "after": 4,
+      "expectedDelta": 0
+    },
+    {
+      "table": "lab_policies",
+      "before": 2,
+      "after": 2,
+      "expectedDelta": 0
+    },
+    {
+      "table": "laboratories",
+      "before": 2,
+      "after": 2,
+      "expectedDelta": 0
+    },
+    {
+      "table": "maintenance_windows",
+      "before": 0,
+      "after": 0,
+      "expectedDelta": 0
+    },
+    {
+      "table": "notifications",
+      "before": 10,
+      "after": 10,
+      "expectedDelta": 0
+    },
+    {
+      "table": "optimization_decisions",
+      "before": 1,
+      "after": 1,
+      "expectedDelta": 0
+    },
+    {
+      "table": "optimization_runs",
+      "before": 1,
+      "after": 1,
+      "expectedDelta": 0
+    },
+    {
+      "table": "payment_transactions",
+      "before": 3,
+      "after": 3,
+      "expectedDelta": 0
+    },
+    {
+      "table": "policy_versions",
+      "before": 0,
+      "after": 0,
+      "expectedDelta": 0
+    },
+    {
+      "table": "resource_allocations",
+      "before": 1,
+      "after": 1,
+      "expectedDelta": 0
+    },
+    {
+      "table": "resource_capabilities",
+      "before": 2,
+      "after": 2,
+      "expectedDelta": 0
+    },
+    {
+      "table": "resource_requirements",
+      "before": 1,
+      "after": 1,
+      "expectedDelta": 0
+    },
+    {
+      "table": "resource_status_history",
+      "before": 0,
+      "after": 1,
+      "expectedDelta": 1
+    },
+    {
+      "table": "resources",
+      "before": 9,
+      "after": 9,
+      "expectedDelta": 0
+    },
+    {
+      "table": "shipment_orders",
+      "before": 3,
+      "after": 3,
+      "expectedDelta": 0
+    },
+    {
+      "table": "telemetry_samples",
+      "before": 0,
+      "after": 0,
+      "expectedDelta": 0
+    },
+    {
+      "table": "training_courses",
+      "before": 2,
+      "after": 2,
+      "expectedDelta": 0
+    },
+    {
+      "table": "training_requirements",
+      "before": 1,
+      "after": 1,
+      "expectedDelta": 0
+    },
+    {
+      "table": "usage_logs",
+      "before": 6,
+      "after": 6,
+      "expectedDelta": 0
+    },
+    {
+      "table": "user_behavior_scores",
+      "before": 0,
+      "after": 0,
+      "expectedDelta": 0
+    },
+    {
+      "table": "user_certifications",
+      "before": 1,
+      "after": 1,
+      "expectedDelta": 0
+    },
+    {
+      "table": "users",
+      "before": 5,
+      "after": 5,
+      "expectedDelta": 0
+    }
+  ],
+  "preProfile": {
+    "roles": {
+      "admin": 2,
+      "student": 2,
+      "lab_staff": 1
+    },
+    "booking_statuses": {
+      "cancelled": 1,
+      "completed": 1
+    },
+    "booking_no_show": 0,
+    "behavior_no_show": 0,
+    "users_with_no_show": 0,
+    "telemetry_samples": 0
+  },
+  "postProfile": {
+    "roles": {
+      "ADMIN": 2,
+      "STUDENT": 2,
+      "LAB_STAFF": 1
+    },
+    "booking_statuses": {
+      "CANCELLED": 1,
+      "COMPLETED": 1
+    },
+    "booking_no_show": 0,
+    "behavior_no_show": 0,
+    "users_with_no_show": 0,
+    "telemetry_samples": 0
+  },
+  "verification": {
+    "identity": {
+      "database": "lab_resources_b1d_upgrade_20260918t0308",
+      "version": "16.14",
+      "read_only": "on"
+    },
+    "foreignKeyCount": 46,
+    "orphans": [
+      {
+        "name": "ai_messages_conversationId_fkey",
+        "count": 0
+      },
+      {
+        "name": "behavior_event_logs_scoreId_fkey",
+        "count": 0
+      },
+      {
+        "name": "bookings_approvedById_fkey",
+        "count": 0
+      },
+      {
+        "name": "bookings_requestedById_fkey",
+        "count": 0
+      },
+      {
+        "name": "bookings_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "buildings_campusId_fkey",
+        "count": 0
+      },
+      {
+        "name": "incident_comments_incidentId_fkey",
+        "count": 0
+      },
+      {
+        "name": "incidents_assignedToId_fkey",
+        "count": 0
+      },
+      {
+        "name": "incidents_bookingId_fkey",
+        "count": 0
+      },
+      {
+        "name": "incidents_reportedById_fkey",
+        "count": 0
+      },
+      {
+        "name": "incidents_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "knowledge_chunks_documentId_fkey",
+        "count": 0
+      },
+      {
+        "name": "knowledge_documents_laboratoryId_fkey",
+        "count": 0
+      },
+      {
+        "name": "knowledge_documents_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "lab_policies_laboratoryId_fkey",
+        "count": 0
+      },
+      {
+        "name": "laboratories_buildingId_fkey",
+        "count": 0
+      },
+      {
+        "name": "maintenance_windows_createdById_fkey",
+        "count": 0
+      },
+      {
+        "name": "maintenance_windows_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "notifications_userId_fkey",
+        "count": 0
+      },
+      {
+        "name": "optimization_decisions_runId_fkey",
+        "count": 0
+      },
+      {
+        "name": "optimization_runs_policyVersionId_fkey",
+        "count": 0
+      },
+      {
+        "name": "payment_transactions_bookingId_fkey",
+        "count": 0
+      },
+      {
+        "name": "payment_transactions_userId_fkey",
+        "count": 0
+      },
+      {
+        "name": "resource_allocations_bookingId_fkey",
+        "count": 0
+      },
+      {
+        "name": "resource_allocations_optimizationRunId_fkey",
+        "count": 0
+      },
+      {
+        "name": "resource_allocations_requirementId_fkey",
+        "count": 0
+      },
+      {
+        "name": "resource_allocations_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "resource_capabilities_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "resource_requirements_bookingId_fkey",
+        "count": 0
+      },
+      {
+        "name": "resource_requirements_userId_fkey",
+        "count": 0
+      },
+      {
+        "name": "resource_status_history_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "resources_laboratoryId_fkey",
+        "count": 0
+      },
+      {
+        "name": "shipment_orders_bookingId_fkey",
+        "count": 0
+      },
+      {
+        "name": "shipment_orders_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "shipment_orders_userId_fkey",
+        "count": 0
+      },
+      {
+        "name": "telemetry_samples_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "training_requirements_courseId_fkey",
+        "count": 0
+      },
+      {
+        "name": "training_requirements_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "usage_logs_bookingId_fkey",
+        "count": 0
+      },
+      {
+        "name": "usage_logs_resourceId_fkey",
+        "count": 0
+      },
+      {
+        "name": "usage_logs_userId_fkey",
+        "count": 0
+      },
+      {
+        "name": "user_behavior_scores_userId_fkey",
+        "count": 0
+      },
+      {
+        "name": "user_certifications_courseId_fkey",
+        "count": 0
+      },
+      {
+        "name": "user_certifications_userId_fkey",
+        "count": 0
+      },
+      {
+        "name": "user_lab_assignments_laboratoryId_fkey",
+        "count": 0
+      },
+      {
+        "name": "user_lab_assignments_userId_fkey",
+        "count": 0
+      }
+    ],
+    "facts": {
+      "invalid_bookings": 0,
+      "invalid_maintenance": 0,
+      "null_operational_status": 0,
+      "reserved_compatibility": 0,
+      "fabricated_lifecycle_evidence": 0,
+      "telemetry_samples": 0,
+      "rewritten_notifications": 0,
+      "expected_reconciliation_history": 1,
+      "corrected_uav": 1,
+      "enabled_schedule_triggers": 2
+    },
+    "unresolved": [
+      {
+        "code": "CAM-D435I-01"
+      },
+      {
+        "code": "EDGE-RPI5-01"
+      },
+      {
+        "code": "RPI-KIT-05"
+      },
+      {
+        "code": "UAV-M350-RTK-01"
+      },
+      {
+        "code": "UAV-MATRICE-300"
+      }
+    ],
+    "enums": [
+      {
+        "name": "AuditActorType",
+        "labels": [
+          "USER",
+          "SYSTEM",
+          "SERVICE"
+        ]
+      },
+      {
+        "name": "BookingOutcome",
+        "labels": [
+          "NO_SHOW"
+        ]
+      },
+      {
+        "name": "BookingState",
+        "labels": [
+          "bookable",
+          "restricted",
+          "non_bookable"
+        ]
+      },
+      {
+        "name": "BookingStatus",
+        "labels": [
+          "PENDING_APPROVAL",
+          "CONFIRMED",
+          "CHECKED_OUT",
+          "RETURNED",
+          "COMPLETED",
+          "REJECTED",
+          "CANCELLED"
+        ]
+      },
+      {
+        "name": "CertificationStatus",
+        "labels": [
+          "pending",
+          "active",
+          "expired",
+          "revoked"
+        ]
+      },
+      {
+        "name": "IncidentSeverity",
+        "labels": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ]
+      },
+      {
+        "name": "IncidentStatus",
+        "labels": [
+          "reported",
+          "triaged",
+          "assigned",
+          "investigating",
+          "resolved",
+          "verified",
+          "closed"
+        ]
+      },
+      {
+        "name": "MaintenanceKind",
+        "labels": [
+          "maintenance",
+          "calibration"
+        ]
+      },
+      {
+        "name": "MaintenanceStatus",
+        "labels": [
+          "scheduled",
+          "in_progress",
+          "completed",
+          "cancelled"
+        ]
+      },
+      {
+        "name": "NotificationSeverity",
+        "labels": [
+          "info",
+          "success",
+          "warning",
+          "danger"
+        ]
+      },
+      {
+        "name": "NotificationType",
+        "labels": [
+          "BOOKING_APPROVED",
+          "BOOKING_REJECTED",
+          "BOOKING_UPCOMING",
+          "RETURN_REMINDER"
+        ]
+      },
+      {
+        "name": "OperationalStatus",
+        "labels": [
+          "AVAILABLE",
+          "IN_USE",
+          "MAINTENANCE",
+          "CALIBRATION",
+          "BROKEN",
+          "RETIRED",
+          "OFFLINE"
+        ]
+      },
+      {
+        "name": "PaymentStatus",
+        "labels": [
+          "pending",
+          "success",
+          "failed",
+          "refunded"
+        ]
+      },
+      {
+        "name": "ResourceCategory",
+        "labels": [
+          "ROOM",
+          "EQUIPMENT",
+          "MACHINE",
+          "EXPERIMENT_KIT",
+          "MATERIAL"
+        ]
+      },
+      {
+        "name": "ResourceStatus",
+        "labels": [
+          "available",
+          "reserved",
+          "in_use",
+          "maintenance",
+          "offline"
+        ]
+      },
+      {
+        "name": "ResourceType",
+        "labels": [
+          "room",
+          "gpu_server",
+          "raspberry_pi",
+          "uav",
+          "camera",
+          "kit",
+          "material",
+          "other"
+        ]
+      },
+      {
+        "name": "Role",
+        "labels": [
+          "ADMIN",
+          "LAB_STAFF",
+          "LECTURER",
+          "STUDENT"
+        ]
+      },
+      {
+        "name": "ShipmentStatus",
+        "labels": [
+          "pending",
+          "picking",
+          "delivering",
+          "delivered",
+          "cancelled",
+          "returned"
+        ]
+      },
+      {
+        "name": "UsageAction",
+        "labels": [
+          "REQUEST",
+          "APPROVE",
+          "REJECT",
+          "CHECK_OUT",
+          "CHECK_IN",
+          "RETURN",
+          "COMPLETE",
+          "STATUS_CHANGE",
+          "TELEMETRY",
+          "CANCEL",
+          "INCIDENT_REPORTED",
+          "NO_SHOW"
+        ]
+      }
+    ]
+  },
+  "verdict": "PASS"
+}

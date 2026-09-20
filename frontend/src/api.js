@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `http://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:8000`;
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL || `http://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:8000`;
+const API_BASE_URL = `${configuredApiBase.replace(/\/$/, "")}${/\/api$/.test(configuredApiBase) ? "" : "/api"}`;
 
 export class ApiError extends Error {
   constructor(message, status, details, code) {
@@ -26,7 +27,12 @@ export async function apiRequest(path, options = {}) {
   const body = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
-    throw new ApiError(body?.message || "API request failed", response.status, body?.details, body?.code);
+    const error = body?.error || {};
+    if (response.status === 401 && !["/auth/login", "/auth/register"].includes(path)) {
+      clearSession();
+      window.dispatchEvent(new CustomEvent("lrm:session-invalid"));
+    }
+    throw new ApiError(error.message || "API request failed", response.status, error.details, error.code);
   }
 
   return body;
@@ -52,7 +58,25 @@ export async function register(userData) {
   return result;
 }
 
-export function logout() {
+export async function logout() {
+  try {
+    if (localStorage.getItem("lrm_token")) {
+      await apiRequest("/auth/logout", { method: "POST" });
+    }
+  } finally {
+    clearSession();
+  }
+}
+
+export async function getCurrentUser() {
+  return apiRequest("/auth/me");
+}
+
+export function hasStoredSession() {
+  return Boolean(localStorage.getItem("lrm_token"));
+}
+
+export function clearSession() {
   localStorage.removeItem("lrm_token");
   localStorage.removeItem("lrm_user");
 }

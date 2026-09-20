@@ -1,0 +1,232 @@
+{
+  "generatedAt": "2026-09-18T03:08:25.562Z",
+  "restoreDatabase": "lab_resources_b1d_noshow_20260918t0308",
+  "readOnly": true,
+  "migrationFileSha256": {
+    "20260820000100_add_booking_guard_constraint": "658716b3be743f2bbd81b1c2f4dee5248eb1b9751a8eea693ed19b5a2b32eedb",
+    "20260820000200_add_orchestration_provenance_and_policy": "ca0da76bb6ef6c8d1f04a518cc8398446e499c0c11bcf70e3155937b61b691c3"
+  },
+  "identity": {
+    "database": "lab_resources_b1d_noshow_20260918t0308",
+    "version": "16.14",
+    "read_only": "on"
+  },
+  "history": {
+    "recordedPendingMigrations": []
+  },
+  "migrations": {
+    "20260820000100_add_booking_guard_constraint": {
+      "classification": "EXACTLY_EQUIVALENT",
+      "checks": {
+        "extensionPresent": true,
+        "extensionVersion": "1.7",
+        "constraintPresent": true,
+        "constraintValidated": true,
+        "exclusionIndex": true,
+        "accessMethod": "gist",
+        "definition": "EXCLUDE USING gist (\"resourceId\" WITH =, tsrange(\"startAt\", \"endAt\", '[)'::text) WITH &&) WHERE ((status = ANY (ARRAY['pending'::\"BookingStatus\", 'approved'::\"BookingStatus\", 'checked_out'::\"BookingStatus\"])))",
+        "expectedDefinition": "EXCLUDE USING gist (\"resourceId\" WITH =, tsrange(\"startAt\", \"endAt\", '[)'::text) WITH &&) WHERE ((status = ANY (ARRAY['pending'::\"BookingStatus\", 'approved'::\"BookingStatus\", 'checked_out'::\"BookingStatus\"])))",
+        "definitionMatches": true,
+        "invalidRanges": 0,
+        "activeOverlapPairs": 0
+      }
+    },
+    "20260820000200_add_orchestration_provenance_and_policy": {
+      "classification": "EXACTLY_EQUIVALENT",
+      "checks": {
+        "tableCount": 5,
+        "columnCounts": [
+          {
+            "table_name": "optimization_decisions",
+            "count": 8
+          },
+          {
+            "table_name": "optimization_runs",
+            "count": 13
+          },
+          {
+            "table_name": "policy_versions",
+            "count": 11
+          },
+          {
+            "table_name": "resource_allocations",
+            "count": 15
+          },
+          {
+            "table_name": "resource_requirements",
+            "count": 14
+          }
+        ],
+        "indexCountsIncludingPrimaryKeys": [
+          {
+            "table_name": "optimization_decisions",
+            "count": 2
+          },
+          {
+            "table_name": "optimization_runs",
+            "count": 3
+          },
+          {
+            "table_name": "policy_versions",
+            "count": 2
+          },
+          {
+            "table_name": "resource_allocations",
+            "count": 5
+          },
+          {
+            "table_name": "resource_requirements",
+            "count": 3
+          }
+        ],
+        "constraintCounts": [
+          {
+            "table_name": "optimization_decisions",
+            "type": "f",
+            "count": 1
+          },
+          {
+            "table_name": "optimization_decisions",
+            "type": "p",
+            "count": 1
+          },
+          {
+            "table_name": "optimization_runs",
+            "type": "f",
+            "count": 1
+          },
+          {
+            "table_name": "optimization_runs",
+            "type": "p",
+            "count": 1
+          },
+          {
+            "table_name": "policy_versions",
+            "type": "p",
+            "count": 1
+          },
+          {
+            "table_name": "resource_allocations",
+            "type": "f",
+            "count": 4
+          },
+          {
+            "table_name": "resource_allocations",
+            "type": "p",
+            "count": 1
+          },
+          {
+            "table_name": "resource_requirements",
+            "type": "f",
+            "count": 2
+          },
+          {
+            "table_name": "resource_requirements",
+            "type": "p",
+            "count": 1
+          }
+        ],
+        "catalogHashes": {
+          "columns_hash": "84a144a24ee7666515e49422dd21003e",
+          "constraints_hash": "3704215e93dc3e137987733758a2e925",
+          "indexes_hash": "10f0a84abfb2a1e5fa3fca8e91771b18"
+        },
+        "expectedHashes": {
+          "columns_hash": "84a144a24ee7666515e49422dd21003e",
+          "constraints_hash": "3704215e93dc3e137987733758a2e925",
+          "indexes_hash": "10f0a84abfb2a1e5fa3fca8e91771b18"
+        },
+        "hashesMatch": true,
+        "resourceTypeLabels": [
+          "room",
+          "gpu_server",
+          "raspberry_pi",
+          "uav",
+          "camera",
+          "kit",
+          "material",
+          "other"
+        ],
+        "resourceTypeDefaultAvailable": true,
+        "rowCounts": [
+          {
+            "table": "resource_requirements",
+            "count": 1
+          },
+          {
+            "table": "resource_allocations",
+            "count": 1
+          },
+          {
+            "table": "policy_versions",
+            "count": 0
+          },
+          {
+            "table": "optimization_runs",
+            "count": 1
+          },
+          {
+            "table": "optimization_decisions",
+            "count": 1
+          }
+        ],
+        "populatedTablesRequirePreservation": [
+          {
+            "table": "resource_requirements",
+            "count": 1
+          },
+          {
+            "table": "resource_allocations",
+            "count": 1
+          },
+          {
+            "table": "optimization_runs",
+            "count": 1
+          },
+          {
+            "table": "optimization_decisions",
+            "count": 1
+          }
+        ],
+        "orphanChecks": [
+          {
+            "name": "optimization_decisions_runId_fkey",
+            "count": 0
+          },
+          {
+            "name": "optimization_runs_policyVersionId_fkey",
+            "count": 0
+          },
+          {
+            "name": "resource_allocations_bookingId_fkey",
+            "count": 0
+          },
+          {
+            "name": "resource_allocations_optimizationRunId_fkey",
+            "count": 0
+          },
+          {
+            "name": "resource_allocations_requirementId_fkey",
+            "count": 0
+          },
+          {
+            "name": "resource_allocations_resourceId_fkey",
+            "count": 0
+          },
+          {
+            "name": "resource_requirements_bookingId_fkey",
+            "count": 0
+          },
+          {
+            "name": "resource_requirements_userId_fkey",
+            "count": 0
+          }
+        ],
+        "orphanCount": 0
+      }
+    }
+  },
+  "resolutionPermittedInBatch1C": false,
+  "isolatedBatch1DResolutionCandidate": true,
+  "verdict": "PASS"
+}

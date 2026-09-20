@@ -1,9 +1,12 @@
+import crypto from "crypto";
 import express from "express";
 import { z } from "zod";
 
 import { prisma } from "../db.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { assertLabStaffResourceAccess, requireLabAccess } from "../middleware/labScope.js";
 import { HttpError } from "../middleware/errors.js";
+import { ADMIN, LAB_STAFF } from "../constants/roles.js";
 import {
   BLOCKING_MAINTENANCE_STATUSES,
   buildBookingConflict,
@@ -61,12 +64,26 @@ router.get("/", async (req, res, next) => {
       throw new HttpError(400, "Date range is invalid", undefined, "INVALID_DATE_RANGE");
     }
 
+    let scopeWhere = {};
+    if (req.user.role === LAB_STAFF) {
+      if (resourceId) {
+        await assertLabStaffResourceAccess(req.user.id, resourceId);
+      } else {
+        scopeWhere = {
+          resource: {
+            laboratory: { staffAssignments: { some: { userId: req.user.id } } }
+          }
+        };
+      }
+    }
+
     const windows = await prisma.maintenanceWindow.findMany({
       where: {
         ...(resourceId ? { resourceId } : {}),
         ...(kind ? { kind } : {}),
         ...(status ? { status } : {}),
-        ...overlapDateRangeWhere(from, to)
+        ...overlapDateRangeWhere(from, to),
+        ...scopeWhere
       },
       include: maintenanceInclude,
       orderBy: [{ startAt: "asc" }, { createdAt: "desc" }]
@@ -78,17 +95,17 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-router.post("/", requireRole("admin", "lab_staff"), async (req, res, next) => {
+router.post("/", requireRole(ADMIN, LAB_STAFF), requireLabAccess("body.resourceId"), async (req, res, next) => {
   try {
     const data = maintenanceWindowSchema.parse(req.body);
     validateMaintenanceWindow(data.startAt, data.endAt);
 
     const window = await prisma.$transaction(async (tx) => {
       // Lock resource row to serialize concurrent maintenance + booking operations
-      await tx.$queryRaw`SELECT 1 FROM resources WHERE id = ${data.resourceId}::uuid FOR UPDATE`;
+      await tx.$queryRaw`SELECT 1 FROM resources WHERE id = ${data.resourceId} FOR UPDATE`;
 
       const resource = await tx.resource.findUnique({ where: { id: data.resourceId } });
-      if (!resource) throw new HttpError(404, "Resource not found", undefined, "RESOURCE_NOT_FOUND");
+      if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
 
       await ensureNoBookingConflictTx(tx, {
         resourceId: data.resourceId,
@@ -99,6 +116,7 @@ router.post("/", requireRole("admin", "lab_staff"), async (req, res, next) => {
 
       const created = await tx.maintenanceWindow.create({
         data: {
+          id: crypto.randomUUID(),
           ...data,
           createdById: req.user.id
         },
@@ -106,9 +124,10 @@ router.post("/", requireRole("admin", "lab_staff"), async (req, res, next) => {
       });
       await tx.usageLog.create({
         data: {
+          id: crypto.randomUUID(),
           resourceId: data.resourceId,
           userId: req.user.id,
-          action: "status_change",
+          action: "STATUS_CHANGE",
           message: "maintenance.window.created",
           messageKey: data.kind === "calibration" ? "calibration_schedule" : "maintenance_schedule",
           messageParams: { title: data.title, resource: resource.code }
@@ -123,7 +142,7 @@ router.post("/", requireRole("admin", "lab_staff"), async (req, res, next) => {
   }
 });
 
-router.patch("/:id", requireRole("admin", "lab_staff"), async (req, res, next) => {
+router.patch("/:id", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {
     const data = maintenanceWindowUpdateSchema.parse(req.body);
     const { changeReason: _changeReason, ...windowData } = data;
@@ -135,7 +154,7 @@ router.patch("/:id", requireRole("admin", "lab_staff"), async (req, res, next) =
       where: { id: req.params.id },
       include: maintenanceInclude
     });
-    if (!current) throw new HttpError(404, "Maintenance window not found", undefined, "MAINTENANCE_NOT_FOUND");
+    if (!current) throw new HttpError(404, "Maintenance window not found", undefined, "NOT_FOUND");
 
     const nextResourceId = windowData.resourceId || current.resourceId;
     const nextStartAt = windowData.startAt || current.startAt;
@@ -143,13 +162,36 @@ router.patch("/:id", requireRole("admin", "lab_staff"), async (req, res, next) =
     const nextStatus = windowData.status || current.status;
     validateMaintenanceWindow(nextStartAt, nextEndAt);
 
+    // If LAB_STAFF, check lab access for the target resource
+    if (req.user.role === LAB_STAFF) {
+      await assertLabStaffResourceAccess(req.user.id, current.resourceId);
+      const targetRes = await prisma.resource.findUnique({
+        where: { id: nextResourceId },
+        select: { laboratoryId: true }
+      });
+      if (!targetRes?.laboratoryId) {
+        throw new HttpError(403, "Resource has no laboratory assigned", undefined, "FORBIDDEN");
+      }
+      const assignment = await prisma.userLabAssignment.findUnique({
+        where: {
+          userId_laboratoryId: {
+            userId: req.user.id,
+            laboratoryId: targetRes.laboratoryId
+          }
+        }
+      });
+      if (!assignment) {
+        throw new HttpError(403, "Access denied: you are not assigned to this resource's laboratory", undefined, "FORBIDDEN");
+      }
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       // Lock resource row to serialize concurrent operations
-      await tx.$queryRaw`SELECT 1 FROM resources WHERE id = ${nextResourceId}::uuid FOR UPDATE`;
+      await tx.$queryRaw`SELECT 1 FROM resources WHERE id = ${nextResourceId} FOR UPDATE`;
 
       if (windowData.resourceId && windowData.resourceId !== current.resourceId) {
         const resource = await tx.resource.findUnique({ where: { id: windowData.resourceId } });
-        if (!resource) throw new HttpError(404, "Resource not found", undefined, "RESOURCE_NOT_FOUND");
+        if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
       }
 
       await ensureNoBookingConflictTx(tx, {
@@ -166,9 +208,10 @@ router.patch("/:id", requireRole("admin", "lab_staff"), async (req, res, next) =
       });
       await tx.usageLog.create({
         data: {
+          id: crypto.randomUUID(),
           resourceId: nextResourceId,
           userId: req.user.id,
-          action: "status_change",
+          action: "STATUS_CHANGE",
           message: "maintenance.window.updated",
           messageKey: saved.kind === "calibration" ? "calibration_update" : "maintenance_update",
           messageParams: { title: saved.title, resource: saved.resource.code, status: saved.status }

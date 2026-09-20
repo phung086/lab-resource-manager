@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Server, ShieldCheck, Lock, Mail, ArrowRight, Sparkles, Cpu, Radio, Globe, Terminal, CheckCircle2 } from "lucide-react";
+import { login } from "../api.js";
 
 export interface AuthLoginViewProps {
   onLogin: (user: any) => void;
@@ -14,50 +15,31 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   locale = "vi",
   onLocaleChange
 }) => {
-  const [email, setEmail] = useState("admin@ailab.edu.vn");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   const hardwareChips = [
-    { name: "DGX H100 SXM5", status: "Online", color: "text-emerald-400" },
-    { name: "DGX A100 SuperPOD", status: "Active", color: "text-cyan-400" },
-    { name: "DJI Matrice 300 UAV", status: "Docked", color: "text-blue-400" },
-    { name: "Jetson AGX Orin 64GB", status: "Ready", color: "text-violet-400" },
-    { name: "4K RealSense AI Vision", status: "Stream", color: "text-teal-400" }
+    { name: "Phòng thí nghiệm", status: "ROOM", color: "text-emerald-400" },
+    { name: "Thiết bị", status: "EQUIPMENT", color: "text-cyan-400" },
+    { name: "Máy móc", status: "MACHINE", color: "text-blue-400" },
+    { name: "Bộ thí nghiệm", status: "EXPERIMENT KIT", color: "text-violet-400" },
+    { name: "Vật tư", status: "MATERIAL", color: "text-teal-400" }
   ];
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
-    setTimeout(() => {
+    try {
+      const result = await login(email, password);
+      onLogin(result.user);
+    } catch (requestError: any) {
+      setError(requestError?.message || "Không thể đăng nhập. Vui lòng kiểm tra thông tin tài khoản.");
+    } finally {
       setIsLoading(false);
-      // Mock successful login
-      const mockUser = {
-        id: "admin-01",
-        email: email || "admin@ailab.edu.vn",
-        fullName: email.includes("student") ? "SV. Nguyễn Mai Phương" : "GS.TS Nguyễn Văn A",
-        role: email.includes("student") ? "student" : "admin",
-        department: "Khoa CNTT - PTN Trí Tuệ Nhân Tạo 2026",
-        quotaUsed: 42.5,
-        quotaTotal: 100.0
-      };
-
-      localStorage.setItem("lrm_token", "jwt-token-2026-auth-session");
-      localStorage.setItem("lrm_user", JSON.stringify(mockUser));
-      onLogin(mockUser);
-    }, 600);
-  }
-
-  function handleQuickFill(role: "admin" | "student") {
-    if (role === "admin") {
-      setEmail("admin@ailab.edu.vn");
-      setPassword("admin123");
-    } else {
-      setEmail("student@ailab.edu.vn");
-      setPassword("student123");
     }
   }
 
@@ -107,11 +89,10 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
             <div className="flex items-center justify-between pb-2 mb-3 border-b border-white/10 text-[11px] font-mono">
               <span className="text-slate-400 flex items-center gap-1.5">
                 <Terminal size={12} className="text-cyan-400" />
-                <span>ACTIVE CLUSTER TELEMETRY</span>
+                <span>PHẠM VI TÀI NGUYÊN</span>
               </span>
               <span className="text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>MESH: HEALTHY</span>
+                <span>5 NHÓM NGHIỆP VỤ</span>
               </span>
             </div>
 
@@ -237,26 +218,6 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
               </button>
             </form>
 
-            {/* Quick Demo Fill Buttons */}
-            <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between text-xs font-mono text-slate-400">
-              <span>Điền mẫu nhanh:</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("admin")}
-                  className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-cyan-300 text-[11px] cursor-pointer"
-                >
-                  ⚡ Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("student")}
-                  className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-emerald-300 text-[11px] cursor-pointer"
-                >
-                  ⚡ Sinh viên
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Switch to Register */}

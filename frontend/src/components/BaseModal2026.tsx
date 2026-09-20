@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { X, LucideIcon } from "lucide-react";
 
 export interface BaseModal2026Props {
@@ -24,8 +24,13 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
   children,
   footer
 }) => {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     if (!isOpen) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    window.setTimeout(() => closeButtonRef.current?.focus(), 0);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -34,7 +39,10 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus?.();
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -49,6 +57,7 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
       }}
       role="dialog"
       aria-modal="true"
+      aria-label={title || "Hộp thoại"}
     >
       <div className={`modal-container-2026 ${maxWidth} mx-4 flex flex-col`}>
         {/* Hairline Cyan Gradient Accent Top Edge */}
@@ -78,6 +87,7 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
             </div>
 
             <button
+              ref={closeButtonRef}
               type="button"
               onClick={onClose}
               className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-transform hover:rotate-90 duration-200 cursor-pointer"

@@ -1,0 +1,24 @@
+{
+  "generatedAt": "2026-09-18T03:17:59.197Z",
+  "migrationName": "20260917000100_reconcile_canonical_persistence",
+  "migrationSha256": "64a214a446b5c7564229f1385f50b1ffc897814931b72b619d98e873d5b7905d",
+  "schemaSha256": "f96a94baeab6e4681bddd3f580f662415c1b5b531ee24b9436f4c59d9a427f0e",
+  "checks": {
+    "lexicalBalance": "PASS",
+    "phaseOrder": "PASS",
+    "explicitTransaction": "PASS",
+    "forbiddenTableColumnDataAndHistoryDestruction": "PASS",
+    "requiredDdlFragments": 29,
+    "prismaModels": 32,
+    "canonicalRoles": "PASS",
+    "canonicalBookingStatuses": "PASS",
+    "canonicalOperationalStatuses": "PASS",
+    "schemaMigrationContract": "PASS",
+    "historicalMigrationHashesUnchanged": 7
+  },
+  "limitations": [
+    "Static inspection does not execute PostgreSQL DDL.",
+    "Execution, rollback, and concurrency evidence is reported separately in Batch 1D."
+  ],
+  "verdict": "PASS_AUTHORING_ONLY"
+}

@@ -15,7 +15,7 @@
 
 // ─── NETWORK & MQTT CONFIGURATION ───────────────────────────────────────────
 const char* WIFI_SSID       = "Lab_IoT_WiFi";          // Change to your Lab WiFi SSID
-const char* WIFI_PASSWORD   = "LabSecurePass2026";     // Change to your WiFi Password
+const char* WIFI_PASSWORD   = "CHANGE_ME";             // Configure locally before flashing
 const char* MQTT_BROKER     = "192.168.1.100";         // IP address of Mosquitto Broker / Host
 const int   MQTT_PORT       = 1883;
 const char* MQTT_CLIENT_ID  = "ESP32_Sensor_GPU_H100_01";

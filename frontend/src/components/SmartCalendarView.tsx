@@ -17,16 +17,32 @@ import {
 } from "lucide-react";
 
 export interface SmartCalendarViewProps {
-  onOpenQuickBooking: (slot?: any) => void;
-  onOpenCheckIn: (booking?: any) => void;
-  onOpenVietQR: (booking?: any) => void;
+  onOpenQuickBooking?: (slot?: any) => void;
+  onOpenBooking?: (slot?: any) => void;
+  onOpenCheckIn?: (booking?: any) => void;
+  onOpenVietQR?: (booking?: any) => void;
+  onOpenAdvisory?: () => void;
 }
 
 export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({
   onOpenQuickBooking,
+  onOpenBooking,
   onOpenCheckIn,
-  onOpenVietQR
+  onOpenVietQR,
+  onOpenAdvisory
 }) => {
+  const triggerQuickBooking = (slot?: any) => {
+    if (onOpenQuickBooking) onOpenQuickBooking(slot);
+    else if (onOpenBooking) onOpenBooking(slot);
+  };
+
+  const triggerCheckIn = (booking?: any) => {
+    if (onOpenCheckIn) onOpenCheckIn(booking);
+  };
+
+  const triggerVietQR = (booking?: any) => {
+    if (onOpenVietQR) onOpenVietQR(booking);
+  };
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
@@ -86,11 +102,11 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({
 
     if (booking) {
       if (booking.type === "mine") {
-        onOpenCheckIn(booking);
+        triggerCheckIn(booking);
       }
     } else {
       // Empty slot - trigger quick booking
-      onOpenQuickBooking({
+      triggerQuickBooking({
         date: day.fullDate,
         time: hour,
         resourceId: selectedFilter === "gpu" ? "res-01" : "res-02"
@@ -179,24 +195,20 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2.5">
-          <button
+          {onOpenAdvisory && <button
             type="button"
             onClick={() =>
-              onOpenQuickBooking({
-                date: "2026-09-10",
-                time: "14:00",
-                resourceId: "res-01"
-              })
+              onOpenAdvisory()
             }
             className="px-3 py-2 bg-violet-950/60 border border-violet-500/40 hover:border-violet-400 text-violet-300 hover:text-white text-xs font-mono rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-[0_0_15px_rgba(139,92,246,0.2)]"
           >
             <Sparkles size={14} className="text-violet-400" />
             <span>AI Đề Xuất Slot Tốt Nhất</span>
-          </button>
+          </button>}
 
           <button
             type="button"
-            onClick={() => onOpenQuickBooking()}
+            onClick={() => triggerQuickBooking()}
             className="btn-cyan-gradient px-4 py-2 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.4)]"
           >
             <Plus size={15} />

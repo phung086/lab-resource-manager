@@ -24,6 +24,25 @@ async function main() {
   await page.screenshot({ path: "screenshot_dashboard.png" });
   console.log("Screenshot saved to screenshot_dashboard.png");
 
+  // Click Đặt Khung Giờ Mới
+  const bookingBtn = page.locator('button:has-text("Đặt Khung Giờ Mới")').first();
+  if (await bookingBtn.isVisible()) {
+    console.log("Clicking '+ Đặt Khung Giờ Mới' button...");
+    await bookingBtn.click();
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: "screenshot_modal.png" });
+    console.log("Screenshot saved to screenshot_modal.png");
+
+    const vietQrBtn = page.locator('button:has-text("Thanh Toán VietQR")').first();
+    if (await vietQrBtn.isVisible()) {
+      console.log("Clicking 'Thanh Toán VietQR' button...");
+      await vietQrBtn.click();
+      await page.waitForTimeout(1500);
+      await page.screenshot({ path: "screenshot_vietqr.png" });
+      console.log("Screenshot saved to screenshot_vietqr.png");
+    }
+  }
+
   await browser.close();
 }
 

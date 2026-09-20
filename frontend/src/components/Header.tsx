@@ -52,8 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     function updateClock() {
       const now = new Date();
-      // Year 2026 formatting
-      const year = 2026;
+      const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, "0");
       const day = String(now.getDate()).padStart(2, "0");
       const hours = String(now.getHours()).padStart(2, "0");
@@ -78,30 +77,22 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const quotaUsed = user?.quotaUsed ?? 42.5;
-  const quotaTotal = user?.quotaTotal ?? 100.0;
-  const quotaPercent = Math.min(100, Math.round((quotaUsed / quotaTotal) * 100));
+  const hasQuota = Number.isFinite(user?.quotaUsed) && Number.isFinite(user?.quotaTotal) && (user?.quotaTotal || 0) > 0;
+  const quotaUsed = user?.quotaUsed || 0;
+  const quotaTotal = user?.quotaTotal || 0;
+  const quotaPercent = hasQuota ? Math.min(100, Math.round((quotaUsed / quotaTotal) * 100)) : 0;
 
   return (
     <header className="header-2026">
-      {/* Left side: Page Title & System Status */}
+      {/* Left side: page identity and local clock. */}
       <div className="header-left-2026">
         <div className="header-title-row-2026">
           <h1 className="header-title-2026">{title}</h1>
-          <div className="system-status-pill-2026">
-            <span className="led-pulse led-pulse-safe" />
-            <span className="font-mono text-xs tracking-wider text-emerald-400">MESH: HEALTHY</span>
-          </div>
         </div>
 
-        {/* 2026 Real-Time Monospace Telemetry */}
         <div className="header-telemetry-row-2026">
           <span className="font-mono text-xs text-slate-400 tracking-wide">
-            {currentDateTime || "2026-09-08 00:00:00 UTC+7"}
-          </span>
-          <span className="telemetry-separator">•</span>
-          <span className="font-mono text-xs text-cyan-400 font-semibold tracking-wider">
-            NODE-ID: LAB-CORE-VN
+            {currentDateTime}
           </span>
         </div>
       </div>
@@ -182,7 +173,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                   <div className="user-menu-details">
                     <strong className="user-menu-fullname">{user.fullName}</strong>
-                    <span className="user-menu-email">{user.email || "researcher@ailab.edu.vn"}</span>
+                    <span className="user-menu-email">{user.email || "Chưa cập nhật email"}</span>
                     <div className="user-menu-role-badge font-mono">
                       <Shield size={11} className="text-cyan-400" />
                       <span>{user.role.toUpperCase()}</span>
@@ -191,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 {/* Remaining GPU Quota Telemetry */}
-                <div className="user-menu-quota-box">
+                {hasQuota && <div className="user-menu-quota-box">
                   <div className="user-menu-quota-header">
                     <span className="quota-label text-slate-400 text-xs">Hạn Ngạch GPU Còn Lại:</span>
                     <span className="quota-numbers font-mono text-xs text-cyan-300 font-semibold">
@@ -208,7 +199,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="font-mono text-[10px] text-slate-400">Đã dùng {quotaPercent}% hạn mức</span>
                     <span className="font-mono text-[10px] text-emerald-400">Khả dụng</span>
                   </div>
-                </div>
+                </div>}
 
                 <div className="user-menu-divider" />
 

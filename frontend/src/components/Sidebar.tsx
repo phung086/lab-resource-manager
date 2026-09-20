@@ -8,6 +8,9 @@ import {
   ClipboardCheck,
   Calendar,
   Layers,
+  LayoutDashboard,
+  Users,
+  Wrench,
   LucideIcon
 } from "lucide-react";
 
@@ -56,15 +59,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {
           id: "smart_calendar",
           label: "📅 Lịch Đặt Khung Giờ",
-          icon: CalendarCheck,
-          badge: "LIVE",
-          badgeType: "cyan",
-          showStatusDot: true
+          icon: CalendarCheck
         },
         {
           id: "bookings",
           label: "🕒 Lịch Đặt Của Tôi",
           icon: Clock
+        },
+        {
+          id: "resources",
+          label: "Danh Mục Tài Nguyên",
+          icon: Server
         }
       ]
     },
@@ -75,16 +80,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {
           id: "ai_analytics",
           label: "📊 AI Tính Toán Hiệu Suất",
-          icon: Sliders,
-          badge: "92/100",
-          badgeType: "ai"
+          icon: Sliders
         },
         {
           id: "ai_advisor",
           label: "🧠 AI Cố Vấn & Quyết Định",
-          icon: Sparkles,
-          badge: "3 Mẹo",
-          badgeType: "cyan"
+          icon: Sparkles
         }
       ]
     },
@@ -93,14 +94,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: "3. QUẢN TRỊ HỆ THỐNG",
       items: [
         {
+          id: "dashboard",
+          label: "Bảng Điều Khiển Vận Hành",
+          icon: LayoutDashboard
+        },
+        {
+          id: "maintenance",
+          label: "Lịch Bảo Trì",
+          icon: Wrench
+        },
+        {
           id: "admin_management",
-          label: "⚙️ Quản Trị Tài Nguyên & Sổ Cái",
+          label: "Quản Lý Tài Nguyên",
           icon: Server
         },
         {
           id: "logs",
           label: "📋 Nhật Ký Kiểm Toán",
           icon: ClipboardCheck
+        },
+        {
+          id: "users",
+          label: "Quản Trị Người Dùng",
+          icon: Users
         }
       ]
     }
@@ -121,7 +137,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Navigation Sections */}
       <nav className="sidebar-nav-container-2026" aria-label="Main Navigation">
-        {navSections.map((section) => (
+        {navSections.filter((section) => section.id !== "ai_zone" || import.meta.env.VITE_ENABLE_RESEARCH_FEATURES === "true").map((section) => ({
+          ...section,
+          items: section.items.filter((item) => {
+            if (["logs", "users"].includes(item.id)) return user?.role === "ADMIN";
+            if (["admin_management", "dashboard", "maintenance"].includes(item.id)) return ["ADMIN", "LAB_STAFF"].includes(user?.role || "");
+            return true;
+          })
+        })).filter((section) => section.items.length > 0).map((section) => (
           <div key={section.id} className="nav-section-group-2026">
             <div className="nav-section-title-2026">
               <span>{section.title}</span>

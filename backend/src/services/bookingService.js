@@ -1,243 +1,263 @@
 import crypto from "crypto";
 import { prisma } from "../db.js";
 import { HttpError } from "../middleware/errors.js";
-import { mockStore } from "./store.js";
+import {
+  PENDING_APPROVAL,
+  CONFIRMED,
+  CANCELLED,
+  ACTIVE_BOOKING_STATUSES,
+  isValidTransition,
+  isTerminalStatus
+} from "../constants/bookingStatus.js";
+import { ADMIN, LAB_STAFF } from "../constants/roles.js";
+import { assertLabStaffResourceAccess } from "../middleware/labScope.js";
 
 /**
- * Super-fast slot conflict detection (< 5ms query execution)
- * Overlap formula: slotA.start < slotB.end AND slotA.end > slotB.start
+ * Application-level slot conflict check using canonical fields.
+ * This is a pre-check only; the GiST exclusion constraint is the final authority.
+ * No mockStore fallback — DB error = explicit error.
  */
-export async function checkSlotConflict(resourceId, startTime, endTime, excludeBookingId = null) {
-  const start = new Date(startTime);
-  const end = new Date(endTime);
+export async function checkSlotConflict(resourceId, startAt, endAt, excludeBookingId = null, client = prisma) {
+  const start = new Date(startAt);
+  const end = new Date(endAt);
 
   if (start >= end) {
-    throw new HttpError(400, "Thời gian bắt đầu phải trước thời gian kết thúc.");
+    throw new HttpError(400, "Start time must be before end time", undefined, "VALIDATION_ERROR");
   }
 
-  try {
-    const whereClause = {
-      resourceId,
-      status: {
-        notIn: ["CANCELLED", "cancelled"]
-      },
-      startTime: {
-        lt: end
-      },
-      endTime: {
-        gt: start
-      }
-    };
+  const whereClause = {
+    resourceId,
+    status: { in: ACTIVE_BOOKING_STATUSES },
+    startAt: { lt: end },
+    endAt: { gt: start }
+  };
 
-    if (excludeBookingId) {
-      whereClause.id = { not: excludeBookingId };
-    }
-
-    const conflictingBooking = await prisma.booking.findFirst({
-      where: whereClause,
-      select: { id: true, title: true, startTime: true, endTime: true, status: true }
-    });
-
-    return conflictingBooking;
-  } catch (_e) {
-    // In-memory conflict check
-    const match = mockStore.bookings.find((b) => {
-      if (b.resourceId !== resourceId) return false;
-      if (["CANCELLED", "cancelled"].includes(b.status)) return false;
-      if (excludeBookingId && b.id === excludeBookingId) return false;
-      const bStart = new Date(b.startTime);
-      const bEnd = new Date(b.endTime);
-      return start < bEnd && end > bStart;
-    });
-    return match || null;
+  if (excludeBookingId) {
+    whereClause.id = { not: excludeBookingId };
   }
+
+  const conflictingBooking = await client.booking.findFirst({
+    where: whereClause,
+    select: { id: true, title: true, startAt: true, endAt: true, status: true }
+  });
+
+  return conflictingBooking;
 }
 
 /**
- * Creates a new booking with automatic conflict checking and payment transaction generation
+ * Creates a new booking with canonical field names and status.
+ *
+ * - approval-required resource → PENDING_APPROVAL
+ * - immediate resource → CONFIRMED
+ * - No payment dependency
+ * - No mockStore fallback — Prisma error = explicit error
+ * - Uses operationalStatus for availability check
  */
-export async function createBooking({ userId, resourceId, title, startTime, endTime, attendeesCount = 1 }) {
-  const start = new Date(startTime);
-  const end = new Date(endTime);
+export async function createBooking({ requestedById, resourceId, title, purpose, startAt, endAt }) {
+  const start = new Date(startAt);
+  const end = new Date(endAt);
 
-  // 1. Fetch resource
-  let resource = null;
-  try {
-    resource = await prisma.resource.findUnique({ where: { id: resourceId } });
-  } catch (_e) {}
-
-  if (!resource) {
-    resource = mockStore.resources.find((r) => r.id === resourceId);
+  if (start >= end) {
+    throw new HttpError(400, "Start time must be before end time", undefined, "VALIDATION_ERROR");
   }
 
-  if (!resource) {
-    throw new HttpError(404, "Tài nguyên hoặc phòng lab không tồn tại.");
-  }
+  return prisma.$transaction(async (tx) => {
+    const resource = await tx.resource.findUnique({ where: { id: resourceId } });
+    if (!resource) {
+      throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
+    }
 
-  if (String(resource.status).toUpperCase() === "MAINTENANCE") {
-    throw new HttpError(400, "Tài nguyên hiện đang trong chế độ bảo trì kỹ thuật, không thể đặt lịch.");
-  }
+    const blockedStatuses = ["MAINTENANCE", "CALIBRATION", "BROKEN", "RETIRED", "OFFLINE"];
+    if (blockedStatuses.includes(resource.operationalStatus)) {
+      throw new HttpError(400, "Resource is not available for booking", undefined, "RESOURCE_UNAVAILABLE");
+    }
 
-  // 2. Conflict check
-  const conflict = await checkSlotConflict(resourceId, start, end);
-  if (conflict) {
-    throw new HttpError(
-      409,
-      `Khung giờ đã có người đặt (${conflict.title || "Ca nghiên cứu"}). Vui lòng chọn khung giờ khác.`,
-      { conflictId: conflict.id }
-    );
-  }
+    const conflict = await checkSlotConflict(resourceId, start, end, null, tx);
+    if (conflict) {
+      throw new HttpError(
+        409,
+        "Time slot conflicts with an existing booking",
+        { conflictingBookingId: conflict.id },
+        "BOOKING_CONFLICT"
+      );
+    }
 
-  const durationHours = Math.max(0.5, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
-  const totalPriceVnd = Math.round(durationHours * (resource.hourlyRateVnd || resource.hourlyRate || 180000));
-  const checkinCode = crypto.randomBytes(4).toString("hex");
-
-  try {
-    const booking = await prisma.booking.create({
+    const initialStatus = resource.requiresApproval ? PENDING_APPROVAL : CONFIRMED;
+    const booking = await tx.booking.create({
       data: {
+        id: crypto.randomUUID(),
         resourceId,
-        userId,
-        title: title || `Ca đặt chỗ ${resource.name}`,
-        startTime: start,
-        endTime: end,
-        totalPriceVnd,
-        checkinCode,
-        attendeesCount: Number(attendeesCount) || 1,
-        status: "PENDING_PAYMENT",
-        transactions: {
-          create: {
-            amountVnd: totalPriceVnd,
-            paymentContent: `LABPAY ${checkinCode.toUpperCase()}`,
-            bankCode: "MBBank",
-            accountNumber: "99882826888",
-            status: "PENDING"
-          }
-        }
+        requestedById,
+        title: title || `Booking: ${resource.name}`,
+        purpose: purpose || "",
+        startAt: start,
+        endAt: end,
+        status: initialStatus
       },
       include: {
         resource: true,
-        transactions: true
+        requestedBy: {
+          select: { id: true, fullName: true, email: true, role: true }
+        }
       }
     });
+
+    await tx.usageLog.create({
+      data: {
+        id: crypto.randomUUID(),
+        resourceId,
+        bookingId: booking.id,
+        userId: requestedById,
+        actorType: "USER",
+        action: "REQUEST",
+        fromStatus: null,
+        toStatus: initialStatus,
+        message: `Booking created with status ${initialStatus}`,
+        messageKey: "booking_created"
+      }
+    });
+
     return booking;
-  } catch (_dbErr) {
-    // In-memory fallback
-    const newBooking = {
-      id: `BK-${checkinCode.slice(0, 6)}`,
-      resourceId,
-      userId,
-      title: title || `Ca đặt chỗ ${resource.name}`,
-      startTime: start.toISOString(),
-      endTime: end.toISOString(),
-      totalPriceVnd,
-      checkinCode,
-      attendeesCount: Number(attendeesCount) || 1,
-      status: "PENDING_PAYMENT",
-      resource,
-      transactions: [
-        {
-          id: `TXN-${checkinCode}`,
-          amountVnd: totalPriceVnd,
-          paymentContent: `LABPAY ${checkinCode.toUpperCase()}`,
-          status: "PENDING"
-        }
-      ]
-    };
-    mockStore.bookings.unshift(newBooking);
-    return newBooking;
-  }
+  });
 }
 
 /**
- * Returns all bookings for the authenticated user
+ * Transition a booking through the canonical state machine.
+ *
+ * Validates transition legality before persistence.
+ * Records actor, timestamp, reason, and conditions in audit trail.
+ */
+export async function transitionBooking({
+  bookingId,
+  toStatus,
+  actorId,
+  actorRole,
+  reason = null,
+  conditionBefore = null,
+  conditionAfter = null
+}) {
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      include: { resource: true }
+    });
+
+    if (!booking) {
+      throw new HttpError(404, "Booking not found", undefined, "NOT_FOUND");
+    }
+    if (!isValidTransition(booking.status, toStatus)) {
+      throw new HttpError(
+        409,
+        `Cannot transition from ${booking.status} to ${toStatus}`,
+        { currentStatus: booking.status, requestedStatus: toStatus },
+        "BOOKING_INVALID_TRANSITION"
+      );
+    }
+
+    const updateData = { status: toStatus };
+    if (toStatus === CONFIRMED && booking.status === PENDING_APPROVAL) {
+      updateData.approvedById = actorId;
+      updateData.approvedAt = new Date();
+    }
+    if (toStatus === "RETURNED") updateData.returnedAt = new Date();
+    if (toStatus === "COMPLETED") updateData.completedAt = new Date();
+    if (toStatus === "CHECKED_OUT") updateData.actualStartAt = new Date();
+    if (conditionBefore) updateData.handoverCondition = conditionBefore;
+    if (conditionAfter) updateData.returnCondition = conditionAfter;
+
+    const actionMap = {
+      CONFIRMED: booking.status === PENDING_APPROVAL ? "APPROVE" : "STATUS_CHANGE",
+      REJECTED: "REJECT",
+      CANCELLED: "CANCEL",
+      CHECKED_OUT: "CHECK_OUT",
+      RETURNED: "RETURN",
+      COMPLETED: "COMPLETE"
+    };
+    const action = actionMap[toStatus] || "STATUS_CHANGE";
+
+    const result = await tx.booking.update({
+      where: { id: bookingId },
+      data: updateData,
+      include: {
+        resource: true,
+        requestedBy: { select: { id: true, fullName: true, email: true, role: true } },
+        approvedBy: { select: { id: true, fullName: true, email: true, role: true } }
+      }
+    });
+
+    // Create audit log entry
+    await tx.usageLog.create({
+      data: {
+        id: crypto.randomUUID(),
+        resourceId: booking.resourceId,
+        bookingId: booking.id,
+        userId: actorId,
+        actorType: "USER",
+        action,
+        fromStatus: booking.status,
+        toStatus,
+        reason: reason || null,
+        conditionBefore: conditionBefore || null,
+        conditionAfter: conditionAfter || null,
+        message: `Booking transitioned from ${booking.status} to ${toStatus}`,
+        messageKey: `booking_${action.toLowerCase()}`
+      }
+    });
+
+    return result;
+  });
+}
+
+/**
+ * Returns bookings for the specified user (own bookings).
+ * No mockStore fallback.
  */
 export async function getUserBookings(userId) {
-  try {
-    const bookings = await prisma.booking.findMany({
-      where: { userId },
-      include: { resource: true, transactions: true },
-      orderBy: { startTime: "desc" }
-    });
-    if (bookings && bookings.length > 0) return bookings;
-  } catch (_e) {}
-
-  return mockStore.bookings.filter((b) => !userId || b.userId === userId);
+  return prisma.booking.findMany({
+    where: { requestedById: userId },
+    include: {
+      resource: true,
+      requestedBy: { select: { id: true, fullName: true, email: true, role: true } }
+    },
+    orderBy: { startAt: "desc" }
+  });
 }
 
 /**
- * Optical QR Code Check-in Verification
+ * Cancel a booking with canonical state machine validation.
+ * - Staff/admin can cancel any booking with reason
+ * - Owner can cancel own booking under policy
+ * No mockStore fallback.
  */
-export async function checkinBooking(bookingId, checkinCode) {
-  try {
-    const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: { user: true }
-    });
+export async function cancelBooking(bookingId, actorId, actorRole, reason = null) {
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
 
-    if (booking) {
-      if (checkinCode && booking.checkinCode.toLowerCase() !== checkinCode.toLowerCase()) {
-        throw new HttpError(400, "Mã check-in QR không chính xác hoặc đã hết hạn.");
-      }
-
-      const updated = await prisma.booking.update({
-        where: { id: bookingId },
-        data: { status: "CHECKED_IN", checkinAt: new Date() },
-        include: { resource: true }
-      });
-
-      if (booking.userId) {
-        await prisma.user.update({
-          where: { id: booking.userId },
-          data: { reputationScore: Math.min(100, (booking.user.reputationScore || 98) + 2) }
-        });
-      }
-
-      return updated;
-    }
-  } catch (err) {
-    if (err instanceof HttpError) throw err;
+  if (!booking) {
+    throw new HttpError(404, "Booking not found", undefined, "NOT_FOUND");
   }
 
-  const memBooking = mockStore.bookings.find((b) => b.id === bookingId) || mockStore.bookings[0];
-  if (memBooking) {
-    memBooking.status = "CHECKED_IN";
-    memBooking.checkinAt = new Date().toISOString();
-    return memBooking;
+  if (actorRole === LAB_STAFF && booking.requestedById !== actorId) {
+    await assertLabStaffResourceAccess(actorId, booking.resourceId);
+  } else if (actorRole !== ADMIN && actorRole !== LAB_STAFF && booking.requestedById !== actorId) {
+    throw new HttpError(404, "Booking not found", undefined, "NOT_FOUND");
   }
 
-  throw new HttpError(404, "Không tìm thấy thông tin đặt chỗ.");
-}
-
-/**
- * Cancels a booking and adjusts quota/reputation if late
- */
-export async function cancelBooking(bookingId, userId, isAdmin = false) {
-  try {
-    const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: { user: true }
-    });
-
-    if (booking) {
-      if (!isAdmin && booking.userId !== userId) {
-        throw new HttpError(403, "Bạn không có quyền hủy ca đặt chỗ này.");
-      }
-
-      const updated = await prisma.booking.update({
-        where: { id: bookingId },
-        data: { status: "CANCELLED" }
-      });
-      return updated;
-    }
-  } catch (err) {
-    if (err instanceof HttpError) throw err;
+  // Terminal bookings cannot be cancelled again
+  if (isTerminalStatus(booking.status)) {
+    throw new HttpError(
+      409,
+      `Cannot cancel a booking with status ${booking.status}`,
+      { currentStatus: booking.status },
+      "BOOKING_INVALID_TRANSITION"
+    );
   }
 
-  const memBooking = mockStore.bookings.find((b) => b.id === bookingId);
-  if (memBooking) {
-    memBooking.status = "CANCELLED";
-    return memBooking;
-  }
-
-  throw new HttpError(404, "Không tìm thấy thông tin ca đặt chỗ.");
+  return transitionBooking({
+    bookingId,
+    toStatus: CANCELLED,
+    actorId,
+    actorRole,
+    reason: reason || "Cancelled by user"
+  });
 }

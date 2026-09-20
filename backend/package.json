@@ -15,7 +15,11 @@
     "db:seed:admin": "node prisma/seedAdmin.js",
     "import:resources": "node scripts/importResources.js",
     "db:seed": "node prisma/seedBookingPlatform.js",
-    "test": "node --test"
+    "test": "npm run test:core",
+    "test:core": "node --test test/bookingOverlap.test.js test/dataContract.test.js test/batch1e/bookingStateMachine.test.js test/batch1e/dataContract.test.js test/batch1e/errors.test.js test/batch1e/labScope.test.js test/batch1e/mockSafety.test.js test/batch1e/roleConstants.test.js",
+    "test:batch2": "node --test test/batch2.auth-rbac.integration.test.js",
+    "test:batch3": "node --test test/batch3.resource-management.integration.test.js",
+    "test:all": "node --test"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",

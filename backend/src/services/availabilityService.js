@@ -4,7 +4,15 @@ import { HttpError } from "../middleware/errors.js";
 export const maintenanceKinds = ["maintenance", "calibration"];
 export const maintenanceStatuses = ["scheduled", "in_progress", "completed", "cancelled"];
 
-export const BLOCKING_RESOURCE_STATUSES = ["maintenance", "offline"];
+export const BLOCKING_RESOURCE_STATUSES = [
+  "MAINTENANCE",
+  "CALIBRATION",
+  "BROKEN",
+  "RETIRED",
+  "OFFLINE",
+  "maintenance",
+  "offline"
+];
 export const BLOCKING_MAINTENANCE_STATUSES = ["scheduled", "in_progress"];
 
 export function maintenanceOverlapWhere({ resourceId, startAt, endAt, excludeMaintenanceId }) {
@@ -20,7 +28,7 @@ export function maintenanceOverlapWhere({ resourceId, startAt, endAt, excludeMai
 export async function getResourceAvailability(client, { resourceId, startAt, endAt, excludeBookingId, resource = null }) {
   const selectedResource = resource || await client.resource.findUnique({ where: { id: resourceId } });
   if (!selectedResource) {
-    throw new HttpError(404, "Resource not found", undefined, "RESOURCE_NOT_FOUND");
+    throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
   }
 
   const [bookings, maintenanceWindows] = await Promise.all([
@@ -85,16 +93,27 @@ export function buildAvailabilityResult({ resource, startAt, endAt, bookings = [
   };
 }
 
+function getResourceStatus(resource) {
+  if (!resource) return "AVAILABLE";
+  return resource.operationalStatus || (resource.status ? String(resource.status).toUpperCase() : "AVAILABLE");
+}
+
+function isResourceStatusBlocking(resource) {
+  if (!resource) return false;
+  const status = getResourceStatus(resource);
+  return BLOCKING_RESOURCE_STATUSES.includes(status);
+}
+
 export function buildBlockingIntervals({ resource = null, startAt = null, endAt = null, bookings = [], maintenanceWindows = [] }) {
   const intervals = [
-    ...(resource && BLOCKING_RESOURCE_STATUSES.includes(resource.status) && startAt && endAt
+    ...(resource && isResourceStatusBlocking(resource) && startAt && endAt
       ? [{
-          type: resource.status === "maintenance" ? "MAINTENANCE_CONFLICT" : "ELIGIBILITY_CONFLICT",
+          type: ["MAINTENANCE", "maintenance"].includes(getResourceStatus(resource)) ? "MAINTENANCE_CONFLICT" : "ELIGIBILITY_CONFLICT",
           source: "resource_status",
           resourceId: resource.id,
           startAt: toIso(startAt),
           endAt: toIso(endAt),
-          label: resource.status
+          label: getResourceStatus(resource)
         }]
       : []),
     ...bookings.map((booking) => ({
@@ -123,7 +142,7 @@ export function buildBlockingIntervals({ resource = null, startAt = null, endAt 
 }
 
 export function buildAvailableSlotsForResource(resource, blockingIntervals, from, to, durationMinutes, options = {}) {
-  if (BLOCKING_RESOURCE_STATUSES.includes(resource.status)) return [];
+  if (isResourceStatusBlocking(resource)) return [];
 
   const workDayStartHour = Number(options.workDayStartHour ?? 8);
   const workDayEndHour = Number(options.workDayEndHour ?? 18);
@@ -190,15 +209,19 @@ export function buildMaintenanceConflict(window) {
 }
 
 function buildResourceStatusConflict(resource, startAt, endAt) {
-  if (!BLOCKING_RESOURCE_STATUSES.includes(resource.status)) return null;
-  const isMaintenance = resource.status === "maintenance";
+  if (!isResourceStatusBlocking(resource)) return null;
+  const status = getResourceStatus(resource);
+  const isMaintenance = ["MAINTENANCE", "maintenance"].includes(status);
+  const isCalibration = ["CALIBRATION", "calibration"].includes(status);
   return {
-    type: isMaintenance ? "MAINTENANCE_CONFLICT" : "ELIGIBILITY_CONFLICT",
+    type: isMaintenance ? "MAINTENANCE_CONFLICT" : isCalibration ? "CALIBRATION_CONFLICT" : "ELIGIBILITY_CONFLICT",
     severity: "HARD",
     resourceId: resource.id,
     message: isMaintenance
       ? "Resource is currently marked as under maintenance"
-      : "Resource is currently offline and cannot be booked",
+      : isCalibration
+      ? "Resource is currently undergoing calibration"
+      : "Resource is currently offline or unavailable and cannot be booked",
     startAt: toIso(startAt),
     endAt: toIso(endAt),
     suggestedActions: ["USE_ALTERNATIVE_EQUIPMENT"]

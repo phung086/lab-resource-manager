@@ -1,0 +1,6015 @@
+{
+  "generatedAt": "2026-09-18T03:15:08.232Z",
+  "database": "lab_resources_b1d_clean_20260918t0308",
+  "readOnly": true,
+  "catalogSha256": "f4b0fe5d43dc74a72e7796299851d284d7121d2a85a53a9cec14987ce7e7bb11",
+  "identity": {
+    "database": "lab_resources_b1d_clean_20260918t0308",
+    "version": "16.14",
+    "read_only": "on"
+  },
+  "tables": [
+    {
+      "name": "_prisma_migrations"
+    },
+    {
+      "name": "ai_conversations"
+    },
+    {
+      "name": "ai_messages"
+    },
+    {
+      "name": "behavior_event_logs"
+    },
+    {
+      "name": "bookings"
+    },
+    {
+      "name": "buildings"
+    },
+    {
+      "name": "campuses"
+    },
+    {
+      "name": "incident_comments"
+    },
+    {
+      "name": "incidents"
+    },
+    {
+      "name": "knowledge_chunks"
+    },
+    {
+      "name": "knowledge_documents"
+    },
+    {
+      "name": "lab_policies"
+    },
+    {
+      "name": "laboratories"
+    },
+    {
+      "name": "maintenance_windows"
+    },
+    {
+      "name": "notifications"
+    },
+    {
+      "name": "optimization_decisions"
+    },
+    {
+      "name": "optimization_runs"
+    },
+    {
+      "name": "payment_transactions"
+    },
+    {
+      "name": "policy_versions"
+    },
+    {
+      "name": "resource_allocations"
+    },
+    {
+      "name": "resource_capabilities"
+    },
+    {
+      "name": "resource_requirements"
+    },
+    {
+      "name": "resource_status_history"
+    },
+    {
+      "name": "resources"
+    },
+    {
+      "name": "shipment_orders"
+    },
+    {
+      "name": "telemetry_samples"
+    },
+    {
+      "name": "training_courses"
+    },
+    {
+      "name": "training_requirements"
+    },
+    {
+      "name": "usage_logs"
+    },
+    {
+      "name": "user_behavior_scores"
+    },
+    {
+      "name": "user_certifications"
+    },
+    {
+      "name": "user_lab_assignments"
+    },
+    {
+      "name": "users"
+    }
+  ],
+  "columns": [
+    {
+      "table_name": "_prisma_migrations",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "_prisma_migrations",
+      "column_name": "checksum",
+      "ordinal_position": 2,
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "_prisma_migrations",
+      "column_name": "finished_at",
+      "ordinal_position": 3,
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 6
+    },
+    {
+      "table_name": "_prisma_migrations",
+      "column_name": "migration_name",
+      "ordinal_position": 4,
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "_prisma_migrations",
+      "column_name": "logs",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "_prisma_migrations",
+      "column_name": "rolled_back_at",
+      "ordinal_position": 6,
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 6
+    },
+    {
+      "table_name": "_prisma_migrations",
+      "column_name": "started_at",
+      "ordinal_position": 7,
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "datetime_precision": 6
+    },
+    {
+      "table_name": "_prisma_migrations",
+      "column_name": "applied_steps_count",
+      "ordinal_position": 8,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_conversations",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_conversations",
+      "column_name": "userId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_conversations",
+      "column_name": "title",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_conversations",
+      "column_name": "createdAt",
+      "ordinal_position": 4,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "ai_conversations",
+      "column_name": "updatedAt",
+      "ordinal_position": 5,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "ai_messages",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_messages",
+      "column_name": "conversationId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_messages",
+      "column_name": "role",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_messages",
+      "column_name": "content",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_messages",
+      "column_name": "toolName",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_messages",
+      "column_name": "toolInput",
+      "ordinal_position": 6,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_messages",
+      "column_name": "toolOutput",
+      "ordinal_position": 7,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "ai_messages",
+      "column_name": "createdAt",
+      "ordinal_position": 8,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "column_name": "scoreId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "column_name": "eventType",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "column_name": "scoreDelta",
+      "ordinal_position": 4,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "column_name": "previousScore",
+      "ordinal_position": 5,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "column_name": "newScore",
+      "ordinal_position": 6,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "column_name": "reason",
+      "ordinal_position": 7,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "column_name": "metadata",
+      "ordinal_position": 8,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "column_name": "createdAt",
+      "ordinal_position": 9,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "resourceId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "requestedById",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "approvedById",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "title",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "purpose",
+      "ordinal_position": 6,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "startAt",
+      "ordinal_position": 7,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "endAt",
+      "ordinal_position": 8,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "status",
+      "ordinal_position": 9,
+      "data_type": "USER-DEFINED",
+      "udt_name": "BookingStatus",
+      "is_nullable": "NO",
+      "column_default": "'PENDING_APPROVAL'::\"BookingStatus\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "notes",
+      "ordinal_position": 10,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "handoverCondition",
+      "ordinal_position": 11,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "returnCondition",
+      "ordinal_position": 12,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "createdAt",
+      "ordinal_position": 13,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "updatedAt",
+      "ordinal_position": 14,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "actualEndAt",
+      "ordinal_position": 15,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "actualStartAt",
+      "ordinal_position": 16,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "bookingCode",
+      "ordinal_position": 17,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "checkinDeadline",
+      "ordinal_position": 18,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "idempotencyKey",
+      "ordinal_position": 19,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "priority",
+      "ordinal_position": 20,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "approvedAt",
+      "ordinal_position": 21,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "returnedAt",
+      "ordinal_position": 22,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "completedAt",
+      "ordinal_position": 23,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "outcome",
+      "ordinal_position": 24,
+      "data_type": "USER-DEFINED",
+      "udt_name": "BookingOutcome",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "bookings",
+      "column_name": "outcomeAt",
+      "ordinal_position": 25,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "buildings",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "buildings",
+      "column_name": "campusId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "buildings",
+      "column_name": "name",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "buildings",
+      "column_name": "code",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "buildings",
+      "column_name": "createdAt",
+      "ordinal_position": 5,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "campuses",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "campuses",
+      "column_name": "name",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "campuses",
+      "column_name": "code",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "campuses",
+      "column_name": "address",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "campuses",
+      "column_name": "createdAt",
+      "ordinal_position": 5,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "incident_comments",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incident_comments",
+      "column_name": "incidentId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incident_comments",
+      "column_name": "authorId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incident_comments",
+      "column_name": "content",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incident_comments",
+      "column_name": "createdAt",
+      "ordinal_position": 5,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "resourceId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "bookingId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "reportedById",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "assignedToId",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "severity",
+      "ordinal_position": 6,
+      "data_type": "USER-DEFINED",
+      "udt_name": "IncidentSeverity",
+      "is_nullable": "NO",
+      "column_default": "'medium'::\"IncidentSeverity\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "status",
+      "ordinal_position": 7,
+      "data_type": "USER-DEFINED",
+      "udt_name": "IncidentStatus",
+      "is_nullable": "NO",
+      "column_default": "'reported'::\"IncidentStatus\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "category",
+      "ordinal_position": 8,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "title",
+      "ordinal_position": 9,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "description",
+      "ordinal_position": 10,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "detectedAt",
+      "ordinal_position": 11,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "resolvedAt",
+      "ordinal_position": 12,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "resolution",
+      "ordinal_position": 13,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "createdAt",
+      "ordinal_position": 14,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "incidents",
+      "column_name": "updatedAt",
+      "ordinal_position": 15,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "column_name": "documentId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "column_name": "chunkIndex",
+      "ordinal_position": 3,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "column_name": "content",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "column_name": "metadata",
+      "ordinal_position": 5,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "column_name": "embeddingJson",
+      "ordinal_position": 6,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "column_name": "createdAt",
+      "ordinal_position": 7,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "resourceId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "laboratoryId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "title",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "sourceType",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'manual'::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "fileName",
+      "ordinal_position": 6,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "fileUrl",
+      "ordinal_position": 7,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "version",
+      "ordinal_position": 8,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "isActive",
+      "ordinal_position": 9,
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "createdAt",
+      "ordinal_position": 10,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "knowledge_documents",
+      "column_name": "updatedAt",
+      "ordinal_position": 11,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "laboratoryId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "maxBookingMinutes",
+      "ordinal_position": 3,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "480",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "minBookingMinutes",
+      "ordinal_position": 4,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "15",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "maxAdvanceBookingDays",
+      "ordinal_position": 5,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "30",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "checkInGraceMinutes",
+      "ordinal_position": 6,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "20",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "requiresApproval",
+      "ordinal_position": 7,
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "allowWeekend",
+      "ordinal_position": 8,
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "workDayStartHour",
+      "ordinal_position": 9,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "8",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "workDayEndHour",
+      "ordinal_position": 10,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "18",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "createdAt",
+      "ordinal_position": 11,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "lab_policies",
+      "column_name": "updatedAt",
+      "ordinal_position": 12,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "buildingId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "name",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "code",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "description",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "capacity",
+      "ordinal_position": 6,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "openingTime",
+      "ordinal_position": 7,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "closingTime",
+      "ordinal_position": 8,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "isActive",
+      "ordinal_position": 9,
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "createdAt",
+      "ordinal_position": 10,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "laboratories",
+      "column_name": "updatedAt",
+      "ordinal_position": 11,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "resourceId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "createdById",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "kind",
+      "ordinal_position": 4,
+      "data_type": "USER-DEFINED",
+      "udt_name": "MaintenanceKind",
+      "is_nullable": "NO",
+      "column_default": "'maintenance'::\"MaintenanceKind\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "status",
+      "ordinal_position": 5,
+      "data_type": "USER-DEFINED",
+      "udt_name": "MaintenanceStatus",
+      "is_nullable": "NO",
+      "column_default": "'scheduled'::\"MaintenanceStatus\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "title",
+      "ordinal_position": 6,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "startAt",
+      "ordinal_position": 7,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "endAt",
+      "ordinal_position": 8,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "notes",
+      "ordinal_position": 9,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "createdAt",
+      "ordinal_position": 10,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "updatedAt",
+      "ordinal_position": 11,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "cost",
+      "ordinal_position": 12,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "maintenance_windows",
+      "column_name": "vendor",
+      "ordinal_position": 13,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "userId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "title",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "message",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "severity",
+      "ordinal_position": 5,
+      "data_type": "USER-DEFINED",
+      "udt_name": "NotificationSeverity",
+      "is_nullable": "NO",
+      "column_default": "'info'::\"NotificationSeverity\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "readAt",
+      "ordinal_position": 6,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "createdAt",
+      "ordinal_position": 7,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "titleKey",
+      "ordinal_position": 8,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "messageKey",
+      "ordinal_position": 9,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "messageParams",
+      "ordinal_position": 10,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "channel",
+      "ordinal_position": 11,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'in_app'::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "scheduledAt",
+      "ordinal_position": 12,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "sentAt",
+      "ordinal_position": 13,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "type",
+      "ordinal_position": 14,
+      "data_type": "USER-DEFINED",
+      "udt_name": "NotificationType",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "dedupeKey",
+      "ordinal_position": 15,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_decisions",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_decisions",
+      "column_name": "runId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_decisions",
+      "column_name": "allocationId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_decisions",
+      "column_name": "objectiveVector",
+      "ordinal_position": 4,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_decisions",
+      "column_name": "paretoRank",
+      "ordinal_position": 5,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "1",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_decisions",
+      "column_name": "crowdingDistance",
+      "ordinal_position": 6,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_decisions",
+      "column_name": "explanation",
+      "ordinal_position": 7,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_decisions",
+      "column_name": "createdAt",
+      "ordinal_position": 8,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "algorithm",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "algorithmVersion",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'1.0'::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "datasetVersion",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "policyVersionId",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "populationSize",
+      "ordinal_position": 6,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "generations",
+      "ordinal_position": 7,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "mutationRate",
+      "ordinal_position": 8,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "crossoverRate",
+      "ordinal_position": 9,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "objectiveWeights",
+      "ordinal_position": 10,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "metricsSummary",
+      "ordinal_position": 11,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "runtimeMs",
+      "ordinal_position": 12,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "optimization_runs",
+      "column_name": "createdAt",
+      "ordinal_position": 13,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "bookingId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "userId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "txnRef",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "amount",
+      "ordinal_position": 5,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "currency",
+      "ordinal_position": 6,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'VND'::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "provider",
+      "ordinal_position": 7,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'vnpay'::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "status",
+      "ordinal_position": 8,
+      "data_type": "USER-DEFINED",
+      "udt_name": "PaymentStatus",
+      "is_nullable": "NO",
+      "column_default": "'pending'::\"PaymentStatus\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "bankCode",
+      "ordinal_position": 9,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "cardType",
+      "ordinal_position": 10,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "vnpResponseCode",
+      "ordinal_position": 11,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "vnpTransactionNo",
+      "ordinal_position": 12,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "paymentUrl",
+      "ordinal_position": 13,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "paidAt",
+      "ordinal_position": 14,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "description",
+      "ordinal_position": 15,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "createdAt",
+      "ordinal_position": 16,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "payment_transactions",
+      "column_name": "updatedAt",
+      "ordinal_position": 17,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "policyType",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "version",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'2026.1'::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "name",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "effectiveFrom",
+      "ordinal_position": 5,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "effectiveTo",
+      "ordinal_position": 6,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "configuration",
+      "ordinal_position": 7,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "isActive",
+      "ordinal_position": 8,
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "createdById",
+      "ordinal_position": 9,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "createdAt",
+      "ordinal_position": 10,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "policy_versions",
+      "column_name": "updatedAt",
+      "ordinal_position": 11,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "requirementId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "bookingId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "resourceId",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "startAt",
+      "ordinal_position": 5,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "endAt",
+      "ordinal_position": 6,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "allocationStatus",
+      "ordinal_position": 7,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'proposed'::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "optimizationRunId",
+      "ordinal_position": 8,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "totalScore",
+      "ordinal_position": 9,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "energyScore",
+      "ordinal_position": 10,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "fairnessScore",
+      "ordinal_position": 11,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "healthScore",
+      "ordinal_position": 12,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "explanation",
+      "ordinal_position": 13,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "createdAt",
+      "ordinal_position": 14,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resource_allocations",
+      "column_name": "updatedAt",
+      "ordinal_position": 15,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resource_capabilities",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_capabilities",
+      "column_name": "resourceId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_capabilities",
+      "column_name": "key",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_capabilities",
+      "column_name": "value",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_capabilities",
+      "column_name": "unit",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_capabilities",
+      "column_name": "createdAt",
+      "ordinal_position": 6,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "userId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "bookingId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "resourceType",
+      "ordinal_position": 4,
+      "data_type": "USER-DEFINED",
+      "udt_name": "ResourceType",
+      "is_nullable": "NO",
+      "column_default": "'gpu_server'::\"ResourceType\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "minVramGb",
+      "ordinal_position": 5,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": "16",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "minComputeTflops",
+      "ordinal_position": 6,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "requiredCapabilities",
+      "ordinal_position": 7,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "durationMinutes",
+      "ordinal_position": 8,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "120",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "deadline",
+      "ordinal_position": 9,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "maxCostVnd",
+      "ordinal_position": 10,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "priorityScore",
+      "ordinal_position": 11,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "50",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "projectUrgency",
+      "ordinal_position": 12,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'course_project'::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "createdAt",
+      "ordinal_position": 13,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resource_requirements",
+      "column_name": "updatedAt",
+      "ordinal_position": 14,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resource_status_history",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_status_history",
+      "column_name": "resourceId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_status_history",
+      "column_name": "fromStatus",
+      "ordinal_position": 3,
+      "data_type": "USER-DEFINED",
+      "udt_name": "OperationalStatus",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_status_history",
+      "column_name": "toStatus",
+      "ordinal_position": 4,
+      "data_type": "USER-DEFINED",
+      "udt_name": "OperationalStatus",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_status_history",
+      "column_name": "reason",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_status_history",
+      "column_name": "changedById",
+      "ordinal_position": 6,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resource_status_history",
+      "column_name": "createdAt",
+      "ordinal_position": 7,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resources",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "code",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "name",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "type",
+      "ordinal_position": 4,
+      "data_type": "USER-DEFINED",
+      "udt_name": "ResourceType",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "location",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "status",
+      "ordinal_position": 6,
+      "data_type": "USER-DEFINED",
+      "udt_name": "ResourceStatus",
+      "is_nullable": "NO",
+      "column_default": "'available'::\"ResourceStatus\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "ownerTeam",
+      "ordinal_position": 7,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "capacity",
+      "ordinal_position": 8,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "1",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "requiresApproval",
+      "ordinal_position": 9,
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "specs",
+      "ordinal_position": 10,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "createdAt",
+      "ordinal_position": 11,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resources",
+      "column_name": "bookingState",
+      "ordinal_position": 12,
+      "data_type": "USER-DEFINED",
+      "udt_name": "BookingState",
+      "is_nullable": "NO",
+      "column_default": "'bookable'::\"BookingState\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "description",
+      "ordinal_position": 13,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "laboratoryId",
+      "ordinal_position": 14,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "manufacturer",
+      "ordinal_position": 15,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "model",
+      "ordinal_position": 16,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "operationalStatus",
+      "ordinal_position": 17,
+      "data_type": "USER-DEFINED",
+      "udt_name": "OperationalStatus",
+      "is_nullable": "NO",
+      "column_default": "'AVAILABLE'::\"OperationalStatus\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "purchaseDate",
+      "ordinal_position": 18,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resources",
+      "column_name": "serialNumber",
+      "ordinal_position": 19,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "updatedAt",
+      "ordinal_position": 20,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resources",
+      "column_name": "version",
+      "ordinal_position": 21,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "resources",
+      "column_name": "warrantyExpiry",
+      "ordinal_position": 22,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "resources",
+      "column_name": "category",
+      "ordinal_position": 23,
+      "data_type": "USER-DEFINED",
+      "udt_name": "ResourceCategory",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "bookingId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "resourceId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "userId",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "trackingCode",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "provider",
+      "ordinal_position": 6,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'ghn'::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "status",
+      "ordinal_position": 7,
+      "data_type": "USER-DEFINED",
+      "udt_name": "ShipmentStatus",
+      "is_nullable": "NO",
+      "column_default": "'pending'::\"ShipmentStatus\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "fee",
+      "ordinal_position": 8,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "senderAddress",
+      "ordinal_position": 9,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "recipientName",
+      "ordinal_position": 10,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "recipientPhone",
+      "ordinal_position": 11,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "recipientAddress",
+      "ordinal_position": 12,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "expectedDelivery",
+      "ordinal_position": 13,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "deliveredAt",
+      "ordinal_position": 14,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "rawResponse",
+      "ordinal_position": 15,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "createdAt",
+      "ordinal_position": 16,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "shipment_orders",
+      "column_name": "updatedAt",
+      "ordinal_position": 17,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "resourceId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "cpuPercent",
+      "ordinal_position": 3,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "gpuPercent",
+      "ordinal_position": 4,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "gpuMemoryPercent",
+      "ordinal_position": 5,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "ramPercent",
+      "ordinal_position": 6,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "diskPercent",
+      "ordinal_position": 7,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "temperatureC",
+      "ordinal_position": 8,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "online",
+      "ordinal_position": 9,
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "source",
+      "ordinal_position": 10,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'agent'::text",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "sampledAt",
+      "ordinal_position": 11,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "humidityPercent",
+      "ordinal_position": 12,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "telemetry_samples",
+      "column_name": "verifiedSignals",
+      "ordinal_position": 13,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_courses",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_courses",
+      "column_name": "name",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_courses",
+      "column_name": "code",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_courses",
+      "column_name": "description",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_courses",
+      "column_name": "durationHours",
+      "ordinal_position": 5,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_courses",
+      "column_name": "isRequired",
+      "ordinal_position": 6,
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_courses",
+      "column_name": "createdAt",
+      "ordinal_position": 7,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "training_courses",
+      "column_name": "updatedAt",
+      "ordinal_position": 8,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "training_requirements",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_requirements",
+      "column_name": "resourceId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_requirements",
+      "column_name": "courseId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_requirements",
+      "column_name": "isMandatory",
+      "ordinal_position": 4,
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "training_requirements",
+      "column_name": "createdAt",
+      "ordinal_position": 5,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "resourceId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "bookingId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "userId",
+      "ordinal_position": 4,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "action",
+      "ordinal_position": 5,
+      "data_type": "USER-DEFINED",
+      "udt_name": "UsageAction",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "message",
+      "ordinal_position": 6,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "conditionBefore",
+      "ordinal_position": 7,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "conditionAfter",
+      "ordinal_position": 8,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "createdAt",
+      "ordinal_position": 9,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "messageKey",
+      "ordinal_position": 10,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "messageParams",
+      "ordinal_position": 11,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "ipAddress",
+      "ordinal_position": 12,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "actorType",
+      "ordinal_position": 13,
+      "data_type": "USER-DEFINED",
+      "udt_name": "AuditActorType",
+      "is_nullable": "NO",
+      "column_default": "'USER'::\"AuditActorType\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "actorRef",
+      "ordinal_position": 14,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "fromStatus",
+      "ordinal_position": 15,
+      "data_type": "USER-DEFINED",
+      "udt_name": "BookingStatus",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "toStatus",
+      "ordinal_position": 16,
+      "data_type": "USER-DEFINED",
+      "udt_name": "BookingStatus",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "reason",
+      "ordinal_position": 17,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "usage_logs",
+      "column_name": "metadata",
+      "ordinal_position": 18,
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "column_name": "userId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "column_name": "currentScore",
+      "ordinal_position": 3,
+      "data_type": "double precision",
+      "udt_name": "float8",
+      "is_nullable": "NO",
+      "column_default": "100.0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "column_name": "lateCancelCount",
+      "ordinal_position": 4,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "column_name": "noShowCount",
+      "ordinal_position": 5,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "column_name": "quotaBreachCount",
+      "ordinal_position": 6,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "column_name": "cleanStreakDays",
+      "ordinal_position": 7,
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "column_name": "lastViolationAt",
+      "ordinal_position": 8,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "column_name": "updatedAt",
+      "ordinal_position": 9,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "user_certifications",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_certifications",
+      "column_name": "userId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_certifications",
+      "column_name": "courseId",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_certifications",
+      "column_name": "status",
+      "ordinal_position": 4,
+      "data_type": "USER-DEFINED",
+      "udt_name": "CertificationStatus",
+      "is_nullable": "NO",
+      "column_default": "'active'::\"CertificationStatus\"",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_certifications",
+      "column_name": "issuedAt",
+      "ordinal_position": 5,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "user_certifications",
+      "column_name": "expiresAt",
+      "ordinal_position": 6,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "user_certifications",
+      "column_name": "issuedById",
+      "ordinal_position": 7,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_certifications",
+      "column_name": "notes",
+      "ordinal_position": 8,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_certifications",
+      "column_name": "createdAt",
+      "ordinal_position": 9,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "user_certifications",
+      "column_name": "updatedAt",
+      "ordinal_position": 10,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "user_lab_assignments",
+      "column_name": "userId",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_lab_assignments",
+      "column_name": "laboratoryId",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "user_lab_assignments",
+      "column_name": "createdAt",
+      "ordinal_position": 3,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "users",
+      "column_name": "id",
+      "ordinal_position": 1,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "email",
+      "ordinal_position": 2,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "fullName",
+      "ordinal_position": 3,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "role",
+      "ordinal_position": 4,
+      "data_type": "USER-DEFINED",
+      "udt_name": "Role",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "passwordHash",
+      "ordinal_position": 5,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "isActive",
+      "ordinal_position": 6,
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true",
+      "datetime_precision": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "createdAt",
+      "ordinal_position": 7,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    },
+    {
+      "table_name": "users",
+      "column_name": "department",
+      "ordinal_position": 8,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "phone",
+      "ordinal_position": 9,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "studentId",
+      "ordinal_position": 10,
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "datetime_precision": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "updatedAt",
+      "ordinal_position": 11,
+      "data_type": "timestamp without time zone",
+      "udt_name": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP",
+      "datetime_precision": 3
+    }
+  ],
+  "enums": [
+    {
+      "name": "AuditActorType",
+      "labels": [
+        "USER",
+        "SYSTEM",
+        "SERVICE"
+      ]
+    },
+    {
+      "name": "BookingOutcome",
+      "labels": [
+        "NO_SHOW"
+      ]
+    },
+    {
+      "name": "BookingState",
+      "labels": [
+        "bookable",
+        "restricted",
+        "non_bookable"
+      ]
+    },
+    {
+      "name": "BookingStatus",
+      "labels": [
+        "PENDING_APPROVAL",
+        "CONFIRMED",
+        "CHECKED_OUT",
+        "RETURNED",
+        "COMPLETED",
+        "REJECTED",
+        "CANCELLED"
+      ]
+    },
+    {
+      "name": "CertificationStatus",
+      "labels": [
+        "pending",
+        "active",
+        "expired",
+        "revoked"
+      ]
+    },
+    {
+      "name": "IncidentSeverity",
+      "labels": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    {
+      "name": "IncidentStatus",
+      "labels": [
+        "reported",
+        "triaged",
+        "assigned",
+        "investigating",
+        "resolved",
+        "verified",
+        "closed"
+      ]
+    },
+    {
+      "name": "MaintenanceKind",
+      "labels": [
+        "maintenance",
+        "calibration"
+      ]
+    },
+    {
+      "name": "MaintenanceStatus",
+      "labels": [
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled"
+      ]
+    },
+    {
+      "name": "NotificationSeverity",
+      "labels": [
+        "info",
+        "success",
+        "warning",
+        "danger"
+      ]
+    },
+    {
+      "name": "NotificationType",
+      "labels": [
+        "BOOKING_APPROVED",
+        "BOOKING_REJECTED",
+        "BOOKING_UPCOMING",
+        "RETURN_REMINDER"
+      ]
+    },
+    {
+      "name": "OperationalStatus",
+      "labels": [
+        "AVAILABLE",
+        "IN_USE",
+        "MAINTENANCE",
+        "CALIBRATION",
+        "BROKEN",
+        "RETIRED",
+        "OFFLINE"
+      ]
+    },
+    {
+      "name": "PaymentStatus",
+      "labels": [
+        "pending",
+        "success",
+        "failed",
+        "refunded"
+      ]
+    },
+    {
+      "name": "ResourceCategory",
+      "labels": [
+        "ROOM",
+        "EQUIPMENT",
+        "MACHINE",
+        "EXPERIMENT_KIT",
+        "MATERIAL"
+      ]
+    },
+    {
+      "name": "ResourceStatus",
+      "labels": [
+        "available",
+        "reserved",
+        "in_use",
+        "maintenance",
+        "offline"
+      ]
+    },
+    {
+      "name": "ResourceType",
+      "labels": [
+        "room",
+        "gpu_server",
+        "raspberry_pi",
+        "uav",
+        "camera",
+        "kit",
+        "material",
+        "other"
+      ]
+    },
+    {
+      "name": "Role",
+      "labels": [
+        "ADMIN",
+        "LAB_STAFF",
+        "LECTURER",
+        "STUDENT"
+      ]
+    },
+    {
+      "name": "ShipmentStatus",
+      "labels": [
+        "pending",
+        "picking",
+        "delivering",
+        "delivered",
+        "cancelled",
+        "returned"
+      ]
+    },
+    {
+      "name": "UsageAction",
+      "labels": [
+        "REQUEST",
+        "APPROVE",
+        "REJECT",
+        "CHECK_OUT",
+        "CHECK_IN",
+        "RETURN",
+        "COMPLETE",
+        "STATUS_CHANGE",
+        "TELEMETRY",
+        "CANCEL",
+        "INCIDENT_REPORTED",
+        "NO_SHOW"
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "_prisma_migrations",
+      "name": "_prisma_migrations_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "ai_conversations",
+      "name": "ai_conversations_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "ai_messages",
+      "name": "ai_messages_conversationId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"conversationId\") REFERENCES ai_conversations(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "ai_messages",
+      "name": "ai_messages_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "name": "behavior_event_logs_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "name": "behavior_event_logs_scoreId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"scoreId\") REFERENCES user_behavior_scores(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_approvedById_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"approvedById\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_no_active_overlap",
+      "type": "x",
+      "validated": true,
+      "definition": "EXCLUDE USING gist (\"resourceId\" WITH =, tsrange(\"startAt\", \"endAt\", '[)'::text) WITH &&) WHERE ((status = ANY (ARRAY['PENDING_APPROVAL'::\"BookingStatus\", 'CONFIRMED'::\"BookingStatus\", 'CHECKED_OUT'::\"BookingStatus\", 'RETURNED'::\"BookingStatus\"])))"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_outcome_timestamp_consistency",
+      "type": "c",
+      "validated": true,
+      "definition": "CHECK ((((outcome IS NULL) AND (\"outcomeAt\" IS NULL)) OR ((outcome IS NOT NULL) AND (\"outcomeAt\" IS NOT NULL))))"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_requestedById_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"requestedById\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_valid_time_range",
+      "type": "c",
+      "validated": true,
+      "definition": "CHECK ((\"startAt\" < \"endAt\"))"
+    },
+    {
+      "table_name": "buildings",
+      "name": "buildings_campusId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"campusId\") REFERENCES campuses(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "buildings",
+      "name": "buildings_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "campuses",
+      "name": "campuses_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "incident_comments",
+      "name": "incident_comments_incidentId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"incidentId\") REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "incident_comments",
+      "name": "incident_comments_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_assignedToId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"assignedToId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_bookingId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_reportedById_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"reportedById\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "name": "knowledge_chunks_documentId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"documentId\") REFERENCES knowledge_documents(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "name": "knowledge_chunks_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "knowledge_documents",
+      "name": "knowledge_documents_laboratoryId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"laboratoryId\") REFERENCES laboratories(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "knowledge_documents",
+      "name": "knowledge_documents_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "knowledge_documents",
+      "name": "knowledge_documents_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "lab_policies",
+      "name": "lab_policies_laboratoryId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"laboratoryId\") REFERENCES laboratories(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "lab_policies",
+      "name": "lab_policies_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "laboratories",
+      "name": "laboratories_buildingId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"buildingId\") REFERENCES buildings(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "laboratories",
+      "name": "laboratories_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "maintenance_windows",
+      "name": "maintenance_windows_createdById_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"createdById\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "maintenance_windows",
+      "name": "maintenance_windows_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "maintenance_windows",
+      "name": "maintenance_windows_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "maintenance_windows",
+      "name": "maintenance_windows_valid_time_range",
+      "type": "c",
+      "validated": true,
+      "definition": "CHECK ((\"startAt\" < \"endAt\"))"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_userId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "optimization_decisions",
+      "name": "optimization_decisions_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "optimization_decisions",
+      "name": "optimization_decisions_runId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"runId\") REFERENCES optimization_runs(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "optimization_runs",
+      "name": "optimization_runs_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "optimization_runs",
+      "name": "optimization_runs_policyVersionId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"policyVersionId\") REFERENCES policy_versions(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "payment_transactions",
+      "name": "payment_transactions_bookingId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "payment_transactions",
+      "name": "payment_transactions_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "payment_transactions",
+      "name": "payment_transactions_userId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "policy_versions",
+      "name": "policy_versions_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_bookingId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_optimizationRunId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"optimizationRunId\") REFERENCES optimization_runs(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_requirementId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"requirementId\") REFERENCES resource_requirements(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "resource_capabilities",
+      "name": "resource_capabilities_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "resource_capabilities",
+      "name": "resource_capabilities_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "resource_requirements",
+      "name": "resource_requirements_bookingId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "resource_requirements",
+      "name": "resource_requirements_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "resource_requirements",
+      "name": "resource_requirements_userId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "resource_status_history",
+      "name": "resource_status_history_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "resource_status_history",
+      "name": "resource_status_history_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "resources",
+      "name": "resources_laboratoryId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"laboratoryId\") REFERENCES laboratories(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "resources",
+      "name": "resources_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_bookingId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_userId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "telemetry_samples",
+      "name": "telemetry_samples_humidity_range",
+      "type": "c",
+      "validated": true,
+      "definition": "CHECK (((\"humidityPercent\" IS NULL) OR ((\"humidityPercent\" >= (0)::double precision) AND (\"humidityPercent\" <= (100)::double precision))))"
+    },
+    {
+      "table_name": "telemetry_samples",
+      "name": "telemetry_samples_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "telemetry_samples",
+      "name": "telemetry_samples_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "training_courses",
+      "name": "training_courses_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "training_requirements",
+      "name": "training_requirements_courseId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"courseId\") REFERENCES training_courses(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "training_requirements",
+      "name": "training_requirements_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "training_requirements",
+      "name": "training_requirements_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_actor_source_check",
+      "type": "c",
+      "validated": true,
+      "definition": "CHECK ((((\"actorType\" = 'USER'::\"AuditActorType\") AND (\"userId\" IS NOT NULL) AND (\"actorRef\" IS NULL)) OR ((\"actorType\" = ANY (ARRAY['SYSTEM'::\"AuditActorType\", 'SERVICE'::\"AuditActorType\"])) AND (\"userId\" IS NULL) AND (NULLIF(btrim(\"actorRef\"), ''::text) IS NOT NULL))))"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_bookingId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_resourceId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_userId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "name": "user_behavior_scores_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "name": "user_behavior_scores_userId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "user_certifications",
+      "name": "user_certifications_courseId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"courseId\") REFERENCES training_courses(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "user_certifications",
+      "name": "user_certifications_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "user_certifications",
+      "name": "user_certifications_userId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "user_lab_assignments",
+      "name": "user_lab_assignments_laboratoryId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"laboratoryId\") REFERENCES laboratories(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "user_lab_assignments",
+      "name": "user_lab_assignments_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (\"userId\", \"laboratoryId\")"
+    },
+    {
+      "table_name": "user_lab_assignments",
+      "name": "user_lab_assignments_userId_fkey",
+      "type": "f",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "users",
+      "name": "users_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    }
+  ],
+  "indexes": [
+    {
+      "table_name": "_prisma_migrations",
+      "name": "_prisma_migrations_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX _prisma_migrations_pkey ON public._prisma_migrations USING btree (id)"
+    },
+    {
+      "table_name": "ai_conversations",
+      "name": "ai_conversations_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX ai_conversations_pkey ON public.ai_conversations USING btree (id)"
+    },
+    {
+      "table_name": "ai_conversations",
+      "name": "ai_conversations_userId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"ai_conversations_userId_idx\" ON public.ai_conversations USING btree (\"userId\")"
+    },
+    {
+      "table_name": "ai_messages",
+      "name": "ai_messages_conversationId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"ai_messages_conversationId_idx\" ON public.ai_messages USING btree (\"conversationId\")"
+    },
+    {
+      "table_name": "ai_messages",
+      "name": "ai_messages_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX ai_messages_pkey ON public.ai_messages USING btree (id)"
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "name": "behavior_event_logs_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX behavior_event_logs_pkey ON public.behavior_event_logs USING btree (id)"
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "name": "behavior_event_logs_scoreId_createdAt_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"behavior_event_logs_scoreId_createdAt_idx\" ON public.behavior_event_logs USING btree (\"scoreId\", \"createdAt\")"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_bookingCode_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX \"bookings_bookingCode_key\" ON public.bookings USING btree (\"bookingCode\")"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_idempotencyKey_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"bookings_idempotencyKey_idx\" ON public.bookings USING btree (\"idempotencyKey\")"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_idempotencyKey_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX \"bookings_idempotencyKey_key\" ON public.bookings USING btree (\"idempotencyKey\")"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_no_active_overlap",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": true,
+      "definition": "CREATE INDEX bookings_no_active_overlap ON public.bookings USING gist (\"resourceId\", tsrange(\"startAt\", \"endAt\", '[)'::text)) WHERE (status = ANY (ARRAY['PENDING_APPROVAL'::\"BookingStatus\", 'CONFIRMED'::\"BookingStatus\", 'CHECKED_OUT'::\"BookingStatus\", 'RETURNED'::\"BookingStatus\"]))"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX bookings_pkey ON public.bookings USING btree (id)"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_requestedById_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"bookings_requestedById_idx\" ON public.bookings USING btree (\"requestedById\")"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_resourceId_startAt_endAt_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"bookings_resourceId_startAt_endAt_idx\" ON public.bookings USING btree (\"resourceId\", \"startAt\", \"endAt\")"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_status_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX bookings_status_idx ON public.bookings USING btree (status)"
+    },
+    {
+      "table_name": "buildings",
+      "name": "buildings_campusId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"buildings_campusId_idx\" ON public.buildings USING btree (\"campusId\")"
+    },
+    {
+      "table_name": "buildings",
+      "name": "buildings_code_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX buildings_code_key ON public.buildings USING btree (code)"
+    },
+    {
+      "table_name": "buildings",
+      "name": "buildings_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX buildings_pkey ON public.buildings USING btree (id)"
+    },
+    {
+      "table_name": "campuses",
+      "name": "campuses_code_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX campuses_code_key ON public.campuses USING btree (code)"
+    },
+    {
+      "table_name": "campuses",
+      "name": "campuses_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX campuses_pkey ON public.campuses USING btree (id)"
+    },
+    {
+      "table_name": "incident_comments",
+      "name": "incident_comments_incidentId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"incident_comments_incidentId_idx\" ON public.incident_comments USING btree (\"incidentId\")"
+    },
+    {
+      "table_name": "incident_comments",
+      "name": "incident_comments_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX incident_comments_pkey ON public.incident_comments USING btree (id)"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX incidents_pkey ON public.incidents USING btree (id)"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_reportedById_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"incidents_reportedById_idx\" ON public.incidents USING btree (\"reportedById\")"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_resourceId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"incidents_resourceId_idx\" ON public.incidents USING btree (\"resourceId\")"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_status_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX incidents_status_idx ON public.incidents USING btree (status)"
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "name": "knowledge_chunks_documentId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"knowledge_chunks_documentId_idx\" ON public.knowledge_chunks USING btree (\"documentId\")"
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "name": "knowledge_chunks_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX knowledge_chunks_pkey ON public.knowledge_chunks USING btree (id)"
+    },
+    {
+      "table_name": "knowledge_documents",
+      "name": "knowledge_documents_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX knowledge_documents_pkey ON public.knowledge_documents USING btree (id)"
+    },
+    {
+      "table_name": "knowledge_documents",
+      "name": "knowledge_documents_resourceId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"knowledge_documents_resourceId_idx\" ON public.knowledge_documents USING btree (\"resourceId\")"
+    },
+    {
+      "table_name": "lab_policies",
+      "name": "lab_policies_laboratoryId_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX \"lab_policies_laboratoryId_key\" ON public.lab_policies USING btree (\"laboratoryId\")"
+    },
+    {
+      "table_name": "lab_policies",
+      "name": "lab_policies_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX lab_policies_pkey ON public.lab_policies USING btree (id)"
+    },
+    {
+      "table_name": "laboratories",
+      "name": "laboratories_buildingId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"laboratories_buildingId_idx\" ON public.laboratories USING btree (\"buildingId\")"
+    },
+    {
+      "table_name": "laboratories",
+      "name": "laboratories_code_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX laboratories_code_key ON public.laboratories USING btree (code)"
+    },
+    {
+      "table_name": "laboratories",
+      "name": "laboratories_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX laboratories_pkey ON public.laboratories USING btree (id)"
+    },
+    {
+      "table_name": "maintenance_windows",
+      "name": "maintenance_windows_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX maintenance_windows_pkey ON public.maintenance_windows USING btree (id)"
+    },
+    {
+      "table_name": "maintenance_windows",
+      "name": "maintenance_windows_resourceId_startAt_endAt_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"maintenance_windows_resourceId_startAt_endAt_idx\" ON public.maintenance_windows USING btree (\"resourceId\", \"startAt\", \"endAt\")"
+    },
+    {
+      "table_name": "maintenance_windows",
+      "name": "maintenance_windows_status_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX maintenance_windows_status_idx ON public.maintenance_windows USING btree (status)"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_dedupeKey_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX \"notifications_dedupeKey_key\" ON public.notifications USING btree (\"dedupeKey\")"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_userId_createdAt_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"notifications_userId_createdAt_idx\" ON public.notifications USING btree (\"userId\", \"createdAt\")"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_userId_readAt_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"notifications_userId_readAt_idx\" ON public.notifications USING btree (\"userId\", \"readAt\")"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_userId_type_scheduledAt_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"notifications_userId_type_scheduledAt_idx\" ON public.notifications USING btree (\"userId\", type, \"scheduledAt\")"
+    },
+    {
+      "table_name": "optimization_decisions",
+      "name": "optimization_decisions_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX optimization_decisions_pkey ON public.optimization_decisions USING btree (id)"
+    },
+    {
+      "table_name": "optimization_decisions",
+      "name": "optimization_decisions_runId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"optimization_decisions_runId_idx\" ON public.optimization_decisions USING btree (\"runId\")"
+    },
+    {
+      "table_name": "optimization_runs",
+      "name": "optimization_runs_algorithm_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX optimization_runs_algorithm_idx ON public.optimization_runs USING btree (algorithm)"
+    },
+    {
+      "table_name": "optimization_runs",
+      "name": "optimization_runs_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX optimization_runs_pkey ON public.optimization_runs USING btree (id)"
+    },
+    {
+      "table_name": "optimization_runs",
+      "name": "optimization_runs_policyVersionId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"optimization_runs_policyVersionId_idx\" ON public.optimization_runs USING btree (\"policyVersionId\")"
+    },
+    {
+      "table_name": "payment_transactions",
+      "name": "payment_transactions_bookingId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"payment_transactions_bookingId_idx\" ON public.payment_transactions USING btree (\"bookingId\")"
+    },
+    {
+      "table_name": "payment_transactions",
+      "name": "payment_transactions_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX payment_transactions_pkey ON public.payment_transactions USING btree (id)"
+    },
+    {
+      "table_name": "payment_transactions",
+      "name": "payment_transactions_status_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX payment_transactions_status_idx ON public.payment_transactions USING btree (status)"
+    },
+    {
+      "table_name": "payment_transactions",
+      "name": "payment_transactions_txnRef_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX \"payment_transactions_txnRef_key\" ON public.payment_transactions USING btree (\"txnRef\")"
+    },
+    {
+      "table_name": "payment_transactions",
+      "name": "payment_transactions_userId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"payment_transactions_userId_idx\" ON public.payment_transactions USING btree (\"userId\")"
+    },
+    {
+      "table_name": "policy_versions",
+      "name": "policy_versions_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX policy_versions_pkey ON public.policy_versions USING btree (id)"
+    },
+    {
+      "table_name": "policy_versions",
+      "name": "policy_versions_policyType_isActive_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"policy_versions_policyType_isActive_idx\" ON public.policy_versions USING btree (\"policyType\", \"isActive\")"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_bookingId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resource_allocations_bookingId_idx\" ON public.resource_allocations USING btree (\"bookingId\")"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_optimizationRunId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resource_allocations_optimizationRunId_idx\" ON public.resource_allocations USING btree (\"optimizationRunId\")"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX resource_allocations_pkey ON public.resource_allocations USING btree (id)"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_requirementId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resource_allocations_requirementId_idx\" ON public.resource_allocations USING btree (\"requirementId\")"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_resourceId_startAt_endAt_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resource_allocations_resourceId_startAt_endAt_idx\" ON public.resource_allocations USING btree (\"resourceId\", \"startAt\", \"endAt\")"
+    },
+    {
+      "table_name": "resource_capabilities",
+      "name": "resource_capabilities_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX resource_capabilities_pkey ON public.resource_capabilities USING btree (id)"
+    },
+    {
+      "table_name": "resource_capabilities",
+      "name": "resource_capabilities_resourceId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resource_capabilities_resourceId_idx\" ON public.resource_capabilities USING btree (\"resourceId\")"
+    },
+    {
+      "table_name": "resource_capabilities",
+      "name": "resource_capabilities_resourceId_key_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX \"resource_capabilities_resourceId_key_key\" ON public.resource_capabilities USING btree (\"resourceId\", key)"
+    },
+    {
+      "table_name": "resource_requirements",
+      "name": "resource_requirements_bookingId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resource_requirements_bookingId_idx\" ON public.resource_requirements USING btree (\"bookingId\")"
+    },
+    {
+      "table_name": "resource_requirements",
+      "name": "resource_requirements_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX resource_requirements_pkey ON public.resource_requirements USING btree (id)"
+    },
+    {
+      "table_name": "resource_requirements",
+      "name": "resource_requirements_userId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resource_requirements_userId_idx\" ON public.resource_requirements USING btree (\"userId\")"
+    },
+    {
+      "table_name": "resource_status_history",
+      "name": "resource_status_history_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX resource_status_history_pkey ON public.resource_status_history USING btree (id)"
+    },
+    {
+      "table_name": "resource_status_history",
+      "name": "resource_status_history_resourceId_createdAt_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resource_status_history_resourceId_createdAt_idx\" ON public.resource_status_history USING btree (\"resourceId\", \"createdAt\")"
+    },
+    {
+      "table_name": "resources",
+      "name": "resources_bookingState_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resources_bookingState_idx\" ON public.resources USING btree (\"bookingState\")"
+    },
+    {
+      "table_name": "resources",
+      "name": "resources_code_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX resources_code_key ON public.resources USING btree (code)"
+    },
+    {
+      "table_name": "resources",
+      "name": "resources_laboratoryId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resources_laboratoryId_idx\" ON public.resources USING btree (\"laboratoryId\")"
+    },
+    {
+      "table_name": "resources",
+      "name": "resources_operationalStatus_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"resources_operationalStatus_idx\" ON public.resources USING btree (\"operationalStatus\")"
+    },
+    {
+      "table_name": "resources",
+      "name": "resources_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX resources_pkey ON public.resources USING btree (id)"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_bookingId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"shipment_orders_bookingId_idx\" ON public.shipment_orders USING btree (\"bookingId\")"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX shipment_orders_pkey ON public.shipment_orders USING btree (id)"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_trackingCode_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"shipment_orders_trackingCode_idx\" ON public.shipment_orders USING btree (\"trackingCode\")"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_trackingCode_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX \"shipment_orders_trackingCode_key\" ON public.shipment_orders USING btree (\"trackingCode\")"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_userId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"shipment_orders_userId_idx\" ON public.shipment_orders USING btree (\"userId\")"
+    },
+    {
+      "table_name": "telemetry_samples",
+      "name": "telemetry_samples_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX telemetry_samples_pkey ON public.telemetry_samples USING btree (id)"
+    },
+    {
+      "table_name": "telemetry_samples",
+      "name": "telemetry_samples_resourceId_sampledAt_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"telemetry_samples_resourceId_sampledAt_idx\" ON public.telemetry_samples USING btree (\"resourceId\", \"sampledAt\")"
+    },
+    {
+      "table_name": "training_courses",
+      "name": "training_courses_code_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX training_courses_code_key ON public.training_courses USING btree (code)"
+    },
+    {
+      "table_name": "training_courses",
+      "name": "training_courses_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX training_courses_pkey ON public.training_courses USING btree (id)"
+    },
+    {
+      "table_name": "training_requirements",
+      "name": "training_requirements_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX training_requirements_pkey ON public.training_requirements USING btree (id)"
+    },
+    {
+      "table_name": "training_requirements",
+      "name": "training_requirements_resourceId_courseId_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX \"training_requirements_resourceId_courseId_key\" ON public.training_requirements USING btree (\"resourceId\", \"courseId\")"
+    },
+    {
+      "table_name": "training_requirements",
+      "name": "training_requirements_resourceId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"training_requirements_resourceId_idx\" ON public.training_requirements USING btree (\"resourceId\")"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_bookingId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"usage_logs_bookingId_idx\" ON public.usage_logs USING btree (\"bookingId\")"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX usage_logs_pkey ON public.usage_logs USING btree (id)"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_resourceId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"usage_logs_resourceId_idx\" ON public.usage_logs USING btree (\"resourceId\")"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_userId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"usage_logs_userId_idx\" ON public.usage_logs USING btree (\"userId\")"
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "name": "user_behavior_scores_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX user_behavior_scores_pkey ON public.user_behavior_scores USING btree (id)"
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "name": "user_behavior_scores_userId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"user_behavior_scores_userId_idx\" ON public.user_behavior_scores USING btree (\"userId\")"
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "name": "user_behavior_scores_userId_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX \"user_behavior_scores_userId_key\" ON public.user_behavior_scores USING btree (\"userId\")"
+    },
+    {
+      "table_name": "user_certifications",
+      "name": "user_certifications_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX user_certifications_pkey ON public.user_certifications USING btree (id)"
+    },
+    {
+      "table_name": "user_certifications",
+      "name": "user_certifications_userId_courseId_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX \"user_certifications_userId_courseId_key\" ON public.user_certifications USING btree (\"userId\", \"courseId\")"
+    },
+    {
+      "table_name": "user_certifications",
+      "name": "user_certifications_userId_expiresAt_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"user_certifications_userId_expiresAt_idx\" ON public.user_certifications USING btree (\"userId\", \"expiresAt\")"
+    },
+    {
+      "table_name": "user_certifications",
+      "name": "user_certifications_userId_status_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"user_certifications_userId_status_idx\" ON public.user_certifications USING btree (\"userId\", status)"
+    },
+    {
+      "table_name": "user_lab_assignments",
+      "name": "user_lab_assignments_laboratoryId_idx",
+      "primary_key": false,
+      "unique_key": false,
+      "exclusion": false,
+      "definition": "CREATE INDEX \"user_lab_assignments_laboratoryId_idx\" ON public.user_lab_assignments USING btree (\"laboratoryId\")"
+    },
+    {
+      "table_name": "user_lab_assignments",
+      "name": "user_lab_assignments_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX user_lab_assignments_pkey ON public.user_lab_assignments USING btree (\"userId\", \"laboratoryId\")"
+    },
+    {
+      "table_name": "users",
+      "name": "users_email_key",
+      "primary_key": false,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email)"
+    },
+    {
+      "table_name": "users",
+      "name": "users_pkey",
+      "primary_key": true,
+      "unique_key": true,
+      "exclusion": false,
+      "definition": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)"
+    }
+  ],
+  "foreignKeys": [
+    {
+      "table_name": "ai_messages",
+      "name": "ai_messages_conversationId_fkey",
+      "target_table": "ai_conversations",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"conversationId\") REFERENCES ai_conversations(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "behavior_event_logs",
+      "name": "behavior_event_logs_scoreId_fkey",
+      "target_table": "user_behavior_scores",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"scoreId\") REFERENCES user_behavior_scores(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_approvedById_fkey",
+      "target_table": "users",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"approvedById\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_requestedById_fkey",
+      "target_table": "users",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"requestedById\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "bookings",
+      "name": "bookings_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "buildings",
+      "name": "buildings_campusId_fkey",
+      "target_table": "campuses",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"campusId\") REFERENCES campuses(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "incident_comments",
+      "name": "incident_comments_incidentId_fkey",
+      "target_table": "incidents",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"incidentId\") REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_assignedToId_fkey",
+      "target_table": "users",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"assignedToId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_bookingId_fkey",
+      "target_table": "bookings",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_reportedById_fkey",
+      "target_table": "users",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"reportedById\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "incidents",
+      "name": "incidents_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "knowledge_chunks",
+      "name": "knowledge_chunks_documentId_fkey",
+      "target_table": "knowledge_documents",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"documentId\") REFERENCES knowledge_documents(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "knowledge_documents",
+      "name": "knowledge_documents_laboratoryId_fkey",
+      "target_table": "laboratories",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"laboratoryId\") REFERENCES laboratories(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "knowledge_documents",
+      "name": "knowledge_documents_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "lab_policies",
+      "name": "lab_policies_laboratoryId_fkey",
+      "target_table": "laboratories",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"laboratoryId\") REFERENCES laboratories(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "laboratories",
+      "name": "laboratories_buildingId_fkey",
+      "target_table": "buildings",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"buildingId\") REFERENCES buildings(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "maintenance_windows",
+      "name": "maintenance_windows_createdById_fkey",
+      "target_table": "users",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"createdById\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "maintenance_windows",
+      "name": "maintenance_windows_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_userId_fkey",
+      "target_table": "users",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "optimization_decisions",
+      "name": "optimization_decisions_runId_fkey",
+      "target_table": "optimization_runs",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"runId\") REFERENCES optimization_runs(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "optimization_runs",
+      "name": "optimization_runs_policyVersionId_fkey",
+      "target_table": "policy_versions",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"policyVersionId\") REFERENCES policy_versions(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "payment_transactions",
+      "name": "payment_transactions_bookingId_fkey",
+      "target_table": "bookings",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "payment_transactions",
+      "name": "payment_transactions_userId_fkey",
+      "target_table": "users",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_bookingId_fkey",
+      "target_table": "bookings",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_optimizationRunId_fkey",
+      "target_table": "optimization_runs",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"optimizationRunId\") REFERENCES optimization_runs(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_requirementId_fkey",
+      "target_table": "resource_requirements",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"requirementId\") REFERENCES resource_requirements(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "resource_allocations",
+      "name": "resource_allocations_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "resource_capabilities",
+      "name": "resource_capabilities_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "resource_requirements",
+      "name": "resource_requirements_bookingId_fkey",
+      "target_table": "bookings",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "resource_requirements",
+      "name": "resource_requirements_userId_fkey",
+      "target_table": "users",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "resource_status_history",
+      "name": "resource_status_history_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "resources",
+      "name": "resources_laboratoryId_fkey",
+      "target_table": "laboratories",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"laboratoryId\") REFERENCES laboratories(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_bookingId_fkey",
+      "target_table": "bookings",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "n",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table_name": "shipment_orders",
+      "name": "shipment_orders_userId_fkey",
+      "target_table": "users",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "telemetry_samples",
+      "name": "telemetry_samples_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "training_requirements",
+      "name": "training_requirements_courseId_fkey",
+      "target_table": "training_courses",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"courseId\") REFERENCES training_courses(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "training_requirements",
+      "name": "training_requirements_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_bookingId_fkey",
+      "target_table": "bookings",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"bookingId\") REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_resourceId_fkey",
+      "target_table": "resources",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"resourceId\") REFERENCES resources(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "usage_logs",
+      "name": "usage_logs_userId_fkey",
+      "target_table": "users",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "user_behavior_scores",
+      "name": "user_behavior_scores_userId_fkey",
+      "target_table": "users",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "user_certifications",
+      "name": "user_certifications_courseId_fkey",
+      "target_table": "training_courses",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"courseId\") REFERENCES training_courses(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "user_certifications",
+      "name": "user_certifications_userId_fkey",
+      "target_table": "users",
+      "on_delete": "c",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table_name": "user_lab_assignments",
+      "name": "user_lab_assignments_laboratoryId_fkey",
+      "target_table": "laboratories",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"laboratoryId\") REFERENCES laboratories(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "user_lab_assignments",
+      "name": "user_lab_assignments_userId_fkey",
+      "target_table": "users",
+      "on_delete": "r",
+      "on_update": "c",
+      "validated": true,
+      "definition": "FOREIGN KEY (\"userId\") REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    }
+  ],
+  "migrations": [
+    {
+      "migration_name": "20260723000100_init",
+      "checksum": "c942177016dabbfa0c3465a5e923bd0edf490f238021b6ca96ab65cdca03be96",
+      "finished_at": "2026-09-18 03:09:26.071608+00",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "20260723000200_remove_resource_owner_default",
+      "checksum": "66a1614148472e82df95e52c3649e6119a54c9029fc0d4b4bc71e25a688939aa",
+      "finished_at": "2026-09-18 03:09:26.077109+00",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "20260723000300_require_explicit_resource_fields",
+      "checksum": "df6b0f54b676d92cda13592f3c55bad7b829d9f79058bc1092bf4894e03b9fa7",
+      "finished_at": "2026-09-18 03:09:26.083437+00",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "20260727000100_add_i18n_message_keys",
+      "checksum": "10b67a12359efa91038b95890c1505666e10648d7dd6a12823088544df2c6ed0",
+      "finished_at": "2026-09-18 03:09:26.08989+00",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "20260817000100_add_maintenance_windows",
+      "checksum": "030a4964d697a5b847f94e38e8e5bbecbf921808867a73f15232864b9597022f",
+      "finished_at": "2026-09-18 03:09:26.10527+00",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "20260820000100_add_booking_guard_constraint",
+      "checksum": "658716b3be743f2bbd81b1c2f4dee5248eb1b9751a8eea693ed19b5a2b32eedb",
+      "finished_at": "2026-09-18 03:09:26.153337+00",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "20260820000200_add_orchestration_provenance_and_policy",
+      "checksum": "ca0da76bb6ef6c8d1f04a518cc8398446e499c0c11bcf70e3155937b61b691c3",
+      "finished_at": "2026-09-18 03:09:26.210829+00",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "20260917000100_reconcile_canonical_persistence",
+      "checksum": "64a214a446b5c7564229f1385f50b1ffc897814931b72b619d98e873d5b7905d",
+      "finished_at": "2026-09-18 03:09:26.626984+00",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    }
+  ],
+  "rows": [
+    {
+      "table": "_prisma_migrations",
+      "count": 8,
+      "content_digest": "8e360c65e4c9edf9b594bac8e5a11e73",
+      "ids": [
+        "27a661d3-2164-4079-81da-fbd0bdcf6468",
+        "3111f0ad-5ef2-40e3-88b1-24f2128e34dd",
+        "4ca968fb-386f-4db7-8a98-9dc049231040",
+        "5918a38f-342a-48e2-8c6a-30e9ea2623ec",
+        "a0accd9c-6dea-461a-8b8a-da7fe4f6b162",
+        "d64f7ef0-c2f3-4822-8917-3c9b47f2b478",
+        "ed0437c6-9565-449b-8ba3-3d742c35e311",
+        "ee6231bb-842c-45da-997b-b0c2bb15d23c"
+      ]
+    },
+    {
+      "table": "ai_conversations",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "ai_messages",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "behavior_event_logs",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "bookings",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "buildings",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "campuses",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "incident_comments",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "incidents",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "knowledge_chunks",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "knowledge_documents",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "lab_policies",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "laboratories",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "maintenance_windows",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "notifications",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "optimization_decisions",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "optimization_runs",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "payment_transactions",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "policy_versions",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "resource_allocations",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "resource_capabilities",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "resource_requirements",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "resource_status_history",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "resources",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "shipment_orders",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "telemetry_samples",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "training_courses",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "training_requirements",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "usage_logs",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "user_behavior_scores",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "user_certifications",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "user_lab_assignments",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    },
+    {
+      "table": "users",
+      "count": 0,
+      "content_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "ids": []
+    }
+  ],
+  "profile": {
+    "roles": null,
+    "booking_statuses": null,
+    "booking_no_show": 0,
+    "behavior_no_show": 0,
+    "users_with_no_show": 0,
+    "telemetry_samples": 0
+  }
+}

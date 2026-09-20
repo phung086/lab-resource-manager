@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Server, ShieldCheck, Lock, Mail, User, BookOpen, ArrowRight, Sparkles, Terminal, CheckCircle2 } from "lucide-react";
+import { register } from "../api.js";
 
 export interface AuthRegisterViewProps {
   onRegisterSuccess: (user: any) => void;
@@ -23,33 +24,24 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
   const [error, setError] = useState("");
 
   const perks = [
-    { title: "Cấp 40 GPU-hours khởi tạo", desc: "Đủ để hoàn thành bài tập lớn và huấn luyện mô hình cơ bản", color: "text-emerald-400" },
-    { title: "Khóa độc quyền GiST Exclusion", desc: "Không bị tranh chấp hay gián đoạn trong suốt khung giờ đã đặt", color: "text-cyan-400" },
-    { title: "Tích lũy Điểm Uy Tín Cá Nhân", desc: "Check-in đúng giờ nhận ngay +15% quota thưởng cho các ca sau", color: "text-amber-400" }
+    { title: "Tài khoản sinh viên mặc định", desc: "Vai trò đặc quyền chỉ do quản trị viên phân công", color: "text-emerald-400" },
+    { title: "Bảo vệ lịch đặt ở cơ sở dữ liệu", desc: "Ngăn hai yêu cầu đồng thời chiếm cùng một tài nguyên", color: "text-cyan-400" },
+    { title: "Quy trình duyệt và bàn giao", desc: "Theo dõi trạng thái đặt lịch và lịch sử sử dụng", color: "text-amber-400" }
   ];
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
-    setTimeout(() => {
+    try {
+      const result = await register({ email, password, fullName, studentId, department });
+      onRegisterSuccess(result.user);
+    } catch (requestError: any) {
+      setError(requestError?.message || "Không thể đăng ký tài khoản.");
+    } finally {
       setIsLoading(false);
-      const newUser = {
-        id: `usr-${Date.now().toString().slice(-4)}`,
-        email: email || "newstudent@ailab.edu.vn",
-        fullName: fullName || "SV. Nghiên Cứu Mới",
-        role: "student",
-        studentId: studentId || "20261234",
-        department: department,
-        quotaUsed: 0,
-        quotaTotal: 40.0
-      };
-
-      localStorage.setItem("lrm_token", "jwt-token-2026-auth-session");
-      localStorage.setItem("lrm_user", JSON.stringify(newUser));
-      onRegisterSuccess(newUser);
-    }, 700);
+    }
   }
 
   return (
@@ -240,7 +232,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 disabled={isLoading}
                 className="mt-2 font-mono text-xs btn-cyan-gradient py-3 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.4)]"
               >
-                <span>{isLoading ? "ĐANG TẠO HỒ SƠ..." : "HOÀN TẤT ĐĂNG KÝ (CẤP 40H QUOTA)"}</span>
+                <span>{isLoading ? "ĐANG TẠO HỒ SƠ..." : "HOÀN TẤT ĐĂNG KÝ"}</span>
                 <ArrowRight size={14} />
               </button>
             </form>

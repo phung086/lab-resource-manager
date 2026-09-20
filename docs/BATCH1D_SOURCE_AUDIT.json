@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-18T03:14:00.619Z",
+  "database": "lab_resources",
+  "readOnly": true,
+  "comparedWith": "lab_resources_b1d_rollback_20260918t0308",
+  "tableCount": 32,
+  "totalRows": 71,
+  "allRowCountsAndContentDigestsMatch": true,
+  "verdict": "UNCHANGED"
+}
