@@ -21,6 +21,10 @@ import {
   checkLabPolicyCompliance
 } from "./availabilityService.js";
 import { applyOperationalStatusChange } from "./resourceService.js";
+import {
+  scheduleBookingReminders,
+  cancelPendingBookingReminders
+} from "./notificationService.js";
 
 const HARD_UNAVAILABLE_RESOURCE_STATES = new Set([
   "MAINTENANCE",
@@ -210,6 +214,10 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
       }
     });
 
+    if (initialStatus === CONFIRMED) {
+      await scheduleBookingReminders(tx, booking);
+    }
+
     return booking;
   });
 }
@@ -356,6 +364,16 @@ export async function transitionBooking({
 
     if (booking.status === PENDING_APPROVAL && [CONFIRMED, REJECTED].includes(toStatus)) {
       await createApprovalNotification(tx, booking, toStatus, now);
+    }
+
+    if (toStatus === CONFIRMED) {
+      await scheduleBookingReminders(tx, result, now);
+    } else if (toStatus === CHECKED_OUT) {
+      await cancelPendingBookingReminders(tx, booking.id, ["BOOKING_UPCOMING"]);
+    } else if ([REJECTED, CANCELLED].includes(toStatus)) {
+      await cancelPendingBookingReminders(tx, booking.id);
+    } else if ([RETURNED, COMPLETED].includes(toStatus)) {
+      await cancelPendingBookingReminders(tx, booking.id, ["RETURN_REMINDER"]);
     }
 
     return physicalStateWarning ? { ...result, physicalStateWarning } : result;
