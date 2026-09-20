@@ -373,7 +373,13 @@ test("Batch 1E-L2 isolated canonical runtime", { timeout: 180000 }, async (t) =>
       ] });
       const list = await request(app).get("/api/notifications").set(bearer(tokens.student));
       assert.equal(list.status, 200);
-      assert.deepEqual(list.body.map((item) => item.id), [ownId]);
+      // Earlier lifecycle subtests may now persist legitimate Batch 5
+      // approval/rejection notifications for this same owner. Keep the Batch
+      // 1E assertion focused on its original security invariant: own
+      // notifications are visible and another user's notification is not.
+      assert.equal(list.body.some((item) => item.id === ownId), true);
+      assert.equal(list.body.some((item) => item.id === otherId), false);
+      assert.ok(list.body.every((item) => item.userId === fixture.users.student));
       const read = await request(app).post(`/api/notifications/${ownId}/read`).set(bearer(tokens.student));
       assert.equal(read.status, 200);
       assert.ok((await prisma.notification.findUnique({ where: { id: ownId } })).readAt);
