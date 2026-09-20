@@ -248,7 +248,14 @@ test("Batch 1E-L2 isolated canonical runtime", { timeout: 180000 }, async (t) =>
       assert.equal(row.handoverCondition, "Good before use");
       assert.equal(row.returnCondition, "Good after use");
       const logs = await prisma.usageLog.findMany({ where: { bookingId: pendingBooking.id }, orderBy: { createdAt: "asc" } });
-      assert.deepEqual(logs.map((log) => log.action), ["REQUEST", "APPROVE", "CHECK_OUT", "RETURN", "COMPLETE"]);
+      // Batch 5 adds real physical resource status audit rows during handover
+      // and return. Preserve the original booking-transition invariant while
+      // allowing those attributable STATUS_CHANGE rows to coexist.
+      assert.deepEqual(
+        logs.filter((log) => log.action !== "STATUS_CHANGE").map((log) => log.action),
+        ["REQUEST", "APPROVE", "CHECK_OUT", "RETURN", "COMPLETE"]
+      );
+      assert.equal(logs.filter((log) => log.action === "STATUS_CHANGE").length, 2);
       assert.ok(logs.every((log) => log.userId));
     });
 
@@ -379,7 +386,11 @@ test("Batch 1E-L2 isolated canonical runtime", { timeout: 180000 }, async (t) =>
       // notifications are visible and another user's notification is not.
       assert.equal(list.body.some((item) => item.id === ownId), true);
       assert.equal(list.body.some((item) => item.id === otherId), false);
-      assert.ok(list.body.every((item) => item.userId === fixture.users.student));
+      const visibleRows = await prisma.notification.findMany({
+        where: { id: { in: list.body.map((item) => item.id) } },
+        select: { userId: true }
+      });
+      assert.ok(visibleRows.every((item) => item.userId === fixture.users.student));
       const read = await request(app).post(`/api/notifications/${ownId}/read`).set(bearer(tokens.student));
       assert.equal(read.status, 200);
       assert.ok((await prisma.notification.findUnique({ where: { id: ownId } })).readAt);
