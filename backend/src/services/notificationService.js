@@ -98,7 +98,10 @@ export async function cancelPendingBookingReminders(tx, bookingId, types = REMIN
 export async function dispatchDueNotifications(client = prisma, now = new Date(), userId = null) {
   const where = {
     sentAt: null,
-    scheduledAt: { lte: now },
+    OR: [
+      { scheduledAt: null },
+      { scheduledAt: { lte: now } }
+    ],
     ...(userId ? { userId } : {})
   };
   const result = await client.notification.updateMany({
