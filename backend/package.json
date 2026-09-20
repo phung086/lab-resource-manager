@@ -15,14 +15,19 @@
     "db:seed:admin": "node prisma/seedAdmin.js",
     "import:resources": "node scripts/importResources.js",
     "db:seed": "node prisma/seedBookingPlatform.js",
-    "test": "npm run test:core",
+    "test": "npm run test:required",
     "test:core": "node --test test/bookingOverlap.test.js test/dataContract.test.js test/batch1e/bookingStateMachine.test.js test/batch1e/dataContract.test.js test/batch1e/errors.test.js test/batch1e/labScope.test.js test/batch1e/mockSafety.test.js test/batch1e/roleConstants.test.js",
     "test:batch2": "node --test test/batch2.auth-rbac.integration.test.js",
     "test:batch3": "node --test test/batch3.resource-management.integration.test.js",
     "test:batch4": "node --test test/batch4/bookingPolicy.test.js test/batch4.booking-calendar.integration.test.js",
     "test:all": "node --test",
     "test:batch5": "node --test test/batch5.operational-workflow.integration.test.js",
-    "test:batch6": "node --test test/batch6.notifications-incidents-dashboard.integration.test.js"
+    "test:batch6": "node --test test/batch6.notifications-incidents-dashboard.integration.test.js",
+    "lint": "npx --yes eslint@9.17.0 \"src/**/*.js\" \"prisma/*.js\" \"scripts/**/*.mjs\"",
+    "verify:prod-config": "node scripts/verifyProductionConfig.mjs",
+    "demo:seed-infrastructure": "node scripts/seedGraduationDemoInfrastructure.mjs",
+    "test:required": "npm run test:core",
+    "test:research": "node --test test/concurrency.test.js test/conflictForecasting.test.js test/geneticScheduler.test.js test/hybridDispatch.test.js test/integrations.test.js test/mqttTelemetry.test.js test/multiObjectiveAndBenchmark.test.js test/optimization.test.js test/orchestrationV2.test.js test/reputationScore.test.js test/services.test.js test/smartBookingPlatform.test.js"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
