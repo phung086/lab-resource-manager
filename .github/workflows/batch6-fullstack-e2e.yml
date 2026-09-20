@@ -53,7 +53,6 @@ jobs:
           JWT_SECRET=batch6-fullstack-ci-secret-at-least-32-characters
           CORS_ORIGINS=http://127.0.0.1:5177
           PORT=5002
-          TELEMETRY_API_KEY=batch6-fullstack-telemetry-key-at-least-32-chars
           REMINDER_SCHEDULER_ENABLED=false
           EOF
 
@@ -134,7 +133,6 @@ jobs:
               JWT_SECRET=batch6-fullstack-ci-secret-at-least-32-characters \
               CORS_ORIGINS=http://127.0.0.1:5177 \
               PORT=5002 \
-              TELEMETRY_API_KEY=batch6-fullstack-telemetry-key-at-least-32-chars \
               REMINDER_SCHEDULER_ENABLED=false \
               NODE_ENV=test \
               node backend/src/server.js >"$BACKEND_LOG" 2>&1 &

@@ -24,7 +24,6 @@ export async function configureBatch7TestEnvironment(database) {
   process.env.DATABASE_URL = url.toString();
   process.env.JWT_SECRET = "batch7-production-demo-secret-at-least-32-characters";
   process.env.CORS_ORIGINS = "http://127.0.0.1:5177";
-  process.env.TELEMETRY_API_KEY = "batch7-telemetry-key-at-least-32-characters";
   process.env.REMINDER_SCHEDULER_ENABLED = "false";
   return url.toString();
 }

@@ -15,7 +15,8 @@
     "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
     "typecheck": "tsc -p tsconfig.check.json",
     "test:required": "npm run lint && npm run typecheck && npm run build",
-    "test:e2e:demo": "node test_batch7_graduation_demo_e2e.mjs"
+    "test:e2e:demo": "node test_batch7_graduation_demo_e2e.mjs",
+    "test:e2e:smart-monitoring": "node test_batch8_smart_monitoring_e2e.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",

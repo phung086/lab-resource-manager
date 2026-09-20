@@ -23,7 +23,7 @@ const marker = crypto.randomUUID();
 const id = () => crypto.randomUUID();
 const password = "Batch6!Pass";
 const bearer = (token) => ({ Authorization: `Bearer ${token}` });
-const telemetryKey = process.env.TELEMETRY_API_KEY;
+const telemetryCredentials = new Map();
 
 const fixture = {
   campus: id(),
@@ -156,11 +156,8 @@ async function login(key) {
 async function ingest(resourceId, body = {}) {
   return request(app)
     .post("/api/telemetry/samples")
-    .set("x-telemetry-api-key", telemetryKey)
+    .set("x-telemetry-source-token", telemetryCredentials.get(resourceId) || "")
     .send({
-      labId: fixture.labs.assigned,
-      resourceId,
-      source: "batch6-agent",
       timestamp: new Date().toISOString(),
       temperatureC: 30,
       humidityPercent: 50,
@@ -175,6 +172,16 @@ test("Batch 6 notifications, incidents, dashboard and telemetry", { timeout: 180
     ["admin", "staff", "foreignStaff", "studentA", "studentB", "lecturer"]
       .map(async (key) => [key, await login(key)])
   ));
+  for (const [key, resourceId] of Object.entries(fixture.resources)) {
+    if (key === "noData") continue;
+    const laboratoryId = key === "foreign" ? fixture.labs.foreign : fixture.labs.assigned;
+    const created = await request(app)
+      .post("/api/telemetry/sources")
+      .set(bearer(tokens.admin))
+      .send({ code: `B6-${key}-${marker}`, name: `Batch 6 ${key} source`, laboratoryId, resourceId });
+    assert.equal(created.status, 201);
+    telemetryCredentials.set(resourceId, created.body.credential);
+  }
 
   await t.test("confirmed booking schedules durable upcoming and return reminders", async () => {
     const { start, end } = futureWindow(2);
@@ -308,18 +315,16 @@ test("Batch 6 notifications, incidents, dashboard and telemetry", { timeout: 180
   await t.test("telemetry validates lab ownership and numeric/timestamp sanity", async () => {
     const wrongLab = await request(app)
       .post("/api/telemetry/samples")
-      .set("x-telemetry-api-key", telemetryKey)
+      .set("x-telemetry-source-token", telemetryCredentials.get(fixture.resources.healthy))
       .send({
         labId: fixture.labs.foreign,
-        resourceId: fixture.resources.healthy,
-        source: "batch6-agent",
         timestamp: new Date().toISOString(),
         temperatureC: 25,
         humidityPercent: 50,
         online: true
       });
-    assert.equal(wrongLab.status, 400);
-    assert.equal(wrongLab.body.error.code, "TELEMETRY_RESOURCE_SCOPE_MISMATCH");
+    assert.equal(wrongLab.status, 403);
+    assert.equal(wrongLab.body.error.code, "TELEMETRY_SOURCE_SCOPE_MISMATCH");
 
     assert.equal((await ingest(fixture.resources.healthy, { humidityPercent: 101 })).status, 400);
     assert.equal((await ingest(fixture.resources.healthy, { timestamp: new Date(Date.now() + 10 * 60_000).toISOString() })).status, 400);

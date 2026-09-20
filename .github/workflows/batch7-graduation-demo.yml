@@ -48,7 +48,6 @@ jobs:
           POSTGRES_USER=lab_user
           POSTGRES_PASSWORD=Batch7Database!Passphrase
           JWT_SECRET=batch7-production-jwt-secret-at-least-32-characters
-          TELEMETRY_API_KEY=batch7-production-telemetry-key-at-least-32-characters
           OPENAI_API_KEY=
           OPENAI_MODEL=
           ADMIN_EMAIL=admin@demo.local
@@ -61,7 +60,7 @@ jobs:
           REMINDER_SCHEDULER_ENABLED=false
           BOOKING_UPCOMING_REMINDER_MINUTES=10080
           RETURN_REMINDER_MINUTES=15
-          LOG_FORMAT=combined
+          LRM_LOG_FORMAT=combined
           APP_PORT=8080
           PROMETHEUS_PORT=19090
           VITE_APP_NAME=Quản lý phòng thí nghiệm

@@ -50,7 +50,6 @@ jobs:
           JWT_SECRET=batch6-ci-base-secret-at-least-32-characters
           CORS_ORIGINS=http://127.0.0.1:5177
           PORT=5002
-          TELEMETRY_API_KEY=batch6-ci-telemetry-key-at-least-32-chars
           REMINDER_SCHEDULER_ENABLED=false
           EOF
 
@@ -118,6 +117,4 @@ jobs:
         run: BATCH5_DATABASE=lab_resources_b5_operations_ci npm run test:batch5
 
       - name: Batch 6 notifications incidents dashboard and telemetry
-        env:
-          TELEMETRY_API_KEY: batch6-ci-telemetry-key-at-least-32-chars
         run: BATCH6_DATABASE=lab_resources_b6_monitoring_ci npm run test:batch6
