@@ -21,7 +21,8 @@
     "test:batch3": "node --test test/batch3.resource-management.integration.test.js",
     "test:batch4": "node --test test/batch4/bookingPolicy.test.js test/batch4.booking-calendar.integration.test.js",
     "test:all": "node --test",
-    "test:batch5": "node --test test/batch5.operational-workflow.integration.test.js"
+    "test:batch5": "node --test test/batch5.operational-workflow.integration.test.js",
+    "test:batch6": "node --test test/batch6.notifications-incidents-dashboard.integration.test.js"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",

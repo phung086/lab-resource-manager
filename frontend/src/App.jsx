@@ -56,7 +56,6 @@ import { GeneticAlgorithmVisualizer } from "./components/GeneticAlgorithmVisuali
 import { AiDiagnosticStudio } from "./components/AiDiagnosticStudio.jsx";
 import { OrchestrationWizard } from "./components/OrchestrationWizard.tsx";
 import { WhatIfSimulationStudio } from "./components/WhatIfSimulationStudio.tsx";
-import { MissionControlOverview } from "./components/MissionControlOverview.jsx";
 import { ParetoFrontierExplorer } from "./components/ParetoFrontierExplorer.tsx";
 import { DecisionTimelineReplay } from "./components/DecisionTimelineReplay.tsx";
 import { AiMissionCopilot } from "./components/AiMissionCopilot.jsx";
@@ -67,9 +66,10 @@ import { CostChargebackReport } from "./components/CostChargebackReport.tsx";
 import { PolicyRulesConfig } from "./components/PolicyRulesConfig.tsx";
 import { EscalationsView } from "./components/EscalationsView.tsx";
 import { AuditLogsView } from "./components/AuditLogsView.tsx";
-import { IncidentManagementView } from "./components/IncidentManagementView.tsx";
 import { AccessUserManagement } from "./components/AccessUserManagement.tsx";
 import { NotificationCenter } from "./components/NotificationCenter.jsx";
+import { IncidentsPage } from "./pages/incidents/IncidentsPage.tsx";
+import { MonitoringDashboardPage } from "./pages/monitoring/MonitoringDashboardPage.tsx";
 import {
   emptyBookingForm,
   emptyMaintenanceForm,
@@ -115,7 +115,7 @@ function getInitialLocale() {
 }
 
 const ADMIN_ONLY_TABS = new Set(["users", "quota_fairness", "chargeback", "policy_config", "logs"]);
-const STAFF_ONLY_TABS = new Set(["admin_management", "conflict_queue", "escalations", "allocations", "dashboard", "maintenance", "incidents", "monitoring"]);
+const STAFF_ONLY_TABS = new Set(["admin_management", "conflict_queue", "allocations", "dashboard", "maintenance", "monitoring"]);
 
 function canAccessTab(role, tabId) {
   if (ADMIN_ONLY_TABS.has(tabId)) return role === "ADMIN";
@@ -196,6 +196,7 @@ function App() {
         bookings: apiRequest("/bookings"),
         maintenance: apiRequest("/maintenance"),
         notifications: apiRequest("/notifications"),
+        incidents: apiRequest("/incidents"),
         ...(["ADMIN", "LAB_STAFF"].includes(user.role) ? { dashboard: apiRequest("/dashboard") } : {}),
         ...(user.role === "ADMIN" ? { users: apiRequest("/users") } : {})
       };
@@ -211,7 +212,7 @@ function App() {
       setNotifications(value("notifications", []));
       setUsers(value("users", []));
       setLogs([]);
-      setIncidents([]);
+      setIncidents(value("incidents", []));
       setTrainings({ courses: [], certifications: [] });
 
       const failed = entries
@@ -320,8 +321,8 @@ function App() {
       {activeTab === "quota_fairness" && <QuotaFairnessDashboard />}
       {activeTab === "chargeback" && <CostChargebackReport />}
       {activeTab === "policy_config" && <PolicyRulesConfig />}
-      {activeTab === "escalations" && <EscalationsView />}
-      {activeTab === "dashboard" && <MissionControlOverview dashboard={dashboard} resources={resources} onNavigate={setActiveTab} />}
+      {activeTab === "escalations" && <NotificationCenter notifications={notifications} onChanged={loadData} />}
+      {activeTab === "dashboard" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
       {activeTab === "allocations" && <OrchestrationWizard onAllocated={loadData} />}
       {activeTab === "pareto" && <ParetoFrontierExplorer />}
       {activeTab === "timeline" && <DecisionTimelineReplay />}
@@ -335,9 +336,9 @@ function App() {
       {activeTab === "bookings" && <BookingOperationsPage user={user} onChanged={loadData} />}
       {activeTab === "optimization" && <OptimizationHubView />}
       {activeTab === "maintenance" && <MaintenanceView resources={resources} maintenance={maintenance} isStaff={isStaff} onChanged={loadData} />}
-      {activeTab === "incidents" && <IncidentManagementView />}
+      {activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
       {activeTab === "training" && <TrainingView courses={trainings.courses} certifications={trainings.certifications} resources={resources} user={user} isStaff={isStaff} onChanged={loadData} />}
-      {activeTab === "monitoring" && <MonitoringView telemetry={dashboard?.telemetry || []} />}
+      {activeTab === "monitoring" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
       {activeTab === "logs" && <AuditLogsView />}
       {activeTab === "users" && <AccessUserManagement />}
 

@@ -19,6 +19,8 @@ import bookingRouter from "./routes/bookings.js";
 import maintenanceRouter from "./routes/maintenance.js";
 import dashboardRouter from "./routes/dashboard.js";
 import notificationRouter from "./routes/notifications.js";
+import incidentRouter from "./routes/incidents.js";
+import telemetryRouter from "./routes/telemetry.js";
 
 export function createApp() {
   const app = express();
@@ -99,6 +101,8 @@ export function createApp() {
   // 7. Dashboard & Notifications
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/notifications", notificationRouter);
+  app.use("/api/incidents", incidentRouter);
+  app.use("/api/telemetry", telemetryRouter);
 
   // Error handling
   app.use(notFoundHandler);
