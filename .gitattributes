@@ -1,5 +1,7 @@
-# Historical migration checksums were verified from the original Windows workspace.
-# Materialize migration SQL with CRLF on every platform so Prisma sees the same bytes.
+# Keep migration checkout bytes deterministic across platforms. Historical
+# Batch 1 checksum snapshots predate the current repository materialization;
+# the canonical deployment bridge handles that known reconciliation without
+# editing tracked migration SQL or _prisma_migrations manually.
 backend/prisma/migrations/**/migration.sql text eol=crlf
 
 # Keep application source and documentation portable and deterministic.
