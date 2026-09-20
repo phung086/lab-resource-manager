@@ -122,6 +122,8 @@ administrator configuration and were not changed locally.
   human decision.
 - Frontend lint retains 14 existing hook/fast-refresh warnings; there are zero
   errors.
+- ESLint 9.39.5 is audit-clean but npm marks that major line unsupported; a
+  coordinated ESLint/plugin upgrade remains tooling debt.
 - The main entry bundle is approximately 397 kB minified; optional research is
   split but older core UI still has scoped refactoring opportunities.
 - Not every administrative/laboratory metadata mutation has a dedicated

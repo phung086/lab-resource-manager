@@ -109,6 +109,9 @@ replacement for physical safety systems or laboratory procedures.
 - Five resources remain intentionally unclassified pending an authoritative
   human review decision.
 - Frontend lint has 14 existing hook/fast-refresh warnings and zero errors.
+- ESLint 9.39.5 is audit-clean but npm marks the major line unsupported; a
+  future tooling-only upgrade must move ESLint and its React/TypeScript plugins
+  together and re-run the complete lint gate.
 - The main entry bundle is approximately 397 kB minified; older core UI still
   has scoped refactoring opportunities.
 - Dedicated immutable audit models are not present for every administrative
