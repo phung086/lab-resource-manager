@@ -11,7 +11,11 @@
     "test:e2e:resources": "node test_batch3_resources_e2e.mjs",
     "test:e2e:calendar": "node test_batch4_calendar_e2e.mjs",
     "test:e2e:operations": "node test_batch5_operations_e2e.mjs",
-    "test:e2e:monitoring": "node test_batch6_monitoring_e2e.mjs"
+    "test:e2e:monitoring": "node test_batch6_monitoring_e2e.mjs",
+    "lint": "npx --yes eslint@9.17.0 \"src/**/*.{js,jsx}\"",
+    "typecheck": "npx --yes -p typescript@5.7.3 -p @types/react@19.0.3 -p @types/react-dom@19.0.2 tsc -p tsconfig.check.json",
+    "test:required": "npm run lint && npm run typecheck && npm run build",
+    "test:e2e:demo": "node test_batch7_graduation_demo_e2e.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",
