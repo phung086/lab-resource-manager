@@ -31,17 +31,19 @@ export function currentInterval(now = new Date()) {
   return { startAt: now, endAt: new Date(now.getTime() + 1) };
 }
 
-export function resourceAvailability(resource, { startAt, endAt } = currentInterval()) {
+export function resourceAvailability(resource, interval = null) {
   let state = "AVAILABLE";
   let source = "resource";
 
+  const isCurrentQuery = interval == null;
+  const { startAt, endAt } = interval || currentInterval();
   const now = new Date();
   const intervalIncludesNow = startAt <= now && endAt > now;
 
   if (BLOCKING_OPERATIONAL_STATUSES.has(resource.operationalStatus)) {
     state = resource.operationalStatus;
     source = "operational_status";
-  } else if (resource.operationalStatus === "IN_USE" && intervalIncludesNow) {
+  } else if (resource.operationalStatus === "IN_USE" && (isCurrentQuery || intervalIncludesNow)) {
     state = "IN_USE";
     source = "operational_status";
   } else if (resource.bookingState !== "bookable") {
