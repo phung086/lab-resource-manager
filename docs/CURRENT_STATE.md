@@ -11,8 +11,10 @@ merged to `main` at `a9589d9940c7984324152f8a5636f5f67189b322`.
 Approval, rejection, handover/check-out,
 condition-before evidence, return, condition-after evidence, completion,
 persisted history, notifications, physical-state synchronization, concurrency
-safety, and full-stack E2E have passed. Batch 6 - Notifications, Incidents, Dashboard & Real Telemetry is complete and
-verified on `batch6-notifications-incidents-dashboard`. Batch 7 is NOT authorized.
+safety, and full-stack E2E have passed. Batch 6 - Notifications, Incidents, Dashboard & Real Telemetry is complete,
+verified, and merged to `main` at
+`2dd67ca6f3076849760cecd066ab8eebfdc841d8`. Batch 7 is explicitly authorized
+and is the current implementation boundary.
 
 ## Completed Core Work
 
@@ -107,10 +109,8 @@ None known through the verified Batch 6 required-core boundary.
 
 ## Next Authorized Task
 
-No next batch is currently authorized.
-
-Batch 4/4.1, Batch 5 and Batch 6 are complete and verified. Batch 7 may be
-planned only after explicit user authorization. Before any future batch, read:
+Batch 7 - Production Demo Hardening is explicitly authorized. Do not start
+Batch 8 automatically after Batch 7. Before any future batch, read:
 
 1. `AGENTS.md`
 2. `.agent/PROJECT_RULES.md`
