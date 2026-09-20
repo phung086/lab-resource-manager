@@ -79,6 +79,7 @@ import {
 import { defaultLocale, getDictionary, interpolate, localeOptions, localeStorageKey, normalizeLocale } from "./i18n.js";
 import { buildMonitoringRows, getMonitoringSummary, toBarWidth } from "./monitoring.js";
 import { classNames, formatDateTime, formatPercent } from "./utils.js";
+import { RESEARCH_FEATURES_ENABLED, isTabEnabled } from "./config/featureFlags";
 
 let copy = getDictionary(defaultLocale);
 
@@ -118,6 +119,7 @@ const ADMIN_ONLY_TABS = new Set(["users", "quota_fairness", "chargeback", "polic
 const STAFF_ONLY_TABS = new Set(["admin_management", "conflict_queue", "allocations", "dashboard", "maintenance", "monitoring"]);
 
 function canAccessTab(role, tabId) {
+  if (!isTabEnabled(tabId)) return false;
   if (ADMIN_ONLY_TABS.has(tabId)) return role === "ADMIN";
   if (STAFF_ONLY_TABS.has(tabId)) return role === "ADMIN" || role === "LAB_STAFF";
   return true;
@@ -184,7 +186,7 @@ function App() {
 
   useMemo(() => buildNavItems(copy), [locale]);
   const isStaff = user && ["ADMIN", "LAB_STAFF"].includes(user.role);
-  const researchFeaturesEnabled = import.meta.env.VITE_ENABLE_RESEARCH_FEATURES === "true";
+  const researchFeaturesEnabled = RESEARCH_FEATURES_ENABLED;
 
   async function loadData() {
     if (!user) return;
@@ -371,12 +373,14 @@ function App() {
         </>
       )}
 
-      <SafetyQuizModal
-        isOpen={activeGlobalModal?.type === "safety_quiz"}
-        onClose={() => setActiveGlobalModal(null)}
-        courseTitle={activeGlobalModal?.payload?.title || "Khóa Huấn Luyện An Toàn Cụm Máy Chủ GPU & Thiết Bị Bay 2026"}
-        onPassed={() => loadData()}
-      />
+      {researchFeaturesEnabled && (
+        <SafetyQuizModal
+          isOpen={activeGlobalModal?.type === "safety_quiz"}
+          onClose={() => setActiveGlobalModal(null)}
+          courseTitle={activeGlobalModal?.payload?.title || "Research safety quiz demo"}
+          onPassed={() => loadData()}
+        />
+      )}
 
     </AppLayout>
   );
