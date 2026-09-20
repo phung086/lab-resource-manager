@@ -33,20 +33,22 @@ try {
   await login(studentPage, "b6.student@lab.test");
 
   await openNav(studentPage, /Thông Báo/i);
-  await studentPage.getByRole("heading", { name: "Trung tâm thông báo" }).waitFor();
+  await studentPage.locator("main").getByRole("heading", { name: "Trung tâm thông báo" }).waitFor();
   assert.equal(await studentPage.getByText("Batch 6 lịch sắp bắt đầu").count(), 1);
   assert.equal(await studentPage.getByText("Batch 6 nhắc trả trong tương lai").count(), 0);
 
   const visibleNotification = studentPage.locator(".notification-card", { hasText: "Batch 6 lịch sắp bắt đầu" });
-  await visibleNotification.getByRole("button", { name: "Đã đọc" }).click();
-  await studentPage.waitForResponse((response) =>
-    response.url().includes("/api/notifications/") && response.url().endsWith("/read") && response.status() === 200
-  ).catch(() => null);
+  await Promise.all([
+    studentPage.waitForResponse((response) =>
+      response.url().includes("/api/notifications/") && response.url().endsWith("/read") && response.status() === 200
+    ),
+    visibleNotification.getByRole("button", { name: "Đã đọc" }).click()
+  ]);
   await studentPage.screenshot({ path: path.join(screenshotDir, "student_notifications_desktop.png"), fullPage: true });
 
   console.log("=== BATCH 6 STUDENT INCIDENT REPORT ===");
   await openNav(studentPage, /Sự Cố Tài Nguyên/i);
-  await studentPage.getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
+  await studentPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
   assert.equal(await studentPage.getByText("Batch 6 sự cố phòng B").count(), 1);
   await studentPage.getByRole("button", { name: "Báo cáo sự cố" }).click();
   let dialog = studentPage.getByRole("dialog");
@@ -68,26 +70,30 @@ try {
   const staffPage = await staffContext.newPage();
   await login(staffPage, "b6.staff@lab.test");
   await openNav(staffPage, /Sự Cố Tài Nguyên/i);
-  await staffPage.getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
+  await staffPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
   assert.equal(await staffPage.getByText("Batch 6 quạt làm mát bất thường").count(), 1);
   assert.equal(await staffPage.getByText("Batch 6 sự cố phòng B").count(), 0);
   assert.equal(await staffPage.getByText("Batch 6 báo cáo từ sinh viên").count(), 1);
 
   const incidentCard = staffPage.locator(".operational-card", { hasText: "Batch 6 quạt làm mát bất thường" });
-  await incidentCard.getByRole("button", { name: "Phân loại" }).click();
-  await staffPage.waitForResponse((response) => response.url().includes("/triage") && response.status() === 200).catch(() => null);
+  await Promise.all([
+    staffPage.waitForResponse((response) => response.url().includes("/triage") && response.status() === 200),
+    incidentCard.getByRole("button", { name: "Phân loại" }).click()
+  ]);
   const refreshedCard = staffPage.locator(".operational-card", { hasText: "Batch 6 quạt làm mát bất thường" });
   if (await refreshedCard.getByRole("button", { name: "Bắt đầu điều tra" }).count()) {
-    await refreshedCard.getByRole("button", { name: "Bắt đầu điều tra" }).click();
-    await staffPage.waitForResponse((response) => response.url().includes("/investigate") && response.status() === 200).catch(() => null);
+    await Promise.all([
+      staffPage.waitForResponse((response) => response.url().includes("/investigate") && response.status() === 200),
+      refreshedCard.getByRole("button", { name: "Bắt đầu điều tra" }).click()
+    ]);
   }
 
   const cardBeforeResolve = staffPage.locator(".operational-card", { hasText: "Batch 6 quạt làm mát bất thường" });
   await cardBeforeResolve.getByRole("button", { name: "Xác nhận đã xử lý" }).click();
   dialog = staffPage.getByRole("dialog");
   await dialog.getByRole("button", { name: "Lưu kết quả xử lý" }).click();
-  assert.equal(await dialog.getByRole("alert").count(), 0);
-  // The page-level alert carries validation feedback; no request must be sent until evidence exists.
+  await staffPage.getByRole("alert").getByText(/Cần nhập kết quả xử lý thực tế/).waitFor();
+  // Validation must stop the request until real resolution evidence exists.
   await dialog.getByLabel("Kết quả xử lý thực tế").fill("Đã kiểm tra cụm làm mát, siết lại quạt và xác nhận thông số vận hành ổn định.");
   await Promise.all([
     staffPage.waitForResponse((response) => response.url().includes("/resolve") && response.status() === 200),
@@ -97,7 +103,7 @@ try {
 
   console.log("=== BATCH 6 REAL DASHBOARD & TELEMETRY STATES ===");
   await openNav(staffPage, /Bảng Điều Khiển Vận Hành/i);
-  await staffPage.getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
+  await staffPage.locator("main").getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
   const dashboardText = await staffPage.locator("main").innerText();
   for (const state of ["HEALTHY", "WARNING", "STALE", "UNAVAILABLE", "NO_DATA"]) {
     assert.ok(dashboardText.includes(state), `Dashboard must show ${state}`);
@@ -115,11 +121,11 @@ try {
   const foreignPage = await foreignContext.newPage();
   await login(foreignPage, "b6.foreign.staff@lab.test");
   await openNav(foreignPage, /Sự Cố Tài Nguyên/i);
-  await foreignPage.getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
+  await foreignPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
   assert.equal(await foreignPage.getByText("Batch 6 sự cố phòng B").count(), 1);
   assert.equal(await foreignPage.getByText("Batch 6 quạt làm mát bất thường").count(), 0);
   await openNav(foreignPage, /Bảng Điều Khiển Vận Hành/i);
-  await foreignPage.getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
+  await foreignPage.locator("main").getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
   const foreignDashboard = await foreignPage.locator("main").innerText();
   assert.ok(foreignDashboard.includes("Thiết bị phòng B"));
   assert.equal(foreignDashboard.includes("Máy đo môi trường A"), false);
@@ -130,7 +136,7 @@ try {
   const adminPage = await adminContext.newPage();
   await login(adminPage, "b6.admin@lab.test");
   await openNav(adminPage, /Bảng Điều Khiển Vận Hành/i);
-  await adminPage.getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
+  await adminPage.locator("main").getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
   const adminDashboard = await adminPage.locator("main").innerText();
   assert.ok(adminDashboard.includes("Máy đo môi trường A"));
   assert.ok(adminDashboard.includes("Thiết bị phòng B"));
@@ -141,7 +147,7 @@ try {
   const mobilePage = await mobileContext.newPage();
   await login(mobilePage, "b6.staff@lab.test");
   await openNav(mobilePage, /Bảng Điều Khiển Vận Hành/i);
-  await mobilePage.getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
+  await mobilePage.locator("main").getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
   assert.equal(await mobilePage.locator(".telemetry-status-card").first().isVisible(), true);
   await mobilePage.screenshot({ path: path.join(screenshotDir, "staff_dashboard_mobile.png"), fullPage: true });
   await mobileContext.close();
