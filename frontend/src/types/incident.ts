@@ -5,7 +5,7 @@ export interface IncidentRecord {
   id: string;
   resourceId: string;
   bookingId?: string | null;
-  reportedById: string;
+  reportedById?: string | null;
   assignedToId?: string | null;
   severity: IncidentSeverity;
   status: IncidentStatus;

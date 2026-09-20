@@ -154,6 +154,17 @@ enum IncidentStatus {
   closed
 }
 
+enum MonitoringAlertSeverity {
+  WARNING
+  CRITICAL
+}
+
+enum MonitoringAlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
 enum CertificationStatus {
   pending
   active
@@ -188,22 +199,27 @@ model Building {
 }
 
 model Laboratory {
-  id                 String              @id
-  buildingId         String
-  name               String
-  code               String              @unique
-  description        String?
-  capacity           Int                 @default(0)
-  openingTime        String?
-  closingTime        String?
-  isActive           Boolean             @default(true)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  building           Building            @relation(fields: [buildingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  resources          Resource[]
-  labPolicy          LabPolicy?
-  knowledgeDocuments KnowledgeDocument[]
-  staffAssignments   UserLabAssignment[]
+  id                  String                         @id
+  buildingId          String
+  name                String
+  code                String                         @unique
+  description         String?
+  capacity            Int                            @default(0)
+  openingTime         String?
+  closingTime         String?
+  isActive            Boolean                        @default(true)
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
+  building            Building                       @relation(fields: [buildingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  resources           Resource[]
+  labPolicy           LabPolicy?
+  knowledgeDocuments  KnowledgeDocument[]
+  staffAssignments    UserLabAssignment[]
+  telemetrySources    TelemetrySource[]
+  monitoringThreshold LaboratoryMonitoringThreshold?
+  monitoringAlerts    MonitoringAlert[]
+  cameras             Camera[]
+  cameraAccessAudits  CameraAccessAudit[]
 
   @@index([buildingId])
   @@map("laboratories")
@@ -228,30 +244,32 @@ model LabPolicy {
 }
 
 model User {
-  id                 String                @id
-  email              String                @unique
-  fullName           String
-  role               Role
-  passwordHash       String
-  studentId          String?
-  department         String?
-  phone              String?
-  isActive           Boolean               @default(true)
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @default(now()) @updatedAt
-  bookings           Booking[]             @relation("Requester")
-  approvals          Booking[]             @relation("Approver")
-  maintenanceWindows MaintenanceWindow[]   @relation("MaintenanceCreator")
-  usageLogs          UsageLog[]
-  notifications      Notification[]
-  certifications     UserCertification[]
-  reportedIncidents  Incident[]            @relation("IncidentReporter")
-  assignedIncidents  Incident[]            @relation("IncidentAssignee")
-  payments           PaymentTransaction[]
-  shipments          ShipmentOrder[]
-  requirements       ResourceRequirement[]
-  behaviorScore      UserBehaviorScore?
-  labAssignments     UserLabAssignment[]
+  id                           String                @id
+  email                        String                @unique
+  fullName                     String
+  role                         Role
+  passwordHash                 String
+  studentId                    String?
+  department                   String?
+  phone                        String?
+  isActive                     Boolean               @default(true)
+  createdAt                    DateTime              @default(now())
+  updatedAt                    DateTime              @default(now()) @updatedAt
+  bookings                     Booking[]             @relation("Requester")
+  approvals                    Booking[]             @relation("Approver")
+  maintenanceWindows           MaintenanceWindow[]   @relation("MaintenanceCreator")
+  usageLogs                    UsageLog[]
+  notifications                Notification[]
+  certifications               UserCertification[]
+  reportedIncidents            Incident[]            @relation("IncidentReporter")
+  assignedIncidents            Incident[]            @relation("IncidentAssignee")
+  payments                     PaymentTransaction[]
+  shipments                    ShipmentOrder[]
+  requirements                 ResourceRequirement[]
+  behaviorScore                UserBehaviorScore?
+  labAssignments               UserLabAssignment[]
+  acknowledgedMonitoringAlerts MonitoringAlert[]     @relation("MonitoringAlertAcknowledgement")
+  cameraAccessAudits           CameraAccessAudit[]
 
   @@map("users")
 }
@@ -280,10 +298,10 @@ model Resource {
   description      String?
   specs            Json           @default("{}")
 
-  version              Int                     @default(0)
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @default(now()) @updatedAt
-  laboratory           Laboratory?             @relation(fields: [laboratoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  version              Int                          @default(0)
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @default(now()) @updatedAt
+  laboratory           Laboratory?                  @relation(fields: [laboratoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   bookings             Booking[]
   maintenanceWindows   MaintenanceWindow[]
   usageLogs            UsageLog[]
@@ -295,6 +313,11 @@ model Resource {
   knowledgeDocuments   KnowledgeDocument[]
   shipments            ShipmentOrder[]
   allocations          ResourceAllocation[]
+  telemetrySources     TelemetrySource[]
+  monitoringThreshold  ResourceMonitoringThreshold?
+  monitoringAlerts     MonitoringAlert[]
+  cameras              Camera[]
+  cameraAccessAudits   CameraAccessAudit[]
 
   @@index([laboratoryId])
   @@index([operationalStatus])
@@ -446,30 +469,39 @@ model MaintenanceWindow {
 }
 
 model Incident {
-  id           String            @id
-  resourceId   String
-  bookingId    String?
-  reportedById String
-  assignedToId String?
-  severity     IncidentSeverity  @default(medium)
-  status       IncidentStatus    @default(reported)
-  category     String?
-  title        String
-  description  String
-  detectedAt   DateTime          @default(now())
-  resolvedAt   DateTime?
-  resolution   String?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  resource     Resource          @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  booking      Booking?          @relation(fields: [bookingId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  reportedBy   User              @relation("IncidentReporter", fields: [reportedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  assignedTo   User?             @relation("IncidentAssignee", fields: [assignedToId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  comments     IncidentComment[]
+  id                String            @id
+  resourceId        String
+  bookingId         String?
+  reportedById      String?
+  assignedToId      String?
+  telemetrySourceId String?
+  telemetrySampleId String?
+  monitoringAlertId String?           @unique
+  severity          IncidentSeverity  @default(medium)
+  status            IncidentStatus    @default(reported)
+  category          String?
+  title             String
+  description       String
+  detectedAt        DateTime          @default(now())
+  resolvedAt        DateTime?
+  resolution        String?
+  provenance        Json              @default("{}")
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  resource          Resource          @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  booking           Booking?          @relation(fields: [bookingId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  reportedBy        User?             @relation("IncidentReporter", fields: [reportedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  assignedTo        User?             @relation("IncidentAssignee", fields: [assignedToId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  telemetrySource   TelemetrySource?  @relation(fields: [telemetrySourceId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  telemetrySample   TelemetrySample?  @relation(fields: [telemetrySampleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  monitoringAlert   MonitoringAlert?  @relation("IncidentMonitoringAlert", fields: [monitoringAlertId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  comments          IncidentComment[]
 
   @@index([resourceId])
   @@index([status])
   @@index([reportedById])
+  @@index([telemetrySourceId])
+  @@index([telemetrySampleId])
   @@map("incidents")
 }
 
@@ -539,8 +571,10 @@ model Notification {
 }
 
 model TelemetrySample {
-  id               String   @id
+  id               String            @id
   resourceId       String
+  sourceId         String?
+  externalId       String?
   cpuPercent       Float?
   gpuPercent       Float?
   gpuMemoryPercent Float?
@@ -548,14 +582,156 @@ model TelemetrySample {
   diskPercent      Float?
   temperatureC     Float?
   humidityPercent  Float?
-  online           Boolean  @default(true)
-  source           String   @default("agent")
+  online           Boolean           @default(true)
+  source           String            @default("agent")
   verifiedSignals  Json?
-  sampledAt        DateTime @default(now())
-  resource         Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sampledAt        DateTime          @default(now())
+  resource         Resource          @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  telemetrySource  TelemetrySource?  @relation(fields: [sourceId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  monitoringAlerts MonitoringAlert[]
+  incidents        Incident[]
 
+  @@unique([sourceId, externalId])
   @@index([resourceId, sampledAt])
+  @@index([sourceId, sampledAt])
   @@map("telemetry_samples")
+}
+
+model TelemetrySource {
+  id               String            @id
+  code             String            @unique
+  name             String
+  laboratoryId     String
+  resourceId       String
+  credentialSalt   String
+  credentialHash   String
+  isActive         Boolean           @default(true)
+  reportedOnline   Boolean?
+  lastSeenAt       DateTime?
+  lastSampleAt     DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  laboratory       Laboratory        @relation(fields: [laboratoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  resource         Resource          @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  samples          TelemetrySample[]
+  monitoringAlerts MonitoringAlert[]
+  incidents        Incident[]
+  camera           Camera?
+
+  @@unique([resourceId, code])
+  @@index([laboratoryId, isActive])
+  @@index([resourceId, isActive])
+  @@map("telemetry_sources")
+}
+
+model LaboratoryMonitoringThreshold {
+  id                   String     @id
+  laboratoryId         String     @unique
+  temperatureWarningC  Float?
+  temperatureCriticalC Float?
+  humidityMinPercent   Float?
+  humidityMaxPercent   Float?
+  staleMinutes         Int?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  laboratory           Laboratory @relation(fields: [laboratoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("laboratory_monitoring_thresholds")
+}
+
+model ResourceMonitoringThreshold {
+  id                   String   @id
+  resourceId           String   @unique
+  temperatureWarningC  Float?
+  temperatureCriticalC Float?
+  humidityMinPercent   Float?
+  humidityMaxPercent   Float?
+  staleMinutes         Int?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  resource             Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("resource_monitoring_thresholds")
+}
+
+model MonitoringAlert {
+  id                String                  @id
+  activeDedupeKey   String?                 @unique
+  conditionKey      String
+  sourceId          String
+  resourceId        String
+  laboratoryId      String
+  sampleId          String
+  ruleCode          String
+  severity          MonitoringAlertSeverity
+  status            MonitoringAlertStatus   @default(OPEN)
+  message           String
+  observedValue     Float?
+  thresholdSnapshot Json                    @default("{}")
+  openedAt          DateTime                @default(now())
+  lastObservedAt    DateTime                @default(now())
+  acknowledgedById  String?
+  acknowledgedAt    DateTime?
+  resolvedAt        DateTime?
+  resolution        String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  source            TelemetrySource         @relation(fields: [sourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  resource          Resource                @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  laboratory        Laboratory              @relation(fields: [laboratoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sample            TelemetrySample         @relation(fields: [sampleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  acknowledgedBy    User?                   @relation("MonitoringAlertAcknowledgement", fields: [acknowledgedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  incident          Incident?               @relation("IncidentMonitoringAlert")
+
+  @@index([laboratoryId, status, openedAt])
+  @@index([resourceId, status])
+  @@index([sourceId, status])
+  @@index([conditionKey])
+  @@map("monitoring_alerts")
+}
+
+model Camera {
+  id                String              @id
+  code              String              @unique
+  name              String
+  laboratoryId      String
+  resourceId        String
+  telemetrySourceId String?             @unique
+  enabled           Boolean             @default(false)
+  endpointUrl       String?
+  status            String              @default("NOT_CONFIGURED")
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  laboratory        Laboratory          @relation(fields: [laboratoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  resource          Resource            @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  telemetrySource   TelemetrySource?    @relation(fields: [telemetrySourceId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  accessAudits      CameraAccessAudit[]
+
+  @@index([laboratoryId, enabled])
+  @@index([resourceId])
+  @@map("cameras")
+}
+
+model CameraAccessAudit {
+  id           String     @id
+  cameraId     String
+  resourceId   String
+  laboratoryId String
+  actorId      String
+  purpose      String
+  startedAt    DateTime   @default(now())
+  endedAt      DateTime?
+  outcome      String
+  detail       String?
+  camera       Camera     @relation(fields: [cameraId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  resource     Resource   @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  laboratory   Laboratory @relation(fields: [laboratoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  actor        User       @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([cameraId, startedAt])
+  @@index([actorId, startedAt])
+  @@index([laboratoryId, startedAt])
+  @@map("camera_access_audits")
 }
 
 model KnowledgeDocument {

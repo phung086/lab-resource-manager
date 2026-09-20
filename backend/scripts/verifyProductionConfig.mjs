@@ -7,7 +7,6 @@ const base = {
   PORT: "8000",
   DATABASE_URL: "postgresql://lab_user:strong-db-password@127.0.0.1:5432/lab_resources",
   JWT_SECRET: "batch7-jwt-secret-that-is-longer-than-32-characters",
-  TELEMETRY_API_KEY: "batch7-telemetry-secret-that-is-longer-than-32-characters",
   CORS_ORIGINS: "https://lab.example.edu.vn",
   ADMIN_EMAIL: "admin@lab.example.edu.vn",
   ADMIN_PASSWORD: "Batch7Admin!Passphrase",
@@ -52,19 +51,6 @@ expectFail(
   "placeholder JWT",
   { JWT_SECRET: "replace-with-at-least-32-random-characters" },
   /JWT_SECRET/
-);
-expectFail(
-  "short telemetry credential",
-  { TELEMETRY_API_KEY: "too-short" },
-  /TELEMETRY_API_KEY/
-);
-expectFail(
-  "reused JWT and telemetry credential",
-  {
-    JWT_SECRET: "shared-secret-that-is-longer-than-32-characters",
-    TELEMETRY_API_KEY: "shared-secret-that-is-longer-than-32-characters"
-  },
-  /must be different secrets/
 );
 expectFail(
   "wildcard CORS",

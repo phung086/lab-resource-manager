@@ -4,7 +4,6 @@ dotenv.config();
 
 const isProduction = process.env.NODE_ENV === "production";
 const jwtSecret = process.env.JWT_SECRET || process.env.LRM_SECRET_KEY;
-const telemetryApiKey = process.env.TELEMETRY_API_KEY || "";
 const databaseUrl = process.env.DATABASE_URL || "";
 const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGINS || process.env.LRM_CORS_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173");
 const port = parsePort(process.env.PORT || 8000);
@@ -22,7 +21,6 @@ export const config = {
   jwtSecret: jwtSecret || "change-this-secret-before-production",
   corsOrigins,
   tokenExpiresIn: process.env.TOKEN_EXPIRES_IN || "8h",
-  telemetryApiKey,
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   openaiModel: process.env.OPENAI_MODEL || "",
   trustProxy: process.env.TRUST_PROXY === "true",
@@ -52,12 +50,6 @@ function validateRuntimeConfig() {
     }
     if (!jwtSecret || jwtSecret.length < 32 || isPlaceholder(jwtSecret)) {
       failures.push("JWT_SECRET must be at least 32 characters and not use an example value.");
-    }
-    if (!telemetryApiKey || telemetryApiKey.length < 32 || isPlaceholder(telemetryApiKey)) {
-      failures.push("TELEMETRY_API_KEY must be at least 32 characters and not use an example value.");
-    }
-    if (jwtSecret && telemetryApiKey && jwtSecret === telemetryApiKey) {
-      failures.push("JWT_SECRET and TELEMETRY_API_KEY must be different secrets.");
     }
     if (corsOrigins.some((origin) => origin === "*" || !/^https?:\/\//i.test(origin))) {
       failures.push("CORS_ORIGINS must list explicit HTTP or HTTPS origins.");

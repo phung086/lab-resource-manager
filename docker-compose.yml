@@ -22,7 +22,6 @@ services:
     environment:
       DATABASE_URL: postgresql://lab_user:lab_password@postgres:5432/lab_resources
       JWT_SECRET: local-dev-secret
-      TELEMETRY_API_KEY: local-telemetry-key
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
@@ -30,7 +29,7 @@ services:
       ADMIN_FULL_NAME: ${ADMIN_FULL_NAME:-}
       CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
       REMINDER_SCHEDULER_ENABLED: ${REMINDER_SCHEDULER_ENABLED:-true}
-      LOG_FORMAT: ${LOG_FORMAT:-dev}
+      LOG_FORMAT: ${LRM_LOG_FORMAT:-dev}
     ports:
       - "8000:8000"
     volumes:
