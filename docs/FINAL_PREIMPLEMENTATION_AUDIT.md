@@ -1,7 +1,8 @@
 # Final Preimplementation Audit
 
-Date: 2026-09-21  
-Branch: `final-graduation-hardening`  
+Date: 2026-09-21
+
+Branch: `final-graduation-hardening`
 Starting `main`: `71da1683fc1c8bf842d2fc5b1313b45ac15499c1`
 
 ## Scope and authority

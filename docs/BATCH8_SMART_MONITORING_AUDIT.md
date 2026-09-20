@@ -27,7 +27,7 @@ continues to be the only authoritative physical resource state.
 
 ### Telemetry source identity
 
-Current ingestion authenticates one global `TELEMETRY_API_KEY` and trusts the
+The pre-Batch-8 ingestion path authenticated one global `TELEMETRY_API_KEY` and trusted the
 client-supplied `source` label. There is no stable per-source identity,
 credential lifecycle, active flag, scope, last-seen timestamp, or explicit
 source health. A persisted `TelemetrySource` is required.
