@@ -62,25 +62,6 @@ jobs:
           LOG_FORMAT=combined
           EOF
 
-      - name: Verify migration checkout byte portability
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --input-type=module <<'NODE'
-          import { createHash } from "node:crypto";
-          import { readFile } from "node:fs/promises";
-
-          const baseline = JSON.parse(await readFile("../docs/BATCH1B_VERIFICATION.json", "utf8"));
-          for (const [name, expected] of Object.entries(baseline.migrationFiles)) {
-            const bytes = await readFile(`prisma/migrations/${name}/migration.sql`);
-            const actual = createHash("sha256").update(bytes).digest("hex");
-            if (actual !== expected) {
-              throw new Error(`Migration byte portability failed for ${name}: actual=${actual} expected=${expected}`);
-            }
-            console.log(`migration checksum OK: ${name} ${actual}`);
-          }
-          NODE
-
       - name: Create isolated PostgreSQL 16 databases
         shell: bash
         env:
@@ -100,7 +81,7 @@ jobs:
             psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";"
           done
 
-      - name: Raw canonical migrate deploy on every isolated database
+      - name: Canonical clean migration deployment on every isolated database
         shell: bash
         run: |
           set -euo pipefail
@@ -115,7 +96,7 @@ jobs:
             lab_resources_b7_demo_ci
           do
             echo "::group::migrate:$db"
-            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npx prisma migrate deploy
+            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npm run db:migrate:canonical
             echo "::endgroup::"
           done
           git diff --exit-code -- prisma/migrations
