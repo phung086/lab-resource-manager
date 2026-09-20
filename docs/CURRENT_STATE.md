@@ -8,6 +8,9 @@ Phases A-D of graduation finalization are complete on branch
 `final-graduation-hardening`, synchronized from main SHA
 `71da1683fc1c8bf842d2fc5b1313b45ac15499c1`.
 
+Batch 7 repair/closure was verified and committed at
+`50ecda3a69ef37fc21b572616ac76b3e4975a7d3`.
+
 Batch 7 Production Demo Hardening and Batch 8 Smart Laboratory Monitoring are
 implemented and verified. The final release/assignment closure audit is
 recorded in `docs/FINAL_ASSIGNMENT_CLOSURE_AUDIT.md`. There is no canonical
