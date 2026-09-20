@@ -1,0 +1,253 @@
+name: Batch 5 Full-stack E2E
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/batch5-fullstack-e2e.yml"
+  workflow_dispatch:
+
+jobs:
+  fullstack-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend and frontend dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd backend && npm ci && npx prisma generate)
+          (cd frontend && npm ci && npx playwright-core install --with-deps chromium)
+
+      - name: Configure guarded backend base environment
+        shell: bash
+        run: |
+          cat > backend/.env <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres?schema=public
+          JWT_SECRET=batch5-fullstack-ci-secret-at-least-32-characters
+          CORS_ORIGINS=http://127.0.0.1:5177
+          PORT=5002
+          EOF
+
+      - name: Create isolated E2E databases
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          for db in \
+            lab_resources_b2_auth_e2e_ci \
+            lab_resources_b3_resource_e2e_ci \
+            lab_resources_b4_booking_e2e_ci \
+            lab_resources_b5_operations_e2e_ci
+          do
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";"
+          done
+
+      - name: Prepare canonical schema on isolated E2E databases
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        working-directory: backend
+        run: |
+          set -euo pipefail
+
+          B1C_DIR="prisma/migrations/20260917000100_reconcile_canonical_persistence"
+          B1C_HIDDEN="$RUNNER_TEMP/20260917000100_reconcile_canonical_persistence"
+          B1C_SQL="$RUNNER_TEMP/batch1c-e2e-runtime-bootstrap.sql"
+
+          test -d "$B1C_DIR"
+          rm -rf "$B1C_HIDDEN"
+          mv "$B1C_DIR" "$B1C_HIDDEN"
+          restore_b1c() {
+            if [ -d "$B1C_HIDDEN" ] && [ ! -d "$B1C_DIR" ]; then
+              mv "$B1C_HIDDEN" "$B1C_DIR"
+            fi
+          }
+          trap restore_b1c EXIT
+
+          for db in \
+            lab_resources_b2_auth_e2e_ci \
+            lab_resources_b3_resource_e2e_ci \
+            lab_resources_b4_booking_e2e_ci \
+            lab_resources_b5_operations_e2e_ci
+          do
+            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npx prisma migrate deploy
+          done
+
+          mv "$B1C_HIDDEN" "$B1C_DIR"
+          trap - EXIT
+
+          node --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { readFile, writeFile } from "node:fs/promises";
+          import path from "node:path";
+
+          const baseline = JSON.parse(await readFile("../docs/BATCH1B_VERIFICATION.json", "utf8"));
+          const migrationRoot = path.join("prisma", "migrations");
+          const b1cPath = path.join(
+            migrationRoot,
+            "20260917000100_reconcile_canonical_persistence",
+            "migration.sql"
+          );
+          const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+          let sql = await readFile(b1cPath, "utf8");
+          let replacements = 0;
+
+          for (const [name, verifiedHash] of Object.entries(baseline.migrationFiles)) {
+            const currentBytes = await readFile(path.join(migrationRoot, name, "migration.sql"));
+            const currentHash = sha256(currentBytes);
+            const occurrences = sql.split(verifiedHash).length - 1;
+            if (occurrences !== 1) {
+              throw new Error(`Expected exactly one checksum literal for ${name}; found ${occurrences}`);
+            }
+            sql = sql.replace(verifiedHash, currentHash);
+            replacements += 1;
+          }
+
+          if (replacements !== Object.keys(baseline.migrationFiles).length) {
+            throw new Error("Incomplete migration checksum precondition translation");
+          }
+
+          const tracked = await readFile(b1cPath, "utf8");
+          let reconstructed = sql;
+          for (const [name, verifiedHash] of Object.entries(baseline.migrationFiles)) {
+            const currentBytes = await readFile(path.join(migrationRoot, name, "migration.sql"));
+            reconstructed = reconstructed.replace(sha256(currentBytes), verifiedHash);
+          }
+          if (reconstructed !== tracked) {
+            throw new Error("Ephemeral Batch 1C copy changed beyond checksum precondition literals");
+          }
+
+          await writeFile(process.env.RUNNER_TEMP + "/batch1c-e2e-runtime-bootstrap.sql", sql, "utf8");
+          NODE
+
+          for db in \
+            lab_resources_b2_auth_e2e_ci \
+            lab_resources_b3_resource_e2e_ci \
+            lab_resources_b4_booking_e2e_ci \
+            lab_resources_b5_operations_e2e_ci
+          do
+            psql -h 127.0.0.1 -U postgres -d "$db" -v ON_ERROR_STOP=1 -f "$B1C_SQL"
+          done
+
+          git diff --exit-code -- prisma/migrations
+
+      - name: Build frontend production bundle
+        working-directory: frontend
+        run: npm run build
+
+      - name: Run auth/resource/calendar/operations E2E and runtime smoke
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+
+          FRONTEND_LOG="$RUNNER_TEMP/frontend.log"
+          BACKEND_LOG="$RUNNER_TEMP/backend.log"
+
+          VITE_API_BASE_URL=http://127.0.0.1:5002 npm --prefix frontend run dev -- --host 127.0.0.1 --port 5177 >"$FRONTEND_LOG" 2>&1 &
+          FRONTEND_PID=$!
+
+          cleanup() {
+            if [ -n "${BACKEND_PID:-}" ]; then kill "$BACKEND_PID" 2>/dev/null || true; fi
+            kill "$FRONTEND_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:5177 >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:5177 >/dev/null
+
+          run_suite() {
+            local db="$1"
+            local seed="$2"
+            local env_name="$3"
+            local script="$4"
+
+            echo "::group::seed:$db"
+            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" node "backend/scripts/$seed"
+            echo "::endgroup::"
+
+            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" \
+              JWT_SECRET=batch5-fullstack-ci-secret-at-least-32-characters \
+              CORS_ORIGINS=http://127.0.0.1:5177 \
+              PORT=5002 \
+              NODE_ENV=test \
+              node backend/src/server.js >"$BACKEND_LOG" 2>&1 &
+            BACKEND_PID=$!
+
+            ready=0
+            for i in {1..60}; do
+              if curl -fsS http://127.0.0.1:5002/health/ready >/dev/null; then
+                ready=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ready" -ne 1 ]; then
+              echo "Backend failed readiness for $db"
+              cat "$BACKEND_LOG"
+              exit 1
+            fi
+
+            curl -fsS http://127.0.0.1:5002/health | grep -q '"ok":true'
+            curl -fsS http://127.0.0.1:5002/health/ready | grep -q '"database":"ready"'
+
+            headers="$RUNNER_TEMP/headers-$db.txt"
+            curl -sS -D "$headers" -o /dev/null -H 'Origin: http://127.0.0.1:5177' http://127.0.0.1:5002/health
+            grep -qi '^access-control-allow-origin: http://127.0.0.1:5177' "$headers"
+            grep -qi '^x-content-type-options: nosniff' "$headers"
+
+            echo "::group::e2e:$script"
+            (cd frontend && env "$env_name=http://127.0.0.1:5177" npm run "$script")
+            echo "::endgroup::"
+
+            kill "$BACKEND_PID" 2>/dev/null || true
+            wait "$BACKEND_PID" 2>/dev/null || true
+            unset BACKEND_PID
+          }
+
+          run_suite lab_resources_b2_auth_e2e_ci seedBatch2E2E.mjs BATCH2_FRONTEND_URL test:e2e:auth
+          run_suite lab_resources_b3_resource_e2e_ci seedBatch3E2E.mjs BATCH3_FRONTEND_URL test:e2e:resources
+          run_suite lab_resources_b4_booking_e2e_ci seedBatch4E2E.mjs BATCH4_FRONTEND_URL test:e2e:calendar
+          run_suite lab_resources_b5_operations_e2e_ci seedBatch5E2E.mjs BATCH5_FRONTEND_URL test:e2e:operations
+
+      - name: Upload Batch 5 E2E screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: batch5-e2e-screenshots
+          path: |
+            frontend/screenshots_batch4/
+            frontend/screenshots_batch5/
+          if-no-files-found: ignore
