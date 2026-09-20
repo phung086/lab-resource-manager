@@ -138,3 +138,59 @@ migration history on clean PostgreSQL 16 in the Linux production image. The
 temporary checksum-compatibility bridge is retired because it is no longer
 needed and its cross-filesystem move failed closed during production startup.
 Historical migration SQL and `_prisma_migrations` remain immutable.
+
+## ADR-016 - Telemetry Sources Have Persisted Scoped Identities
+
+Status: Accepted
+
+Every production telemetry write is authenticated by a stable persisted source
+bound to one laboratory and resource. A source credential consists of a public
+identifier and high-entropy secret; only a salted derived hash is stored, and
+comparison is timing-safe. The server resolves scope from the credential and
+does not trust payload source, laboratory, or resource claims. Source active,
+reported-online, last-seen, and freshness state remain separate from
+`Resource.operationalStatus`.
+
+## ADR-017 - Monitoring Policy And Alert Episodes Are Durable
+
+Status: Accepted
+
+Monitoring thresholds use deterministic field-level precedence:
+
+`resource override -> laboratory configuration -> documented system default`.
+
+Accepted samples are evaluated by the backend. Active conditions use stable
+deduplication keys, source-scoped advisory locks, and database uniqueness so
+polling or concurrent delivery produces one alert episode. A qualifying
+verified critical alert may create one incident, and that incident retains its
+source, sample, and alert provenance. Automation never changes authoritative
+physical resource state.
+
+## ADR-018 - Camera Capability Is Metadata-First And Audited
+
+Status: Accepted
+
+Camera records are disabled or not configured by default. The required release
+exposes scoped metadata only and never fabricates video. Private endpoint data
+is not returned to clients. ADMIN and correctly assigned LAB_STAFF are the only
+authorized operational roles, and every authenticated access attempt is
+persisted with actor, scope, purpose, timing, and outcome, including denials.
+
+## ADR-019 - Monitoring Delivery Uses Persisted Polling
+
+Status: Accepted
+
+Batch 8 uses polling plus persisted sample, alert, incident, source, and camera
+history rather than SSE or WebSocket. PostgreSQL remains the source of truth,
+and reconnecting reconstructs state without relying on transient socket data.
+No UI may claim a live realtime stream unless a future explicitly authorized
+implementation adds and verifies one.
+
+## ADR-020 - Compose Environment Names Are Host-Collision Safe
+
+Status: Accepted
+
+Compose accepts the host-side `LRM_LOG_FORMAT` variable and maps it to the
+container's `LOG_FORMAT`. This prevents unrelated host tooling variables from
+silently overriding the validated production value. Other production secrets
+and origins remain explicit and fail closed.

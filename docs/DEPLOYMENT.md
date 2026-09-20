@@ -27,7 +27,6 @@ Required production values include:
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD` — strong secret
 - `JWT_SECRET` — at least 32 characters, not an example value
-- `TELEMETRY_API_KEY` — at least 32 characters, distinct from JWT secret
 - `ADMIN_EMAIL` — valid first-admin email
 - `ADMIN_PASSWORD` — at least 12 characters, not an example value
 - `ADMIN_FULL_NAME`
@@ -41,10 +40,15 @@ Recommended/defaulted:
 - `REMINDER_SCHEDULER_ENABLED=true`
 - `BOOKING_UPCOMING_REMINDER_MINUTES=60`
 - `RETURN_REMINDER_MINUTES=15`
-- `LOG_FORMAT=combined`
+- `LRM_LOG_FORMAT=combined` (Compose maps this namespaced value to backend
+  `LOG_FORMAT`; this avoids accidental host-environment collisions)
 - `VITE_ENABLE_RESEARCH_FEATURES=false`
 
 The production backend refuses to boot when critical production configuration is invalid.
+
+Telemetry devices do not share an environment secret. Provision a source as an
+administrator, copy its one-time credential to the device, and rotate it if it
+is exposed. Only the derived credential hash is persisted.
 
 ## 2. Validate before startup
 

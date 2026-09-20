@@ -72,7 +72,6 @@ Thay toàn bộ giá trị mẫu bằng secret/domain thật. Các biến quan t
 
 - `POSTGRES_PASSWORD`
 - `JWT_SECRET`
-- `TELEMETRY_API_KEY`
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 - `ADMIN_FULL_NAME`
@@ -80,6 +79,10 @@ Thay toàn bộ giá trị mẫu bằng secret/domain thật. Các biến quan t
 - `VITE_ENABLE_RESEARCH_FEATURES=false`
 
 Production backend fail closed nếu secret/admin/CORS quan trọng không hợp lệ.
+
+Telemetry sources are provisioned by an administrator. Each source receives a
+one-time credential whose derived hash is stored in PostgreSQL; there is no
+shared production telemetry key.
 
 Clean deployment uses ordinary tracked `prisma migrate deploy`. Historical
 migration SQL remains immutable, and production never edits
