@@ -106,3 +106,23 @@ agent rules. A ChatGPT Project may coordinate work using selected canonical
 sources and GitHub, while Google Drive may hold thesis/reference documents.
 Web context does not replace local repository verification, and unpushed local
 changes are not visible through GitHub.
+
+## ADR-013 - Asia/Ho_Chi_Minh Is The Canonical Scheduling Timezone
+
+Status: Accepted
+
+Scheduling policy and operational timestamps are interpreted for the laboratory
+in `Asia/Ho_Chi_Minh` (UTC+07:00). Browser or server local timezone must not
+change weekend, working-hour, booking-slot, or operational timestamp semantics.
+
+## ADR-014 - Booking Handover Synchronizes Physical Resource State
+
+Status: Accepted
+
+A successful `CONFIRMED -> CHECKED_OUT` handover changes an `AVAILABLE`
+resource to `IN_USE` in the same transaction. A successful
+`CHECKED_OUT -> RETURNED` operation changes `IN_USE` back to `AVAILABLE`.
+A more serious authoritative physical state such as `BROKEN`, `MAINTENANCE`,
+`CALIBRATION`, `RETIRED`, or `OFFLINE` is never silently overwritten by
+the return workflow. Real physical changes must be recorded in
+`ResourceStatusHistory`.
