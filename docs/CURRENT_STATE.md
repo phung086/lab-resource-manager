@@ -6,8 +6,9 @@ Last synchronized: 2026-09-20
 
 Batch 4 & 4.1 - Booking Calendar and Required Booking Workflow is complete and verified.
 
-Batch 5 - Canonical Operational Booking Workflow is complete and verified on
-`batch5-operational-workflow`. Approval, rejection, handover/check-out,
+Batch 5 - Canonical Operational Booking Workflow is complete, verified, and
+merged to `main` at `a9589d9940c7984324152f8a5636f5f67189b322`.
+Approval, rejection, handover/check-out,
 condition-before evidence, return, condition-after evidence, completion,
 persisted history, notifications, physical-state synchronization, concurrency
 safety, and full-stack E2E have passed. Batch 6 is NOT authorized.
@@ -111,7 +112,7 @@ after explicit user authorization. Before any future batch, read:
 5. `docs/DECISIONS.md`
 6. `docs/BATCH4_BOOKING_CALENDAR_REPORT.md`
 7. `docs/BATCH5_OPERATIONAL_WORKFLOW_REPORT.md`
-7. the relevant booking and persistence reports
+8. the relevant booking and persistence reports
 
 ## Do Not Work On Without Explicit Approval
 
