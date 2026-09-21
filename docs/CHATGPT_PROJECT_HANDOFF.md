@@ -13,7 +13,9 @@ the authority order below and inspect the current branch before answering.
 - Repository: `https://github.com/phung086/lab-resource-manager`
 - Working branch: `final-graduation-hardening`
 - Starting main SHA: `71da1683fc1c8bf842d2fc5b1313b45ac15499c1`
-- Verified handoff SHA: `75b17a789f13635cd16b292b94ff3d74c7dc96f2`
+- Previous handoff SHA: `75b17a789f13635cd16b292b94ff3d74c7dc96f2`
+- Verified Final UI/UX Master Polish baseline SHA:
+  `81675fb0293535c6205da3b19a12b2f1f2dfe467`
 - Batch 7 repair/closure commit: `50ecda3a69ef37fc21b572616ac76b3e4975a7d3`
 - Branch is pushed; it has not been merged into main.
 
@@ -23,6 +25,7 @@ the authority order below and inspect the current branch before answering.
 - Batch 8 Smart Laboratory Monitoring implementation: **GO**
 - Required graduation scenario: **GO**
 - Final UI/UX Polish Pass A (Core Surfaces & Design Foundation): **GO**
+- Final UI/UX Master Polish release candidate: **VERIFIED GO; frontend polish closed**
 - Full B2–6/8 regression and Batch 7 production 10-step rerun: **PASS**
 - Real sensor/camera verification: **PENDING REAL HARDWARE**
 - No canonical Batch 9 or Batch 10 exists. Do not invent or start one.
@@ -82,6 +85,10 @@ the authority order below and inspect the current branch before answering.
   acknowledgement, private camera metadata/access audit, monitoring UI/history,
   production E2E, and a new additive migration.
 - Phase D: final assignment requirement/evidence matrix and final release audit.
+- Final UI/UX Master Polish: visually harmonized mounted required-core
+  frontend; responsive/keyboard improvements; curated 23-image review evidence;
+  stronger B4 cancellation E2E assertions. No backend, Prisma, migration,
+  Compose, or research-activation changes.
 
 ## Verified evidence
 
@@ -99,7 +106,12 @@ Fresh isolated PostgreSQL 16 backend results:
 - Batch 8 12/12.
 
 Frontend lint has zero errors and 14 documented warnings. Typecheck and build
-pass. E2E Batch 2–8 pass. Production Compose verifies Nginx, Express,
+pass; main JS is 393.50 kB minified / 112.06 kB gzip. E2E Batch 2–6 and 8
+passed on isolated PostgreSQL 16 databases. The unchanged official Batch 7
+10-step demo passed on a new isolated production-like demo database with
+`BOOKING_UPCOMING_REMINDER_MINUTES=10080`,
+`REMINDER_SCHEDULER_ENABLED=false`, and `RETURN_REMINDER_MINUTES=15`.
+Production Compose verifies Nginx, Express,
 PostgreSQL 16, health/readiness, CORS, Helmet, migration status, the official
 10-step demo, Batch 8 monitoring, and mobile paths. Full backend and frontend
 `npm audit` report zero vulnerabilities at the handoff SHA.
@@ -135,13 +147,15 @@ PostgreSQL 16, health/readiness, CORS, Helmet, migration status, the official
 - Do not restore research modules merely to make legacy tests green.
 - Clearly distinguish verified software, assumptions, future ideas, and pending
   hardware evidence.
+- Do not initiate another frontend polish pass. The next sensible work is the
+  defense demo, report/slides, and project run checklist, only when requested.
 - Keep all recommendations inside the documented authority and safety rules.
 
 ## Suggested first message in the new Project
 
 > Read the uploaded project handoff and canonical documents. Treat the GitHub
 > branch `final-graduation-hardening` at SHA
-> `75b17a789f13635cd16b292b94ff3d74c7dc96f2` as the latest verified state. First
+> `81675fb0293535c6205da3b19a12b2f1f2dfe467` as the verified Final UI/UX Master Polish baseline. First
 > summarize the frozen contracts, completed batches, test evidence, remaining
-> debt, and the rule that no Batch 9/10 exists. Do not change code yet. Then ask
-> me what outcome I want next.
+> debt, and the rule that no Batch 9/10 exists. Frontend polish is closed; do not
+> change code yet. Then ask me what outcome I want next.

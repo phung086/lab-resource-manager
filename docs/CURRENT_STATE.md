@@ -28,6 +28,27 @@ Batch 9 or Batch 10, and neither has been started.
   - Dedicated visual evidence recorded in `frontend/screenshots_ui_polish_pass_a/`.
 - Boundaries Reconfirmed: Batches 1–8 and Phase D final closure remain canonical. No Batch 9/10 exists. Real telemetry hardware remains `PENDING REAL HARDWARE`.
 
+## Final UI/UX Master Polish — Release Candidate Closure
+
+- Status: **VERIFIED GO**; frontend presentation polish is closed. Verified
+  frontend baseline SHA: `81675fb0293535c6205da3b19a12b2f1f2dfe467`.
+- Mounted required-core auth, resource, calendar, booking, operations, incident,
+  notification, and monitoring surfaces are visually harmonized, responsive,
+  and more keyboard-accessible without changing backend contracts.
+- Batch 2/3/4/5/6/8 frontend E2E regressions passed on isolated PostgreSQL 16
+  databases during the polish work. The unchanged official Batch 7 production
+  10-step demo was rerun and passed on a new isolated PostgreSQL 16 demo DB
+  with the repository-canonical `BOOKING_UPCOMING_REMINDER_MINUTES=10080`,
+  `REMINDER_SCHEDULER_ENABLED=false`, and `RETURN_REMINDER_MINUTES=15`.
+- Final lint: zero errors, 14 documented warnings; TypeScript check and Vite
+  production build: PASS. Main JS: 393.50 kB minified / 112.06 kB gzip.
+- Final evidence is curated to 23 screenshots in
+  `frontend/screenshots_ui_final_review/`; historical Batch screenshots remain
+  unchanged. No backend, Prisma schema, migration, or Docker Compose changes.
+- No Batch 9/10 or research activation. Physical sensor/camera verification
+  remains **PENDING REAL HARDWARE**. The next work is defense demo preparation,
+  report/slides, and project run checklist—not another UI polish pass.
+
 ## VERIFIED REQUIRED CORE
 
 - Canonical PostgreSQL/Prisma persistence and database conflict protection.
@@ -81,11 +102,11 @@ Frontend/release:
 
 - frontend lint PASS with zero errors and 14 existing warnings;
 - TypeScript check PASS;
-- production build PASS; main entry approximately 397 kB minified / 112 kB
-  gzip;
+- production build PASS; main entry 393.50 kB minified / 112.06 kB gzip;
 - Batch 2/3/4/5/6 frontend E2E regressions PASS;
 - Batch 8 smart-monitoring desktop/scope/denial/mobile E2E PASS;
-- Batch 7 official 10-step production E2E PASS;
+- Batch 7 official 10-step production E2E PASS with canonical upcoming
+  reminder threshold 10080 minutes;
 - production Compose frontend/backend/PostgreSQL health PASS;
 - `/health`, `/api/health`, `/api/health/ready` HTTP 200;
 - allowed/denied CORS and Helmet header checks PASS;
@@ -124,7 +145,7 @@ replacement for physical safety systems or laboratory procedures.
 - ESLint 9.39.5 is audit-clean but npm marks the major line unsupported; a
   future tooling-only upgrade must move ESLint and its React/TypeScript plugins
   together and re-run the complete lint gate.
-- The main entry bundle is approximately 397 kB minified; older core UI still
+- The main entry bundle is approximately 393.50 kB minified; older core UI still
   has scoped refactoring opportunities.
 - Dedicated immutable audit models are not present for every administrative
   and laboratory metadata mutation.
@@ -137,11 +158,13 @@ replacement for physical safety systems or laboratory procedures.
 - Batch 7: GO.
 - Batch 8 implementation: GO.
 - Required graduation scenario: GO.
+- Final UI/UX Master Polish release candidate: GO; frontend polish closed.
 - Real hardware verification: PENDING REAL HARDWARE.
 
 ## Do Not Start Without Explicit Approval
 
 - any newly defined Batch 9 or Batch 10
+- another UI polish pass without a demonstrated regression and explicit request
 - framework migration or repository-wide restructure
 - AI as business authority
 - Digital Twin, simulation, optimization, Pareto, GA/NSGA-II, or showcase
