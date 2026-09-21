@@ -16,38 +16,47 @@ implemented and verified. The final release/assignment closure audit is
 recorded in `docs/FINAL_ASSIGNMENT_CLOSURE_AUDIT.md`. There is no canonical
 Batch 9 or Batch 10, and neither has been started.
 
-## Post-Closure Frontend Presentation Milestone: Final UI/UX Polish Pass A
+## Historical Frontend Milestone: Final UI/UX Master Polish Pass
 
-- Status: **VERIFIED GO** (frontend-only presentation polish; does not alter backend or canonical contracts).
-- Scope: Application shell, authentication views, operational dashboard, and resource catalogue surfaces polished to academic lab production standards.
-- Accessibility & Responsiveness: WCAG AA contrast compliance, 44px mobile touch targets, unified `:focus-visible` styling, responsive wrapping across desktop and mobile.
-- Verification Evidence:
-  - Canonical regression matrix (Batches 2–6 and 8 E2E): 100% PASS on isolated PostgreSQL 16 databases.
-  - Official Batch 7 10-step graduation scenario: 100% PASS against canonical production stack (`docker-compose.prod.yml`, Nginx `:8088`, Express, PostgreSQL 16).
-  - TypeScript: 0 errors; ESLint: 0 errors (14 pre-existing warnings); Vite production build: PASS.
-  - Dedicated visual evidence recorded in `frontend/screenshots_ui_polish_pass_a/`.
-- Boundaries Reconfirmed: Batches 1–8 and Phase D final closure remain canonical. No Batch 9/10 exists. Real telemetry hardware remains `PENDING REAL HARDWARE`.
+- Status: **VERIFIED GO**; historical verified dark/master-polish baseline committed at SHA: `81675fb0293535c6205da3b19a12b2f1f2dfe467`.
+- Mounted required-core auth, resource, calendar, booking, operations, incident, notification, and monitoring surfaces visually harmonized and keyboard-accessible.
+- Historical review evidence preserved as 23 screenshots in `frontend/screenshots_ui_final_review/`.
 
-## Final UI/UX Master Polish — Release Candidate Closure
+## Post-Closure Light UI & Motion Redesign — Final Frontend Baseline
 
-- Status: **VERIFIED GO**; frontend presentation polish is closed. Verified
-  frontend baseline SHA: `81675fb0293535c6205da3b19a12b2f1f2dfe467`.
-- Mounted required-core auth, resource, calendar, booking, operations, incident,
-  notification, and monitoring surfaces are visually harmonized, responsive,
-  and more keyboard-accessible without changing backend contracts.
-- Batch 2/3/4/5/6/8 frontend E2E regressions passed on isolated PostgreSQL 16
-  databases during the polish work. The unchanged official Batch 7 production
-  10-step demo was rerun and passed on a new isolated PostgreSQL 16 demo DB
-  with the repository-canonical `BOOKING_UPCOMING_REMINDER_MINUTES=10080`,
-  `REMINDER_SCHEDULER_ENABLED=false`, and `RETURN_REMINDER_MINUTES=15`.
-- Final lint: zero errors, 14 documented warnings; TypeScript check and Vite
-  production build: PASS. Main JS: 393.50 kB minified / 112.06 kB gzip.
-- Final evidence is curated to 23 screenshots in
-  `frontend/screenshots_ui_final_review/`; historical Batch screenshots remain
-  unchanged. No backend, Prisma schema, migration, or Docker Compose changes.
-- No Batch 9/10 or research activation. Physical sensor/camera verification
-  remains **PENDING REAL HARDWARE**. The next work is defense demo preparation,
-  report/slides, and project run checklist—not another UI polish pass.
+- Status: **VERIFIED GO / SOURCE CLOSED**. Current accepted frontend baseline:
+  `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7`.
+- Authoritative Post-Closure Milestone Chain:
+  - Historical Final UI/UX Master Polish: `81675fb0293535c6205da3b19a12b2f1f2dfe467`
+  - Previous final docs closure: `1b9d5e9d8a272a3dab94bae4a8e9990fc51135c1`
+  - Light UI & Motion redesign candidate: `155482f245cc84d033567ff4700dedb1b0b34b6c`
+  - Final semantic cleanup: `1ae1423a4db3dc4d405820282f812b7abf3e2218`
+  - Final one-line accessibility correction / CURRENT ACCEPTED FRONTEND BASELINE: `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7`
+- Scope: Frontend presentation, accessibility, and responsive interaction only.
+  No backend contract changes. No API changes. No Prisma changes. No migrations.
+  No Docker changes. No research activation. This is NOT Batch 9 or Batch 10.
+- Design Summary:
+  - Light-first academic and enterprise laboratory operations UI with white surfaces on a pale neutral canvas;
+  - Blue primary interaction system with distinct semantic status tokens;
+  - Plus Jakarta Sans UI typography paired with IBM Plex Mono for technical and telemetry contexts;
+  - Subtle card elevation, restrained hover translations, horizontal icon/action micro-motion, and dropdown fade/translate transitions;
+  - Sticky application headers and calendar navigation surfaces where safe;
+  - Fully responsive desktop, tablet (768×1024), and mobile (390×844) layouts;
+  - `prefers-reduced-motion` compliance across all CSS animations;
+  - Improved accessible naming: localized modal dismissal (`aria-label="Đóng hộp thoại"`), explicit Vietnamese icon-only header controls (`Làm mới dữ liệu`, unread notification counts), and accurate popover trigger semantics.
+- Verification Chronology:
+  - Main Light Redesign Candidate (`155482f2`): Complete regression matrix (B2, B3, B4, B5, B6, B8 E2E) passed 100% on isolated PostgreSQL 16 databases. Unchanged official Batch 7 10-step production demo rerun passed 10/10 with `REMINDER_SCHEDULER_ENABLED=false`, `BOOKING_UPCOMING_REMINDER_MINUTES=10080`, `RETURN_REMINDER_MINUTES=15`, and `VITE_ENABLE_RESEARCH_FEATURES=false` (including `/health`, `/api/health`, `/api/health/ready`, Prisma migration status, CORS, and Helmet security headers).
+  - Semantic Cleanup (`1ae1423`): Focused B4 (`test_batch4_calendar_e2e.mjs`: 18.07s PASS) and B5 (`test_batch5_operations_e2e.mjs`: 9.99s PASS) E2E suites rerun and passed on fresh isolated PostgreSQL 16 databases with `prisma migrate deploy`.
+  - Final Accessibility Correction (`ff85dc7`): Removed `aria-haspopup="menu"` from the header account trigger to align with popover semantics; verified via fresh `npm run lint` (0 errors, 14 warnings), `npm run typecheck` (PASS), and `npm run build` (PASS; main JS `391.27 kB` minified / `111.53 kB` gzip; CSS `185.83 kB` minified / `39.36 kB` gzip). This change was accessibility semantics only and did not modify runtime/business behavior (B2/B3/B6/B7/B8 were not rerun after this one-line aria fix).
+- Visual Evidence:
+  - `frontend/screenshots_ui_light_redesign/`: 32 reviewed PNG screenshots covering desktop, mobile (390×844), and tablet (768×1024) across auth, dashboard, resources, resource detail, Day/Week/Month calendar, booking modal, booking conflict, booking success, own bookings, operations, approval, handover, return, history, notifications, incidents, monitoring, admin users, admin resources.
+  - `frontend/screenshots_ui_final_review/`: preserved as the previous 23-image evidence set from the master polish pass.
+  - Historical Batch screenshots remain unchanged.
+- Boundaries & Closure:
+  - Frontend source is CLOSED. No further frontend polish is planned without a demonstrated regression and explicit user authorization.
+  - Real hardware verification remains **PENDING REAL HARDWARE**.
+  - No Batch 9 or Batch 10 exists.
+  - Next expected work: defense preparation, graduation report, slides, demo/run checklist, and real hardware verification when hardware is available—NOT another UI pass.
 
 ## VERIFIED REQUIRED CORE
 
@@ -102,7 +111,7 @@ Frontend/release:
 
 - frontend lint PASS with zero errors and 14 existing warnings;
 - TypeScript check PASS;
-- production build PASS; main entry 393.50 kB minified / 112.06 kB gzip;
+- production build PASS; main entry 391.27 kB minified / 111.53 kB gzip;
 - Batch 2/3/4/5/6 frontend E2E regressions PASS;
 - Batch 8 smart-monitoring desktop/scope/denial/mobile E2E PASS;
 - Batch 7 official 10-step production E2E PASS with canonical upcoming
@@ -145,7 +154,7 @@ replacement for physical safety systems or laboratory procedures.
 - ESLint 9.39.5 is audit-clean but npm marks the major line unsupported; a
   future tooling-only upgrade must move ESLint and its React/TypeScript plugins
   together and re-run the complete lint gate.
-- The main entry bundle is approximately 393.50 kB minified; older core UI still
+- The main entry bundle is approximately 391.27 kB minified; older core UI still
   has scoped refactoring opportunities.
 - Dedicated immutable audit models are not present for every administrative
   and laboratory metadata mutation.
@@ -158,7 +167,8 @@ replacement for physical safety systems or laboratory procedures.
 - Batch 7: GO.
 - Batch 8 implementation: GO.
 - Required graduation scenario: GO.
-- Final UI/UX Master Polish release candidate: GO; frontend polish closed.
+- Historical Final UI/UX Master Polish: GO.
+- Post-Closure Light UI & Motion Redesign: **VERIFIED GO; SOURCE CLOSED** (current accepted baseline `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7`).
 - Real hardware verification: PENDING REAL HARDWARE.
 
 ## Do Not Start Without Explicit Approval

@@ -13,10 +13,14 @@ the authority order below and inspect the current branch before answering.
 - Repository: `https://github.com/phung086/lab-resource-manager`
 - Working branch: `final-graduation-hardening`
 - Starting main SHA: `71da1683fc1c8bf842d2fc5b1313b45ac15499c1`
-- Previous handoff SHA: `75b17a789f13635cd16b292b94ff3d74c7dc96f2`
-- Verified Final UI/UX Master Polish baseline SHA:
-  `81675fb0293535c6205da3b19a12b2f1f2dfe467`
 - Batch 7 repair/closure commit: `50ecda3a69ef37fc21b572616ac76b3e4975a7d3`
+- Historical Final UI/UX Master Polish baseline SHA:
+  `81675fb0293535c6205da3b19a12b2f1f2dfe467`
+- Previous documentation closure: `1b9d5e9d8a272a3dab94bae4a8e9990fc51135c1`
+- Light UI & Motion redesign candidate: `155482f245cc84d033567ff4700dedb1b0b34b6c`
+- Semantic cleanup: `1ae1423a4db3dc4d405820282f812b7abf3e2218`
+- CURRENT VERIFIED FRONTEND / HANDOFF SHA:
+  `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7`
 - Branch is pushed; it has not been merged into main.
 
 ## Current verdict
@@ -24,9 +28,9 @@ the authority order below and inspect the current branch before answering.
 - Batch 7 Production Demo Hardening: **GO**
 - Batch 8 Smart Laboratory Monitoring implementation: **GO**
 - Required graduation scenario: **GO**
-- Final UI/UX Polish Pass A (Core Surfaces & Design Foundation): **GO**
-- Final UI/UX Master Polish release candidate: **VERIFIED GO; frontend polish closed**
-- Full B2–6/8 regression and Batch 7 production 10-step rerun: **PASS**
+- Historical Final UI/UX Master Polish: **GO**
+- Post-Closure Light UI & Motion Redesign: **VERIFIED GO; SOURCE CLOSED** (baseline `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7`)
+- Full B2–6/8 regression, focused B4/B5 rerun, and Batch 7 production 10-step rerun: **PASS**
 - Real sensor/camera verification: **PENDING REAL HARDWARE**
 - No canonical Batch 9 or Batch 10 exists. Do not invent or start one.
 
@@ -89,6 +93,13 @@ the authority order below and inspect the current branch before answering.
   frontend; responsive/keyboard improvements; curated 23-image review evidence;
   stronger B4 cancellation E2E assertions. No backend, Prisma, migration,
   Compose, or research-activation changes.
+- Post-Closure Light UI & Motion Redesign: modern light-first academic/operations UI;
+  white surfaces on pale neutral canvas; Plus Jakarta Sans and IBM Plex Mono typography;
+  subtle card elevation and micro-motion; 32 reviewed screenshots in
+  `frontend/screenshots_ui_light_redesign/`; localized modal accessibility; clean
+  semantic day schedule locators; aligned popover trigger semantics. Verified via B2–6/8
+  matrix, B7 production 10-step demo, focused B4/B5 rerun, lint (0 errors, 14 warnings),
+  typecheck (PASS), and build (391.27 kB minified / 111.53 kB gzip). Source is closed.
 
 ## Verified evidence
 
@@ -106,9 +117,10 @@ Fresh isolated PostgreSQL 16 backend results:
 - Batch 8 12/12.
 
 Frontend lint has zero errors and 14 documented warnings. Typecheck and build
-pass; main JS is 393.50 kB minified / 112.06 kB gzip. E2E Batch 2–6 and 8
-passed on isolated PostgreSQL 16 databases. The unchanged official Batch 7
-10-step demo passed on a new isolated production-like demo database with
+pass; main JS is 391.27 kB minified / 111.53 kB gzip. E2E Batch 2–6 and 8
+passed on isolated PostgreSQL 16 databases. Focused B4/B5 E2E rerun passed on
+fresh isolated PostgreSQL 16 databases deployed with `prisma migrate deploy`. The unchanged
+official Batch 7 10-step demo passed on an isolated production-like demo database with
 `BOOKING_UPCOMING_REMINDER_MINUTES=10080`,
 `REMINDER_SCHEDULER_ENABLED=false`, and `RETURN_REMINDER_MINUTES=15`.
 Production Compose verifies Nginx, Express,
@@ -147,7 +159,7 @@ PostgreSQL 16, health/readiness, CORS, Helmet, migration status, the official
 - Do not restore research modules merely to make legacy tests green.
 - Clearly distinguish verified software, assumptions, future ideas, and pending
   hardware evidence.
-- Do not initiate another frontend polish pass. The next sensible work is the
+- Frontend source is closed; do not initiate another frontend polish pass. The next sensible work is the
   defense demo, report/slides, and project run checklist, only when requested.
 - Keep all recommendations inside the documented authority and safety rules.
 
@@ -155,7 +167,9 @@ PostgreSQL 16, health/readiness, CORS, Helmet, migration status, the official
 
 > Read the uploaded project handoff and canonical documents. Treat the GitHub
 > branch `final-graduation-hardening` at SHA
-> `81675fb0293535c6205da3b19a12b2f1f2dfe467` as the verified Final UI/UX Master Polish baseline. First
+> `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7` as the current accepted Post-Closure Light UI baseline. First
 > summarize the frozen contracts, completed batches, test evidence, remaining
-> debt, and the rule that no Batch 9/10 exists. Frontend polish is closed; do not
-> change code yet. Then ask me what outcome I want next.
+> debt, and the rule that no Batch 9/10 exists. Frontend source is closed; do not
+> start another UI redesign, and inspect the current GitHub branch before making
+> technical claims. Physical hardware remains pending real hardware. Then ask me
+> what outcome I want next.
