@@ -16,6 +16,18 @@ implemented and verified. The final release/assignment closure audit is
 recorded in `docs/FINAL_ASSIGNMENT_CLOSURE_AUDIT.md`. There is no canonical
 Batch 9 or Batch 10, and neither has been started.
 
+## Post-Closure Frontend Presentation Milestone: Final UI/UX Polish Pass A
+
+- Status: **VERIFIED GO** (frontend-only presentation polish; does not alter backend or canonical contracts).
+- Scope: Application shell, authentication views, operational dashboard, and resource catalogue surfaces polished to academic lab production standards.
+- Accessibility & Responsiveness: WCAG AA contrast compliance, 44px mobile touch targets, unified `:focus-visible` styling, responsive wrapping across desktop and mobile.
+- Verification Evidence:
+  - Canonical regression matrix (Batches 2–6 and 8 E2E): 100% PASS on isolated PostgreSQL 16 databases.
+  - Official Batch 7 10-step graduation scenario: 100% PASS against canonical production stack (`docker-compose.prod.yml`, Nginx `:8088`, Express, PostgreSQL 16).
+  - TypeScript: 0 errors; ESLint: 0 errors (14 pre-existing warnings); Vite production build: PASS.
+  - Dedicated visual evidence recorded in `frontend/screenshots_ui_polish_pass_a/`.
+- Boundaries Reconfirmed: Batches 1–8 and Phase D final closure remain canonical. No Batch 9/10 exists. Real telemetry hardware remains `PENDING REAL HARDWARE`.
+
 ## VERIFIED REQUIRED CORE
 
 - Canonical PostgreSQL/Prisma persistence and database conflict protection.

@@ -22,6 +22,8 @@ the authority order below and inspect the current branch before answering.
 - Batch 7 Production Demo Hardening: **GO**
 - Batch 8 Smart Laboratory Monitoring implementation: **GO**
 - Required graduation scenario: **GO**
+- Final UI/UX Polish Pass A (Core Surfaces & Design Foundation): **GO**
+- Full B2–6/8 regression and Batch 7 production 10-step rerun: **PASS**
 - Real sensor/camera verification: **PENDING REAL HARDWARE**
 - No canonical Batch 9 or Batch 10 exists. Do not invent or start one.
 
