@@ -321,7 +321,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
         <section className="panel resource-table-panel">
           <div className="resource-table-wrap">
             <table className="resource-management-table">
-              <caption>{resources.length} tài nguyên từ PostgreSQL</caption>
+              <caption>{resources.length} tài nguyên trong danh mục</caption>
               <thead><tr><th>Tài nguyên</th><th>Phân loại</th><th>Phòng lab</th><th>Vận hành</th><th>Availability</th><th><span className="sr-only">Thao tác</span></th></tr></thead>
               <tbody>{resources.map((resource) => {
                 const manageable = canManageResource(resource);

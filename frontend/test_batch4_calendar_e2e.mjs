@@ -73,7 +73,7 @@ try {
   assert.ok(dateVal && dateVal.length === 10, "Date must prepopulate with day date");
 
   // Verify Fix 3: Dynamic or truthful policy display (no static hardcoded claim)
-  const policyText = await slotModal.locator(".bg-cyan-950\\/20").innerText();
+  const policyText = await slotModal.locator(".booking-policy-box").innerText();
   assert.ok(!policyText.includes("Vui lòng đặt trước ít nhất 1 giờ"), "Must not contain obsolete static claim");
   assert.ok(policyText.includes("Chính sách lab:") || policyText.includes("Thời gian đặt phải tuân thủ"), "Must display dynamic or truthful policy");
 
@@ -82,7 +82,7 @@ try {
   if (await gpuOption.count() > 0) {
     const gpuVal = await gpuOption.getAttribute('value');
     await slotModal.locator('#booking-resource-select').selectOption(gpuVal);
-    const gpuPolicyText = await slotModal.locator(".bg-cyan-950\\/20").innerText();
+    const gpuPolicyText = await slotModal.locator(".booking-policy-box").innerText();
     assert.ok(gpuPolicyText.includes("tối đa 4 tiếng/ca"), "Dynamic policy must display 4 tiếng/ca for 240m policy");
   }
 
@@ -121,7 +121,7 @@ try {
   // Fix 6: Success state is shown, modal does NOT auto close! Real persisted status is shown
   await studentPage.locator("#created-booking-status").waitFor({ timeout: 3000 });
   const statusText = await studentPage.locator("#created-booking-status").innerText();
-  assert.ok(statusText.includes("CONFIRMED"), "Success modal must show real persisted status CONFIRMED");
+  assert.ok(statusText.includes("Xác nhận ngay"), "Success modal must show real persisted status CONFIRMED");
 
   // Explicit Close button click (Fix 6)
   await studentPage.locator("#booking-success-close-btn").click();
@@ -167,16 +167,29 @@ try {
   await studentPage.screenshot({ path: path.join(screenshotDir, "student_calendar_desktop.png"), fullPage: true });
   console.log("  Saved student_calendar_desktop.png");
 
-  // 1e. Cancellation workflow
-  console.log("  Testing student booking cancellation...");
-  const cancelButton = studentPage.locator(".booking-actions").getByRole("button", { name: /Hủy|Huỷ/i }).first();
-  if (await cancelButton.isVisible()) {
-    await Promise.all([
-      studentPage.waitForResponse((r) => r.url().includes("/cancel") && r.status() === 200),
-      cancelButton.click()
-    ]);
-    console.log("  Booking cancelled successfully");
-  }
+  // 1e. Cancellation requires explicit confirmation and persisted CANCELLED state.
+  console.log("  Testing student booking cancellation confirmation...");
+  const cancelButton = studentPage.getByRole("button", { name: "Hủy booking" }).first();
+  await cancelButton.waitFor({ state: "visible" });
+  let cancelRequests = 0;
+  studentPage.on("request", (request) => {
+    if (request.url().includes("/cancel") && request.method() === "POST") cancelRequests++;
+  });
+  await cancelButton.click();
+  const cancelDialog = studentPage.getByRole("dialog", { name: "Xác nhận hủy booking" });
+  await cancelDialog.waitFor();
+  assert.equal(cancelRequests, 0, "Opening confirmation must not mutate the booking");
+  const [cancelResponse] = await Promise.all([
+    studentPage.waitForResponse((r) => r.url().includes("/cancel") && r.status() === 200),
+    cancelDialog.getByRole("button", { name: "Xác nhận hủy" }).click()
+  ]);
+  assert.equal(cancelRequests, 1, "Only the confirmed action may call /cancel");
+  assert.equal((await cancelResponse.json()).status, "CANCELLED", "Persisted response must be CANCELLED");
+  await studentPage.getByRole("button", { name: /Lịch sử/ }).first().click();
+  const cancelledCard = studentPage.locator(".operation-card", { hasText: bookingTitle });
+  await cancelledCard.getByText("Đã hủy", { exact: true }).waitFor();
+  console.log("  Booking cancellation persisted as CANCELLED");
+
   await studentContext.close();
 
   console.log("=== 2. LECTURER E2E WORKFLOW ===");
@@ -261,7 +274,7 @@ try {
 
   // Select Spectrometer (which has scheduled maintenance tomorrow 09:00 - 13:00)
   const resourceSelect = maintPage.locator('select[aria-label="Chọn tài nguyên lịch"]');
-  await resourceSelect.selectOption({ label: "B4-E2E-SPECTRO-01 - Máy quang phổ kiểm tra" });
+  await resourceSelect.selectOption({ label: "B4-E2E-SPECTRO-01 — Máy quang phổ kiểm tra" });
   await maintPage.waitForTimeout(500);
 
   // Attempt to book during the maintenance window
@@ -316,7 +329,7 @@ try {
 
   console.log("=== 5B. EFFECTIVE APPROVAL REQUIREMENT & TRUTHFUL POLICY VERIFICATION ===");
   // B4-E2E-CNC-01 is in foreignLab, where labPolicy.requiresApproval = true and resource.requiresApproval = false
-  await adminSelect.selectOption({ label: "B4-E2E-CNC-01 - Máy CNC độ chính xác cao" });
+  await adminSelect.selectOption({ label: "B4-E2E-CNC-01 — Máy CNC độ chính xác cao" });
   await adminPage.waitForTimeout(400);
 
   await adminPage.getByRole("button", { name: "Đặt Khung Giờ Mới" }).click();
@@ -344,7 +357,7 @@ try {
   // Verify Fix 6: Modal stays open with real status PENDING_APPROVAL and closes on button click
   await adminPage.locator("#created-booking-status").waitFor({ timeout: 3000 });
   const cncStatusText = await adminPage.locator("#created-booking-status").innerText();
-  assert.ok(cncStatusText.includes("PENDING_APPROVAL"), "Success modal must show real persisted status PENDING_APPROVAL");
+  assert.ok(cncStatusText.includes("Chờ phê duyệt"), "Success modal must show real persisted status PENDING_APPROVAL");
 
   await adminPage.locator("#booking-success-close-btn").click();
   await approvalModal.waitFor({ state: "hidden", timeout: 3000 });

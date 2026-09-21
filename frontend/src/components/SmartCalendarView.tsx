@@ -6,8 +6,9 @@ import { WeekSchedule } from "./calendar/WeekSchedule.js";
 import { DaySchedule } from "./calendar/DaySchedule.js";
 import { MonthSchedule } from "./calendar/MonthSchedule.js";
 import { BookingStatusBadge } from "./BookingStatusBadge.js";
-import { X, Clock, Calendar, User } from "lucide-react";
-import { toVietnamDateString, vietnamTimeToIso } from "../utils/timezone.js";
+import { BaseModal2026 } from "./BaseModal2026.js";
+import { Clock, Calendar, User } from "lucide-react";
+import { formatVietnamDateTime, getVietnamTodayDateString, vietnamTimeToIso } from "../utils/timezone.js";
 
 export interface SmartCalendarViewProps {
   onOpenBooking?: (slot?: any) => void;
@@ -54,14 +55,16 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
 
   // Compute reference anchor dates
   const getAnchorDate = useCallback(() => {
-    const d = new Date();
+    // A UTC-midnight date is used only as a calendar-date carrier. The date itself
+    // comes from Vietnam time, so browser timezone cannot change the selected day.
+    const d = new Date(`${getVietnamTodayDateString()}T00:00:00Z`);
     if (viewMode === "week") {
-      d.setDate(d.getDate() + weekOffset * 7);
+      d.setUTCDate(d.getUTCDate() + weekOffset * 7);
     } else if (viewMode === "month") {
-      d.setMonth(d.getMonth() + monthOffset);
-      d.setDate(1);
+      d.setUTCDate(1);
+      d.setUTCMonth(d.getUTCMonth() + monthOffset);
     } else if (viewMode === "day") {
-      d.setDate(d.getDate() + dayOffset);
+      d.setUTCDate(d.getUTCDate() + dayOffset);
     }
     return d;
   }, [viewMode, weekOffset, monthOffset, dayOffset]);
@@ -82,24 +85,25 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
         const data = await apiRequest(`/calendar/slots?${queryParams.toString()}`);
         setSlotsData(data);
       } else if (viewMode === "month") {
-        const startOfMonth = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-        const endOfMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, 23, 59, 59);
+        const startDate = `${anchor.getUTCFullYear()}-${String(anchor.getUTCMonth() + 1).padStart(2, "0")}-01`;
+        const nextMonth = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1));
+        const endDate = nextMonth.toISOString().slice(0, 10);
 
         const queryParams = new URLSearchParams();
         if (selectedResourceId) queryParams.set("resource_id", selectedResourceId);
-        queryParams.set("start", startOfMonth.toISOString());
-        queryParams.set("end", endOfMonth.toISOString());
+        queryParams.set("start", vietnamTimeToIso(startDate, "00:00"));
+        queryParams.set("end", vietnamTimeToIso(endDate, "00:00"));
 
         const data = await apiRequest(`/calendar/events?${queryParams.toString()}`);
         setEventsData(data.events || []);
       } else if (viewMode === "day") {
-        const startOfDay = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), 0, 0, 0);
-        const endOfDay = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), 23, 59, 59);
+        const nextDay = new Date(anchor);
+        nextDay.setUTCDate(nextDay.getUTCDate() + 1);
 
         const queryParams = new URLSearchParams();
         if (selectedResourceId) queryParams.set("resource_id", selectedResourceId);
-        queryParams.set("start", startOfDay.toISOString());
-        queryParams.set("end", endOfDay.toISOString());
+        queryParams.set("start", vietnamTimeToIso(dateStr, "00:00"));
+        queryParams.set("end", vietnamTimeToIso(nextDay.toISOString().slice(0, 10), "00:00"));
 
         const data = await apiRequest(`/calendar/events?${queryParams.toString()}`);
         setEventsData(data.events || []);
@@ -161,11 +165,11 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
   // Compute title string
   const getHeaderTitle = () => {
     const anchor = getAnchorDate();
-    const formattedMonth = anchor.toLocaleDateString("vi-VN", { month: "long" });
-    const year = anchor.getFullYear();
+    const formattedMonth = anchor.toLocaleDateString("vi-VN", { month: "long", timeZone: "UTC" });
+    const year = anchor.getUTCFullYear();
 
     if (viewMode === "day") {
-      return `${anchor.toLocaleDateString("vi-VN", { weekday: "long" })}, ${anchor.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}`;
+      return `${anchor.toLocaleDateString("vi-VN", { weekday: "long", timeZone: "UTC" })}, ${anchor.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" })}`;
     }
     if (viewMode === "month") {
       return `${formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1)} năm ${year}`;
@@ -175,11 +179,11 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
       const last = slotsData.daysHeader[6]?.dateStr;
       return `Tuần từ ${first} đến ${last} (${year})`;
     }
-    return `Tháng ${anchor.getMonth() + 1}, ${year}`;
+    return `Tháng ${anchor.getUTCMonth() + 1}, ${year}`;
   };
 
   const anchor = getAnchorDate();
-  const currentDateStr = toVietnamDateString(anchor);
+  const currentDateStr = anchor.toISOString().slice(0, 10);
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -260,63 +264,58 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
       />
 
       {/* Booking Detail Modal (when user clicks an existing event) */}
-      {selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full shadow-lg flex flex-col gap-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-slate-100">
-                  {selectedBooking.title || "Thông tin lịch đặt"}
-                </h3>
-                <div className="mt-1">
-                  <BookingStatusBadge
-                    status={selectedBooking.status}
-                    occupancy={selectedBooking.occupancy}
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedBooking(null)}
-                className="text-slate-400 hover:text-white p-1 rounded transition-colors"
-                aria-label="Đóng"
-              >
-                <X size={16} />
-              </button>
+      <BaseModal2026
+        isOpen={Boolean(selectedBooking)}
+        onClose={() => setSelectedBooking(null)}
+        title={selectedBooking?.title || "Thông tin lịch đặt"}
+        subtitle={
+          selectedBooking
+            ? `${selectedBooking.resourceName || ""}`
+            : ""
+        }
+        icon={Calendar}
+        iconColor="text-sky-400"
+        maxWidth="max-w-md"
+        footer={
+          <button
+            type="button"
+            onClick={() => setSelectedBooking(null)}
+            className="font-mono text-xs text-slate-400 hover:text-white px-4 py-2 rounded-lg border border-white/10 hover:border-white/25 bg-white/5 cursor-pointer transition-all"
+          >
+            Đóng
+          </button>
+        }
+      >
+        {selectedBooking && (
+          <div className="flex flex-col gap-3">
+            <div className="mt-1">
+              <BookingStatusBadge
+                status={selectedBooking.status}
+                occupancy={selectedBooking.occupancy}
+              />
             </div>
 
             <div className="flex flex-col gap-2.5 text-xs text-slate-300 bg-slate-800/60 p-3 rounded-lg border border-slate-700/60">
-              {selectedBooking.resourceName && (
-                <div className="flex items-center gap-2">
-                  <Calendar size={13} className="text-slate-400" />
-                  <span className="text-slate-400">Tài nguyên:</span>
-                  <span className="font-medium text-slate-100">
-                    {selectedBooking.resourceName}
-                  </span>
-                </div>
-              )}
-
               {(selectedBooking.start || selectedBooking.startAt) && (
                 <div className="flex items-center gap-2">
                   <Clock size={13} className="text-slate-400" />
                   <span className="text-slate-400">Thời gian:</span>
                   <span className="font-medium text-slate-100">
-                    {(selectedBooking.start || selectedBooking.startAt)?.slice(0, 10)}{" "}
-                    {(selectedBooking.start || selectedBooking.startAt)?.slice(11, 16)} –{" "}
-                    {(selectedBooking.end || selectedBooking.endAt)?.slice(11, 16)}
+                    {formatVietnamDateTime(selectedBooking.start || selectedBooking.startAt)} –{" "}
+                    {formatVietnamDateTime(selectedBooking.end || selectedBooking.endAt)}
                   </span>
                 </div>
               )}
 
               {selectedBooking.purpose && (
-                <div className="mt-1 pt-2 border-t border-slate-700/60">
+                <div className="pt-2 border-t border-slate-700/60">
                   <span className="text-slate-400 block mb-0.5">Mục đích sử dụng:</span>
                   <span className="text-slate-200">{selectedBooking.purpose}</span>
                 </div>
               )}
 
               {selectedBooking.requestedBy && (
-                <div className="mt-1 pt-2 border-t border-slate-700/60 flex items-center gap-2">
+                <div className="pt-2 border-t border-slate-700/60 flex items-center gap-2">
                   <User size={13} className="text-slate-400" />
                   <span className="text-slate-400">Người đặt:</span>
                   <span className="text-slate-100">
@@ -325,19 +324,9 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
                 </div>
               )}
             </div>
-
-            <div className="flex justify-end pt-1">
-              <button
-                type="button"
-                onClick={() => setSelectedBooking(null)}
-                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg transition-colors"
-              >
-                Đóng
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </BaseModal2026>
     </div>
   );
 };

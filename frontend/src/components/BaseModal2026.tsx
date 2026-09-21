@@ -11,6 +11,7 @@ export interface BaseModal2026Props {
   maxWidth?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  dismissible?: boolean;
 }
 
 export const BaseModal2026: React.FC<BaseModal2026Props> = ({
@@ -22,20 +23,25 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
   iconColor = "text-blue-400",
   maxWidth = "max-w-2xl",
   children,
-  footer
+  footer,
+  dismissible = true
 }) => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  const dismissibleRef = useRef(dismissible);
+  onCloseRef.current = onClose;
+  dismissibleRef.current = dismissible;
 
   useEffect(() => {
     if (!isOpen) return;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+    const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 0);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        if (dismissibleRef.current) onCloseRef.current();
         return;
       }
       if (e.key !== "Tab") return;
@@ -60,10 +66,11 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => {
+      window.clearTimeout(focusTimer);
       window.removeEventListener("keydown", handleKeyDown);
       previouslyFocused?.focus?.();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -71,8 +78,8 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
     <div
       className="modal-backdrop-2026"
       onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
+        if (dismissible && e.target === e.currentTarget) {
+          onCloseRef.current();
         }
       }}
       role="dialog"
@@ -85,7 +92,7 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
 
         {/* Modal Header */}
         {(title || Icon) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.02]">
+          <div className="modal-heading-2026 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {Icon && (
                 <div className="w-9 h-9 rounded-xl bg-blue-950/60 border border-blue-500/30 flex items-center justify-center shrink-0">
@@ -109,8 +116,9 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
             <button
               ref={closeButtonRef}
               type="button"
-              onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-transform hover:rotate-90 duration-200 cursor-pointer"
+              onClick={() => { if (dismissible) onCloseRef.current(); }}
+              aria-disabled={!dismissible}
+              className="modal-close-button-2026 flex items-center justify-center cursor-pointer"
               title="Đóng (Esc)"
               aria-label="Close"
             >
@@ -120,13 +128,13 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
         )}
 
         {/* Modal Body Content */}
-        <div className="px-6 py-5 overflow-y-auto max-h-[calc(85vh-120px)] flex flex-col gap-4">
+        <div className="modal-body-2026 px-6 py-5 flex flex-col gap-4">
           {children}
         </div>
 
         {/* Optional Footer */}
         {footer && (
-          <div className="px-6 py-3.5 border-t border-white/10 bg-black/40 flex items-center justify-end gap-3 flex-wrap">
+          <div className="modal-footer-2026 flex items-center justify-end gap-3 flex-wrap">
             {footer}
           </div>
         )}

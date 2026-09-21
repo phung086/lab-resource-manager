@@ -21,6 +21,10 @@
 .operation-evidence-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-top: 10px; }
 .operation-evidence-grid p { margin-top: 5px; color: var(--text-secondary); font-size: 12px; line-height: 1.45; white-space: pre-wrap; }
 .operation-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.operation-actions-spacer { flex: 1 1 auto; }
+.operation-card-actions .btn, .operations-filter-row button { min-height: 40px; }
+.btn-danger { border: 1px solid rgba(239,68,68,.42); background: rgba(239,68,68,.12); color: #fca5a5; }
+.btn-danger:hover:not(:disabled) { border-color: #f87171; background: rgba(239,68,68,.2); color: #fff; }
 .operations-empty { display: flex; min-height: 140px; align-items: center; justify-content: center; flex-direction: column; gap: 7px; border: 1px dashed var(--line-strong); border-radius: 10px; color: var(--text-muted); padding: 20px; text-align: center; font-size: 12px; }
 .operations-empty strong { color: var(--text-secondary); }
 .operation-modal-resource { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.02); padding: 11px 12px; }

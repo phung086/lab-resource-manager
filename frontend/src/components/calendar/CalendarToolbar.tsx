@@ -31,143 +31,126 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
   onResourceChange
 }) => {
   return (
-    <div className="flex flex-col gap-3 w-full">
+    <div className="calendar-toolbar">
       {/* Control bar */}
-      <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm">
+      <div className="calendar-toolbar-row">
         {/* Navigation & Header Title */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center bg-slate-800/80 border border-slate-700 rounded-lg p-0.5">
+        <div className="calendar-nav-group">
+          <div className="calendar-nav-controls">
             <button
               type="button"
               onClick={onPrev}
-              className="p-1.5 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition-colors"
+              className="calendar-nav-btn"
               title="Khoảng trước"
               aria-label="Khoảng trước"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={16} aria-hidden="true" />
             </button>
             <button
               type="button"
               onClick={onToday}
-              className="px-2.5 py-1 text-xs font-semibold text-sky-400 hover:text-white transition-colors"
+              className="calendar-today-btn"
             >
-              HÔM NAY
+              Hôm nay
             </button>
             <button
               type="button"
               onClick={onNext}
-              className="p-1.5 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition-colors"
+              className="calendar-nav-btn"
               title="Khoảng sau"
               aria-label="Khoảng sau"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={16} aria-hidden="true" />
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold text-slate-100 tracking-tight flex items-center gap-2">
+          <div className="calendar-title-group">
+            <h2 className="calendar-period-title">
               <span>{headerTitle}</span>
-              {loading && <RefreshCw size={14} className="animate-spin text-sky-400" />}
+              {loading && <RefreshCw size={14} className="calendar-loading-spin" aria-label="Đang tải" />}
             </h2>
             <button
               type="button"
               onClick={onRefresh}
-              className="p-1 text-slate-400 hover:text-slate-200 rounded transition-colors"
+              className="calendar-refresh-btn"
               title="Làm mới lịch"
               aria-label="Làm mới lịch"
             >
-              <RefreshCw size={13} />
+              <RefreshCw size={13} aria-hidden="true" />
             </button>
           </div>
         </div>
 
         {/* View Switcher (Day / Week / Month) */}
-        <div className="flex items-center bg-slate-800/90 border border-slate-700 rounded-lg p-0.5">
+        <div role="group" aria-label="Chế độ xem lịch" className="calendar-view-switcher">
           <button
             type="button"
             onClick={() => onViewModeChange("day")}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              viewMode === "day"
-                ? "bg-sky-600 text-white shadow-xs"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
+            aria-pressed={viewMode === "day"}
           >
             Ngày
           </button>
           <button
             type="button"
             onClick={() => onViewModeChange("week")}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              viewMode === "week"
-                ? "bg-sky-600 text-white shadow-xs"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
+            aria-pressed={viewMode === "week"}
           >
             Tuần
           </button>
           <button
             type="button"
             onClick={() => onViewModeChange("month")}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              viewMode === "month"
-                ? "bg-sky-600 text-white shadow-xs"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
+            aria-pressed={viewMode === "month"}
           >
             Tháng
           </button>
         </div>
 
         {/* Action: New Booking */}
-        <div>
-          <button
-            type="button"
-            onClick={onNewBooking}
-            className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
-          >
-            <Plus size={14} />
-            <span>Đặt Khung Giờ Mới</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onNewBooking}
+          className="btn btn-primary calendar-new-booking-btn"
+        >
+          <Plus size={14} aria-hidden="true" />
+          <span>Đặt Khung Giờ Mới</span>
+        </button>
       </div>
 
-      {/* Filter Chips Bar */}
-      <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400 flex items-center gap-1 font-medium">
-            <Filter size={13} className="text-sky-400" />
-            <span>Tài nguyên:</span>
-          </span>
+      {/* Filter & Legend bar */}
+      <div className="calendar-filter-bar">
+        <div className="calendar-resource-filter">
+          <Filter size={13} className="calendar-filter-icon" aria-hidden="true" />
+          <span className="calendar-filter-label">Tài nguyên:</span>
           <select
             value={selectedResourceId}
             onChange={(e) => onResourceChange(e.target.value)}
-            className="bg-slate-900 border border-slate-700 focus:border-sky-500 text-slate-100 rounded-lg px-2.5 py-1 text-xs outline-none"
             aria-label="Chọn tài nguyên lịch"
           >
             {resources.map((r) => (
-              <option key={r.id} value={r.id} className="bg-slate-900 text-slate-100">
-                {r.code} - {r.name}
+              <option key={r.id} value={r.id}>
+                {r.code} — {r.name}
               </option>
             ))}
           </select>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3 text-slate-400 shrink-0 text-xs">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-sky-500/20 border border-sky-400/40" />
+        <div className="calendar-legend" aria-label="Chú thích màu sắc lịch">
+          <span className="calendar-legend-item">
+            <span className="calendar-legend-swatch is-available" aria-hidden="true" />
             <span>Trống</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500/20 border border-emerald-400/40" />
+          <span className="calendar-legend-item">
+            <span className="calendar-legend-swatch is-mine" aria-hidden="true" />
             <span>Lịch của bạn</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-slate-800 border border-slate-600" />
+          <span className="calendar-legend-item">
+            <span className="calendar-legend-swatch is-booked" aria-hidden="true" />
             <span>Đã đặt</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-amber-500/20 border border-amber-400/40" />
+          <span className="calendar-legend-item">
+            <span className="calendar-legend-swatch is-maintenance" aria-hidden="true" />
             <span>Bảo trì / Hiệu chuẩn</span>
           </span>
         </div>

@@ -18,12 +18,12 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
   onSelectSlot,
   onSelectBooking
 }) => {
-  const year = anchorDate.getFullYear();
-  const month = anchorDate.getMonth();
+  const year = anchorDate.getUTCFullYear();
+  const month = anchorDate.getUTCMonth();
 
-  const firstDayIndex = new Date(year, month, 1).getDay(); // 0 is Sun
+  const firstDayIndex = new Date(Date.UTC(year, month, 1)).getUTCDay(); // 0 is Sun
   const adjustedFirstDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1; // 0 is Mon
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
 
   const todayStr = getVietnamTodayDateString();
 
@@ -33,7 +33,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
     cells.push(
       <div
         key={`blank-${i}`}
-        className="min-h-[85px] bg-slate-900/30 border border-slate-800/40 rounded-lg opacity-40"
+        className="calendar-month-blank"
       />
     );
   }
@@ -51,14 +51,10 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
     cells.push(
       <div
         key={dayDateStr}
-        onClick={() => onSelectSlot(dayDateStr, "09:00")}
-        className={`min-h-[95px] p-2 rounded-lg border flex flex-col justify-between transition-colors cursor-pointer group hover:border-sky-500/50 hover:bg-slate-800/60 ${
-          isToday
-            ? "border-sky-500 bg-sky-950/20"
-            : "border-slate-800 bg-slate-900/50"
-        }`}
+        className={`calendar-month-cell ${isToday ? "is-today" : ""} p-2 rounded-lg border flex flex-col justify-between group`}
       >
-        <div className="flex items-center justify-between">
+
+        <button type="button" onClick={() => onSelectSlot(dayDateStr, "09:00")} aria-label={`Đặt lịch ngày ${dayDateStr}`} className="calendar-month-day-action flex items-center justify-between w-full text-left">
           <span
             className={`text-xs font-semibold ${
               isToday
@@ -72,7 +68,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
             size={12}
             className="text-slate-500 opacity-0 group-hover:opacity-100 group-hover:text-sky-400 transition-opacity"
           />
-        </div>
+        </button>
 
         <div className="flex flex-col gap-1 my-1 overflow-hidden">
           {dayEvents.slice(0, 3).map((ev) => (
@@ -90,7 +86,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
           )}
         </div>
 
-        <div className="text-[10px] text-slate-500 group-hover:text-sky-400">
+        <div className="text-[10px] text-slate-500">
           {dayEvents.length === 0 ? "Trống" : `${dayEvents.length} lịch`}
         </div>
       </div>
@@ -98,8 +94,9 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
   }
 
   return (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 shadow-xs">
-      <div className="grid grid-cols-7 gap-2">
+    <div className="calendar-month-frame">
+      <div className="calendar-month-scroll">
+      <div className="calendar-month-grid">
         {DAY_NAMES.map((dayName) => (
           <div
             key={dayName}
@@ -109,6 +106,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
           </div>
         ))}
         {cells}
+      </div>
       </div>
     </div>
   );

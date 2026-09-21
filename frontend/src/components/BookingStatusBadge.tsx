@@ -13,80 +13,80 @@ const STATUS_CONFIG: Record<
   PENDING_APPROVAL: {
     label: "Chờ duyệt",
     bg: "rgba(245, 158, 11, 0.12)",
-    text: "#b45309",
+    text: "#fbbf24",
     border: "rgba(245, 158, 11, 0.3)"
   },
   CONFIRMED: {
     label: "Đã xác nhận",
     bg: "rgba(16, 185, 129, 0.12)",
-    text: "#047857",
+    text: "#6ee7b7",
     border: "rgba(16, 185, 129, 0.3)"
   },
   CHECKED_OUT: {
     label: "Đang sử dụng",
     bg: "rgba(14, 165, 233, 0.12)",
-    text: "#0369a1",
+    text: "#7dd3fc",
     border: "rgba(14, 165, 233, 0.3)"
   },
   RETURNED: {
     label: "Đã hoàn trả",
     bg: "rgba(99, 102, 241, 0.12)",
-    text: "#4338ca",
+    text: "#c4b5fd",
     border: "rgba(99, 102, 241, 0.3)"
   },
   COMPLETED: {
     label: "Hoàn tất",
     bg: "rgba(100, 116, 139, 0.12)",
-    text: "#334155",
+    text: "#cbd5e1",
     border: "rgba(100, 116, 139, 0.3)"
   },
   REJECTED: {
     label: "Từ chối",
     bg: "rgba(239, 68, 68, 0.12)",
-    text: "#b91c1c",
+    text: "#fca5a5",
     border: "rgba(239, 68, 68, 0.3)"
   },
   CANCELLED: {
     label: "Đã hủy",
     bg: "rgba(148, 163, 184, 0.12)",
-    text: "#475569",
+    text: "#cbd5e1",
     border: "rgba(148, 163, 184, 0.3)"
   },
   // Compatibility lowercase mappings
   pending: {
     label: "Chờ duyệt",
     bg: "rgba(245, 158, 11, 0.12)",
-    text: "#b45309",
+    text: "#fbbf24",
     border: "rgba(245, 158, 11, 0.3)"
   },
   approved: {
     label: "Đã xác nhận",
     bg: "rgba(16, 185, 129, 0.12)",
-    text: "#047857",
+    text: "#6ee7b7",
     border: "rgba(16, 185, 129, 0.3)"
   },
   checked_out: {
     label: "Đang sử dụng",
     bg: "rgba(14, 165, 233, 0.12)",
-    text: "#0369a1",
+    text: "#7dd3fc",
     border: "rgba(14, 165, 233, 0.3)"
   },
   completed: {
     label: "Hoàn tất",
     bg: "rgba(100, 116, 139, 0.12)",
-    text: "#334155",
+    text: "#cbd5e1",
     border: "rgba(100, 116, 139, 0.3)"
   },
   rejected: {
     label: "Từ chối",
     bg: "rgba(239, 68, 68, 0.12)",
-    text: "#b91c1c",
+    text: "#fca5a5",
     border: "rgba(239, 68, 68, 0.3)"
   },
   cancelled: {
     label: "Đã hủy",
     bg: "rgba(148, 163, 184, 0.12)",
-    text: "#475569",
+    text: "#cbd5e1",
     border: "rgba(148, 163, 184, 0.3)"
   }
 };
@@ -97,21 +97,21 @@ const OCCUPANCY_CONFIG: Record<
 > = {
   BOOKED: {
     label: "Đã đặt",
-    bg: "rgba(219, 234, 254, 0.8)",
-    text: "#1e40af",
-    border: "#bfdbfe"
+    bg: "rgba(37, 99, 235, 0.14)",
+    text: "#bfdbfe",
+    border: "rgba(96, 165, 250, 0.35)"
   },
   MAINTENANCE: {
     label: "Bảo trì",
-    bg: "rgba(254, 226, 226, 0.8)",
-    text: "#991b1b",
-    border: "#fecaca"
+    bg: "rgba(245, 158, 11, 0.12)",
+    text: "#fcd34d",
+    border: "rgba(245, 158, 11, 0.35)"
   },
   AVAILABLE: {
     label: "Trống",
-    bg: "rgba(220, 252, 231, 0.8)",
-    text: "#166534",
-    border: "#bbf7d0"
+    bg: "rgba(16, 185, 129, 0.12)",
+    text: "#6ee7b7",
+    border: "rgba(16, 185, 129, 0.35)"
   }
 };
 

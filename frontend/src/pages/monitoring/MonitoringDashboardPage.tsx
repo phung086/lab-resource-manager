@@ -3,6 +3,7 @@ import { Activity, AlertTriangle, Bell, CalendarClock, Camera, Gauge, Server, Sh
 import { TelemetryStatusGrid } from "../../components/features/monitoring/TelemetryStatusGrid";
 import { acknowledgeMonitoringAlert } from "../../services/monitoring";
 import type { DashboardPayload } from "../../types/telemetry";
+import { formatVietnamDateTime } from "../../utils/timezone.js";
 
 interface Props {
   dashboard: DashboardPayload | null;
@@ -52,7 +53,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
           <p className="eyebrow">GIÁM SÁT TỪ DỮ LIỆU ĐƯỢC CHẤP NHẬN</p>
           <h1 id="monitoring-dashboard-heading">Bảng điều khiển vận hành</h1>
           <p className="section-description">
-            KPI, sự cố và telemetry được tổng hợp trực tiếp từ PostgreSQL. Không có dữ liệu giả hoặc trạng thái khỏe mạnh suy diễn khi thiếu mẫu đo.
+            Theo dõi tình trạng tài nguyên, sự cố và mẫu đo đã ghi nhận. Khi thiếu dữ liệu, hệ thống không suy diễn trạng thái ổn định.
           </p>
         </div>
         {onRefresh && <button className="btn btn-secondary" type="button" onClick={onRefresh} disabled={loading}>{loading ? "Đang cập nhật..." : "Cập nhật"}</button>}
@@ -67,7 +68,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
         ))}
       </div>
 
-      {actionError && <div className="alert danger">{actionError}</div>}
+      {actionError && <div className="alert danger" role="alert">{actionError}</div>}
 
       <div className="dashboard-data-grid">
         <article className="card dashboard-data-panel">
@@ -131,7 +132,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
                 </div>
                 <div>
                   <span>{alert.status}</span>
-                  <time>{new Date(alert.lastObservedAt).toLocaleString("vi-VN")}</time>
+                  <time dateTime={alert.lastObservedAt}>{formatVietnamDateTime(alert.lastObservedAt)}</time>
                   {alert.status === "OPEN" && (
                     <button className="btn btn-secondary" type="button" disabled={acknowledgingId === alert.id} onClick={() => acknowledge(alert.id)}>
                       {acknowledgingId === alert.id ? "Đang xác nhận..." : "Xác nhận"}
@@ -180,7 +181,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
                 </div>
                 <div>
                   <span>{booking.status}</span>
-                  <time>{new Date(booking.startAt).toLocaleString("vi-VN")}</time>
+                  <time dateTime={booking.startAt}>{formatVietnamDateTime(booking.startAt)}</time>
                 </div>
               </div>
             ))}

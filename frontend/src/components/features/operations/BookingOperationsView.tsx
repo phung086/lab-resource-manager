@@ -29,6 +29,10 @@ const FILTER_LABELS: Record<FilterKey, string> = {
   CHECKED_OUT: "Đang sử dụng", RETURNED: "Chờ hoàn tất", HISTORY: "Lịch sử"
 };
 const HISTORY_STATUSES = new Set(["COMPLETED", "REJECTED", "CANCELLED"]);
+const STATUS_LABELS: Record<string, string> = {
+  PENDING_APPROVAL: "chờ duyệt", CONFIRMED: "đã xác nhận", CHECKED_OUT: "đang sử dụng",
+  RETURNED: "đã hoàn trả", COMPLETED: "hoàn tất", REJECTED: "bị từ chối", CANCELLED: "đã hủy"
+};
 
 export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ user, onChanged }) => {
   const isStaff = ["ADMIN", "LAB_STAFF"].includes(user.role);
@@ -41,6 +45,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   const [actionState, setActionState] = useState<{ action: BookingAction; booking: BookingRecord } | null>(null);
   const [historyState, setHistoryState] = useState<BookingHistoryResponse | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [cancelState, setCancelState] = useState<BookingRecord | null>(null);
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
@@ -84,7 +89,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     try {
       const updated = await performBookingAction(actionState.booking.id, actionState.action, payload);
       const warning = updated.physicalStateWarning ? ` ${updated.physicalStateWarning}` : "";
-      setSuccess(`Đã cập nhật booking ${updated.resource?.code || updated.id} sang ${updated.status}.${warning}`);
+      setSuccess(`Đã cập nhật booking ${updated.resource?.code || updated.id}: ${STATUS_LABELS[updated.status] || updated.status}.${warning}`);
       setActionState(null);
       await loadBookings();
       onChanged?.();
@@ -106,14 +111,16 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     }
   }
 
-  async function cancelBooking(booking: BookingRecord) {
-    if (!window.confirm(`Hủy booking “${booking.title}”?`)) return;
+  async function confirmCancellation() {
+    if (!cancelState || busyId) return;
+    const booking = cancelState;
     setBusyId(booking.id);
     setError("");
     setSuccess("");
     try {
       const updated = await cancelOwnBooking(booking.id, "Người đặt chủ động hủy booking");
-      setSuccess(`Booking đã được hủy (${updated.status}).`);
+      setSuccess(`Booking đã được hủy (${STATUS_LABELS[updated.status] || updated.status}).`);
+      setCancelState(null);
       await loadBookings();
       onChanged?.();
     } catch (requestError: any) {
@@ -124,13 +131,13 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   }
 
   return (
-    <div className="operations-view">
+    <div className="operations-view" data-testid="operations-view">
       <header className="operations-header">
         <div>
-          <span className="operations-kicker">REQUIRED CORE · OPERATIONAL WORKFLOW</span>
+          <span className="operations-kicker">Quản lý booking phòng lab</span>
           <h2>{isStaff ? "Vận hành booking & bàn giao tài nguyên" : "Lịch đặt và tiến trình sử dụng của tôi"}</h2>
           <p>{isStaff
-            ? "Duyệt yêu cầu, bàn giao, tiếp nhận hoàn trả và đóng workflow bằng dữ liệu đã lưu trong PostgreSQL."
+            ? "Duyệt yêu cầu, bàn giao, tiếp nhận hoàn trả và hoàn tất workflow từ nguồn dữ liệu thực."
             : "Theo dõi trạng thái duyệt, lịch sử bàn giao và tình trạng tài nguyên của các booking thuộc tài khoản hiện tại."}</p>
         </div>
         <button type="button" className="btn btn-secondary" onClick={loadBookings} disabled={loading}>
@@ -138,12 +145,13 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
         </button>
       </header>
 
+
       {error && <div className="alert danger" role="alert"><AlertCircle size={16} /> {error}</div>}
       {success && <div className="alert success" role="status" aria-live="polite">{success}</div>}
 
       <nav className="operations-filter-row" aria-label="Bộ lọc workflow booking">
         {filters.map((key) => (
-          <button key={key} type="button" className={filter === key ? "is-active" : ""} onClick={() => setFilter(key)}>
+          <button key={key} type="button" className={filter === key ? "is-active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>
             <span>{FILTER_LABELS[key]}</span><strong>{counts[key]}</strong>
           </button>
         ))}
@@ -163,7 +171,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
               busy={busyId === booking.id}
               onAction={(action, selected) => setActionState({ action, booking: selected })}
               onOpenHistory={openHistory}
-              onCancel={!isStaff ? cancelBooking : undefined}
+              onCancel={!isStaff ? setCancelState : undefined}
             />
           ))}
         </div>
@@ -179,6 +187,20 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
           onConfirm={submitAction}
         />
       )}
+
+      <BaseModal2026
+        isOpen={Boolean(cancelState)}
+        onClose={() => { if (!busyId) setCancelState(null); }}
+        title="Xác nhận hủy booking"
+        subtitle={cancelState ? `${cancelState.resource?.code || "Tài nguyên"} · ${cancelState.title}` : ""}
+        maxWidth="max-w-md"
+        footer={<>
+          <button type="button" className="btn btn-secondary" disabled={Boolean(busyId)} onClick={() => setCancelState(null)}>Giữ booking</button>
+          <button type="button" className="btn btn-danger" disabled={Boolean(busyId)} onClick={confirmCancellation}>{busyId ? "Đang hủy..." : "Xác nhận hủy"}</button>
+        </>}
+      >
+        <p>Booking sẽ chuyển sang trạng thái đã hủy sau khi hệ thống lưu thành công. Thao tác này không thể hoàn tác từ giao diện.</p>
+      </BaseModal2026>
 
       <BaseModal2026
         isOpen={Boolean(historyState) || historyLoading}

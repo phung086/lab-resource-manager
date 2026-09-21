@@ -1,6 +1,7 @@
 import React from "react";
 import { Clock, User, Calendar } from "lucide-react";
 import { BookingStatusBadge } from "../BookingStatusBadge.js";
+import { toVietnamTimeString } from "../../utils/timezone.js";
 
 export interface CalendarEventCardProps {
   event: any;
@@ -14,17 +15,19 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
   compact = false
 }) => {
   const isMaintenance = event.type === "maintenance" || event.type === "calibration";
-  const startTime = event.start ? event.start.slice(11, 16) : "";
-  const endTime = event.end ? event.end.slice(11, 16) : "";
+  const startTime = toVietnamTimeString(event.start);
+  const endTime = toVietnamTimeString(event.end);
+  const appearance = event.isMine ? "is-mine" : isMaintenance ? "is-maintenance" : "is-booked";
 
   if (compact) {
     return (
-      <div
+      <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
           if (onClick) onClick(event);
         }}
-        className={`text-[11px] px-2 py-1 rounded border transition-colors cursor-pointer truncate ${
+        className={`calendar-event-card-wrap ${appearance} w-full text-left text-[11px] px-2 py-1 rounded border transition-colors cursor-pointer truncate ${
           event.isMine
             ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-200 hover:bg-emerald-900/50"
             : isMaintenance
@@ -34,18 +37,19 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
         title={`${event.title} (${startTime} - ${endTime})`}
       >
         <span className="font-medium">
-          {event.isMine ? "★ " : ""}
+          {event.isMine ? <span aria-hidden="true">★ </span> : null}
           {event.title}
         </span>
         {startTime && <span className="ml-1 text-[10px] text-slate-400">({startTime})</span>}
-      </div>
+      </button>
     );
   }
 
   return (
-    <div
+    <button
+      type="button"
       onClick={() => onClick && onClick(event)}
-      className={`p-3 rounded-lg border transition-colors cursor-pointer flex flex-col gap-2 ${
+      className={`calendar-event-card-wrap ${appearance} w-full text-left p-3 rounded-lg border transition-colors cursor-pointer flex flex-col gap-2 ${
         event.isMine
           ? "bg-emerald-950/30 border-emerald-600/40 hover:border-emerald-500 hover:bg-emerald-950/40"
           : isMaintenance
@@ -55,7 +59,7 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
     >
       <div className="flex items-start justify-between gap-2">
         <h4 className="text-sm font-medium text-slate-100 leading-snug">
-          {event.isMine && <span className="text-emerald-400 mr-1">★</span>}
+          {event.isMine && <span aria-hidden="true" className="text-emerald-400 mr-1">★</span>}
           {event.title}
         </h4>
         <BookingStatusBadge status={event.status} occupancy={event.occupancy} />
@@ -82,6 +86,6 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
           <span>{event.requestedBy.fullName || event.requestedBy.email}</span>
         </div>
       )}
-    </div>
+    </button>
   );
 };

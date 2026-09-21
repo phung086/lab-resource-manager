@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
 import { Header } from "./Header.tsx";
-import { KeyRound, X, Check, ShieldAlert } from "lucide-react";
+import { KeyRound, Check, ShieldAlert } from "lucide-react";
+import { BaseModal2026 } from "./BaseModal2026.tsx";
 import { apiRequest } from "../api.js";
 import { RESEARCH_FEATURES_ENABLED } from "../config/featureFlags";
 import { AiCopilotDrawer, FloatingCopilotFab } from "../research/ResearchFeatureRegistry";
@@ -48,6 +49,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const [currentPassword, setCurrentPassword] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
+
+  function closePasswordModal() {
+    if (passwordBusy) return;
+    setChangePasswordOpen(false);
+    setPasswordError("");
+    setPasswordSuccess(false);
+  }
 
   // Map activeTab to readable header title
   const tabTitles: Record<string, string> = {
@@ -85,6 +94,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (passwordBusy) return;
     setPasswordError("");
     if (!currentPassword) {
       setPasswordError("Vui lòng nhập mật khẩu hiện tại.");
@@ -99,6 +109,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       return;
     }
 
+    setPasswordBusy(true);
     try {
       await apiRequest("/auth/change-password", {
         method: "POST",
@@ -110,12 +121,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       setConfirmPassword("");
     } catch (error: any) {
       setPasswordError(error?.message || "Không thể đổi mật khẩu.");
-      return;
+    } finally {
+      setPasswordBusy(false);
     }
-    setTimeout(() => {
-      setPasswordSuccess(false);
-      setChangePasswordOpen(false);
-    }, 1500);
   }
 
   return (
@@ -169,47 +177,37 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         </React.Suspense>
       )}
 
-      {/* 5. Modal Đổi Mật Khẩu (Level 3 Depth) */}
-      {changePasswordOpen && (
-        <div className="modal-backdrop-2026" onClick={() => setChangePasswordOpen(false)}>
-          <div
-            className="modal-container-2026 animate-scaleUp"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 420 }}
-          >
-            <div className="modal-header-2026">
-              <div className="flex items-center gap-2">
-                <div className="modal-icon-badge-2026">
-                  <KeyRound size={18} className="text-cyan-400" />
-                </div>
-                <h3 className="text-sm font-semibold text-white">Đổi Mật Khẩu Truy Cập Lab</h3>
-              </div>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => setChangePasswordOpen(false)}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <form onSubmit={handlePasswordSubmit} className="p-4 flex flex-col gap-3">
+      <BaseModal2026
+        isOpen={changePasswordOpen}
+        onClose={closePasswordModal}
+        dismissible={!passwordBusy}
+        title="Đổi mật khẩu"
+        subtitle="Cập nhật mật khẩu truy cập tài khoản phòng lab"
+        icon={KeyRound}
+        maxWidth="max-w-md"
+        footer={<>
+          <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>Đóng</button>
+          {!passwordSuccess && <button type="submit" form="change-password-form" className="btn btn-primary" disabled={passwordBusy}>{passwordBusy ? "Đang cập nhật..." : "Cập nhật mật khẩu"}</button>}
+        </>}
+      >
+            <form id="change-password-form" onSubmit={handlePasswordSubmit} className="booking-form">
               {passwordError && (
-                <div className="alert danger text-xs flex items-center gap-2">
-                  <ShieldAlert size={14} />
+                <div className="alert danger text-xs flex items-center gap-2" role="alert">
+                  <ShieldAlert size={14} aria-hidden="true" />
                   <span>{passwordError}</span>
                 </div>
               )}
               {passwordSuccess && (
-                <div className="alert success text-xs flex items-center gap-2">
-                  <Check size={14} />
-                  <span>Mật khẩu đã được cập nhật thành công!</span>
+                <div className="alert success text-xs flex items-center gap-2" role="status">
+                  <Check size={14} aria-hidden="true" />
+                  <span>Mật khẩu đã được cập nhật thành công.</span>
                 </div>
               )}
 
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Mật khẩu hiện tại</label>
+                <label htmlFor="current-password" className="text-xs text-slate-400 mb-1 block">Mật khẩu hiện tại</label>
                 <input
+                  id="current-password"
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -220,8 +218,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Mật khẩu mới</label>
+                <label htmlFor="new-password" className="text-xs text-slate-400 mb-1 block">Mật khẩu mới</label>
                 <input
+                  id="new-password"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -232,8 +231,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Xác nhận mật khẩu mới</label>
+                <label htmlFor="confirm-password" className="text-xs text-slate-400 mb-1 block">Xác nhận mật khẩu mới</label>
                 <input
+                  id="confirm-password"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -243,22 +243,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 />
               </div>
 
-              <div className="flex justify-end gap-2 mt-3">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setChangePasswordOpen(false)}
-                >
-                  Hủy bỏ
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Cập nhật mật khẩu
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+      </BaseModal2026>
     </div>
   );
 };

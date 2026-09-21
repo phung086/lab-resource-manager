@@ -57,6 +57,7 @@ import {
 import { defaultLocale, getDictionary, interpolate, localeOptions, localeStorageKey, normalizeLocale } from "./i18n.js";
 import { buildMonitoringRows, getMonitoringSummary, toBarWidth } from "./monitoring.js";
 import { classNames, formatDateTime, formatPercent } from "./utils.js";
+import { formatVietnamDateTime, vietnamTimeToIso } from "./utils/timezone.js";
 import { RESEARCH_FEATURES_ENABLED, isTabEnabled } from "./config/featureFlags";
 import {
   AiDiagnosticStudio,
@@ -727,8 +728,8 @@ function MaintenanceView({ resources, maintenance, isStaff, onChanged }) {
           title: form.title.trim(),
           kind: form.kind || "maintenance",
           status: "scheduled",
-          startAt: new Date(form.scheduledStart).toISOString(),
-          endAt: new Date(form.scheduledEnd).toISOString(),
+          startAt: vietnamTimeToIso(...form.scheduledStart.split("T")),
+          endAt: vietnamTimeToIso(...form.scheduledEnd.split("T")),
           notes: form.notes.trim() || undefined
         })
       });
@@ -772,44 +773,44 @@ function MaintenanceView({ resources, maintenance, isStaff, onChanged }) {
         )}
       </div>
 
-      {error && <div className="alert danger">{error}</div>}
+      {error && <div className="alert danger" role="alert">{error}</div>}
 
       {showForm && isStaff && (
         <form className="card form-card" onSubmit={createMaintenance}>
           <h3>Tạo lịch bảo trì mới</h3>
           <div className="form-grid">
             <div className="form-group">
-              <label>Thiết bị *</label>
-              <select required value={form.resourceId} onChange={e => setForm({ ...form, resourceId: e.target.value })}>
+              <label htmlFor="maintenance-resource">Tài nguyên *</label>
+              <select id="maintenance-resource" required value={form.resourceId} onChange={e => setForm({ ...form, resourceId: e.target.value })}>
                 <option value="">-- Chọn thiết bị --</option>
                 {resources.map(r => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
               </select>
             </div>
             <div className="form-group">
-              <label>Loại bảo trì</label>
-              <select value={form.kind || "maintenance"} onChange={e => setForm({ ...form, kind: e.target.value })}>
+              <label htmlFor="maintenance-kind">Loại công việc</label>
+              <select id="maintenance-kind" value={form.kind || "maintenance"} onChange={e => setForm({ ...form, kind: e.target.value })}>
                 {Object.entries(kindLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
             <div className="form-group full-width">
-              <label>Tiêu đề *</label>
-              <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Vd: Vệ sinh bụi server GPU-A100..." />
+              <label htmlFor="maintenance-title">Tiêu đề *</label>
+              <input id="maintenance-title" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Ví dụ: Kiểm tra quạt làm mát thiết bị" />
             </div>
             <div className="form-group">
-              <label>Bắt đầu *</label>
-              <input type="datetime-local" required value={form.scheduledStart} onChange={e => setForm({ ...form, scheduledStart: e.target.value })} />
+              <label htmlFor="maintenance-start">Bắt đầu (giờ Việt Nam) *</label>
+              <input id="maintenance-start" type="datetime-local" required value={form.scheduledStart} onChange={e => setForm({ ...form, scheduledStart: e.target.value })} />
             </div>
             <div className="form-group">
-              <label>Kết thúc *</label>
-              <input type="datetime-local" required value={form.scheduledEnd} onChange={e => setForm({ ...form, scheduledEnd: e.target.value })} />
+              <label htmlFor="maintenance-end">Kết thúc (giờ Việt Nam) *</label>
+              <input id="maintenance-end" type="datetime-local" required value={form.scheduledEnd} onChange={e => setForm({ ...form, scheduledEnd: e.target.value })} />
             </div>
             <div className="form-group full-width">
-              <label>Ghi chú</label>
-              <textarea rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Mô tả chi tiết công việc bảo trì..." />
+              <label htmlFor="maintenance-notes">Ghi chú</label>
+              <textarea id="maintenance-notes" rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Mô tả công việc hoặc điều kiện thực tế" />
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={loading}>Tạo lịch bảo trì</button>
+            <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? "Đang lưu..." : "Tạo lịch bảo trì"}</button>
             <button type="button" className="btn" onClick={() => setShowForm(false)}>Huỷ</button>
           </div>
         </form>
@@ -834,8 +835,8 @@ function MaintenanceView({ resources, maintenance, isStaff, onChanged }) {
             </div>
             <p className="card-text">{item.resource?.name} — {item.resource?.location}</p>
             <div className="card-meta">
-              <span>Bắt đầu: {new Date(item.startAt).toLocaleString("vi-VN")}</span>
-              <span>Kết thúc: {new Date(item.endAt).toLocaleString("vi-VN")}</span>
+              <span>Bắt đầu: {formatVietnamDateTime(item.startAt)}</span>
+              <span>Kết thúc: {formatVietnamDateTime(item.endAt)}</span>
               {item.notes && <span>Ghi chú: {item.notes}</span>}
             </div>
             {isStaff && !["completed", "cancelled"].includes(item.status) && (

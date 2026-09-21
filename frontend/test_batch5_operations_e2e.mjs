@@ -24,7 +24,7 @@ async function openOperations(page) {
   const nav = page.locator(".sidebar-nav-item-2026", { hasText: /Vận Hành Booking|Lịch Đặt Của Tôi/i }).first();
   await nav.waitFor({ timeout: 5000 });
   await nav.click();
-  await page.getByText(/REQUIRED CORE · OPERATIONAL WORKFLOW/i).waitFor({ timeout: 5000 });
+  await page.locator("[data-testid=\"operations-view\"]").waitFor({ timeout: 5000 });
 }
 
 async function cardFor(page, title) {

@@ -1,6 +1,7 @@
 import React from "react";
 import { Activity, AlertTriangle, Clock3, Radio, Server, Thermometer, Wifi, WifiOff } from "lucide-react";
 import type { TelemetryResourceView, TelemetryState } from "../../../types/telemetry";
+import { formatVietnamDateTime } from "../../../utils/timezone.js";
 
 const stateMeta: Record<TelemetryState, { label: string; icon: React.ElementType }> = {
   HEALTHY: { label: "Ổn định", icon: Activity },
@@ -8,6 +9,10 @@ const stateMeta: Record<TelemetryState, { label: string; icon: React.ElementType
   STALE: { label: "Dữ liệu cũ", icon: Clock3 },
   UNAVAILABLE: { label: "Không khả dụng", icon: WifiOff },
   NO_DATA: { label: "Chưa có dữ liệu", icon: Radio }
+};
+const operationalLabels: Record<string, string> = {
+  AVAILABLE: "Sẵn sàng", IN_USE: "Đang sử dụng", MAINTENANCE: "Bảo trì",
+  CALIBRATION: "Hiệu chuẩn", BROKEN: "Hỏng", RETIRED: "Ngừng sử dụng", OFFLINE: "Ngoại tuyến"
 };
 
 export const TelemetryStatusGrid: React.FC<{ telemetry: TelemetryResourceView[] }> = ({ telemetry }) => {
@@ -44,7 +49,7 @@ export const TelemetryStatusGrid: React.FC<{ telemetry: TelemetryResourceView[] 
               </div>
               <div>
                 <dt>Trạng thái vật lý</dt>
-                <dd>{item.resource.operationalStatus}</dd>
+                <dd>{operationalLabels[item.resource.operationalStatus] || item.resource.operationalStatus}</dd>
               </div>
               <div>
                 <dt>Nguồn</dt>
@@ -56,14 +61,14 @@ export const TelemetryStatusGrid: React.FC<{ telemetry: TelemetryResourceView[] 
               </div>
               <div>
                 <dt>Lần thấy gần nhất</dt>
-                <dd>{item.sourceHealth?.lastSeenAt ? new Date(item.sourceHealth.lastSeenAt).toLocaleString("vi-VN") : "—"}</dd>
+                <dd>{formatVietnamDateTime(item.sourceHealth?.lastSeenAt)}</dd>
               </div>
             </dl>
 
             {sample ? (
               <div className="telemetry-sample-meta">
                 <Server size={13} />
-                <span>Mẫu gần nhất: {new Date(sample.sampledAt).toLocaleString("vi-VN")}</span>
+                <span>Mẫu gần nhất: {formatVietnamDateTime(sample.sampledAt)}</span>
               </div>
             ) : (
               <p className="telemetry-no-data">
@@ -85,7 +90,7 @@ export const TelemetryStatusGrid: React.FC<{ telemetry: TelemetryResourceView[] 
             {!!item.activeAlerts.length && (
               <div className="content-stack compact" aria-label="Cảnh báo giám sát đang hoạt động">
                 {item.activeAlerts.map((alert) => (
-                  <div className={`alert ${alert.severity === "CRITICAL" ? "danger" : "warning"}`} key={alert.id}>
+                  <div className={`alert telemetry-alert-detail ${alert.severity === "CRITICAL" ? "danger" : "warning"}`} key={alert.id}>
                     <strong>{alert.severity} · {alert.ruleCode}</strong>
                     <span>{alert.message}</span>
                     <small>{alert.status}{alert.incident ? ` · Incident ${alert.incident.id}` : ""}</small>
@@ -100,7 +105,7 @@ export const TelemetryStatusGrid: React.FC<{ telemetry: TelemetryResourceView[] 
                 <ul>
                   {item.history.slice(0, 5).map((history) => (
                     <li key={history.id}>
-                      {new Date(history.sampledAt).toLocaleString("vi-VN")} · {history.temperatureC != null ? `${history.temperatureC.toFixed(1)}°C` : "—"} · {history.humidityPercent != null ? `${history.humidityPercent.toFixed(1)}%` : "—"}
+                      {formatVietnamDateTime(history.sampledAt)} · {history.temperatureC != null ? `${history.temperatureC.toFixed(1)}°C` : "—"} · {history.humidityPercent != null ? `${history.humidityPercent.toFixed(1)}%` : "—"}
                     </li>
                   ))}
                 </ul>
