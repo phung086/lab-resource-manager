@@ -213,12 +213,12 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
 
       {/* Error Notice */}
       {error && (
-        <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-lg text-red-200 text-xs flex items-center justify-between">
+        <div className="alert danger text-xs flex items-center justify-between" role="alert">
           <span>{error}</span>
           <button
             type="button"
             onClick={loadCalendarData}
-            className="underline ml-2 hover:text-white"
+            className="underline ml-2"
           >
             Thử lại
           </button>
@@ -274,13 +274,13 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
             : ""
         }
         icon={Calendar}
-        iconColor="text-sky-400"
+        iconColor="text-blue-600"
         maxWidth="max-w-md"
         footer={
           <button
             type="button"
             onClick={() => setSelectedBooking(null)}
-            className="font-mono text-xs text-slate-400 hover:text-white px-4 py-2 rounded-lg border border-white/10 hover:border-white/25 bg-white/5 cursor-pointer transition-all"
+            className="btn btn-secondary text-xs"
           >
             Đóng
           </button>
@@ -295,12 +295,12 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
               />
             </div>
 
-            <div className="flex flex-col gap-2.5 text-xs text-slate-300 bg-slate-800/60 p-3 rounded-lg border border-slate-700/60">
+            <div className="calendar-detail-card flex flex-col gap-2.5 text-xs">
               {(selectedBooking.start || selectedBooking.startAt) && (
                 <div className="flex items-center gap-2">
-                  <Clock size={13} className="text-slate-400" />
-                  <span className="text-slate-400">Thời gian:</span>
-                  <span className="font-medium text-slate-100">
+                  <Clock size={13} className="text-muted shrink-0" aria-hidden="true" />
+                  <span className="text-muted">Thời gian:</span>
+                  <span className="font-medium font-mono">
                     {formatVietnamDateTime(selectedBooking.start || selectedBooking.startAt)} –{" "}
                     {formatVietnamDateTime(selectedBooking.end || selectedBooking.endAt)}
                   </span>
@@ -308,17 +308,17 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
               )}
 
               {selectedBooking.purpose && (
-                <div className="pt-2 border-t border-slate-700/60">
-                  <span className="text-slate-400 block mb-0.5">Mục đích sử dụng:</span>
-                  <span className="text-slate-200">{selectedBooking.purpose}</span>
+                <div className="calendar-detail-subfield pt-2">
+                  <span className="text-muted block mb-0.5 font-medium">Mục đích sử dụng:</span>
+                  <span>{selectedBooking.purpose}</span>
                 </div>
               )}
 
               {selectedBooking.requestedBy && (
-                <div className="pt-2 border-t border-slate-700/60 flex items-center gap-2">
-                  <User size={13} className="text-slate-400" />
-                  <span className="text-slate-400">Người đặt:</span>
-                  <span className="text-slate-100">
+                <div className="calendar-detail-subfield pt-2 flex items-center gap-2">
+                  <User size={13} className="text-muted shrink-0" aria-hidden="true" />
+                  <span className="text-muted">Người đặt:</span>
+                  <span className="font-medium">
                     {selectedBooking.requestedBy.fullName || selectedBooking.requestedBy.email}
                   </span>
                 </div>

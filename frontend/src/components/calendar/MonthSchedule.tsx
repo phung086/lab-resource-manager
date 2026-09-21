@@ -56,17 +56,13 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
 
         <button type="button" onClick={() => onSelectSlot(dayDateStr, "09:00")} aria-label={`Đặt lịch ngày ${dayDateStr}`} className="calendar-month-day-action flex items-center justify-between w-full text-left">
           <span
-            className={`text-xs font-semibold ${
-              isToday
-                ? "text-sky-300 bg-sky-950 px-1.5 py-0.5 rounded font-bold"
-                : "text-slate-300"
-            }`}
+            className={`calendar-month-date text-xs font-semibold ${isToday ? "is-today" : ""}`}
           >
             {day}
           </span>
           <Plus
             size={12}
-            className="text-slate-500 opacity-0 group-hover:opacity-100 group-hover:text-sky-400 transition-opacity"
+            className="calendar-month-add"
           />
         </button>
 
@@ -80,13 +76,13 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
             />
           ))}
           {dayEvents.length > 3 && (
-            <span className="text-[10px] text-sky-400 font-medium">
+            <span className="calendar-month-more text-[10px] font-medium">
               +{dayEvents.length - 3} lịch khác
             </span>
           )}
         </div>
 
-        <div className="text-[10px] text-slate-500">
+        <div className="calendar-month-count text-[10px]">
           {dayEvents.length === 0 ? "Trống" : `${dayEvents.length} lịch`}
         </div>
       </div>
@@ -100,7 +96,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
         {DAY_NAMES.map((dayName) => (
           <div
             key={dayName}
-            className="text-center text-xs font-semibold text-slate-400 py-1.5 border-b border-slate-800"
+            className="calendar-month-weekday text-center text-xs font-semibold py-1.5"
           >
             {dayName}
           </div>

@@ -211,12 +211,12 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       title="Đặt lịch sử dụng phòng thí nghiệm"
       subtitle="Hệ thống ghi nhận yêu cầu và xác thực tính khả dụng theo thời gian thực"
       icon={Calendar}
-      iconColor="text-blue-400"
+      iconColor="text-blue-600"
       maxWidth="max-w-xl"
       footer={
         showSuccess ? (
           <div className="w-full flex items-center justify-between">
-            <span className="text-xs text-slate-300 font-medium">
+            <span className="text-xs text-secondary font-medium">
               Vui lòng xem thông tin chi tiết ca đặt phía trên.
             </span>
             <button

@@ -152,11 +152,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="sidebar-2026 w-64 backdrop-blur-2xl border-r border-white/5">
+    <aside className="sidebar-2026">
       {/* Brand Header */}
       <div className="sidebar-brand-2026">
         <div className="brand-mark-2026">
-          <CalendarCheck size={20} className="text-obsidian" />
+          <CalendarCheck size={20} aria-hidden="true" />
         </div>
         <div className="brand-info-2026">
           <strong className="brand-name-2026">LAB RESOURCE MANAGER</strong>
@@ -197,16 +197,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     type="button"
                     title={item.label}
                     onClick={() => onSelectTab(item.id)}
-                    className={`sidebar-nav-item-2026 ${
-                      isActive
-                        ? "is-active text-white"
-                        : "text-slate-400 hover:text-slate-200"
-                    }`}
+                    className={`sidebar-nav-item-2026 ${isActive ? "is-active" : ""}`}
+                    aria-current={isActive ? "page" : undefined}
                   >
                     <div className="nav-item-left-2026">
                       <IconComponent
                         size={16}
-                        className={`nav-item-icon-2026 ${isActive ? "text-blue-400" : "text-slate-400"}`}
+                        className="nav-item-icon-2026"
                       />
                       <span className="nav-item-label-2026">{item.label}</span>
                     </div>
@@ -250,7 +247,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="user-avatar-meta-2026">
               <span className="user-name-text-2026">{user.fullName}</span>
               <div className="user-role-online-2026">
-                <span className="led-pulse led-pulse-safe" />
                 <span className="font-mono text-xs text-slate-400 uppercase">{user.role}</span>
               </div>
             </div>

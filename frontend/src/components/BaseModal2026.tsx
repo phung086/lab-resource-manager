@@ -87,21 +87,18 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
       aria-label={title || "Hộp thoại"}
     >
       <div ref={dialogRef} className={`modal-container-2026 ${maxWidth} mx-4 flex flex-col`}>
-        {/* Hairline Border Accent Top Edge */}
-        <div className="hairline-cyan-gradient" />
-
         {/* Modal Header */}
         {(title || Icon) && (
           <div className="modal-heading-2026 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {Icon && (
-                <div className="w-9 h-9 rounded-xl bg-blue-950/60 border border-blue-500/30 flex items-center justify-center shrink-0">
+                <div className="modal-icon-surface flex items-center justify-center shrink-0">
                   <Icon size={18} className={iconColor} />
                 </div>
               )}
               <div>
                 {title && (
-                  <h3 className="text-base font-bold font-heading text-white tracking-tight leading-snug">
+                  <h3 className="text-base font-bold font-heading tracking-tight leading-snug">
                     {title}
                   </h3>
                 )}

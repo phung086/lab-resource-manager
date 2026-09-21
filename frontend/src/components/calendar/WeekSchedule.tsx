@@ -16,7 +16,7 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
     return (
       <div
         aria-live="polite"
-        className="bg-slate-900/60 border border-slate-800 rounded-xl p-8 text-center text-slate-400 text-sm"
+        className="calendar-week-loading"
       >
         Đang tải lịch tuần...
       </div>
@@ -33,8 +33,8 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
           className="calendar-week-slots-grid"
         >
           {/* Top Left corner: Time Header */}
-          <div className="bg-slate-900 p-2.5 flex items-center justify-center font-medium text-xs text-slate-400">
-            <Clock size={13} className="mr-1 text-slate-500" />
+          <div className="calendar-week-axis p-2.5 flex items-center justify-center font-medium text-xs">
+            <Clock size={13} className="mr-1" />
             <span>Giờ</span>
           </div>
 
@@ -42,17 +42,11 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
           {daysHeader.map((d: any) => (
             <div
               key={d.dateStr}
-              className={`p-2.5 text-center flex flex-col items-center justify-center transition-colors ${
-                d.isToday
-                  ? "bg-sky-950/40 text-sky-200 font-semibold"
-                  : "bg-slate-900 text-slate-300 font-medium"
-              }`}
+              className={`calendar-week-day p-2.5 text-center flex flex-col items-center justify-center ${d.isToday ? "is-today" : ""}`}
             >
               <span className="text-xs uppercase tracking-wider">{d.name}</span>
               <span
-                className={`text-xs mt-0.5 ${
-                  d.isToday ? "text-sky-300 font-bold" : "text-slate-400"
-                }`}
+                className="calendar-week-date text-xs mt-0.5"
               >
                 {d.dateStr}
               </span>
@@ -63,7 +57,7 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
           {grid.map((row: any) => (
             <React.Fragment key={row.hour}>
               {/* Hour Column */}
-              <div className="bg-slate-900/95 p-2 flex items-start justify-center border-t border-slate-800/60 font-mono text-xs text-slate-400">
+              <div className="calendar-week-axis p-2 flex items-start justify-center font-mono text-xs">
                 {row.time}
               </div>
 
@@ -83,14 +77,14 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                       <div className="flex items-center justify-between">
                         <span
                           className={`text-[10px] font-semibold flex items-center gap-1 ${
-                            slot.isMine ? "text-emerald-300" : "text-slate-400"
+                            slot.isMine ? "calendar-booking-mine" : "calendar-booking-other"
                           }`}
                         >
                           {slot.isMine ? <CheckCircle2 size={10} /> : <Lock size={10} />}
                           <span>{slot.label}</span>
                         </span>
                       </div>
-                      <div className="text-slate-200 text-xs font-medium truncate my-0.5">
+                      <div className="calendar-booking-title text-xs font-medium truncate my-0.5">
                         {slot.title || "Đã đặt"}
                       </div>
                     </button>
@@ -101,13 +95,13 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                   return (
                     <div
                       key={`${row.hour}-${idx}`}
-                      className="calendar-week-cell is-maintenance p-2 text-amber-300 select-none"
+                      className="calendar-week-cell is-maintenance p-2 select-none"
                       title={slot.details || "Bảo trì định kỳ"}
                     >
                       <span className="text-[10px] font-semibold flex items-center gap-1">
                         <Wrench size={10} /> {slot.label}
                       </span>
-                      <span className="text-[10px] text-amber-200/70 truncate block">
+                      <span className="text-[10px] truncate block">
                         {slot.details}
                       </span>
                     </div>
@@ -118,11 +112,11 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                   return (
                     <div
                       key={`${row.hour}-${idx}`}
-                      className="calendar-week-cell is-offline p-2 text-rose-400 select-none"
+                      className="calendar-week-cell is-offline p-2 select-none"
                       title={slot.details || "Thiết bị tạm ngừng"}
                     >
                       <span className="text-[10px] font-semibold block">{slot.label}</span>
-                      <span className="text-[10px] text-slate-400 truncate block">
+                      <span className="text-[10px] truncate block">
                         {slot.details}
                       </span>
                     </div>
@@ -139,11 +133,11 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                     aria-label={`Đặt khung giờ ${row.time} ngày ${dayHeader?.name || ""}`}
                     title={`Bấm để đặt khung giờ ${row.time} ngày ${dayHeader?.name || ""}`}
                   >
-                    <div className="flex items-center justify-between text-slate-500 group-hover:text-sky-400">
+                    <div className="flex items-center justify-between">
                       <span className="text-[10px] font-medium">Trống</span>
                       <Plus size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <div className="text-[10px] text-slate-500 group-hover:text-sky-300 transition-colors">
+                    <div className="calendar-slot-action text-[10px]">
                       + Đặt ngay
                     </div>
                   </button>

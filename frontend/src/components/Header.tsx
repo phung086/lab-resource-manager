@@ -1,18 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { parseVietnamParts } from "../utils/timezone";
-import {
-  Bell,
-  Check,
-  ChevronDown,
-  KeyRound,
-  LogOut,
-  RefreshCw,
-  Sparkles,
-  User,
-  Shield,
-  Zap,
-  Globe
-} from "lucide-react";
+import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, Shield } from "lucide-react";
 
 export interface HeaderProps {
   title: string;
@@ -108,6 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
             className={`segmented-btn-2026 ${locale === "vi" ? "is-active" : ""}`}
             onClick={() => onLocaleChange("vi")}
             title="Tiếng Việt"
+            aria-pressed={locale === "vi"}
           >
             VI
           </button>
@@ -116,6 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
             className={`segmented-btn-2026 ${locale === "en" ? "is-active" : ""}`}
             onClick={() => onLocaleChange("en")}
             title="English"
+            aria-pressed={locale === "en"}
           >
             EN
           </button>
@@ -129,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
             title="Làm mới dữ liệu telemetry"
             onClick={onRefresh}
           >
-            <RefreshCw size={16} className={loading ? "animate-spin text-cyan-400" : "text-slate-300"} />
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </button>
         )}
 
@@ -140,8 +130,8 @@ export const Header: React.FC<HeaderProps> = ({
           title="Thông báo & Escalation"
           onClick={onOpenNotifications}
         >
-          <div className={`bell-icon-wrapper ${notificationsCount > 0 ? "bell-shake" : ""}`}>
-            <Bell size={16} className="text-slate-200" />
+          <div className="bell-icon-wrapper">
+            <Bell size={16} />
           </div>
           {notificationsCount > 0 && (
             <span className="notification-counter-pill font-mono">

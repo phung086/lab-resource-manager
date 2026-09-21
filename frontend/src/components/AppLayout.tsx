@@ -128,7 +128,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   return (
     <div className="app-shell-2026">
-      {/* 1. Sidebar Navigation (w-64, backdrop-blur-2xl, border-r border-white/5) */}
+      {/* Primary navigation */}
       <Sidebar
         activeTab={activeTab}
         onSelectTab={onSelectTab}
