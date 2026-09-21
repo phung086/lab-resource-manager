@@ -56,7 +56,7 @@ try {
   assert.equal(await studentPage.getByText("08:00").first().isVisible(), true, "Day schedule hour rows must be visible");
 
   // Click on the 15:00 slot
-  const slotRow15 = studentPage.locator(".calendar-day-row, .bg-slate-850, .bg-slate-900\\/40", { hasText: "15:00" });
+  const slotRow15 = studentPage.locator(".calendar-day-row", { hasText: "15:00" });
   const openSlot15 = slotRow15.locator("text=Khung giờ trống — Bấm để đặt");
   await openSlot15.click();
 

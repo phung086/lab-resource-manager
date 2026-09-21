@@ -117,6 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             className="header-icon-btn-2026"
             title="Làm mới dữ liệu telemetry"
+            aria-label="Làm mới dữ liệu"
             onClick={onRefresh}
           >
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
@@ -128,6 +129,11 @@ export const Header: React.FC<HeaderProps> = ({
           type="button"
           className={`header-notification-btn-2026 ${notificationsCount > 0 ? "has-unread" : ""}`}
           title="Thông báo & Escalation"
+          aria-label={
+            notificationsCount > 0
+              ? `Mở thông báo, ${notificationsCount} chưa đọc`
+              : "Mở thông báo"
+          }
           onClick={onOpenNotifications}
         >
           <div className="bell-icon-wrapper">
@@ -148,6 +154,8 @@ export const Header: React.FC<HeaderProps> = ({
               className="user-avatar-btn-2026"
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               aria-expanded={userMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Mở menu tài khoản"
             >
               <div className="avatar-letter-circle">
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}

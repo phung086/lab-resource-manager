@@ -35,7 +35,7 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
           return (
             <div
               key={hour}
-              className="calendar-day-row bg-slate-900/40 flex items-start gap-4"
+              className="calendar-day-row flex items-start gap-4"
             >
               {/* Hour badge */}
               <div className="calendar-day-time w-16 font-mono text-xs font-semibold flex items-center gap-1 shrink-0 pt-1">

@@ -117,7 +117,7 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
               aria-disabled={!dismissible}
               className="modal-close-button-2026 flex items-center justify-center cursor-pointer"
               title="Đóng (Esc)"
-              aria-label="Close"
+              aria-label="Đóng hộp thoại"
             >
               <X size={15} />
             </button>
