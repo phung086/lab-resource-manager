@@ -13,7 +13,7 @@ the authority order below and inspect the current branch before answering.
 - Repository: `https://github.com/phung086/lab-resource-manager`
 - Working branch: `final-graduation-hardening`
 - Starting main SHA: `71da1683fc1c8bf842d2fc5b1313b45ac15499c1`
-- Verified handoff SHA: `8be168a5e120801ef29160921cb022fd9b65eab5`
+- Verified handoff SHA: `75b17a789f13635cd16b292b94ff3d74c7dc96f2`
 - Batch 7 repair/closure commit: `50ecda3a69ef37fc21b572616ac76b3e4975a7d3`
 - Branch is pushed; it has not been merged into main.
 
@@ -141,7 +141,7 @@ PostgreSQL 16, health/readiness, CORS, Helmet, migration status, the official
 
 > Read the uploaded project handoff and canonical documents. Treat the GitHub
 > branch `final-graduation-hardening` at SHA
-> `8be168a5e120801ef29160921cb022fd9b65eab5` as the latest verified state. First
+> `75b17a789f13635cd16b292b94ff3d74c7dc96f2` as the latest verified state. First
 > summarize the frozen contracts, completed batches, test evidence, remaining
 > debt, and the rule that no Batch 9/10 exists. Do not change code yet. Then ask
 > me what outcome I want next.
