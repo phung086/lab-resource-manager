@@ -28,7 +28,7 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
       isOpen={isOpen}
       onClose={onClose}
       title={resource.name}
-      subtitle={`${resource.code} · ${resource.location}`}
+      subtitle={resource.location ? `${resource.code} · ${resource.location}` : resource.code}
       icon={Server}
       maxWidth="max-w-4xl"
       footer={<button type="button" className="secondary-button" onClick={onClose}>Đóng</button>}

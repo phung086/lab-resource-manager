@@ -47,39 +47,36 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
   return (
     <div className="min-h-screen w-full bg-[#08090D] flex items-center justify-center p-4 lg:p-8 font-sans">
       <div className="auth-split-grid relative">
-        {/* Top hairline gradient */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-80 z-20" />
+        {/* Top hairline border */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-80 z-20" />
 
         {/* CỘT TRÁI: Quy Chế & Lợi Ích Sinh Viên */}
-        <div className="bg-gradient-to-br from-[#0B0F19] via-[#0E1424] to-[#080A10] p-8 lg:p-12 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-hidden">
-          <div className="absolute top-10 left-10 w-80 h-80 rounded-full bg-cyan-500/10 filter blur-3xl pointer-events-none" />
-          <div className="absolute bottom-10 right-10 w-80 h-80 rounded-full bg-violet-500/10 filter blur-3xl pointer-events-none" />
-
+        <div className="bg-[#0D131F] p-8 lg:p-12 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-hidden">
           {/* Top Brand Tag */}
           <div className="relative z-10">
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-cyan-950/80 border border-cyan-400/40 flex items-center justify-center text-cyan-300 font-bold shadow-[0_0_15px_rgba(0,229,255,0.3)]">
+              <div className="w-9 h-9 rounded-xl bg-blue-950/80 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold">
                 <Server size={18} />
               </div>
               <div>
                 <span className="font-heading text-sm font-bold text-white tracking-wider block">
-                  AI LAB ORCHESTRATION
+                  LAB RESOURCE MANAGER
                 </span>
-                <span className="font-mono text-[10.5px] text-cyan-400 tracking-widest uppercase">
-                  ACADEMIC TIER 2026
+                <span className="font-mono text-[10.5px] text-blue-400 tracking-wider uppercase">
+                  HỆ THỐNG VẬN HÀNH PHÒNG THÍ NGHIỆM
                 </span>
               </div>
             </div>
 
             <div className="mt-8">
-              <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">
-                TÀI KHOẢN NGHIÊN CỨU VIÊN & HỌC THUẬT
+              <span className="font-mono text-xs font-semibold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">
+                ĐĂNG KÝ HỌC THUẬT & NGHIÊN CỨU
               </span>
               <h2 className="text-2xl lg:text-3xl font-bold font-heading text-white tracking-tight mt-3 leading-snug">
-                Gia Nhập Cụm Tính Toán Hiệu Năng Cao Của Nhà Trường
+                Truy Cập Hệ Thống Tài Nguyên Phòng Thí Nghiệm
               </h2>
               <p className="text-xs lg:text-sm text-slate-400 mt-2 leading-relaxed font-sans max-w-md">
-                Dành cho sinh viên thực hiện Đồ án Tốt nghiệp, Học viên Cao học và Nghiên cứu sinh công bố bài báo khoa học Q1/Q2.
+                Dành cho sinh viên, học viên cao học và cán bộ nghiên cứu thực hiện đồ án tốt nghiệp, đề tài khoa học và thực hành chuyên đề.
               </p>
             </div>
           </div>
@@ -89,11 +86,11 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
             {perks.map((p) => (
               <div
                 key={p.title}
-                className="p-3.5 bg-black/40 border border-white/10 rounded-xl flex items-start gap-3"
+                className="p-3.5 bg-slate-900/60 border border-white/10 rounded-xl flex items-start gap-3"
               >
                 <CheckCircle2 size={16} className={`${p.color} shrink-0 mt-0.5`} />
                 <div>
-                  <h4 className="text-xs font-bold text-white tracking-wide">{p.title}</h4>
+                  <h4 className="text-xs font-semibold text-white tracking-wide">{p.title}</h4>
                   <p className="text-[11px] text-slate-400 font-sans mt-0.5">{p.desc}</p>
                 </div>
               </div>
@@ -101,17 +98,17 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
           </div>
 
           {/* Bottom Security Footer */}
-          <div className="relative z-10 flex items-center justify-between pt-4 border-t border-white/10 text-[11px] font-mono text-slate-500">
-            <span>CHÍNH SÁCH BẢO MẬT & DỮ LIỆU NỘI BỘ</span>
-            <span>TIÊU CHUẨN ISO/IEC 27001</span>
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-white/10 text-[11px] font-mono text-slate-500 mt-6">
+            <span>QUẢN TRỊ TẬP TRUNG · KHOA HỌC DỮ LIỆU & CNTT</span>
+            <span>PHIÊN BẢN CHUẨN HOÁ TỐT NGHIỆP</span>
           </div>
         </div>
 
         {/* CỘT PHẢI: Form Đăng Ký */}
-        <div className="p-8 lg:p-12 flex flex-col justify-between bg-[#0E121B]">
+        <div className="p-6 sm:p-8 lg:p-12 flex flex-col justify-between bg-[#0E121B]">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-cyan-400 font-bold">KHỞI TẠO TÀI KHOẢN MỚI</span>
+            <span className="font-mono text-xs text-blue-400 font-semibold tracking-wider">KHỞI TẠO TÀI KHOẢN MỚI</span>
 
             <div className="flex items-center gap-2">
               <button
@@ -119,7 +116,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 onClick={() => onLocaleChange && onLocaleChange("vi")}
                 className={`font-mono text-xs px-2.5 py-1 rounded border transition-all ${
                   locale === "vi"
-                    ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold"
+                    ? "bg-blue-600/20 border-blue-500 text-blue-300 font-semibold"
                     : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
                 }`}
               >
@@ -130,7 +127,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 onClick={() => onLocaleChange && onLocaleChange("en")}
                 className={`font-mono text-xs px-2.5 py-1 rounded border transition-all ${
                   locale === "en"
-                    ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold"
+                    ? "bg-blue-600/20 border-blue-500 text-blue-300 font-semibold"
                     : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
                 }`}
               >
@@ -146,7 +143,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 Đăng Ký Tài Khoản
               </h3>
               <p className="text-xs text-slate-400 mt-1 font-sans">
-                Điền thông tin định danh sinh viên / cán bộ để nhận mã phê duyệt
+                Điền thông tin định danh sinh viên / cán bộ để nhận quyền truy cập phòng lab
               </p>
             </div>
 
@@ -167,7 +164,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="VD: Nguyễn Mai Phương"
-                    className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 text-white rounded-xl pl-9 pr-3 py-2 text-xs font-sans outline-none transition-all"
+                    className="w-full bg-black/60 border border-white/15 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 text-white rounded-xl pl-9 pr-3 py-2 text-xs font-sans outline-none transition-all"
                   />
                 </div>
               </div>
@@ -181,7 +178,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     value={studentId}
                     onChange={(e) => setStudentId(e.target.value)}
                     placeholder="VD: 20261456"
-                    className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 text-white rounded-xl px-3 py-2 text-xs font-mono outline-none transition-all"
+                    className="w-full bg-black/60 border border-white/15 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 text-white rounded-xl px-3 py-2 text-xs font-mono outline-none transition-all"
                   />
                 </div>
 
@@ -193,7 +190,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="maiphuong@ailab.edu.vn"
-                    className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 text-white rounded-xl px-3 py-2 text-xs font-mono outline-none transition-all"
+                    className="w-full bg-black/60 border border-white/15 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 text-white rounded-xl px-3 py-2 text-xs font-mono outline-none transition-all"
                   />
                 </div>
               </div>
@@ -203,7 +200,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 text-white rounded-xl px-3 py-2 text-xs font-sans outline-none"
+                  className="w-full bg-black/60 border border-white/15 focus:border-blue-500 text-white rounded-xl px-3 py-2 text-xs font-sans outline-none"
                 >
                   <option value="Khoa CNTT - Bộ Môn Trí Tuệ Nhân Tạo">Khoa CNTT - Bộ Môn Trí Tuệ Nhân Tạo</option>
                   <option value="Bộ Môn Robotics & Hệ Thống Tự Hành">Bộ Môn Robotics & Hệ Thống Tự Hành</option>
@@ -222,7 +219,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Tối thiểu 8 ký tự..."
-                    className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 text-white rounded-xl pl-9 pr-3 py-2 text-xs font-mono outline-none transition-all"
+                    className="w-full bg-black/60 border border-white/15 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 text-white rounded-xl pl-9 pr-3 py-2 text-xs font-mono outline-none transition-all"
                   />
                 </div>
               </div>
@@ -230,7 +227,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-2 font-mono text-xs btn-cyan-gradient py-3 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.4)]"
+                className="mt-2 font-mono text-xs btn-cyan-gradient py-3 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:shadow"
               >
                 <span>{isLoading ? "ĐANG TẠO HỒ SƠ..." : "HOÀN TẤT ĐĂNG KÝ"}</span>
                 <ArrowRight size={14} />
@@ -244,7 +241,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
             <button
               type="button"
               onClick={onSwitchToLogin}
-              className="text-cyan-400 font-bold hover:underline cursor-pointer ml-1"
+              className="text-blue-400 font-semibold hover:underline cursor-pointer ml-1"
             >
               Đăng nhập ngay ➔
             </button>

@@ -87,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Left side: page identity and local clock. */}
       <div className="header-left-2026">
         <div className="header-title-row-2026">
-          <h1 className="header-title-2026">{title}</h1>
+          <div className="header-title-2026">{title}</div>
         </div>
 
         <div className="header-telemetry-row-2026">
@@ -175,18 +175,18 @@ export const Header: React.FC<HeaderProps> = ({
                     <strong className="user-menu-fullname">{user.fullName}</strong>
                     <span className="user-menu-email">{user.email || "Chưa cập nhật email"}</span>
                     <div className="user-menu-role-badge font-mono">
-                      <Shield size={11} className="text-cyan-400" />
+                      <Shield size={11} className="text-blue-400" />
                       <span>{user.role.toUpperCase()}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Remaining GPU Quota Telemetry */}
+                {/* Remaining Quota Telemetry */}
                 {hasQuota && <div className="user-menu-quota-box">
                   <div className="user-menu-quota-header">
-                    <span className="quota-label text-slate-400 text-xs">Hạn Ngạch GPU Còn Lại:</span>
-                    <span className="quota-numbers font-mono text-xs text-cyan-300 font-semibold">
-                      {quotaUsed} / {quotaTotal} GPU-h
+                    <span className="quota-label text-slate-400 text-xs">Hạn Ngạch Phân Bổ:</span>
+                    <span className="quota-numbers font-mono text-xs text-blue-300 font-semibold">
+                      {quotaUsed} / {quotaTotal} giờ
                     </span>
                   </div>
                   <div className="quota-progress-track">
@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
                     />
                   </div>
                   <div className="quota-meta-footer">
-                    <span className="font-mono text-[10px] text-slate-400">Đã dùng {quotaPercent}% hạn mức</span>
+                    <span className="font-mono text-[10px] text-slate-400">Đã dùng {quotaPercent}%</span>
                     <span className="font-mono text-[10px] text-emerald-400">Khả dụng</span>
                   </div>
                 </div>}
@@ -213,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({
                       if (onOpenChangePassword) onOpenChangePassword();
                     }}
                   >
-                    <KeyRound size={15} className="text-cyan-400" />
+                    <KeyRound size={15} className="text-slate-400" />
                     <span>Đổi Mật Khẩu</span>
                   </button>
 

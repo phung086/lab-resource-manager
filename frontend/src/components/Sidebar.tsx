@@ -64,11 +64,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navSections: NavSectionConfig[] = [
     {
       id: "booking_zone",
-      title: "1. LỊCH & ĐẶT CHỖ",
+      title: "LỊCH & ĐẶT CHỖ",
       items: [
         {
           id: "smart_calendar",
-          label: "📅 Lịch Đặt Khung Giờ",
+          label: "Lịch Đặt Khung Giờ",
           icon: CalendarCheck
         },
         {
@@ -89,19 +89,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items: [
         {
           id: "ai_analytics",
-          label: "📊 AI Tính Toán Hiệu Suất",
+          label: "AI Tính Toán Hiệu Suất",
           icon: Sliders
         },
         {
           id: "ai_advisor",
-          label: "🧠 AI Cố Vấn & Quyết Định",
+          label: "AI Cố Vấn & Quyết Định",
           icon: Sparkles
         }
       ]
     },
     {
       id: "admin_zone",
-      title: "3. QUẢN TRỊ HỆ THỐNG",
+      title: "QUẢN TRỊ HỆ THỐNG",
       items: [
         {
           id: "dashboard",
@@ -139,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
         {
           id: "logs",
-          label: "📋 Nhật Ký Kiểm Toán",
+          label: "Nhật Ký Kiểm Toán",
           icon: ClipboardCheck
         },
         {
@@ -199,14 +199,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => onSelectTab(item.id)}
                     className={`sidebar-nav-item-2026 ${
                       isActive
-                        ? "is-active border-l-2 border-cyan-400 bg-gradient-to-r from-cyan-500/10 to-transparent text-white"
+                        ? "is-active text-white"
                         : "text-slate-400 hover:text-slate-200"
                     }`}
                   >
                     <div className="nav-item-left-2026">
                       <IconComponent
                         size={16}
-                        className={`nav-item-icon-2026 ${isActive ? "text-cyan-400" : "text-slate-400"}`}
+                        className={`nav-item-icon-2026 ${isActive ? "text-blue-400" : "text-slate-400"}`}
                       />
                       <span className="nav-item-label-2026">{item.label}</span>
                     </div>

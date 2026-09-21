@@ -34,6 +34,7 @@ try {
 
   await openNav(studentPage, /Thông Báo/i);
   await studentPage.locator("main").getByRole("heading", { name: "Trung tâm thông báo" }).waitFor();
+  await studentPage.getByText("Batch 6 lịch sắp bắt đầu").first().waitFor({ timeout: 5000 });
   assert.equal(await studentPage.getByText("Batch 6 lịch sắp bắt đầu").count(), 1);
   assert.equal(await studentPage.getByText("Batch 6 nhắc trả trong tương lai").count(), 0);
 

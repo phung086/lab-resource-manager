@@ -19,7 +19,7 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
   title,
   subtitle,
   icon: Icon,
-  iconColor = "text-cyan-400",
+  iconColor = "text-blue-400",
   maxWidth = "max-w-2xl",
   children,
   footer
@@ -80,7 +80,7 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
       aria-label={title || "Hộp thoại"}
     >
       <div ref={dialogRef} className={`modal-container-2026 ${maxWidth} mx-4 flex flex-col`}>
-        {/* Hairline Cyan Gradient Accent Top Edge */}
+        {/* Hairline Border Accent Top Edge */}
         <div className="hairline-cyan-gradient" />
 
         {/* Modal Header */}
@@ -88,7 +88,7 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.02]">
             <div className="flex items-center gap-3">
               {Icon && (
-                <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-500/30 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(0,229,255,0.2)]">
+                <div className="w-9 h-9 rounded-xl bg-blue-950/60 border border-blue-500/30 flex items-center justify-center shrink-0">
                   <Icon size={18} className={iconColor} />
                 </div>
               )}

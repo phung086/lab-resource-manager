@@ -138,7 +138,8 @@ try {
   const foreignStaffPage = await foreignStaffContext.newPage();
   await login(foreignStaffPage, "b5.foreign.staff@lab.test");
   await openOperations(foreignStaffPage);
-  assert.ok(await foreignStaffPage.getByText("Batch 5 foreign lab booking").first().isVisible());
+  const foreignCard = await cardFor(foreignStaffPage, "Batch 5 foreign lab booking");
+  assert.ok(await foreignCard.isVisible());
   assert.equal(await foreignStaffPage.getByText("Batch 5 lifecycle booking").count(), 0);
   await foreignStaffContext.close();
 
