@@ -154,7 +154,6 @@ export const Header: React.FC<HeaderProps> = ({
               className="user-avatar-btn-2026"
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               aria-expanded={userMenuOpen}
-              aria-haspopup="menu"
               aria-label="Mở menu tài khoản"
             >
               <div className="avatar-letter-circle">
