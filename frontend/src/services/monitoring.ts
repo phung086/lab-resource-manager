@@ -10,3 +10,10 @@ export async function getTelemetry(resourceId?: string): Promise<TelemetryResour
   const data = await apiRequest(`/telemetry${query}`);
   return Array.isArray(data) ? data : [];
 }
+
+export async function acknowledgeMonitoringAlert(alertId: string): Promise<void> {
+  await apiRequest(`/telemetry/alerts/${encodeURIComponent(alertId)}/acknowledge`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+}

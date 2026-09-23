@@ -54,6 +54,12 @@ Disposition:
 - prove clean migration deployment on Linux/PostgreSQL 16 without editing
   tracked migration SQL or `_prisma_migrations` manually.
 
+Finalization update (2026-09-21): ordinary tracked `prisma migrate deploy`
+succeeds on a clean PostgreSQL 16 database in both the host environment and the
+Linux production image. The compatibility bridge itself failed production
+startup with `EXDEV` while moving a migration directory across filesystems and
+was therefore retired in favor of ordinary Prisma deployment.
+
 ### First admin seed — BLOCKER
 
 `backend/prisma/seedAdmin.js` used lowercase role `admin`, which violates the frozen canonical role `ADMIN`.

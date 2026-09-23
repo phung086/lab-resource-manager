@@ -1,5 +1,7 @@
 import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
 import { ADMIN, LAB_STAFF } from "../constants/roles.js";
+import { serializeCamera } from "./cameraService.js";
+import { serializeMonitoringAlert } from "./monitoringAlertService.js";
 import { serializeTelemetry } from "./telemetryService.js";
 
 export function dashboardResourceScope(user) {
@@ -25,11 +27,27 @@ export async function buildDashboard(client, user, now = new Date()) {
   const windowStart = new Date(now.getTime() - 30 * 24 * 60 * 60_000);
   const windowEnd = now;
 
-  const [resources, upcomingBookings, periodBookings, incidents, unreadNotifications] = await Promise.all([
+  const [resources, upcomingBookings, periodBookings, incidents, unreadNotifications, cameras] = await Promise.all([
     client.resource.findMany({
       where: resourceWhere,
       include: {
-        telemetrySamples: { orderBy: { sampledAt: "desc" }, take: 1 }
+        monitoringThreshold: true,
+        laboratory: { include: { monitoringThreshold: true } },
+        telemetrySamples: {
+          include: { telemetrySource: true },
+          orderBy: { sampledAt: "desc" },
+          take: 10
+        },
+        monitoringAlerts: {
+          where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } },
+          include: {
+            source: { select: { id: true, code: true, name: true } },
+            resource: { select: { id: true, code: true, name: true } },
+            acknowledgedBy: { select: { id: true, fullName: true, role: true } },
+            incident: { select: { id: true, severity: true, status: true, category: true } }
+          },
+          orderBy: { openedAt: "desc" }
+        }
       },
       orderBy: { code: "asc" }
     }),
@@ -59,7 +77,13 @@ export async function buildDashboard(client, user, now = new Date()) {
       where: { resource: resourceWhere },
       select: { id: true, severity: true, status: true, detectedAt: true, resolvedAt: true }
     }),
-    client.notification.count({ where: { userId: user.id, sentAt: { not: null }, readAt: null } })
+    client.notification.count({ where: { userId: user.id, sentAt: { not: null }, readAt: null } }),
+    client.camera.findMany({
+      where: user.role === ADMIN
+        ? {}
+        : { laboratory: { staffAssignments: { some: { userId: user.id } } } },
+      orderBy: { code: "asc" }
+    })
   ]);
 
   const statusCounts = Object.fromEntries(
@@ -83,9 +107,28 @@ export async function buildDashboard(client, user, now = new Date()) {
   const openStatuses = new Set(["reported", "triaged", "assigned", "investigating"]);
   const openIncidents = incidents.filter((incident) => openStatuses.has(incident.status));
 
-  const telemetry = resources.map((resource) =>
-    serializeTelemetry(resource, resource.telemetrySamples[0] || null, now)
-  );
+  const telemetry = resources.map((resource) => ({
+    ...serializeTelemetry(resource, resource.telemetrySamples[0] || null, now),
+    history: resource.telemetrySamples.map((sample) => ({
+      id: sample.id,
+      sourceId: sample.sourceId,
+      source: sample.telemetrySource?.code || sample.source,
+      sampledAt: sample.sampledAt,
+      online: sample.online,
+      temperatureC: sample.temperatureC,
+      humidityPercent: sample.humidityPercent,
+      cpuPercent: sample.cpuPercent,
+      gpuPercent: sample.gpuPercent,
+      gpuMemoryPercent: sample.gpuMemoryPercent,
+      ramPercent: sample.ramPercent,
+      diskPercent: sample.diskPercent,
+      signals: sample.verifiedSignals || []
+    }))
+  }));
+  const monitoringAlerts = resources
+    .flatMap((resource) => resource.monitoringAlerts)
+    .sort((left, right) => new Date(right.lastObservedAt) - new Date(left.lastObservedAt))
+    .map(serializeMonitoringAlert);
   const telemetrySummary = telemetry.reduce((acc, item) => {
     acc[item.monitoring.state] = (acc[item.monitoring.state] || 0) + 1;
     return acc;
@@ -101,7 +144,9 @@ export async function buildDashboard(client, user, now = new Date()) {
       checkedOutCount: upcomingBookings.filter((booking) => booking.status === "CHECKED_OUT").length,
       openIncidentCount: openIncidents.length,
       criticalIncidentCount: openIncidents.filter((incident) => incident.severity === "critical").length,
-      unreadNotifications
+      unreadNotifications,
+      activeMonitoringAlertCount: monitoringAlerts.filter((alert) => alert.status === "OPEN").length,
+      acknowledgedMonitoringAlertCount: monitoringAlerts.filter((alert) => alert.status === "ACKNOWLEDGED").length
     },
     utilization: {
       windowDays: 30,
@@ -125,6 +170,8 @@ export async function buildDashboard(client, user, now = new Date()) {
     },
     telemetrySummary,
     telemetry,
+    monitoringAlerts,
+    cameras: cameras.map(serializeCamera),
     upcomingBookings
   };
 }

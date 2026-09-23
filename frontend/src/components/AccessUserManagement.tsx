@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Plus, RefreshCw, ShieldCheck, UserCheck, UserX, X } from "lucide-react";
+import { Plus, RefreshCw, ShieldCheck, UserCheck, UserX } from "lucide-react";
 
 import { apiRequest } from "../api.js";
+import { BaseModal2026 } from "./BaseModal2026.js";
 
 const ROLES = ["ADMIN", "LAB_STAFF", "LECTURER", "STUDENT"] as const;
+const roleLabels: Record<(typeof ROLES)[number], string> = {
+  ADMIN: "Quản trị viên",
+  LAB_STAFF: "Cán bộ phòng lab",
+  LECTURER: "Giảng viên",
+  STUDENT: "Sinh viên"
+};
 
 type Role = typeof ROLES[number];
 type User = {
@@ -138,30 +145,22 @@ export function AccessUserManagement() {
     <section className="view-section">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">RBAC & LAB SCOPE</span>
+          <span className="eyebrow">QUẢN LÝ TÀI KHOẢN</span>
           <h2>Quản trị người dùng</h2>
         </div>
         <div className="flex gap-2">
           <button className="btn btn-primary" type="button" onClick={() => setShowCreate(true)}>
             <Plus size={15} /> Tạo người dùng
           </button>
-          <button className="icon-button" type="button" onClick={load} title="Tải lại" disabled={loading}>
+          <button className="icon-button" type="button" onClick={load} title="Tải lại" aria-label="Tải lại danh sách người dùng" disabled={loading}>
             <RefreshCw size={16} />
           </button>
         </div>
       </div>
 
-      {error && <div className="alert danger">{error}</div>}
+      {error && <div className="alert danger" role="alert">{error}</div>}
       {loading && <p className="empty-state">Đang tải dữ liệu thật...</p>}
-      {showCreate && (
-        <div className="modal-backdrop-2026" role="presentation">
-          <div className="modal-container-2026" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
-            <div className="modal-header-2026">
-              <h3 id="create-user-title">Tạo người dùng</h3>
-              <button className="icon-button" type="button" aria-label="Đóng" onClick={() => setShowCreate(false)}>
-                <X size={16} />
-              </button>
-            </div>
+      <BaseModal2026 isOpen={showCreate} onClose={() => setShowCreate(false)} title="Tạo người dùng" dismissible={!creating}>
             <form className="booking-operation-form" onSubmit={createUser} noValidate>
               <label>
                 Họ và tên
@@ -178,7 +177,7 @@ export function AccessUserManagement() {
               <label>
                 Vai trò
                 <select value={createForm.role} onChange={(event) => setCreateForm({ ...createForm, role: event.target.value as Role })}>
-                  {ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+                  {ROLES.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}
                 </select>
               </label>
               <div className="modal-actions">
@@ -186,12 +185,10 @@ export function AccessUserManagement() {
                 <button className="btn btn-primary" type="submit" disabled={creating}>{creating ? "Đang tạo..." : "Tạo người dùng"}</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </BaseModal2026>
 
       {!loading && (
-        <div className="table-wrap">
+        <div className="table-wrap user-management-table">
           <table>
             <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th>Phân công phòng lab</th></tr></thead>
             <tbody>
@@ -200,7 +197,7 @@ export function AccessUserManagement() {
                   <td><strong>{user.fullName}</strong><br /><small>{user.email}</small></td>
                   <td>
                     <select value={user.role} onChange={(event) => updateRole(user, event.target.value as Role)}>
-                      {ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+                      {ROLES.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}
                     </select>
                   </td>
                   <td>

@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci
-RUN npx prisma generate
+RUN npm run db:generate
 
 FROM deps AS dev
 

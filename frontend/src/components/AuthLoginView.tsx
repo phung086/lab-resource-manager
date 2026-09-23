@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Server, ShieldCheck, Lock, Mail, ArrowRight, Sparkles, Cpu, Radio, Globe, Terminal, CheckCircle2 } from "lucide-react";
+import { Server, ShieldCheck, Lock, Mail, ArrowRight, Layers } from "lucide-react";
 import { login } from "../api.js";
 
 export interface AuthLoginViewProps {
@@ -20,12 +20,12 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const hardwareChips = [
-    { name: "Phòng thí nghiệm", status: "ROOM", color: "text-emerald-400" },
-    { name: "Thiết bị", status: "EQUIPMENT", color: "text-cyan-400" },
-    { name: "Máy móc", status: "MACHINE", color: "text-blue-400" },
-    { name: "Bộ thí nghiệm", status: "EXPERIMENT KIT", color: "text-violet-400" },
-    { name: "Vật tư", status: "MATERIAL", color: "text-teal-400" }
+  const resourceCategories = [
+    { name: "Phòng thực hành", code: "ROOM" },
+    { name: "Thiết bị đo kiểm", code: "EQUIPMENT" },
+    { name: "Máy móc chuyên dụng", code: "MACHINE" },
+    { name: "Bộ kit thí nghiệm", code: "EXPERIMENT_KIT" },
+    { name: "Vật tư tiêu hao", code: "MATERIAL" }
   ];
 
   async function handleSubmit(e: React.FormEvent) {
@@ -44,95 +44,86 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#08090D] flex items-center justify-center p-4 lg:p-8 font-sans">
-      <div className="auth-split-grid relative">
-        {/* Top hairline cyan accent */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-80 z-20" />
-
-        {/* CỘT TRÁI: Visual Server Rack & Hardware Mesh Graphic */}
-        <div className="bg-gradient-to-br from-[#0B0F19] via-[#0E1424] to-[#080A10] p-8 lg:p-12 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-hidden">
-          {/* Ambient background glow */}
-          <div className="absolute top-10 left-10 w-80 h-80 rounded-full bg-cyan-500/10 filter blur-3xl pointer-events-none" />
-          <div className="absolute bottom-10 right-10 w-80 h-80 rounded-full bg-violet-500/10 filter blur-3xl pointer-events-none" />
-
-          {/* Top Brand Tag */}
+    <div className="auth-screen min-h-screen w-full flex items-center justify-center font-sans">
+      <div className="auth-split-grid relative border border-white/10 rounded-2xl overflow-hidden shadow-2xl bg-[#111827]">
+        {/* Left Column: Product Identity & Scope */}
+        <div className="auth-panel auth-panel-identity flex flex-col justify-between relative">
           <div className="relative z-10">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-cyan-950/80 border border-cyan-400/40 flex items-center justify-center text-cyan-300 font-bold shadow-[0_0_15px_rgba(0,229,255,0.3)]">
-                <Server size={18} />
+            {/* Brand Mark */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
+                <Server size={22} />
               </div>
               <div>
-                <span className="font-heading text-sm font-bold text-white tracking-wider block">
-                  AI LAB ORCHESTRATION
-                </span>
-                <span className="font-mono text-[10.5px] text-cyan-400 tracking-widest uppercase">
-                  AUTONOMOUS 2026 CORE
-                </span>
+                <h1 className="text-base font-bold font-heading text-white tracking-tight leading-tight">
+                  LAB RESOURCE MANAGER
+                </h1>
+                <p className="text-xs text-slate-400">
+                  Hệ thống quản lý tài nguyên phòng thí nghiệm
+                </p>
               </div>
             </div>
 
+            {/* Core Value Proposition */}
             <div className="mt-8">
-              <span className="font-mono text-xs font-bold text-amber-400 bg-amber-950/60 px-2.5 py-1 rounded border border-amber-500/30">
-                LAB HARMONY ENGINE 2026
+              <span className="inline-block text-[11px] font-semibold text-blue-400 font-mono tracking-wider uppercase mb-2">
+                Vận hành & Đặt lịch
               </span>
-              <h2 className="text-2xl lg:text-3xl font-bold font-heading text-white tracking-tight mt-3 leading-snug">
-                Trung Tâm Điều Phối Tài Nguyên Thí Nghiệm AI & Bản Sao Số
+              <h2 className="text-2xl lg:text-3xl font-bold font-heading text-white tracking-tight leading-snug">
+                Quản lý tập trung tài nguyên phòng thí nghiệm trường đại học
               </h2>
-              <p className="text-xs lg:text-sm text-slate-400 mt-2 leading-relaxed font-sans max-w-md">
-                Tự động hóa phân bổ cụm máy chủ GPU, lịch thiết bị bay không người lái UAV và tối ưu biểu giá điện xanh EVN bằng thuật toán tiến hóa NSGA-II.
+              <p className="text-xs lg:text-sm text-slate-400 mt-3 leading-relaxed">
+                Nền tảng hỗ trợ giảng viên, sinh viên và cán bộ lab tra cứu danh mục thiết bị,
+                đặt lịch sử dụng không trùng lặp, duyệt yêu cầu và quản lý vận hành.
               </p>
             </div>
-          </div>
 
-          {/* Center Graphic: Hardware Chips Mesh */}
-          <div className="my-6 p-4 bg-black/40 border border-white/10 rounded-xl relative z-10">
-            <div className="flex items-center justify-between pb-2 mb-3 border-b border-white/10 text-[11px] font-mono">
-              <span className="text-slate-400 flex items-center gap-1.5">
-                <Terminal size={12} className="text-cyan-400" />
-                <span>PHẠM VI TÀI NGUYÊN</span>
-              </span>
-              <span className="text-emerald-400 flex items-center gap-1">
-                <span>5 NHÓM NGHIỆP VỤ</span>
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {hardwareChips.map((chip) => (
-                <div
-                  key={chip.name}
-                  className="px-2.5 py-1.5 bg-white/[0.03] border border-white/10 rounded-lg flex items-center gap-2 font-mono text-xs text-slate-300"
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${chip.color} bg-current`} />
-                  <span>{chip.name}</span>
-                  <span className={`text-[10px] ${chip.color}`}>[{chip.status}]</span>
-                </div>
-              ))}
+            {/* 5 Canonical Categories Matrix */}
+            <div className="auth-scope-overview mt-8 pt-6 border-t border-white/10">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Layers size={14} className="text-blue-400" />
+                  <span>PHẠM VI TÀI NGUYÊN</span>
+                </span>
+                <span className="text-[11px] text-emerald-400 font-mono font-medium">5 NHÓM CHUẨN</span>
+              </div>
+              <div className="auth-category-list">
+                {resourceCategories.map((cat) => (
+                  <div
+                    key={cat.code}
+                    className="auth-category-chip flex items-center gap-1.5 text-xs"
+                  >
+                    <span className="text-slate-300">{cat.name}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">[{cat.code}]</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Bottom Security Footer */}
-          <div className="relative z-10 flex items-center justify-between pt-4 border-t border-white/10 text-[11px] font-mono text-slate-500">
+          {/* Security and RBAC footer */}
+          <div className="auth-identity-footer relative z-10 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-white/10 text-xs text-slate-400 mt-6">
             <span className="flex items-center gap-1.5">
-              <ShieldCheck size={14} className="text-cyan-400" />
-              <span>TLS 1.3 • Ed25519 Token Signed</span>
+              <ShieldCheck size={15} className="text-blue-400 shrink-0" />
+              <span>Phân quyền 4 vai trò: Admin · Staff · Lecturer · Student</span>
             </span>
-            <span>NODE-ID: LAB-CORE-VN</span>
           </div>
         </div>
 
-        {/* CỘT PHẢI: Form Đăng Nhập */}
-        <div className="p-8 lg:p-12 flex flex-col justify-between bg-[#0E121B]">
+        {/* Right Column: Authentication Form */}
+        <div className="auth-panel auth-panel-form flex flex-col justify-between">
           {/* Header & Language Switch */}
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-slate-500">BẢN THỬ NGHIỆM v3.4.0</span>
+            <span className="text-xs text-slate-400 font-medium">Cổng xác thực người dùng</span>
 
-            <div className="flex items-center gap-2">
+            <div className="auth-language flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => onLocaleChange && onLocaleChange("vi")}
-                className={`font-mono text-xs px-2.5 py-1 rounded border transition-all ${
+                aria-pressed={locale === "vi"}
+                className={`text-xs px-2.5 py-1 rounded-md border transition-all ${
                   locale === "vi"
-                    ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold"
+                    ? "bg-blue-600 border-blue-500 text-white font-semibold"
                     : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
                 }`}
               >
@@ -141,9 +132,10 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
               <button
                 type="button"
                 onClick={() => onLocaleChange && onLocaleChange("en")}
-                className={`font-mono text-xs px-2.5 py-1 rounded border transition-all ${
+                aria-pressed={locale === "en"}
+                className={`text-xs px-2.5 py-1 rounded-md border transition-all ${
                   locale === "en"
-                    ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold"
+                    ? "bg-blue-600 border-blue-500 text-white font-semibold"
                     : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
                 }`}
               >
@@ -153,57 +145,57 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
           </div>
 
           {/* Form Content */}
-          <div className="my-auto py-6 max-w-md w-full mx-auto">
+          <div className="auth-form-content my-auto w-full mx-auto">
             <div className="mb-6">
               <h3 className="text-2xl font-bold font-heading text-white tracking-tight">
-                Đăng Nhập Cổng Điều Phối
+                Đăng nhập hệ thống
               </h3>
-              <p className="text-xs text-slate-400 mt-1 font-sans">
-                Nhập tài khoản định danh đơn vị nghiên cứu hoặc trường đại học
+              <p className="text-xs text-slate-400 mt-1.5">
+                Nhập tài khoản đơn vị nghiên cứu hoặc trường đại học để tiếp tục
               </p>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 bg-rose-950/80 border border-rose-500/40 rounded-xl text-xs font-mono text-rose-300">
+              <div className="mb-4 p-3.5 bg-rose-950/70 border border-rose-500/40 rounded-xl text-xs text-rose-200" role="alert">
                 {error}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="font-mono text-xs text-slate-300 flex items-center justify-between">
-                  <span>Email Trường / Đơn vị *</span>
-                  <span className="text-[10.5px] text-slate-500 font-normal">Đuôi @ailab.edu.vn</span>
+                <label htmlFor="login-email" className="text-xs font-medium text-slate-300 flex items-center justify-between">
+                  <span>Email tài khoản *</span>
                 </label>
                 <div className="relative">
-                  <Mail size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
+                  <Mail size={16} className="auth-input-icon text-slate-400" aria-hidden="true" />
                   <input
+                    id="login-email"
                     type="email"
                     required
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="ten.cb@ailab.edu.vn"
-                    className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 text-white rounded-xl pl-10 pr-3 py-2.5 text-xs font-mono outline-none transition-all"
+                    placeholder="email@domain.edu.vn"
+                    className="auth-form-input has-icon w-full text-xs"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="font-mono text-xs text-slate-300 flex items-center justify-between">
-                  <span>Mật Khẩu *</span>
-                  <a href="#forgot" className="text-[10.5px] text-cyan-400 hover:underline">
-                    Quên mật khẩu?
-                  </a>
+                <label htmlFor="login-password" className="text-xs font-medium text-slate-300 flex items-center justify-between">
+                  <span>Mật khẩu *</span>
                 </label>
                 <div className="relative">
-                  <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
+                  <Lock size={16} className="auth-input-icon text-slate-400" aria-hidden="true" />
                   <input
+                    id="login-password"
                     type="password"
                     required
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 text-white rounded-xl pl-10 pr-3 py-2.5 text-xs font-mono outline-none transition-all"
+                    className="auth-form-input has-icon w-full text-xs"
                   />
                 </div>
               </div>
@@ -211,22 +203,21 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-2 font-mono text-xs btn-cyan-gradient py-3 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.4)]"
+                className="auth-submit-button mt-2 text-xs btn-cyan-gradient flex items-center justify-center gap-2 cursor-pointer font-semibold"
               >
-                <span>{isLoading ? "ĐANG XÁC THỰC DANH TÍNH..." : "ĐĂNG NHẬP VÀO HỆ THỐNG"}</span>
-                <ArrowRight size={14} />
+                <span>{isLoading ? "Đang xác thực tài khoản..." : "ĐĂNG NHẬP VÀO HỆ THỐNG"}</span>
+                <ArrowRight size={15} aria-hidden="true" />
               </button>
             </form>
-
           </div>
 
           {/* Switch to Register */}
           <div className="text-center pt-4 border-t border-white/10 text-xs text-slate-400">
-            <span>Chưa có tài khoản nghiên cứu? </span>
+            <span>Chưa có tài khoản sinh viên? </span>
             <button
               type="button"
               onClick={onSwitchToRegister}
-              className="text-cyan-400 font-bold hover:underline cursor-pointer ml-1"
+              className="auth-switch-link text-blue-400 font-semibold cursor-pointer ml-1"
             >
               Đăng ký tài khoản mới ➔
             </button>

@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          (cd backend && npm ci && npx prisma generate)
+          (cd backend && npm ci && npm run db:generate)
           (cd frontend && npm ci && npx playwright-core install --with-deps chromium)
 
       - name: Configure guarded backend base environment
@@ -53,7 +53,6 @@ jobs:
           JWT_SECRET=batch6-fullstack-ci-secret-at-least-32-characters
           CORS_ORIGINS=http://127.0.0.1:5177
           PORT=5002
-          TELEMETRY_API_KEY=batch6-fullstack-telemetry-key-at-least-32-chars
           REMINDER_SCHEDULER_ENABLED=false
           EOF
 
@@ -73,28 +72,11 @@ jobs:
             psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";"
           done
 
-      - name: Prepare canonical schema on isolated E2E databases
+      - name: Deploy canonical migrations to isolated E2E databases
         shell: bash
-        env:
-          PGPASSWORD: postgres
         working-directory: backend
         run: |
           set -euo pipefail
-
-          B1C_DIR="prisma/migrations/20260917000100_reconcile_canonical_persistence"
-          B1C_HIDDEN="$RUNNER_TEMP/20260917000100_reconcile_canonical_persistence"
-          B1C_SQL="$RUNNER_TEMP/batch1c-e2e-runtime-bootstrap.sql"
-
-          test -d "$B1C_DIR"
-          rm -rf "$B1C_HIDDEN"
-          mv "$B1C_DIR" "$B1C_HIDDEN"
-          restore_b1c() {
-            if [ -d "$B1C_HIDDEN" ] && [ ! -d "$B1C_DIR" ]; then
-              mv "$B1C_HIDDEN" "$B1C_DIR"
-            fi
-          }
-          trap restore_b1c EXIT
-
           for db in \
             lab_resources_b2_auth_e2e_ci \
             lab_resources_b3_resource_e2e_ci \
@@ -102,66 +84,10 @@ jobs:
             lab_resources_b5_operations_e2e_ci \
             lab_resources_b6_monitoring_e2e_ci
           do
-            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npx prisma migrate deploy
+            echo "::group::migrate:$db"
+            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npm run db:migrate
+            echo "::endgroup::"
           done
-
-          mv "$B1C_HIDDEN" "$B1C_DIR"
-          trap - EXIT
-
-          node --input-type=module <<'NODE'
-          import { createHash } from "node:crypto";
-          import { readFile, writeFile } from "node:fs/promises";
-          import path from "node:path";
-
-          const baseline = JSON.parse(await readFile("../docs/BATCH1B_VERIFICATION.json", "utf8"));
-          const migrationRoot = path.join("prisma", "migrations");
-          const b1cPath = path.join(
-            migrationRoot,
-            "20260917000100_reconcile_canonical_persistence",
-            "migration.sql"
-          );
-          const sha256 = (value) => createHash("sha256").update(value).digest("hex");
-          let sql = await readFile(b1cPath, "utf8");
-          let replacements = 0;
-
-          for (const [name, verifiedHash] of Object.entries(baseline.migrationFiles)) {
-            const currentBytes = await readFile(path.join(migrationRoot, name, "migration.sql"));
-            const currentHash = sha256(currentBytes);
-            const occurrences = sql.split(verifiedHash).length - 1;
-            if (occurrences !== 1) {
-              throw new Error(`Expected exactly one checksum literal for ${name}; found ${occurrences}`);
-            }
-            sql = sql.replace(verifiedHash, currentHash);
-            replacements += 1;
-          }
-
-          if (replacements !== Object.keys(baseline.migrationFiles).length) {
-            throw new Error("Incomplete migration checksum precondition translation");
-          }
-
-          const tracked = await readFile(b1cPath, "utf8");
-          let reconstructed = sql;
-          for (const [name, verifiedHash] of Object.entries(baseline.migrationFiles)) {
-            const currentBytes = await readFile(path.join(migrationRoot, name, "migration.sql"));
-            reconstructed = reconstructed.replace(sha256(currentBytes), verifiedHash);
-          }
-          if (reconstructed !== tracked) {
-            throw new Error("Ephemeral Batch 1C copy changed beyond checksum precondition literals");
-          }
-
-          await writeFile(process.env.RUNNER_TEMP + "/batch1c-e2e-runtime-bootstrap.sql", sql, "utf8");
-          NODE
-
-          for db in \
-            lab_resources_b2_auth_e2e_ci \
-            lab_resources_b3_resource_e2e_ci \
-            lab_resources_b4_booking_e2e_ci \
-            lab_resources_b5_operations_e2e_ci \
-            lab_resources_b6_monitoring_e2e_ci
-          do
-            psql -h 127.0.0.1 -U postgres -d "$db" -v ON_ERROR_STOP=1 -f "$B1C_SQL"
-          done
-
           git diff --exit-code -- prisma/migrations
 
       - name: Build frontend production bundle
@@ -207,7 +133,6 @@ jobs:
               JWT_SECRET=batch6-fullstack-ci-secret-at-least-32-characters \
               CORS_ORIGINS=http://127.0.0.1:5177 \
               PORT=5002 \
-              TELEMETRY_API_KEY=batch6-fullstack-telemetry-key-at-least-32-chars \
               REMINDER_SCHEDULER_ENABLED=false \
               NODE_ENV=test \
               node backend/src/server.js >"$BACKEND_LOG" 2>&1 &

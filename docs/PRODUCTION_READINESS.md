@@ -12,7 +12,7 @@ Use this checklist before handing the system to lab operations.
 ## Inventory
 
 - Resource CSV uses official asset codes, official names, real locations, responsible owner teams, and real capacity.
-- GPU, RAM, temperature, and stale telemetry thresholds are stored in `specs` when they differ from defaults.
+- Monitoring thresholds are stored in the laboratory/resource monitoring policy tables when they differ from documented defaults.
 - Maintenance/offline resources are marked before users start booking.
 
 ## Booking Operations
@@ -35,7 +35,9 @@ Use this checklist before handing the system to lab operations.
 
 - `/api/health/ready` returns database connected.
 - `/api/metrics` is scraped by Prometheus.
-- Telemetry agents use real resource codes and the production `TELEMETRY_API_KEY`.
+- Every telemetry agent uses its own active, resource-scoped credential; shared telemetry keys are prohibited.
+- Source health, last-seen time, explicit online/offline state, alert deduplication, and credential rotation have been checked.
+- Camera metadata is disabled until explicitly configured, and access audits are reviewed; the application never substitutes a fake stream.
 - Devices without telemetry are reviewed and either connected to an agent or documented as manually monitored.
 
 ## AI And MCP
@@ -49,7 +51,7 @@ Use this checklist before handing the system to lab operations.
 
 ## Security
 
-- `JWT_SECRET` and `TELEMETRY_API_KEY` are at least 32 random characters.
+- `JWT_SECRET` is at least 32 random characters; telemetry source credentials are issued individually and stored only as hashes.
 - `CORS_ORIGINS` contains only real production origins.
 - HTTPS terminates in front of Nginx for external access.
 - Prometheus is restricted to the lab network or an authenticated operations network.

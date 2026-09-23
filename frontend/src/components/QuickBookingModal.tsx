@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Clock, AlertCircle, CheckCircle2, ArrowRight, ShieldAlert, Sparkles } from "lucide-react";
+import { Calendar, Clock, AlertCircle, CheckCircle2, ArrowRight, ShieldAlert, Shield } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.js";
 import { apiRequest, ApiError } from "../api.js";
 import {
@@ -87,7 +87,6 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     if (!isOpen) return;
 
     if (initialSlot?.startAt) {
-      // Canonical initial-slot contract: ISO timestamps
       const slotDate = toVietnamDateString(initialSlot.startAt);
       const slotStart = toVietnamTimeString(initialSlot.startAt);
       if (slotDate) setSelectedDate(slotDate);
@@ -97,13 +96,11 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
         const slotEnd = toVietnamTimeString(initialSlot.endAt);
         if (slotEnd) setEndTime(slotEnd);
       } else {
-        // Default 2-hour duration if endAt not supplied
         const [h, m] = slotStart.split(":").map(Number);
         const endH = String(Math.min((h || 9) + 2, 21)).padStart(2, "0");
         setEndTime(`${endH}:${String(m || 0).padStart(2, "0")}`);
       }
     } else if (initialSlot?.date) {
-      // Backward compatibility for date/time strings
       setSelectedDate(initialSlot.date);
       if (initialSlot.time) {
         setStartTime(initialSlot.time);
@@ -112,7 +109,6 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
         setEndTime(`${endH}:${String(m || 0).padStart(2, "0")}`);
       }
     } else {
-      // Default to tomorrow in Vietnam wall-clock date
       setSelectedDate(getVietnamTomorrowDateString());
       setStartTime("09:00");
       setEndTime("11:00");
@@ -132,7 +128,6 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   const currentResource = resources.find((r) => r.id === resourceId) || resources[0] || null;
   const currentPolicy = currentResource?.labPolicy || currentResource?.laboratory?.labPolicy || null;
 
-  // Effective approval requirement: resource approval OR labPolicy approval
   const effectiveRequiresApproval = Boolean(
     currentResource?.effectiveRequiresApproval ??
     (currentResource?.requiresApproval || currentPolicy?.requiresApproval)
@@ -151,7 +146,6 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       return;
     }
 
-    // Unambiguous Vietnam ISO timestamps (+07:00)
     let startAtIso: string;
     let endAtIso: string;
     try {
@@ -192,7 +186,6 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       if (onConfirmBooking) {
         onConfirmBooking(booking);
       }
-      // NO setTimeout auto-close: keep state visible for user to read status and dismiss manually
     } catch (err: any) {
       const msg = err instanceof ApiError ? err.message : err?.message || "Không thể tạo lịch đặt.";
       if (err?.code === "BOOKING_CONFLICT") {
@@ -215,22 +208,22 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     <BaseModal2026
       isOpen={isOpen}
       onClose={onClose}
-      title="Đặt Lịch Khung Giờ Phòng Lab"
-      subtitle="Hệ thống xác thực tính khả dụng thời gian thực và ghi nhận nhật ký kiểm toán"
+      title="Đặt lịch sử dụng phòng thí nghiệm"
+      subtitle="Hệ thống ghi nhận yêu cầu và xác thực tính khả dụng theo thời gian thực"
       icon={Calendar}
-      iconColor="text-cyan-400"
+      iconColor="text-blue-600"
       maxWidth="max-w-xl"
       footer={
         showSuccess ? (
           <div className="w-full flex items-center justify-between">
-            <span className="text-xs text-slate-300 font-medium">
+            <span className="text-xs text-secondary font-medium">
               Vui lòng xem thông tin chi tiết ca đặt phía trên.
             </span>
             <button
               id="booking-success-close-btn"
               type="button"
               onClick={onClose}
-              className="font-mono text-xs px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold cursor-pointer transition-colors"
+              className="booking-modal-complete-button"
             >
               Hoàn tất
             </button>
@@ -241,7 +234,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="font-mono text-xs text-slate-400 hover:text-white px-4 py-2 rounded-lg border border-white/10 hover:border-white/25 bg-white/5 cursor-pointer transition-all"
+              className="btn btn-secondary booking-modal-secondary-button"
             >
               Đóng
             </button>
@@ -249,91 +242,87 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               type="button"
               disabled={isSubmitting}
               onClick={handleSubmit}
-              className="font-mono text-xs btn-cyan-gradient px-5 py-2.5 rounded-lg flex items-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.4)] disabled:opacity-50"
+              className="btn btn-primary text-xs px-5 py-2.5 flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <span>{isSubmitting ? "ĐANG GỬI..." : "⚡ Xác Nhận Đặt Lịch"}</span>
-              <ArrowRight size={14} />
+              <span>{isSubmitting ? "Đang gửi..." : "Xác nhận đặt lịch"}</span>
+              <ArrowRight size={14} aria-hidden="true" />
             </button>
           </>
         )
       }
     >
       {showSuccess ? (
-        /* Real persisted success confirmation view */
-        <div className="flex flex-col gap-4 p-4 bg-emerald-950/25 border border-emerald-500/40 rounded-xl">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 size={28} className="text-emerald-400 shrink-0" />
+        /* Persisted success confirmation */
+        <div className="booking-success-panel">
+          <div className="booking-success-header">
+            <CheckCircle2 size={28} className="booking-success-icon" aria-hidden="true" />
             <div>
-              <h4 className="text-sm font-semibold text-emerald-200">
-                Đặt Lịch Thành Công!
-              </h4>
-              <p className="text-xs text-emerald-300/80 mt-0.5">
+              <h4 className="booking-success-title">Đặt lịch thành công</h4>
+              <p className="booking-success-desc">
                 {createdBooking?.status === "CONFIRMED"
-                  ? "Ca đặt đã được tự động xác nhận vào hệ thống."
-                  : "Ca đặt đã được ghi nhận và đang chờ Cán bộ quản lý phòng lab phê duyệt."}
+                  ? "Lịch đặt đã được tự động xác nhận."
+                  : "Lịch đặt đã ghi nhận và đang chờ cán bộ phòng lab phê duyệt."}
               </p>
             </div>
           </div>
 
-          <div className="bg-black/40 rounded-lg p-3 border border-emerald-500/20 text-xs font-mono flex flex-col gap-2">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">Trạng thái:</span>
+          <div className="booking-success-details">
+            <div className="booking-detail-row">
+              <span className="booking-detail-label">Trạng thái</span>
               <span
                 id="created-booking-status"
-                className={`font-bold px-2 py-0.5 rounded text-[11px] ${
-                  createdBooking?.status === "CONFIRMED"
-                    ? "bg-emerald-900/60 text-emerald-300 border border-emerald-500/40"
-                    : "bg-amber-900/60 text-amber-300 border border-amber-500/40"
+                className={`booking-status-chip ${
+                  createdBooking?.status === "CONFIRMED" ? "is-confirmed" : "is-pending"
                 }`}
               >
-                {createdBooking?.status === "CONFIRMED" ? "XÁC NHẬN TỨC THÌ (CONFIRMED)" : "CHỜ DUYỆT (PENDING_APPROVAL)"}
+                {createdBooking?.status === "CONFIRMED" ? "Xác nhận ngay" : "Chờ phê duyệt"}
               </span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">Tài nguyên:</span>
-              <span className="text-white font-medium">{currentResource?.name} ({currentResource?.code})</span>
+            <div className="booking-detail-row">
+              <span className="booking-detail-label">Tài nguyên</span>
+              <span className="booking-detail-value">{currentResource?.name} ({currentResource?.code})</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">Thời gian (VN):</span>
-              <span className="text-cyan-300">{selectedDate} | {startTime} – {endTime}</span>
+            <div className="booking-detail-row">
+              <span className="booking-detail-label">Thời gian</span>
+              <span className="booking-detail-value font-mono">{selectedDate} · {startTime} – {endTime}</span>
             </div>
             {createdBooking?.id && (
-              <div className="flex justify-between items-center pt-1 border-t border-white/10">
-                <span className="text-slate-400">Mã ca đặt:</span>
-                <span className="text-slate-300 text-[10px]">{createdBooking.id}</span>
+              <div className="booking-detail-row border-top">
+                <span className="booking-detail-label">Mã booking</span>
+                <span className="booking-detail-value font-mono text-muted">{createdBooking.id}</span>
               </div>
             )}
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="booking-form">
           {errorMessage && (
-            <div className="p-3 bg-rose-950/50 border border-rose-500/40 rounded-xl text-rose-300 text-xs font-mono flex items-start gap-2">
-              <AlertCircle size={16} className="shrink-0 text-rose-400 mt-0.5" />
+            <div className="alert danger" role="alert">
+              <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {/* Resource Selector */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="booking-resource-select" className="font-mono text-xs text-slate-300 flex items-center justify-between">
-              <span>Thiết bị / Phòng thí nghiệm *</span>
+          <div className="booking-field">
+            <label htmlFor="booking-resource-select" className="booking-label">
+              <span>Thiết bị / Phòng thí nghiệm <span aria-hidden="true">*</span></span>
               {effectiveRequiresApproval ? (
-                <span className="text-amber-400 font-bold flex items-center gap-1 text-[11px]">
-                  <ShieldAlert size={12} /> Cần duyệt
+                <span className="booking-approval-badge is-required">
+                  <ShieldAlert size={11} aria-hidden="true" /> Cần duyệt
                 </span>
               ) : (
-                <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px]">
-                  <Sparkles size={12} /> Xác nhận tức thì
+                <span className="booking-approval-badge is-instant">
+                  <Shield size={11} aria-hidden="true" /> Xác nhận tức thì
                 </span>
               )}
             </label>
             <select
               id="booking-resource-select"
+              aria-label="Chọn tài nguyên lịch"
               value={resourceId}
               onChange={(e) => setResourceId(e.target.value)}
               required
-              className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 text-white rounded-xl px-3 py-2.5 text-xs font-mono outline-none"
             >
               {resources.map((r) => {
                 const rApproval = Boolean(
@@ -341,18 +330,18 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                   (r.requiresApproval || r.laboratory?.labPolicy?.requiresApproval || r.labPolicy?.requiresApproval)
                 );
                 return (
-                  <option key={r.id} value={r.id} className="bg-slate-900 text-white">
-                    {r.code} - {r.name} {rApproval ? "(Cần duyệt)" : "(Tức thì)"}
+                  <option key={r.id} value={r.id}>
+                    {r.code} — {r.name}{rApproval ? " (Cần duyệt)" : " (Tức thì)"}
                   </option>
                 );
               })}
             </select>
           </div>
 
-          {/* Title */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="booking-title" className="font-mono text-xs text-slate-300">
-              Tiêu đề buổi làm việc *
+          {/* Booking Title */}
+          <div className="booking-field">
+            <label htmlFor="booking-title" className="booking-label">
+              Tiêu đề buổi làm việc <span aria-hidden="true">*</span>
             </label>
             <input
               id="booking-title"
@@ -360,14 +349,13 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Vd: Thử nghiệm mô hình học sâu, Nghiên cứu robot..."
-              className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 text-white rounded-xl px-3 py-2.5 text-xs font-mono outline-none"
+              placeholder="Vd: Thử nghiệm mô hình học sâu, Thực hành robot..."
             />
           </div>
 
           {/* Purpose */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="booking-purpose" className="font-mono text-xs text-slate-300">
+          <div className="booking-field">
+            <label htmlFor="booking-purpose" className="booking-label">
               Mục đích sử dụng
             </label>
             <textarea
@@ -376,15 +364,14 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
               placeholder="Mô tả mục đích sử dụng tài nguyên (đề tài, môn học, thí nghiệm)..."
-              className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 text-white rounded-xl px-3 py-2.5 text-xs font-mono outline-none resize-none"
             />
           </div>
 
           {/* Date and Time Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="booking-date" className="font-mono text-xs text-slate-300">
-                Ngày đặt *
+          <div className="booking-time-grid">
+            <div className="booking-field">
+              <label htmlFor="booking-date" className="booking-label">
+                Ngày đặt <span aria-hidden="true">*</span>
               </label>
               <input
                 id="booking-date"
@@ -392,13 +379,12 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                 required
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 text-white rounded-xl px-3 py-2.5 text-xs font-mono outline-none"
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="booking-start-time" className="font-mono text-xs text-slate-300">
-                Giờ bắt đầu *
+            <div className="booking-field">
+              <label htmlFor="booking-start-time" className="booking-label">
+                Giờ bắt đầu <span aria-hidden="true">*</span>
               </label>
               <input
                 id="booking-start-time"
@@ -406,13 +392,12 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                 required
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 text-white rounded-xl px-3 py-2.5 text-xs font-mono outline-none"
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="booking-end-time" className="font-mono text-xs text-slate-300">
-                Giờ kết thúc *
+            <div className="booking-field">
+              <label htmlFor="booking-end-time" className="booking-label">
+                Giờ kết thúc <span aria-hidden="true">*</span>
               </label>
               <input
                 id="booking-end-time"
@@ -420,15 +405,14 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                 required
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full bg-black/60 border border-white/15 focus:border-cyan-400 text-white rounded-xl px-3 py-2.5 text-xs font-mono outline-none"
               />
             </div>
           </div>
 
-          {/* Policy helper info: truthful dynamic or generic policy display */}
-          <div className="p-3 bg-cyan-950/20 border border-cyan-500/20 rounded-xl text-cyan-300/80 text-[11px] font-mono flex items-start gap-2">
-            <Clock size={14} className="text-cyan-400 shrink-0 mt-0.5" />
-            <div className="flex flex-col gap-0.5">
+          {/* Policy info box */}
+          <div className="booking-policy-box">
+            <Clock size={13} className="booking-policy-icon" aria-hidden="true" />
+            <div className="booking-policy-text">
               {currentPolicy ? (
                 <>
                   <span>

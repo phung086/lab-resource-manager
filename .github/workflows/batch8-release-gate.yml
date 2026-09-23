@@ -1,0 +1,225 @@
+name: Batch 8 Smart Monitoring Release Gate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".gitattributes"
+      - ".github/workflows/batch8-release-gate.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".gitattributes"
+      - ".github/workflows/batch8-release-gate.yml"
+  workflow_dispatch:
+
+jobs:
+  required-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install dependencies and generate Prisma client
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd backend && npm ci && npm run db:generate)
+          (cd frontend && npm ci)
+
+      - name: Static and production checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd backend && npm run lint && npm run verify:prod-config && npm audit --omit=dev)
+          (cd frontend && npm run lint && npm run typecheck && npm run build && npm audit --omit=dev)
+
+      - name: Configure guarded local test base URL
+        shell: bash
+        run: |
+          cat > backend/.env <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres?schema=public
+          JWT_SECRET=batch8-ci-base-secret-at-least-32-characters
+          CORS_ORIGINS=http://127.0.0.1:5177
+          PORT=5002
+          REMINDER_SCHEDULER_ENABLED=false
+          LOG_FORMAT=combined
+          EOF
+
+      - name: Create isolated PostgreSQL 16 databases
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          for db in \
+            lab_resources_b1d_ci \
+            lab_resources_b1e_ci \
+            lab_resources_b2_auth_ci \
+            lab_resources_b3_resource_ci \
+            lab_resources_b4_booking_ci \
+            lab_resources_b5_operations_ci \
+            lab_resources_b6_monitoring_ci \
+            lab_resources_b7_demo_ci \
+            lab_resources_b8_monitoring_ci
+          do
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";"
+          done
+
+      - name: Deploy canonical migrations to every isolated database
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          for db in \
+            lab_resources_b1d_ci \
+            lab_resources_b1e_ci \
+            lab_resources_b2_auth_ci \
+            lab_resources_b3_resource_ci \
+            lab_resources_b4_booking_ci \
+            lab_resources_b5_operations_ci \
+            lab_resources_b6_monitoring_ci \
+            lab_resources_b7_demo_ci \
+            lab_resources_b8_monitoring_ci
+          do
+            echo "::group::migrate:$db"
+            DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npm run db:migrate
+            echo "::endgroup::"
+          done
+          git diff --exit-code -- prisma/migrations
+
+      - name: Required backend matrix
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          npm run test:core
+          BATCH1D_DATABASES=lab_resources_b1d_ci npm run test:batch1:concurrency
+          BATCH1D_DATABASES=lab_resources_b1d_ci npm run test:batch1:persistence
+          BATCH1E_DATABASE=lab_resources_b1e_ci npm run test:batch1e-runtime
+          BATCH2_DATABASE=lab_resources_b2_auth_ci npm run test:batch2
+          BATCH3_DATABASE=lab_resources_b3_resource_ci npm run test:batch3
+          BATCH4_DATABASE=lab_resources_b4_booking_ci npm run test:batch4
+          BATCH5_DATABASE=lab_resources_b5_operations_ci npm run test:batch5
+          BATCH6_DATABASE=lab_resources_b6_monitoring_ci npm run test:batch6
+          BATCH7_DATABASE=lab_resources_b7_demo_ci npm run test:batch7
+          BATCH8_DATABASE=lab_resources_b8_monitoring_ci npm run test:batch8
+
+  smart-monitoring-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install runtime and browser dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd backend && npm ci && npm run db:generate)
+          (cd frontend && npm ci && npx playwright-core install --with-deps chromium)
+
+      - name: Create, migrate, and seed isolated Batch 8 database
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_b8_monitoring_e2e_ci?schema=public
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE "lab_resources_b8_monitoring_e2e_ci";'
+          (cd backend && npm run db:migrate && node scripts/seedBatch8E2E.mjs)
+
+      - name: Run real backend, frontend, and Chromium assertions
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_b8_monitoring_e2e_ci?schema=public
+          JWT_SECRET: batch8-fullstack-secret-at-least-32-characters
+          CORS_ORIGINS: http://127.0.0.1:5177
+          PORT: 8000
+          REMINDER_SCHEDULER_ENABLED: "false"
+          NODE_ENV: test
+          VITE_API_BASE_URL: http://127.0.0.1:8000
+          BATCH8_FRONTEND_URL: http://127.0.0.1:5177
+        run: |
+          set -euo pipefail
+          BACKEND_LOG="$RUNNER_TEMP/batch8-backend.log"
+          FRONTEND_LOG="$RUNNER_TEMP/batch8-frontend.log"
+          node backend/src/server.js >"$BACKEND_LOG" 2>&1 &
+          BACKEND_PID=$!
+          (cd frontend && npx vite --host 127.0.0.1 --port 5177) >"$FRONTEND_LOG" 2>&1 &
+          FRONTEND_PID=$!
+          cleanup() {
+            kill "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          ready=0
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8000/health/ready >/dev/null && curl -fsS http://127.0.0.1:5177 >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat "$BACKEND_LOG" "$FRONTEND_LOG"
+            exit 1
+          fi
+
+          (cd frontend && npm run test:e2e:smart-monitoring)
+
+      - name: Upload Batch 8 screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: batch8-smart-monitoring-screenshots
+          path: frontend/screenshots_batch8/
+          if-no-files-found: ignore

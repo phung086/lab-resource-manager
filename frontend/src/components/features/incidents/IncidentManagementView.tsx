@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Plus, ShieldAlert, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Plus, ShieldAlert } from "lucide-react";
+import { BaseModal2026 } from "../../BaseModal2026.js";
+import { formatVietnamDateTime } from "../../../utils/timezone.js";
 
 import type { IncidentRecord, IncidentSeverity } from "../../../types/incident";
 import {
@@ -38,6 +40,10 @@ const statusLabels: Record<string, string> = {
   resolved: "Đã xử lý",
   verified: "Đã xác minh",
   closed: "Đã đóng"
+};
+const resourceStatusLabels: Record<string, string> = {
+  AVAILABLE: "Sẵn sàng", IN_USE: "Đang sử dụng", MAINTENANCE: "Đang bảo trì",
+  CALIBRATION: "Đang hiệu chuẩn", BROKEN: "Hỏng", RETIRED: "Ngừng sử dụng", OFFLINE: "Ngoại tuyến"
 };
 
 export const IncidentManagementView: React.FC<Props> = ({ user, resources, incidents, onChanged }) => {
@@ -165,6 +171,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
             key={value}
             type="button"
             className={filter === value ? "btn btn-primary" : "btn btn-secondary"}
+            aria-pressed={filter === value}
             onClick={() => setFilter(value)}
           >
             {value === "ALL" ? "Tất cả" : value === "OPEN" ? "Đang xử lý" : "Đã giải quyết"}
@@ -194,7 +201,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
                   <p>{incident.resource?.code} · {incident.resource?.name}</p>
                 </div>
                 <time dateTime={incident.detectedAt}>
-                  {new Date(incident.detectedAt).toLocaleString("vi-VN")}
+                  {formatVietnamDateTime(incident.detectedAt)}
                 </time>
               </div>
 
@@ -203,7 +210,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
               <dl className="operational-evidence-grid">
                 <div><dt>Người báo cáo</dt><dd>{incident.reportedBy?.fullName || "—"}</dd></div>
                 <div><dt>Người phụ trách</dt><dd>{incident.assignedTo?.fullName || "Chưa phân công"}</dd></div>
-                <div><dt>Trạng thái tài nguyên</dt><dd>{incident.resource?.operationalStatus || "—"}</dd></div>
+                <div><dt>Trạng thái tài nguyên</dt><dd>{resourceStatusLabels[incident.resource?.operationalStatus || ""] || "—"}</dd></div>
                 <div><dt>Kết quả xử lý</dt><dd>{incident.resolution || "Chưa có"}</dd></div>
               </dl>
 
@@ -233,13 +240,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
         })}
       </div>
 
-      {showReport && (
-        <div className="modal-backdrop-2026" role="presentation">
-          <div className="modal-container-2026" role="dialog" aria-modal="true" aria-labelledby="incident-report-title">
-            <div className="modal-header-2026">
-              <h2 id="incident-report-title"><ShieldAlert size={18} /> Báo cáo sự cố</h2>
-              <button className="icon-button" type="button" aria-label="Đóng" onClick={() => setShowReport(false)}><X size={18} /></button>
-            </div>
+      <BaseModal2026 isOpen={showReport} onClose={() => setShowReport(false)} title="Báo cáo sự cố" icon={ShieldAlert} dismissible={busyId !== "create"}>
             <form className="booking-operation-form" onSubmit={submitReport} noValidate>
               <label>
                 Tài nguyên
@@ -271,17 +272,10 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
                 <button className="btn btn-primary" type="submit" disabled={busyId === "create"}>{busyId === "create" ? "Đang gửi..." : "Gửi báo cáo"}</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </BaseModal2026>
 
-      {resolving && (
-        <div className="modal-backdrop-2026" role="presentation">
-          <div className="modal-container-2026" role="dialog" aria-modal="true" aria-labelledby="incident-resolve-title">
-            <div className="modal-header-2026">
-              <h2 id="incident-resolve-title"><AlertTriangle size={18} /> Xác nhận xử lý sự cố</h2>
-              <button className="icon-button" type="button" aria-label="Đóng" onClick={() => setResolving(null)}><X size={18} /></button>
-            </div>
+      <BaseModal2026 isOpen={Boolean(resolving)} onClose={() => setResolving(null)} title="Xác nhận xử lý sự cố" icon={AlertTriangle} dismissible={busyId !== resolving?.id}>
+          {resolving && (
             <form className="booking-operation-form" onSubmit={submitResolution} noValidate>
               <p>{resolving.title}</p>
               <label>
@@ -293,9 +287,8 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
                 <button className="btn btn-primary" type="submit" disabled={busyId === resolving.id}>{busyId === resolving.id ? "Đang lưu..." : "Lưu kết quả xử lý"}</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          )}
+      </BaseModal2026>
     </section>
   );
 };

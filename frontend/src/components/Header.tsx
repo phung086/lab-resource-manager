@@ -1,17 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Bell,
-  Check,
-  ChevronDown,
-  KeyRound,
-  LogOut,
-  RefreshCw,
-  Sparkles,
-  User,
-  Shield,
-  Zap,
-  Globe
-} from "lucide-react";
+import { parseVietnamParts } from "../utils/timezone";
+import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, Shield } from "lucide-react";
 
 export interface HeaderProps {
   title: string;
@@ -51,13 +40,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   useEffect(() => {
     function updateClock() {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const day = String(now.getDate()).padStart(2, "0");
-      const hours = String(now.getHours()).padStart(2, "0");
-      const minutes = String(now.getMinutes()).padStart(2, "0");
-      const seconds = String(now.getSeconds()).padStart(2, "0");
+      const now = parseVietnamParts(new Date());
+      if (!now) return;
+      const year = now.year;
+      const month = String(now.month).padStart(2, "0");
+      const day = String(now.day).padStart(2, "0");
+      const hours = String(now.hours).padStart(2, "0");
+      const minutes = String(now.minutes).padStart(2, "0");
+      const seconds = String(now.seconds).padStart(2, "0");
       setCurrentDateTime(`${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC+7`);
     }
 
@@ -87,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Left side: page identity and local clock. */}
       <div className="header-left-2026">
         <div className="header-title-row-2026">
-          <h1 className="header-title-2026">{title}</h1>
+          <div className="header-title-2026">{title}</div>
         </div>
 
         <div className="header-telemetry-row-2026">
@@ -106,6 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
             className={`segmented-btn-2026 ${locale === "vi" ? "is-active" : ""}`}
             onClick={() => onLocaleChange("vi")}
             title="Tiếng Việt"
+            aria-pressed={locale === "vi"}
           >
             VI
           </button>
@@ -114,6 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
             className={`segmented-btn-2026 ${locale === "en" ? "is-active" : ""}`}
             onClick={() => onLocaleChange("en")}
             title="English"
+            aria-pressed={locale === "en"}
           >
             EN
           </button>
@@ -125,9 +117,10 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             className="header-icon-btn-2026"
             title="Làm mới dữ liệu telemetry"
+            aria-label="Làm mới dữ liệu"
             onClick={onRefresh}
           >
-            <RefreshCw size={16} className={loading ? "animate-spin text-cyan-400" : "text-slate-300"} />
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </button>
         )}
 
@@ -136,10 +129,15 @@ export const Header: React.FC<HeaderProps> = ({
           type="button"
           className={`header-notification-btn-2026 ${notificationsCount > 0 ? "has-unread" : ""}`}
           title="Thông báo & Escalation"
+          aria-label={
+            notificationsCount > 0
+              ? `Mở thông báo, ${notificationsCount} chưa đọc`
+              : "Mở thông báo"
+          }
           onClick={onOpenNotifications}
         >
-          <div className={`bell-icon-wrapper ${notificationsCount > 0 ? "bell-shake" : ""}`}>
-            <Bell size={16} className="text-slate-200" />
+          <div className="bell-icon-wrapper">
+            <Bell size={16} />
           </div>
           {notificationsCount > 0 && (
             <span className="notification-counter-pill font-mono">
@@ -156,6 +154,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="user-avatar-btn-2026"
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               aria-expanded={userMenuOpen}
+              aria-label="Mở menu tài khoản"
             >
               <div className="avatar-letter-circle">
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
@@ -175,18 +174,18 @@ export const Header: React.FC<HeaderProps> = ({
                     <strong className="user-menu-fullname">{user.fullName}</strong>
                     <span className="user-menu-email">{user.email || "Chưa cập nhật email"}</span>
                     <div className="user-menu-role-badge font-mono">
-                      <Shield size={11} className="text-cyan-400" />
+                      <Shield size={11} className="text-blue-400" />
                       <span>{user.role.toUpperCase()}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Remaining GPU Quota Telemetry */}
+                {/* Remaining Quota Telemetry */}
                 {hasQuota && <div className="user-menu-quota-box">
                   <div className="user-menu-quota-header">
-                    <span className="quota-label text-slate-400 text-xs">Hạn Ngạch GPU Còn Lại:</span>
-                    <span className="quota-numbers font-mono text-xs text-cyan-300 font-semibold">
-                      {quotaUsed} / {quotaTotal} GPU-h
+                    <span className="quota-label text-slate-400 text-xs">Hạn Ngạch Phân Bổ:</span>
+                    <span className="quota-numbers font-mono text-xs text-blue-300 font-semibold">
+                      {quotaUsed} / {quotaTotal} giờ
                     </span>
                   </div>
                   <div className="quota-progress-track">
@@ -196,7 +195,7 @@ export const Header: React.FC<HeaderProps> = ({
                     />
                   </div>
                   <div className="quota-meta-footer">
-                    <span className="font-mono text-[10px] text-slate-400">Đã dùng {quotaPercent}% hạn mức</span>
+                    <span className="font-mono text-[10px] text-slate-400">Đã dùng {quotaPercent}%</span>
                     <span className="font-mono text-[10px] text-emerald-400">Khả dụng</span>
                   </div>
                 </div>}
@@ -213,7 +212,7 @@ export const Header: React.FC<HeaderProps> = ({
                       if (onOpenChangePassword) onOpenChangePassword();
                     }}
                   >
-                    <KeyRound size={15} className="text-cyan-400" />
+                    <KeyRound size={15} className="text-slate-400" />
                     <span>Đổi Mật Khẩu</span>
                   </button>
 

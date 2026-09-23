@@ -19,7 +19,7 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
-      - run: npx prisma generate
+      - run: npm run db:generate
       - name: Backend lint
         run: npm run lint
       - name: Production configuration contract

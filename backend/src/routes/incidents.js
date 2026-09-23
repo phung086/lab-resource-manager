@@ -49,7 +49,10 @@ router.get("/", async (req, res, next) => {
       include: {
         resource: { select: { id: true, code: true, name: true, laboratoryId: true, operationalStatus: true } },
         reportedBy: { select: { id: true, fullName: true, role: true } },
-        assignedTo: { select: { id: true, fullName: true, role: true } }
+        assignedTo: { select: { id: true, fullName: true, role: true } },
+        telemetrySource: { select: { id: true, code: true, name: true } },
+        telemetrySample: { select: { id: true, sampledAt: true } },
+        monitoringAlert: { select: { id: true, ruleCode: true, severity: true, status: true } }
       },
       orderBy: [{ detectedAt: "desc" }, { createdAt: "desc" }],
       take: query.take
@@ -68,6 +71,9 @@ router.get("/:id", async (req, res, next) => {
         resource: { select: { id: true, code: true, name: true, laboratoryId: true, operationalStatus: true } },
         reportedBy: { select: { id: true, fullName: true, role: true } },
         assignedTo: { select: { id: true, fullName: true, role: true } },
+        telemetrySource: { select: { id: true, code: true, name: true } },
+        telemetrySample: { select: { id: true, sampledAt: true } },
+        monitoringAlert: { select: { id: true, ruleCode: true, severity: true, status: true } },
         comments: { orderBy: { createdAt: "asc" } }
       }
     });

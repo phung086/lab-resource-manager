@@ -12,10 +12,11 @@
     "test:e2e:calendar": "node test_batch4_calendar_e2e.mjs",
     "test:e2e:operations": "node test_batch5_operations_e2e.mjs",
     "test:e2e:monitoring": "node test_batch6_monitoring_e2e.mjs",
-    "lint": "npx --yes eslint@9.17.0 \"src/**/*.{js,jsx}\"",
-    "typecheck": "npx --yes -p typescript@5.7.3 -p @types/react@19.0.3 -p @types/react-dom@19.0.2 tsc -p tsconfig.check.json",
+    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
+    "typecheck": "tsc -p tsconfig.check.json",
     "test:required": "npm run lint && npm run typecheck && npm run build",
-    "test:e2e:demo": "node test_batch7_graduation_demo_e2e.mjs"
+    "test:e2e:demo": "node test_batch7_graduation_demo_e2e.mjs",
+    "test:e2e:smart-monitoring": "node test_batch8_smart_monitoring_e2e.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",
@@ -29,8 +30,18 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "9.17.0",
+    "@types/react": "19.0.3",
+    "@types/react-dom": "19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "9.39.5",
+    "eslint-plugin-react": "7.37.3",
+    "eslint-plugin-react-hooks": "5.1.0",
+    "eslint-plugin-react-refresh": "0.4.16",
+    "globals": "15.14.0",
     "playwright-core": "^1.61.1",
+    "typescript": "5.7.3",
+    "typescript-eslint": "8.18.1",
     "vite": "^6.0.7"
   }
 }

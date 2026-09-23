@@ -1,5 +1,5 @@
 import React from "react";
-import { CalendarClock, ClipboardCheck, History, PackageCheck, RotateCcw, ShieldCheck, XCircle } from "lucide-react";
+import { CalendarClock, ClipboardCheck, History, Loader2, PackageCheck, RotateCcw, ShieldCheck, XCircle } from "lucide-react";
 import { BookingStatusBadge } from "../../BookingStatusBadge.js";
 import type { BookingAction, BookingRecord } from "../../../types/booking.js";
 import { formatVietnamDateTime } from "../../../utils/timezone.js";
@@ -43,14 +43,37 @@ export const BookingOperationCard: React.FC<BookingOperationCardProps> = ({
 
     <footer className="operation-card-actions">
       <button type="button" className="btn btn-secondary" onClick={() => onOpenHistory(booking)} disabled={busy}><History size={15} /> Lịch sử</button>
+      <span className="operation-actions-spacer" aria-hidden="true" />
       {isStaff && booking.status === "PENDING_APPROVAL" && <>
-        <button type="button" className="btn btn-primary" onClick={() => onAction("APPROVE", booking)} disabled={busy}><ShieldCheck size={15} /> Duyệt</button>
-        <button type="button" className="btn btn-danger" onClick={() => onAction("REJECT", booking)} disabled={busy}><XCircle size={15} /> Từ chối</button>
+        <button type="button" className="btn btn-primary" onClick={() => onAction("APPROVE", booking)} disabled={busy}>
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Duyệt
+        </button>
+        <button type="button" className="btn btn-danger" onClick={() => onAction("REJECT", booking)} disabled={busy}>
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <XCircle size={15} />} Từ chối
+        </button>
       </>}
-      {isStaff && booking.status === "CONFIRMED" && <button type="button" className="btn btn-primary" onClick={() => onAction("CHECK_OUT", booking)} disabled={busy}><ClipboardCheck size={15} /> Bàn giao</button>}
-      {isStaff && booking.status === "CHECKED_OUT" && <button type="button" className="btn btn-primary" onClick={() => onAction("RETURN", booking)} disabled={busy}><RotateCcw size={15} /> Nhận hoàn trả</button>}
-      {isStaff && booking.status === "RETURNED" && <button type="button" className="btn btn-primary" onClick={() => onAction("COMPLETE", booking)} disabled={busy}><PackageCheck size={15} /> Hoàn tất</button>}
-      {!isStaff && onCancel && ["PENDING_APPROVAL", "CONFIRMED"].includes(booking.status) && <button type="button" className="btn btn-secondary" onClick={() => onCancel(booking)} disabled={busy}><CalendarClock size={15} /> Hủy booking</button>}
+      {isStaff && booking.status === "CONFIRMED" && <button type="button" className="btn btn-primary" onClick={() => onAction("CHECK_OUT", booking)} disabled={busy}>
+        {busy ? <Loader2 size={15} className="animate-spin" /> : <ClipboardCheck size={15} />} Bàn giao
+      </button>}
+      {isStaff && booking.status === "CHECKED_OUT" && <button type="button" className="btn btn-primary" onClick={() => onAction("RETURN", booking)} disabled={busy}>
+        {busy ? <Loader2 size={15} className="animate-spin" /> : <RotateCcw size={15} />} Nhận hoàn trả
+      </button>}
+      {isStaff && booking.status === "RETURNED" && <button type="button" className="btn btn-primary" onClick={() => onAction("COMPLETE", booking)} disabled={busy}>
+        {busy ? <Loader2 size={15} className="animate-spin" /> : <PackageCheck size={15} />} Hoàn tất
+      </button>}
+      {!isStaff && onCancel && ["PENDING_APPROVAL", "CONFIRMED"].includes(booking.status) && (
+        <button
+          type="button"
+          className="btn btn-danger"
+          onClick={() => onCancel(booking)}
+          disabled={busy}
+        >
+          {busy
+            ? <Loader2 size={15} className="animate-spin" />
+            : <CalendarClock size={15} />}
+          Hủy booking
+        </button>
+      )}
     </footer>
   </article>
 );

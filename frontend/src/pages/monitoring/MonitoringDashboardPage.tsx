@@ -1,7 +1,9 @@
-import React from "react";
-import { Activity, AlertTriangle, Bell, CalendarClock, Gauge, Server } from "lucide-react";
+import React, { useState } from "react";
+import { Activity, AlertTriangle, Bell, CalendarClock, Camera, Gauge, Server, ShieldAlert } from "lucide-react";
 import { TelemetryStatusGrid } from "../../components/features/monitoring/TelemetryStatusGrid";
+import { acknowledgeMonitoringAlert } from "../../services/monitoring";
 import type { DashboardPayload } from "../../types/telemetry";
+import { formatVietnamDateTime } from "../../utils/timezone.js";
 
 interface Props {
   dashboard: DashboardPayload | null;
@@ -10,6 +12,8 @@ interface Props {
 }
 
 export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = false, onRefresh }) => {
+  const [actionError, setActionError] = useState("");
+  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
   if (!dashboard) {
     return (
       <section className="content-stack">
@@ -29,6 +33,19 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
     { label: "Thông báo chưa đọc", value: dashboard.summary.unreadNotifications, icon: Bell }
   ];
 
+  async function acknowledge(alertId: string) {
+    setAcknowledgingId(alertId);
+    setActionError("");
+    try {
+      await acknowledgeMonitoringAlert(alertId);
+      onRefresh?.();
+    } catch (error: any) {
+      setActionError(error?.message || "Không thể xác nhận cảnh báo.");
+    } finally {
+      setAcknowledgingId(null);
+    }
+  }
+
   return (
     <section className="content-stack" aria-labelledby="monitoring-dashboard-heading">
       <div className="page-section-header">
@@ -36,7 +53,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
           <p className="eyebrow">GIÁM SÁT TỪ DỮ LIỆU ĐƯỢC CHẤP NHẬN</p>
           <h1 id="monitoring-dashboard-heading">Bảng điều khiển vận hành</h1>
           <p className="section-description">
-            KPI, sự cố và telemetry được tổng hợp trực tiếp từ PostgreSQL. Không có dữ liệu giả hoặc trạng thái khỏe mạnh suy diễn khi thiếu mẫu đo.
+            Theo dõi tình trạng tài nguyên, sự cố và mẫu đo đã ghi nhận. Khi thiếu dữ liệu, hệ thống không suy diễn trạng thái ổn định.
           </p>
         </div>
         {onRefresh && <button className="btn btn-secondary" type="button" onClick={onRefresh} disabled={loading}>{loading ? "Đang cập nhật..." : "Cập nhật"}</button>}
@@ -50,6 +67,8 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
           </div>
         ))}
       </div>
+
+      {actionError && <div className="alert danger" role="alert">{actionError}</div>}
 
       <div className="dashboard-data-grid">
         <article className="card dashboard-data-panel">
@@ -99,6 +118,56 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
 
       <div className="card dashboard-data-panel">
         <div className="panel-heading">
+          <ShieldAlert size={17} />
+          <h2>Cảnh báo giám sát đã lưu</h2>
+        </div>
+        {dashboard.monitoringAlerts.length ? (
+          <div className="content-stack compact">
+            {dashboard.monitoringAlerts.map((alert) => (
+              <div className="dashboard-booking-row" key={alert.id}>
+                <div>
+                  <strong>{alert.severity} · {alert.ruleCode}</strong>
+                  <span>{alert.resourceCode || alert.resourceId} · {alert.message}</span>
+                  {alert.incident && <span>Incident: {alert.incident.id} ({alert.incident.status})</span>}
+                </div>
+                <div>
+                  <span>{alert.status}</span>
+                  <time dateTime={alert.lastObservedAt}>{formatVietnamDateTime(alert.lastObservedAt)}</time>
+                  {alert.status === "OPEN" && (
+                    <button className="btn btn-secondary" type="button" disabled={acknowledgingId === alert.id} onClick={() => acknowledge(alert.id)}>
+                      {acknowledgingId === alert.id ? "Đang xác nhận..." : "Xác nhận"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <div className="empty-state">Không có cảnh báo giám sát đang hoạt động.</div>}
+      </div>
+
+      <div className="card dashboard-data-panel">
+        <div className="panel-heading">
+          <Camera size={17} />
+          <h2>Camera và hỗ trợ cảnh báo an toàn</h2>
+        </div>
+        <div className="alert warning">
+          <strong>NON-CERTIFIED · NOT A FIRE ALARM</strong>
+          <span>Không thay thế hệ thống báo cháy vật lý, quy trình an toàn hoặc xác minh của con người.</span>
+        </div>
+        {dashboard.cameras.length ? (
+          <div className="content-stack compact">
+            {dashboard.cameras.map((camera) => (
+              <div className="dashboard-booking-row" key={camera.id}>
+                <div><strong>{camera.code} — {camera.name}</strong><span>Metadata phạm vi tài nguyên {camera.resourceId}</span></div>
+                <div><span>{camera.state}</span><small>{camera.enabled ? "Đã bật cấu hình" : "Tắt theo mặc định"}</small></div>
+              </div>
+            ))}
+          </div>
+        ) : <div className="empty-state">NOT_CONFIGURED — Không có camera được cấu hình; không tạo luồng video giả.</div>}
+      </div>
+
+      <div className="card dashboard-data-panel">
+        <div className="panel-heading">
           <CalendarClock size={17} />
           <h2>Booking sắp tới</h2>
         </div>
@@ -112,7 +181,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
                 </div>
                 <div>
                   <span>{booking.status}</span>
-                  <time>{new Date(booking.startAt).toLocaleString("vi-VN")}</time>
+                  <time dateTime={booking.startAt}>{formatVietnamDateTime(booking.startAt)}</time>
                 </div>
               </div>
             ))}

@@ -72,7 +72,6 @@ Thay toàn bộ giá trị mẫu bằng secret/domain thật. Các biến quan t
 
 - `POSTGRES_PASSWORD`
 - `JWT_SECRET`
-- `TELEMETRY_API_KEY`
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 - `ADMIN_FULL_NAME`
@@ -81,7 +80,13 @@ Thay toàn bộ giá trị mẫu bằng secret/domain thật. Các biến quan t
 
 Production backend fail closed nếu secret/admin/CORS quan trọng không hợp lệ.
 
-Clean deployment uses the repository's canonical migration bridge. The bridge preserves tracked historical SQL, reconciles the verified Batch 1 checksum snapshot through an ephemeral copy, records the reconciliation via Prisma's supported `migrate resolve`, then returns to normal `prisma migrate deploy`. It never edits `_prisma_migrations` manually.
+Telemetry sources are provisioned by an administrator. Each source receives a
+one-time credential whose derived hash is stored in PostgreSQL; there is no
+shared production telemetry key.
+
+Clean deployment uses ordinary tracked `prisma migrate deploy`. Historical
+migration SQL remains immutable, and production never edits
+`_prisma_migrations` manually.
 
 Kiểm tra cấu hình Compose:
 

@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
 import { Header } from "./Header.tsx";
-import { AiCopilotDrawer, FloatingCopilotFab } from "./AiCopilotDrawer.tsx";
-import { KeyRound, X, Check, ShieldAlert } from "lucide-react";
+import { KeyRound, Check, ShieldAlert } from "lucide-react";
+import { BaseModal2026 } from "./BaseModal2026.tsx";
 import { apiRequest } from "../api.js";
 import { RESEARCH_FEATURES_ENABLED } from "../config/featureFlags";
+import { AiCopilotDrawer, FloatingCopilotFab } from "../research/ResearchFeatureRegistry";
 
 export interface AppLayoutProps {
   activeTab: string;
@@ -48,36 +49,44 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const [currentPassword, setCurrentPassword] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
+
+  function closePasswordModal() {
+    if (passwordBusy) return;
+    setChangePasswordOpen(false);
+    setPasswordError("");
+    setPasswordSuccess(false);
+  }
 
   // Map activeTab to readable header title
   const tabTitles: Record<string, string> = {
-    smart_calendar: "📅 Lịch Đặt Khung Giờ Thông Minh (Smart Booking)",
-    ai_analytics: "📊 AI Tính Toán Hiệu Suất & Tỷ Lệ Chiếm Dụng",
-    ai_advisor: "🧠 AI Cố Vấn Lịch Đặt & Tối Ưu Chi Phí",
+    smart_calendar: "Lịch Đặt Khung Giờ",
+    ai_analytics: "AI Tính Toán Hiệu Suất",
+    ai_advisor: "AI Cố Vấn Lịch Đặt",
     admin_management: "Quản lý tài nguyên phòng thí nghiệm",
-    conflict_queue: "⚡ Xử Lý Xung Đột Real-Time",
-    quota_fairness: "📊 Hạn Ngạch & Công Bằng Nhóm",
-    chargeback: "💰 Quyết Toán & Tiền Điện EVN",
-    policy_config: "⚙️ Chính Sách & Ràng Buộc Lab",
+    conflict_queue: "Xử Lý Xung Đột Lịch Đặt",
+    quota_fairness: "Hạn Ngạch & Phân Bổ",
+    chargeback: "Quyết Toán Chi Phí",
+    policy_config: "Chính Sách & Quy Định Lab",
     escalations: "Trung tâm thông báo",
-    allocations: "🎯 Điều Phối Yêu Cầu Mới",
-    dashboard: "🖥️ Mission Control Thiết Bị",
-    digital_twin: "🌐 Bản Sao Số & Heatmap",
-    what_if: "🔮 Studio Mô Phỏng What-If",
+    allocations: "Điều Phối Yêu Cầu",
+    dashboard: "Bảng điều khiển vận hành",
+    digital_twin: "Bản Sao Số & Mặt Bằng Lab",
+    what_if: "Mô Phỏng Kịch Bản",
     resources: "Danh mục tài nguyên phòng thí nghiệm",
-    bookings: "Booking & Bàn Giao Tài Nguyên",
-    maintenance: "🔧 Phiếu Yêu Cầu Bảo Trì",
-    monitoring: "Giám sát telemetry",
-    pareto: "📐 Khảo Sát Pareto Frontier",
-    timeline: "⏱️ Replay Tái Tối Ưu Hóa",
-    concurrency: "🔒 Giám Sát Tranh Chấp GiST",
-    ga_solver: "🧬 Bộ Giải Di Truyền NSGA-II",
-    ai_rca: "🔍 AI Diagnostic Studio (RCA)",
-    assistant: "🤖 AI Copilot & MCP Trace",
+    bookings: "Lịch Đặt & Bàn Giao Tài Nguyên",
+    maintenance: "Lịch Bảo Trì & Kiểm Định",
+    monitoring: "Giám sát vận hành & Telemetry",
+    pareto: "Khảo Sát Tối Ưu Hóa",
+    timeline: "Nhật Ký Điều Phối",
+    concurrency: "Kiểm Soát Tranh Chấp Lịch",
+    ga_solver: "Thuật Toán Điều Lịch",
+    ai_rca: "Phân Tích Nguyên Nhân Sự Cố",
+    assistant: "Trợ Lý Vận Hành Lab",
     incidents: "Sự cố tài nguyên",
-    training: "🎓 Chứng Chỉ Đào Tạo Lab",
-    logs: "📋 Nhật Ký Kiểm Toán",
-    users: "👥 Quản Trị Người Dùng"
+    training: "Đào Tạo & An Toàn Lab",
+    logs: "Nhật Ký Kiểm Toán",
+    users: "Quản Trị Người Dùng"
   };
 
   const currentTitle = tabTitles[activeTab] || "Hệ thống đặt lịch và tài nguyên phòng thí nghiệm";
@@ -85,6 +94,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (passwordBusy) return;
     setPasswordError("");
     if (!currentPassword) {
       setPasswordError("Vui lòng nhập mật khẩu hiện tại.");
@@ -99,6 +109,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       return;
     }
 
+    setPasswordBusy(true);
     try {
       await apiRequest("/auth/change-password", {
         method: "POST",
@@ -110,17 +121,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       setConfirmPassword("");
     } catch (error: any) {
       setPasswordError(error?.message || "Không thể đổi mật khẩu.");
-      return;
+    } finally {
+      setPasswordBusy(false);
     }
-    setTimeout(() => {
-      setPasswordSuccess(false);
-      setChangePasswordOpen(false);
-    }, 1500);
   }
 
   return (
     <div className="app-shell-2026">
-      {/* 1. Sidebar Navigation (w-64, backdrop-blur-2xl, border-r border-white/5) */}
+      {/* Primary navigation */}
       <Sidebar
         activeTab={activeTab}
         onSelectTab={onSelectTab}
@@ -152,7 +160,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       </div>
 
       {RESEARCH_FEATURES_ENABLED && (
-        <>
+        <React.Suspense fallback={null}>
           <FloatingCopilotFab
             isOpen={copilotOpen}
             onClick={() => setCopilotOpen(true)}
@@ -166,50 +174,40 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               }
             }}
           />
-        </>
+        </React.Suspense>
       )}
 
-      {/* 5. Modal Đổi Mật Khẩu (Level 3 Depth) */}
-      {changePasswordOpen && (
-        <div className="modal-backdrop-2026" onClick={() => setChangePasswordOpen(false)}>
-          <div
-            className="modal-container-2026 animate-scaleUp"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 420 }}
-          >
-            <div className="modal-header-2026">
-              <div className="flex items-center gap-2">
-                <div className="modal-icon-badge-2026">
-                  <KeyRound size={18} className="text-cyan-400" />
-                </div>
-                <h3 className="text-sm font-semibold text-white">Đổi Mật Khẩu Truy Cập Lab</h3>
-              </div>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => setChangePasswordOpen(false)}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <form onSubmit={handlePasswordSubmit} className="p-4 flex flex-col gap-3">
+      <BaseModal2026
+        isOpen={changePasswordOpen}
+        onClose={closePasswordModal}
+        dismissible={!passwordBusy}
+        title="Đổi mật khẩu"
+        subtitle="Cập nhật mật khẩu truy cập tài khoản phòng lab"
+        icon={KeyRound}
+        maxWidth="max-w-md"
+        footer={<>
+          <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>Đóng</button>
+          {!passwordSuccess && <button type="submit" form="change-password-form" className="btn btn-primary" disabled={passwordBusy}>{passwordBusy ? "Đang cập nhật..." : "Cập nhật mật khẩu"}</button>}
+        </>}
+      >
+            <form id="change-password-form" onSubmit={handlePasswordSubmit} className="booking-form">
               {passwordError && (
-                <div className="alert danger text-xs flex items-center gap-2">
-                  <ShieldAlert size={14} />
+                <div className="alert danger text-xs flex items-center gap-2" role="alert">
+                  <ShieldAlert size={14} aria-hidden="true" />
                   <span>{passwordError}</span>
                 </div>
               )}
               {passwordSuccess && (
-                <div className="alert success text-xs flex items-center gap-2">
-                  <Check size={14} />
-                  <span>Mật khẩu đã được cập nhật thành công!</span>
+                <div className="alert success text-xs flex items-center gap-2" role="status">
+                  <Check size={14} aria-hidden="true" />
+                  <span>Mật khẩu đã được cập nhật thành công.</span>
                 </div>
               )}
 
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Mật khẩu hiện tại</label>
+                <label htmlFor="current-password" className="text-xs text-slate-400 mb-1 block">Mật khẩu hiện tại</label>
                 <input
+                  id="current-password"
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -220,8 +218,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Mật khẩu mới</label>
+                <label htmlFor="new-password" className="text-xs text-slate-400 mb-1 block">Mật khẩu mới</label>
                 <input
+                  id="new-password"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -232,8 +231,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Xác nhận mật khẩu mới</label>
+                <label htmlFor="confirm-password" className="text-xs text-slate-400 mb-1 block">Xác nhận mật khẩu mới</label>
                 <input
+                  id="confirm-password"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -243,22 +243,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 />
               </div>
 
-              <div className="flex justify-end gap-2 mt-3">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setChangePasswordOpen(false)}
-                >
-                  Hủy bỏ
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Cập nhật mật khẩu
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+      </BaseModal2026>
     </div>
   );
 };

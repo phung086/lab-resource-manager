@@ -24,7 +24,7 @@ async function openOperations(page) {
   const nav = page.locator(".sidebar-nav-item-2026", { hasText: /Vận Hành Booking|Lịch Đặt Của Tôi/i }).first();
   await nav.waitFor({ timeout: 5000 });
   await nav.click();
-  await page.getByText(/REQUIRED CORE · OPERATIONAL WORKFLOW/i).waitFor({ timeout: 5000 });
+  await page.locator("[data-testid=\"operations-view\"]").waitFor({ timeout: 5000 });
 }
 
 async function cardFor(page, title) {
@@ -92,7 +92,7 @@ try {
   for (const label of ["Tạo yêu cầu", "Duyệt booking", "Bàn giao tài nguyên", "Tiếp nhận hoàn trả", "Hoàn tất workflow"]) {
     assert.ok(historyText.includes(label), `Timeline must include ${label}`);
   }
-  await dialog.getByRole("button", { name: "Close" }).click();
+  await dialog.getByRole("button", { name: "Đóng hộp thoại", exact: true }).click();
 
   await staffPage.getByRole("button", { name: /Chờ duyệt/ }).click();
   const rejectCard = await cardFor(staffPage, "Batch 5 rejection booking");
@@ -120,7 +120,7 @@ try {
   assert.equal(await studentCard.getByRole("button", { name: "Bàn giao" }).count(), 0);
   await studentCard.getByRole("button", { name: "Lịch sử" }).click();
   await studentPage.getByRole("dialog").getByText("Tình trạng trước:").waitFor();
-  await studentPage.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  await studentPage.getByRole("dialog").getByRole("button", { name: "Đóng hộp thoại", exact: true }).click();
   await studentContext.close();
 
   console.log("=== BATCH 5 LECTURER REJECTION VISIBILITY ===");
@@ -138,7 +138,8 @@ try {
   const foreignStaffPage = await foreignStaffContext.newPage();
   await login(foreignStaffPage, "b5.foreign.staff@lab.test");
   await openOperations(foreignStaffPage);
-  assert.ok(await foreignStaffPage.getByText("Batch 5 foreign lab booking").first().isVisible());
+  const foreignCard = await cardFor(foreignStaffPage, "Batch 5 foreign lab booking");
+  assert.ok(await foreignCard.isVisible());
   assert.equal(await foreignStaffPage.getByText("Batch 5 lifecycle booking").count(), 0);
   await foreignStaffContext.close();
 

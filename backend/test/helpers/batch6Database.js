@@ -24,7 +24,6 @@ export async function configureBatch6TestEnvironment(database) {
   process.env.DATABASE_URL = url.toString();
   process.env.JWT_SECRET = "batch6-notification-incident-monitoring-secret";
   process.env.CORS_ORIGINS = "http://localhost:5173";
-  process.env.TELEMETRY_API_KEY = "batch6-telemetry-api-key-at-least-32-chars";
   process.env.REMINDER_SCHEDULER_ENABLED = "false";
   return url.toString();
 }

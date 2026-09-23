@@ -2,6 +2,14 @@ import React, { useMemo, useState } from "react";
 import { Bell, CheckCheck, CheckCircle2, Clock3 } from "lucide-react";
 
 import { apiRequest } from "../api.js";
+import { formatVietnamDateTime } from "../utils/timezone.js";
+
+const notificationTypeLabels = {
+  BOOKING_APPROVED: "Lịch đặt được duyệt",
+  BOOKING_REJECTED: "Lịch đặt bị từ chối",
+  BOOKING_UPCOMING: "Lịch sắp bắt đầu",
+  RETURN_REMINDER: "Nhắc hoàn trả"
+};
 
 export function NotificationCenter({ notifications = [], onChanged }) {
   const [busy, setBusy] = useState("");
@@ -87,12 +95,12 @@ export function NotificationCenter({ notifications = [], onChanged }) {
               <div className="notification-card__body">
                 <div>
                   <span className={`status-badge notification-severity-${notification.severity || "info"}`}>
-                    {notification.type || "SYSTEM"}
+                    {notificationTypeLabels[notification.type] || "Thông báo hệ thống"}
                   </span>
                   <h2>{notification.title || "Thông báo"}</h2>
                   <p>{notification.message}</p>
                   <time dateTime={notification.sentAt || notification.createdAt}>
-                    {new Date(notification.sentAt || notification.createdAt).toLocaleString("vi-VN")}
+                    {formatVietnamDateTime(notification.sentAt || notification.createdAt)} (giờ Việt Nam)
                   </time>
                 </div>
                 {!notification.readAt && (

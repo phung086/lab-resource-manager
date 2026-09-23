@@ -19,7 +19,7 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
   onSelectBooking
 }) => {
   return (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 shadow-xs">
+    <div className="calendar-day-frame">
       <div className="flex flex-col gap-2.5">
         {HOURS.map((hour) => {
           const hourStr = `${String(hour).padStart(2, "0")}:00`;
@@ -35,11 +35,11 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
           return (
             <div
               key={hour}
-              className="flex items-start gap-4 p-2.5 bg-slate-850 bg-slate-900/40 rounded-lg border border-slate-800/80 hover:border-slate-700/80 transition-colors"
+              className="calendar-day-row flex items-start gap-4"
             >
               {/* Hour badge */}
-              <div className="w-16 font-mono text-xs font-semibold text-slate-400 flex items-center gap-1 shrink-0 pt-1">
-                <Clock size={12} className="text-slate-500" />
+              <div className="calendar-day-time w-16 font-mono text-xs font-semibold flex items-center gap-1 shrink-0 pt-1">
+                <Clock size={12} />
                 <span>{hourStr}</span>
               </div>
 
@@ -54,13 +54,15 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
                     />
                   ))
                 ) : (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => onSelectSlot(currentDateStr, hourStr)}
-                    className="py-2 px-3 rounded border border-dashed border-slate-700/70 text-slate-400 hover:text-sky-300 hover:border-sky-500/50 hover:bg-sky-950/20 cursor-pointer text-xs flex items-center justify-between transition-colors group"
+                    className="calendar-day-available w-full text-left py-2 px-3 rounded border border-dashed text-xs flex items-center justify-between transition-colors group"
+                    aria-label={`Đặt khung giờ ${hourStr} ngày ${currentDateStr}`}
                   >
                     <span>Khung giờ trống — Bấm để đặt</span>
-                    <Plus size={13} className="text-slate-500 group-hover:text-sky-400" />
-                  </div>
+                    <Plus size={13} />
+                  </button>
                 )}
               </div>
             </div>

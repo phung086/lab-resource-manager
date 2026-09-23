@@ -34,6 +34,7 @@ try {
 
   await openNav(studentPage, /Thông Báo/i);
   await studentPage.locator("main").getByRole("heading", { name: "Trung tâm thông báo" }).waitFor();
+  await studentPage.getByText("Batch 6 lịch sắp bắt đầu").first().waitFor({ timeout: 5000 });
   assert.equal(await studentPage.getByText("Batch 6 lịch sắp bắt đầu").count(), 1);
   assert.equal(await studentPage.getByText("Batch 6 nhắc trả trong tương lai").count(), 0);
 
@@ -71,6 +72,7 @@ try {
   await login(staffPage, "b6.staff@lab.test");
   await openNav(staffPage, /Sự Cố Tài Nguyên/i);
   await staffPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
+  await staffPage.getByText("Batch 6 báo cáo từ sinh viên").waitFor();
   assert.equal(await staffPage.getByText("Batch 6 quạt làm mát bất thường").count(), 1);
   assert.equal(await staffPage.getByText("Batch 6 sự cố phòng B").count(), 0);
   assert.equal(await staffPage.getByText("Batch 6 báo cáo từ sinh viên").count(), 1);

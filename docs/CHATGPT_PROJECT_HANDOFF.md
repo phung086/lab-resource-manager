@@ -1,0 +1,175 @@
+# ChatGPT Project Handoff — Lab Resource Manager
+
+Last synchronized: 2026-09-21
+
+## Purpose
+
+This file is the compact entry point for a new ChatGPT Project. It does not
+replace repository evidence. When a claim conflicts with the repository, use
+the authority order below and inspect the current branch before answering.
+
+## Repository state
+
+- Repository: `https://github.com/phung086/lab-resource-manager`
+- Working branch: `final-graduation-hardening`
+- Starting main SHA: `71da1683fc1c8bf842d2fc5b1313b45ac15499c1`
+- Batch 7 repair/closure commit: `50ecda3a69ef37fc21b572616ac76b3e4975a7d3`
+- Historical Final UI/UX Master Polish baseline SHA:
+  `81675fb0293535c6205da3b19a12b2f1f2dfe467`
+- Previous documentation closure: `1b9d5e9d8a272a3dab94bae4a8e9990fc51135c1`
+- Light UI & Motion redesign candidate: `155482f245cc84d033567ff4700dedb1b0b34b6c`
+- Semantic cleanup: `1ae1423a4db3dc4d405820282f812b7abf3e2218`
+- CURRENT VERIFIED FRONTEND / HANDOFF SHA:
+  `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7`
+- Branch is pushed; it has not been merged into main.
+
+## Current verdict
+
+- Batch 7 Production Demo Hardening: **GO**
+- Batch 8 Smart Laboratory Monitoring implementation: **GO**
+- Required graduation scenario: **GO**
+- Historical Final UI/UX Master Polish: **GO**
+- Post-Closure Light UI & Motion Redesign: **VERIFIED GO; SOURCE CLOSED** (baseline `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7`)
+- Full B2–6/8 regression, focused B4/B5 rerun, and Batch 7 production 10-step rerun: **PASS**
+- Real sensor/camera verification: **PENDING REAL HARDWARE**
+- No canonical Batch 9 or Batch 10 exists. Do not invent or start one.
+
+## Authority order
+
+1. Official graduation assignment, if supplied.
+2. `AGENTS.md` and `.agent/INSTRUCTOR_BASELINE.md`.
+3. `docs/srs.md`.
+4. `PRODUCT.md`.
+5. Approved contracts and `docs/DECISIONS.md`.
+6. Verified batch reports and final closure audit.
+7. Current implementation.
+8. Reference repositories or suggestions.
+
+## Read first
+
+1. `AGENTS.md`
+2. `.agent/PROJECT_RULES.md`
+3. `.agent/INSTRUCTOR_BASELINE.md`
+4. `.agent/DEVELOPMENT_WORKFLOW.md`
+5. `docs/srs.md`
+6. `PRODUCT.md`
+7. `docs/CURRENT_STATE.md`
+8. `docs/DECISIONS.md`
+9. `docs/FINAL_ASSIGNMENT_CLOSURE_AUDIT.md`
+10. `docs/BATCH7_PRODUCTION_DEMO_HARDENING_REPORT.md`
+11. `docs/BATCH8_SMART_MONITORING_REPORT.md`
+12. Relevant frontend/backend guidelines before proposing code changes.
+
+## Frozen contracts
+
+- Stack: React 19 + Vite 6; Node.js + Express; Prisma 6; PostgreSQL 16.
+- Roles only: `ADMIN`, `LAB_STAFF`, `LECTURER`, `STUDENT`.
+- Booking statuses only: `PENDING_APPROVAL`, `CONFIRMED`, `CHECKED_OUT`,
+  `RETURNED`, `COMPLETED`, `REJECTED`, `CANCELLED`.
+- `NO_SHOW` is an outcome/event, never a booking status.
+- Intervals use `[startAt, endAt)`.
+- `Resource.operationalStatus` is authoritative physical state.
+- Resource categories: `ROOM`, `EQUIPMENT`, `MACHINE`, `EXPERIMENT_KIT`,
+  `MATERIAL`; subtype is separate.
+- Backend authorization is authoritative. `UserLabAssignment` defines
+  LAB_STAFF scope.
+- Never fake required success, telemetry, history, audit, authorization, or
+  persistence.
+
+## Completed work
+
+- Batches 1–6: canonical persistence, RBAC/scope, resources, calendar,
+  conflict-safe bookings, operational workflow, conditions, notifications,
+  incidents, dashboard, and persisted telemetry.
+- Batch 7: ordinary Prisma deployment, production Docker/Nginx health routing,
+  research isolation, local quality tooling, service layering, security smoke,
+  and official 10-step production demo.
+- Batch 8: per-source hashed credentials, source health, threshold precedence,
+  deduplicated alerts, one critical incident with provenance, scoped alert
+  acknowledgement, private camera metadata/access audit, monitoring UI/history,
+  production E2E, and a new additive migration.
+- Phase D: final assignment requirement/evidence matrix and final release audit.
+- Final UI/UX Master Polish: visually harmonized mounted required-core
+  frontend; responsive/keyboard improvements; curated 23-image review evidence;
+  stronger B4 cancellation E2E assertions. No backend, Prisma, migration,
+  Compose, or research-activation changes.
+- Post-Closure Light UI & Motion Redesign: modern light-first academic/operations UI;
+  white surfaces on pale neutral canvas; Plus Jakarta Sans and IBM Plex Mono typography;
+  subtle card elevation and micro-motion; 32 reviewed screenshots in
+  `frontend/screenshots_ui_light_redesign/`; localized modal accessibility; clean
+  semantic day schedule locators; aligned popover trigger semantics. Verified via B2–6/8
+  matrix, B7 production 10-step demo, focused B4/B5 rerun, lint (0 errors, 14 warnings),
+  typecheck (PASS), and build (391.27 kB minified / 111.53 kB gzip). Source is closed.
+
+## Verified evidence
+
+Fresh isolated PostgreSQL 16 backend results:
+
+- core 27/27;
+- Batch 1 concurrency 1/1 and persistence 1/1;
+- Batch 1E 11/11;
+- Batch 2 10/10;
+- Batch 3 9/9;
+- Batch 4/4.1 30/30;
+- Batch 5 13/13;
+- Batch 6 11/11;
+- Batch 7 6/6;
+- Batch 8 12/12.
+
+Frontend lint has zero errors and 14 documented warnings. Typecheck and build
+pass; main JS is 391.27 kB minified / 111.53 kB gzip. E2E Batch 2–6 and 8
+passed on isolated PostgreSQL 16 databases. Focused B4/B5 E2E rerun passed on
+fresh isolated PostgreSQL 16 databases deployed with `prisma migrate deploy`. The unchanged
+official Batch 7 10-step demo passed on an isolated production-like demo database with
+`BOOKING_UPCOMING_REMINDER_MINUTES=10080`,
+`REMINDER_SCHEDULER_ENABLED=false`, and `RETURN_REMINDER_MINUTES=15`.
+Production Compose verifies Nginx, Express,
+PostgreSQL 16, health/readiness, CORS, Helmet, migration status, the official
+10-step demo, Batch 8 monitoring, and mobile paths. Full backend and frontend
+`npm audit` report zero vulnerabilities at the handoff SHA.
+
+## Database safety
+
+- Never run `prisma db push` on development/shared databases.
+- Never edit applied historical migrations or `_prisma_migrations`.
+- Batch 8 adds exactly
+  `backend/prisma/migrations/20260921000100_add_smart_monitoring/migration.sql`.
+- A documented local execution incident applied that additive migration to the
+  development DB; the fixture guard stopped, and no historical migration or
+  existing data was deleted or rewritten. Do not attempt destructive rollback.
+
+## Remaining debt
+
+- Resource list uses a 250-row cap rather than cursor pagination.
+- Five resources remain intentionally unclassified pending human authority.
+- Frontend has 14 hook/fast-refresh warnings.
+- ESLint 9.39.5 is audit-clean but its major line is marked unsupported.
+- Not every administrative metadata mutation has a dedicated immutable audit.
+- Optional research/legacy modules remain feature-flagged or await an explicit
+  keep/rewrite/retire decision.
+- Physical sensor and camera evidence is pending real hardware.
+
+## Rules for the new ChatGPT
+
+- Start by summarizing the current boundary and cite exact repository files.
+- Ask what outcome the user wants before proposing a new batch or broad change.
+- For code work, inspect the latest branch and diff; never assume uploaded files
+  are newer than Git.
+- Do not silently redesign architecture, roles, statuses, or persistence.
+- Do not restore research modules merely to make legacy tests green.
+- Clearly distinguish verified software, assumptions, future ideas, and pending
+  hardware evidence.
+- Frontend source is closed; do not initiate another frontend polish pass. The next sensible work is the
+  defense demo, report/slides, and project run checklist, only when requested.
+- Keep all recommendations inside the documented authority and safety rules.
+
+## Suggested first message in the new Project
+
+> Read the uploaded project handoff and canonical documents. Treat the GitHub
+> branch `final-graduation-hardening` at SHA
+> `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7` as the current accepted Post-Closure Light UI baseline. First
+> summarize the frozen contracts, completed batches, test evidence, remaining
+> debt, and the rule that no Batch 9/10 exists. Frontend source is closed; do not
+> start another UI redesign, and inspect the current GitHub branch before making
+> technical claims. Physical hardware remains pending real hardware. Then ask me
+> what outcome I want next.

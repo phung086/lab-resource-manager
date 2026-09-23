@@ -14,10 +14,10 @@ export interface BookingActionModalProps {
 
 const ACTION_COPY: Record<BookingAction, { title: string; submit: string; hint: string }> = {
   APPROVE: { title: "Duyệt yêu cầu đặt lịch", submit: "Duyệt booking", hint: "Xác nhận booking sau khi đã kiểm tra lịch và điều kiện sử dụng." },
-  REJECT: { title: "Từ chối yêu cầu đặt lịch", submit: "Xác nhận từ chối", hint: "Lý do từ chối được lưu vào audit trail và hiển thị cho người đặt." },
-  CHECK_OUT: { title: "Bàn giao / Check-out tài nguyên", submit: "Xác nhận bàn giao", hint: "Ghi nhận tình trạng thực tế trước khi người dùng nhận tài nguyên." },
+  REJECT: { title: "Từ chối yêu cầu đặt lịch", submit: "Xác nhận từ chối", hint: "Lý do từ chối được lưu vào lịch sử và hiển thị cho người đặt." },
+  CHECK_OUT: { title: "Bàn giao tài nguyên", submit: "Xác nhận bàn giao", hint: "Ghi nhận tình trạng thực tế trước khi người dùng nhận tài nguyên." },
   RETURN: { title: "Tiếp nhận hoàn trả tài nguyên", submit: "Xác nhận hoàn trả", hint: "Ghi nhận tình trạng thực tế của tài nguyên tại thời điểm nhận lại." },
-  COMPLETE: { title: "Hoàn tất hồ sơ booking", submit: "Hoàn tất workflow", hint: "Đóng workflow sau khi đã đối soát bàn giao và hoàn trả." }
+  COMPLETE: { title: "Hoàn tất hồ sơ booking", submit: "Hoàn tất workflow", hint: "Hoàn tất hồ sơ sau khi đã đối soát việc bàn giao và hoàn trả." }
 };
 
 const CONDITION_SUGGESTIONS = [
@@ -88,12 +88,12 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
       title={copy.title}
       subtitle={subtitle}
       icon={ClipboardCheck}
-      iconColor="text-cyan-400"
+      iconColor="text-blue-400"
       maxWidth="max-w-xl"
       footer={
         <>
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>Hủy</button>
-          <button type="submit" form="booking-operation-form" className="btn btn-primary" disabled={busy}>
+          <button type="submit" form="booking-operation-form" className={`btn ${action === "REJECT" ? "btn-danger" : "btn-primary"}`} disabled={busy}>
             <CheckCircle2 size={15} />
             <span>{busy ? "Đang lưu..." : copy.submit}</span>
           </button>
@@ -110,6 +110,7 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
         </div>
 
         <p className="operation-modal-hint">{copy.hint}</p>
+        {action === "RETURN" && booking.handoverCondition && <p className="operation-modal-hint">Tình trạng khi bàn giao: {booking.handoverCondition}</p>}
         {error && <div className="alert danger" role="alert">{error}</div>}
 
         {(action === "APPROVE" || action === "REJECT" || action === "COMPLETE") && (
@@ -138,7 +139,6 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
               placeholder="Mô tả những gì cán bộ lab thực tế quan sát/kiểm tra. Không chọn sẵn kết luận."
               maxLength={2000}
               required
-              autoFocus
             />
             <div className="operation-suggestion-row" aria-label="Gợi ý nhập nhanh, chưa được xác nhận">
               {CONDITION_SUGGESTIONS.map((suggestion) => (
