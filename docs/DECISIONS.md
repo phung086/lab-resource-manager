@@ -194,3 +194,23 @@ Compose accepts the host-side `LRM_LOG_FORMAT` variable and maps it to the
 container's `LOG_FORMAT`. This prevents unrelated host tooling variables from
 silently overriding the validated production value. Other production secrets
 and origins remain explicit and fail closed.
+# 2026-09-23 — Open LAB iterative upgrade (user-approved, in progress)
+
+The user approved serving internal and external users with resource/purpose-based
+fees, fast booking with email verification, and automatic account provisioning.
+Phone numbers must not be initial passwords. Pricing, verified external identity,
+Vietnam administrative address selection, and booking-linked VNPAY remain pending
+implementation; approval here is not evidence they have shipped.
+
+Implemented contract extension: a booking owner may return their own ROOM while
+CHECKED_OUT. The server records RETURN and COMPLETE audit events atomically and
+persists COMPLETED with actualEndAt/returnedAt/completedAt and required condition
+evidence. Original planned times stay intact; COMPLETED releases the slot guard.
+This is the owner's declaration, not a fabricated staff inspection. Hard physical
+states remain authoritative. Equipment still requires staff receipt/inspection.
+Existing staff transition endpoints retain their authorization rules.
+
+Booking creation and transitions now notify active ADMIN users and assigned
+LAB_STAFF; owners receive transition outcomes. Notifications commit with the
+booking operation and deduplicate per booking/event/recipient. Historical events
+are not backfilled. See OPEN_LAB_UPGRADE_REPORT.md for tests and remaining work.

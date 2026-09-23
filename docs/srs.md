@@ -92,3 +92,22 @@ the working requirement baseline for implementation.
 - Digital Twin, optimization, simulation, genetic scheduling, and research
   modules as production-core features.
 - Fabricated telemetry, audit, usage history, or benchmark evidence.
+# Approved incremental extension — 2026-09-23
+
+The user-approved Open LAB direction extends this historical graduation baseline.
+Track its implementation in `docs/OPEN_LAB_UPGRADE_REPORT.md`; this is not a final
+product release. External identity/fast booking, resource-purpose pricing and
+booking-linked payment are approved requirements, still pending implementation.
+Canonical role and booking enums are unchanged in the current checkpoint.
+
+Current implemented exception to staff-only return/completion: an authenticated
+owner may self-return a ROOM booking in CHECKED_OUT, supplying condition evidence.
+The server atomically records RETURN then COMPLETE history, completes the booking,
+preserves the planned interval, and records actual end time. It releases future
+availability without requiring staff approval, while preserving any existing hard
+unavailable physical state. EQUIPMENT/MACHINE/KIT/MATERIAL are excluded. Staff
+inspection is not claimed by an owner declaration. Existing staff APIs remain scoped.
+
+Booking creation and each operation notify active administrators and staff assigned
+to the resource's lab; the owner also receives operation outcomes. Delivery is
+persisted in-app; this does not imply email/push delivery or historical backfill.
