@@ -1,5 +1,20 @@
 # Current Project State
 
+## Phase 0 verified gap audit — 2026-09-24
+
+The current `main` HEAD is `dbab294`. The external business/UX review is in
+open PR #5 and has not been merged into `main`. The read-only baseline and
+current evidence matrix are in
+[CURRENT_VERIFIED_GAP_MATRIX_20260924.md](CURRENT_VERIFIED_GAP_MATRIX_20260924.md).
+At this HEAD, general CI passes but three GitHub workflows that exercise fresh
+PostgreSQL migration/startup fail. Local checks found a deterministic mismatch
+between the historical mixed-line-ending checksum expectations and the bytes
+produced by a fresh CRLF checkout. An isolated PostgreSQL 16 validation and a
+safe canonical deployment strategy are required before claiming clean deploy.
+Mandatory training is also not enforced in `createBooking`; guest OTP/account
+and booking use separate transactions. These are current gaps, despite the
+historical verified milestones below.
+
 ## Active local work — 2026-09-23
 
 User has approved an iterative Open LAB upgrade for internal/external users,
