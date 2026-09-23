@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Clock, AlertCircle, CheckCircle2, ArrowRight, ShieldAlert, Shield } from "lucide-react";
+import { Calendar, AlertCircle, CheckCircle2, ArrowRight, ShieldAlert, Shield, RefreshCw } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.js";
+import { LabPolicySummary } from "./LabPolicySummary";
 import { apiRequest, ApiError } from "../api.js";
 import {
   toVietnamDateString,
@@ -38,6 +39,7 @@ export interface QuickBookingModalProps {
     };
   }>;
   onConfirmBooking?: (booking: any) => void;
+  onViewBookings?: () => void;
   onProceedPayment?: (booking: any) => void;
 }
 
@@ -46,9 +48,14 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   onClose,
   initialSlot,
   resources: passedResources,
-  onConfirmBooking
+  onConfirmBooking,
+  onViewBookings,
+  onProceedPayment
 }) => {
   const [resources, setResources] = useState<any[]>(passedResources || []);
+  const [loadingResources, setLoadingResources] = useState(passedResources === undefined);
+  const [resourceError, setResourceError] = useState("");
+  const [resourceRetry, setResourceRetry] = useState(0);
   const [selectedDate, setSelectedDate] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("11:00");
@@ -62,25 +69,46 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
   // Load resources if not passed or empty
   useEffect(() => {
-    if (passedResources && passedResources.length > 0) {
+    if (!isOpen) return;
+    let active = true;
+    setResourceError("");
+
+    if (passedResources !== undefined) {
       setResources(passedResources);
-      if (!resourceId) {
+      setLoadingResources(false);
+      if (passedResources.length > 0) {
         const initialRes = passedResources.find((r) => r.id === initialSlot?.resourceId) || passedResources[0];
         if (initialRes) setResourceId(initialRes.id);
+      } else {
+        setResourceId("");
       }
-    } else if (isOpen) {
+    } else {
+      setLoadingResources(true);
       apiRequest("/resources")
         .then((data) => {
+          if (!active) return;
           const list = Array.isArray(data) ? data : data.items || [];
           setResources(list);
-          if (list.length > 0 && !resourceId) {
+          if (list.length > 0) {
             const initialRes = list.find((r: any) => r.id === initialSlot?.resourceId) || list[0];
             if (initialRes) setResourceId(initialRes.id);
+          } else {
+            setResourceId("");
           }
         })
-        .catch(() => {});
+        .catch((err) => {
+          if (!active) return;
+          setResourceError(err?.message || "Không thể tải danh sách tài nguyên.");
+          console.error("Failed to load resources in modal", err);
+          setResources([]);
+          setResourceId("");
+        })
+        .finally(() => {
+          if (active) setLoadingResources(false);
+        });
     }
-  }, [passedResources, isOpen]);
+    return () => { active = false; };
+  }, [passedResources, isOpen, initialSlot?.resourceId, resourceRetry]);
 
   // Handle initialSlot prepopulation
   useEffect(() => {
@@ -125,7 +153,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentResource = resources.find((r) => r.id === resourceId) || resources[0] || null;
+  const currentResource = resources.find((r) => r.id === resourceId) || null;
   const currentPolicy = currentResource?.labPolicy || currentResource?.laboratory?.labPolicy || null;
 
   const effectiveRequiresApproval = Boolean(
@@ -135,9 +163,10 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
     setErrorMessage("");
 
-    if (!resourceId) {
+    if (!resourceId || !resources.some((r) => r.id === resourceId)) {
       setErrorMessage("Vui lòng chọn tài nguyên phòng thí nghiệm.");
       return;
     }
@@ -208,6 +237,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     <BaseModal2026
       isOpen={isOpen}
       onClose={onClose}
+      dismissible={!isSubmitting}
       title="Đặt lịch sử dụng phòng thí nghiệm"
       subtitle="Hệ thống ghi nhận yêu cầu và xác thực tính khả dụng theo thời gian thực"
       icon={Calendar}
@@ -219,6 +249,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             <span className="text-xs text-secondary font-medium">
               Vui lòng xem thông tin chi tiết ca đặt phía trên.
             </span>
+            {onViewBookings && <button className="secondary-button" type="button" onClick={onViewBookings}>Xem lịch đặt của tôi</button>}
             <button
               id="booking-success-close-btn"
               type="button"
@@ -239,10 +270,10 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               Đóng
             </button>
             <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={handleSubmit}
-              className="btn btn-primary text-xs px-5 py-2.5 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              type="submit"
+              form="quick-booking-form"
+              disabled={isSubmitting || loadingResources || resources.length === 0 || !resourceId}
+              className="btn btn-primary text-xs px-5 py-2.5 flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>{isSubmitting ? "Đang gửi..." : "Xác nhận đặt lịch"}</span>
               <ArrowRight size={14} aria-hidden="true" />
@@ -253,7 +284,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     >
       {showSuccess ? (
         /* Persisted success confirmation */
-        <div className="booking-success-panel">
+        <div className="booking-success-panel" role="status">
           <div className="booking-success-header">
             <CheckCircle2 size={28} className="booking-success-icon" aria-hidden="true" />
             <div>
@@ -293,9 +324,10 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               </div>
             )}
           </div>
+          {onProceedPayment && createdBooking?.id && <div className="alert"><p>Thanh toán đặt phòng LAB được xử lý theo khoản thu do quản trị viên tạo. Nếu chưa có khoản thu, bạn chưa cần thanh toán.</p><button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>Xem khoản thanh toán của lịch đặt</button></div>}
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="booking-form">
+        <form id="quick-booking-form" onSubmit={handleSubmit} className="booking-form">
           {errorMessage && (
             <div className="alert danger" role="alert">
               <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
@@ -307,35 +339,54 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           <div className="booking-field">
             <label htmlFor="booking-resource-select" className="booking-label">
               <span>Thiết bị / Phòng thí nghiệm <span aria-hidden="true">*</span></span>
-              {effectiveRequiresApproval ? (
-                <span className="booking-approval-badge is-required">
-                  <ShieldAlert size={11} aria-hidden="true" /> Cần duyệt
-                </span>
-              ) : (
-                <span className="booking-approval-badge is-instant">
-                  <Shield size={11} aria-hidden="true" /> Xác nhận tức thì
-                </span>
+              {currentResource && (
+                effectiveRequiresApproval ? (
+                  <span className="booking-approval-badge is-required">
+                    <ShieldAlert size={11} aria-hidden="true" /> Cần duyệt
+                  </span>
+                ) : (
+                  <span className="booking-approval-badge is-instant">
+                    <Shield size={11} aria-hidden="true" /> Xác nhận tức thì
+                  </span>
+                )
               )}
             </label>
-            <select
-              id="booking-resource-select"
-              aria-label="Chọn tài nguyên lịch"
-              value={resourceId}
-              onChange={(e) => setResourceId(e.target.value)}
-              required
-            >
-              {resources.map((r) => {
-                const rApproval = Boolean(
-                  r.effectiveRequiresApproval ??
-                  (r.requiresApproval || r.laboratory?.labPolicy?.requiresApproval || r.labPolicy?.requiresApproval)
-                );
-                return (
-                  <option key={r.id} value={r.id}>
-                    {r.code} — {r.name}{rApproval ? " (Cần duyệt)" : " (Tức thì)"}
-                  </option>
-                );
-              })}
-            </select>
+            {loadingResources ? (
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500 flex items-center gap-2">
+                <RefreshCw size={13} className="animate-spin text-blue-600" />
+                <span>Đang tải danh sách tài nguyên...</span>
+              </div>
+            ) : resourceError ? (<div className="alert danger" role="alert"><span>{resourceError}</span><button className="secondary-button" type="button" onClick={() => setResourceRetry(value => value + 1)}>Thử lại</button></div>) : resources.length === 0 ? (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex flex-col gap-1">
+                <span className="font-semibold flex items-center gap-1">
+                  <AlertCircle size={13} /> Không có tài nguyên khả dụng
+                </span>
+                <span>Cần có ít nhất một phòng hoặc thiết bị hoạt động trước khi tạo lịch đặt. Vui lòng liên hệ quản trị viên.</span>
+              </div>
+            ) : (
+              <select
+                id="booking-resource-select"
+                aria-label="Chọn tài nguyên lịch"
+                value={resourceId}
+                onChange={(e) => setResourceId(e.target.value)}
+                required
+              >
+                {!resourceId && (
+                  <option value="">-- Chọn tài nguyên phòng thí nghiệm --</option>
+                )}
+                {resources.map((r) => {
+                  const rApproval = Boolean(
+                    r.effectiveRequiresApproval ??
+                    (r.requiresApproval || r.laboratory?.labPolicy?.requiresApproval || r.labPolicy?.requiresApproval)
+                  );
+                  return (
+                    <option key={r.id} value={r.id}>
+                      {r.code} — {r.name}{rApproval ? " (Cần duyệt)" : " (Tức thì)"}
+                    </option>
+                  );
+                })}
+              </select>
+            )}
           </div>
 
           {/* Booking Title */}
@@ -409,28 +460,8 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             </div>
           </div>
 
-          {/* Policy info box */}
-          <div className="booking-policy-box">
-            <Clock size={13} className="booking-policy-icon" aria-hidden="true" />
-            <div className="booking-policy-text">
-              {currentPolicy ? (
-                <>
-                  <span>
-                    Chính sách lab: Tối thiểu {currentPolicy.minBookingMinutes ?? 15} phút
-                    {currentPolicy.maxBookingMinutes ? `, tối đa ${currentPolicy.maxBookingMinutes / 60} tiếng/ca` : ""}.
-                  </span>
-                  {currentPolicy.workDayStartHour != null && currentPolicy.workDayEndHour != null && (
-                    <span>
-                      Giờ mở cửa: {currentPolicy.workDayStartHour}:00 – {currentPolicy.workDayEndHour}:00
-                      {currentPolicy.allowWeekend === false ? " (nghỉ Thứ 7 & Chủ Nhật)" : ""}.
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span>Thời gian đặt phải tuân thủ chính sách quy định của phòng thí nghiệm.</span>
-              )}
-            </div>
-          </div>
+          <p className="booking-review-note">Thời gian theo giờ Việt Nam (UTC+07:00). {effectiveRequiresApproval ? "Sau khi gửi, yêu cầu sẽ chờ cán bộ lab duyệt." : "Lịch sẽ được xác nhận nếu khung giờ và chính sách hợp lệ."}</p>
+          <LabPolicySummary policy={currentPolicy} requiresApproval={currentResource ? effectiveRequiresApproval : undefined} />
         </form>
       )}
     </BaseModal2026>

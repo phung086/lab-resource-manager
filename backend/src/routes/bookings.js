@@ -8,6 +8,7 @@ import {
   cancelBooking,
   createBooking,
   getUserBookings,
+  selfReturnRoom,
   transitionBooking
 } from "../services/bookingService.js";
 import { getResourceAvailability } from "../services/availabilityService.js";
@@ -41,6 +42,7 @@ const returnSchema = z.object({
 }).strict();
 const completeSchema = z.object({ reason: optionalReason }).strict();
 const cancelSchema = z.object({ reason: optionalReason }).strict();
+const selfReturnSchema = z.object({ conditionAfter: z.string().trim().min(1).max(2000) }).strict();
 
 const bookingInclude = {
   resource: {
@@ -224,6 +226,13 @@ router.post("/", requireAuth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+router.post("/:id/self-return", requireAuth, async (req, res, next) => {
+  try {
+    const data = selfReturnSchema.parse(req.body);
+    res.json(await selfReturnRoom({ bookingId: req.params.id, actorId: req.user.id, actorRole: req.user.role, ...data }));
+  } catch (error) { next(error); }
 });
 
 // PENDING_APPROVAL -> CONFIRMED

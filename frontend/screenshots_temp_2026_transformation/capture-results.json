@@ -1,0 +1,247 @@
+[
+  {
+    "name": "login_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "register_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "student_home_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "student_search_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "resource_detail_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "calendar_week_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "calendar_day_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "calendar_month_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "booking_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "my_bookings_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "notifications_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "staff_home_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "staff_operations_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "monitoring_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "incidents_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "login_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "register_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "student_home_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "student_search_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "resource_detail_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "calendar_week_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "calendar_day_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "calendar_month_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "booking_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "my_bookings_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "notifications_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "staff_home_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "staff_operations_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "monitoring_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "incidents_mobile",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "name": "login_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "register_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "student_home_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "student_search_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "resource_detail_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "calendar_week_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "calendar_day_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "calendar_month_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "booking_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "my_bookings_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "notifications_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "staff_home_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "staff_operations_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "monitoring_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "incidents_tablet",
+    "width": 768,
+    "overflow": false
+  },
+  {
+    "name": "lecturer_home_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "admin_home_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "admin_users_desktop",
+    "width": 1440,
+    "overflow": false
+  },
+  {
+    "name": "admin_resources_desktop",
+    "width": 1440,
+    "overflow": false
+  }
+]

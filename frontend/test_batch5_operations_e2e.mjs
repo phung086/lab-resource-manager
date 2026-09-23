@@ -21,6 +21,7 @@ async function login(page, email) {
 }
 
 async function openOperations(page) {
+  if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
   const nav = page.locator(".sidebar-nav-item-2026", { hasText: /Vận Hành Booking|Lịch Đặt Của Tôi/i }).first();
   await nav.waitFor({ timeout: 5000 });
   await nav.click();

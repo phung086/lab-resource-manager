@@ -1,5 +1,14 @@
 # Current Project State
 
+## Active local work — 2026-09-23
+
+User has approved an iterative Open LAB upgrade for internal/external users,
+resource/purpose fees, fast booking with verified email, ROOM self-return,
+administrative booking notifications, and separate operations/telemetry screens.
+This is **in progress, not final**. Read [OPEN_LAB_UPGRADE_REPORT.md](OPEN_LAB_UPGRADE_REPORT.md)
+for implementation and verification status before continuing local agent work.
+The closure statements below describe historical milestones, not this upgrade.
+
 Last synchronized: 2026-09-21
 
 ## Final Boundary

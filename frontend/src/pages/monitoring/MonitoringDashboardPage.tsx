@@ -6,12 +6,14 @@ import type { DashboardPayload } from "../../types/telemetry";
 import { formatVietnamDateTime } from "../../utils/timezone.js";
 
 interface Props {
+  mode?: "operations" | "telemetry";
   dashboard: DashboardPayload | null;
   loading?: boolean;
   onRefresh?: () => void;
 }
 
-export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = false, onRefresh }) => {
+export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = false, onRefresh, mode = "telemetry" }) => {
+  const operations = mode === "operations";
   const [actionError, setActionError] = useState("");
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
   if (!dashboard) {
@@ -50,27 +52,27 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
     <section className="content-stack" aria-labelledby="monitoring-dashboard-heading">
       <div className="page-section-header">
         <div>
-          <p className="eyebrow">GIÁM SÁT TỪ DỮ LIỆU ĐƯỢC CHẤP NHẬN</p>
-          <h1 id="monitoring-dashboard-heading">Bảng điều khiển vận hành</h1>
+          <h1 id="monitoring-dashboard-heading">{operations ? "Bảng điều khiển vận hành" : "Giám sát telemetry"}</h1>
           <p className="section-description">
-            Theo dõi tình trạng tài nguyên, sự cố và mẫu đo đã ghi nhận. Khi thiếu dữ liệu, hệ thống không suy diễn trạng thái ổn định.
+            {operations ? "Theo dõi lịch đặt, bàn giao, mức sử dụng và sự cố từ hồ sơ đã lưu trong hệ thống." : "Theo dõi mẫu đo và kết nối nguồn cảm biến. Chưa nhận được mẫu hợp lệ sẽ hiển thị Chưa có dữ liệu."}
           </p>
+          <p className="data-source-note">{operations ? "Nguồn: booking, thời điểm bàn giao/hoàn trả và sự cố trong cơ sở dữ liệu." : "Nguồn: thiết bị hoặc exporter gửi dữ liệu qua API tiếp nhận có xác thực; chỉ mẫu được chấp nhận mới hiển thị."} Cập nhật: {formatVietnamDateTime(dashboard.generatedAt)}.</p>
         </div>
         {onRefresh && <button className="btn btn-secondary" type="button" onClick={onRefresh} disabled={loading}>{loading ? "Đang cập nhật..." : "Cập nhật"}</button>}
       </div>
 
-      <div className="operational-summary-grid">
+      {operations && <div className="operational-summary-grid">
         {metrics.map(({ label, value, icon: Icon }) => (
           <div className="card operational-summary-card" key={label}>
             <span><Icon size={15} /> {label}</span>
             <strong>{value}</strong>
           </div>
         ))}
-      </div>
+      </div>}
 
       {actionError && <div className="alert danger" role="alert">{actionError}</div>}
 
-      <div className="dashboard-data-grid">
+      {operations && <div className="dashboard-data-grid">
         <article className="card dashboard-data-panel">
           <div className="panel-heading">
             <Gauge size={17} />
@@ -97,8 +99,9 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
             <div><dt>Mức cao</dt><dd>{dashboard.incidents.bySeverity.high || 0}</dd></div>
           </dl>
         </article>
-      </div>
+      </div>}
 
+      {!operations && <>
       <div className="card dashboard-data-panel">
         <div className="panel-heading">
           <Activity size={17} />
@@ -166,7 +169,8 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
         ) : <div className="empty-state">NOT_CONFIGURED — Không có camera được cấu hình; không tạo luồng video giả.</div>}
       </div>
 
-      <div className="card dashboard-data-panel">
+      </>}
+      {operations && <div className="card dashboard-data-panel">
         <div className="panel-heading">
           <CalendarClock size={17} />
           <h2>Booking sắp tới</h2>
@@ -187,7 +191,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
             ))}
           </div>
         ) : <div className="empty-state">Không có booking hoạt động trong phạm vi hiện tại.</div>}
-      </div>
+      </div>}
     </section>
   );
 };

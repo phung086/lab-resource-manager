@@ -1,11 +1,13 @@
 import React from "react";
 import { Plus } from "lucide-react";
 import { CalendarEventCard } from "./CalendarEventCard.js";
-import { toVietnamDateString, getVietnamTodayDateString } from "../../utils/timezone.js";
+import { vietnamTimeToIso, getVietnamTodayDateString } from "../../utils/timezone.js";
 
 export interface MonthScheduleProps {
   anchorDate: Date;
   events: any[];
+  selectedResourceName?: string;
+  blocked?: boolean;
   onSelectSlot: (dateStr: string, timeStr: string) => void;
   onSelectBooking: (booking: any) => void;
 }
@@ -15,6 +17,8 @@ const DAY_NAMES = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ
 export const MonthSchedule: React.FC<MonthScheduleProps> = ({
   anchorDate,
   events,
+  selectedResourceName,
+  blocked = false,
   onSelectSlot,
   onSelectBooking
 }) => {
@@ -44,8 +48,8 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
 
     // Filter events for this day in Vietnam time
     const dayEvents = events.filter((ev) => {
-      const evDate = toVietnamDateString(ev.start);
-      return evDate === dayDateStr;
+      const dayStart = new Date(vietnamTimeToIso(dayDateStr, "00:00")).getTime();
+      return new Date(ev.start).getTime() < dayStart + 86400000 && new Date(ev.end).getTime() > dayStart;
     });
 
     cells.push(
@@ -53,8 +57,17 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
         key={dayDateStr}
         className={`calendar-month-cell ${isToday ? "is-today" : ""} p-2 rounded-lg border flex flex-col justify-between group`}
       >
-
-        <button type="button" onClick={() => onSelectSlot(dayDateStr, "09:00")} aria-label={`Đặt lịch ngày ${dayDateStr}`} className="calendar-month-day-action flex items-center justify-between w-full text-left">
+        <button
+          type="button"
+          disabled={blocked}
+          onClick={() => onSelectSlot(dayDateStr, "09:00")}
+          aria-label={
+            selectedResourceName
+              ? `Đặt ${selectedResourceName} ngày ${dayDateStr}`
+              : `Đặt lịch ngày ${dayDateStr}`
+          }
+          className="calendar-month-day-action flex items-center justify-between w-full text-left cursor-pointer"
+        >
           <span
             className={`calendar-month-date text-xs font-semibold ${isToday ? "is-today" : ""}`}
           >
@@ -63,6 +76,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
           <Plus
             size={12}
             className="calendar-month-add"
+            aria-hidden="true"
           />
         </button>
 
@@ -83,7 +97,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
         </div>
 
         <div className="calendar-month-count text-[10px]">
-          {dayEvents.length === 0 ? "Trống" : `${dayEvents.length} lịch`}
+          {dayEvents.length > 0 ? `${dayEvents.length} lịch` : ""}
         </div>
       </div>
     );
@@ -92,17 +106,17 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
   return (
     <div className="calendar-month-frame">
       <div className="calendar-month-scroll">
-      <div className="calendar-month-grid">
-        {DAY_NAMES.map((dayName) => (
-          <div
-            key={dayName}
-            className="calendar-month-weekday text-center text-xs font-semibold py-1.5"
-          >
-            {dayName}
-          </div>
-        ))}
-        {cells}
-      </div>
+        <div className="calendar-month-grid">
+          {DAY_NAMES.map((dayName) => (
+            <div
+              key={dayName}
+              className="calendar-month-weekday text-center text-xs font-semibold py-1.5"
+            >
+              {dayName}
+            </div>
+          ))}
+          {cells}
+        </div>
       </div>
     </div>
   );

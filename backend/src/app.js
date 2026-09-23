@@ -21,6 +21,10 @@ import dashboardRouter from "./routes/dashboard.js";
 import notificationRouter from "./routes/notifications.js";
 import incidentRouter from "./routes/incidents.js";
 import telemetryRouter from "./routes/telemetry.js";
+import paymentRouter from "./routes/payments.js";
+import assistantRouter from "./routes/assistant.js";
+import { handleMcp } from "./assistant/mcpServer.js";
+import { requireAuth } from "./middleware/auth.js";
 
 export function createApp() {
   const app = express();
@@ -100,8 +104,13 @@ export function createApp() {
   // 6. Maintenance Windows & Calibration
   app.use("/api/maintenance", maintenanceRouter);
 
-  // Optional payment and AI/research routers remain unmounted until their
-  // persistence and authorization contracts are reconciled in a later batch.
+  // Optional integrations are independent of the retired research routes.
+  if (config.paymentsEnabled) app.use("/api/payments", paymentRouter);
+  if (config.mcpAssistantEnabled) {
+    app.use("/api/assistant", assistantRouter);
+    app.post("/mcp", requireAuth, handleMcp);
+    app.all("/mcp", requireAuth, (_req, res) => res.sendStatus(405));
+  }
 
   // 7. Dashboard & Notifications
   app.use("/api/dashboard", dashboardRouter);

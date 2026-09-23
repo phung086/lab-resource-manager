@@ -23,6 +23,8 @@ export const config = {
   tokenExpiresIn: process.env.TOKEN_EXPIRES_IN || "8h",
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   openaiModel: process.env.OPENAI_MODEL || "",
+  paymentsEnabled: process.env.PAYMENTS_ENABLED === "true",
+  mcpAssistantEnabled: process.env.MCP_ASSISTANT_ENABLED === "true",
   trustProxy: process.env.TRUST_PROXY === "true",
   logFormat,
   jsonBodyLimit,

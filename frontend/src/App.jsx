@@ -43,11 +43,14 @@ import { BookingOperationsPage } from "./pages/operations/BookingOperationsPage.
 import { QuickBookingModal } from "./components/QuickBookingModal.tsx";
 import { AuthLoginView } from "./components/AuthLoginView.tsx";
 import { AuthRegisterView } from "./components/AuthRegisterView.tsx";
+import { PublicLanding } from "./components/PublicLanding.tsx";
+import { WorkspaceHome } from "./pages/WorkspaceHome";
 import { AppLayout } from "./components/AppLayout.tsx";
 import { AccessUserManagement } from "./components/AccessUserManagement.tsx";
 import { NotificationCenter } from "./components/NotificationCenter.jsx";
 import { IncidentsPage } from "./pages/incidents/IncidentsPage.tsx";
 import { MonitoringDashboardPage } from "./pages/monitoring/MonitoringDashboardPage.tsx";
+import { hashForTab, tabFromHash } from "./workspaceRoutes.js";
 import {
   emptyBookingForm,
   emptyMaintenanceForm,
@@ -58,7 +61,8 @@ import { defaultLocale, getDictionary, interpolate, localeOptions, localeStorage
 import { buildMonitoringRows, getMonitoringSummary, toBarWidth } from "./monitoring.js";
 import { classNames, formatDateTime, formatPercent } from "./utils.js";
 import { formatVietnamDateTime, vietnamTimeToIso } from "./utils/timezone.js";
-import { RESEARCH_FEATURES_ENABLED, isTabEnabled } from "./config/featureFlags";
+import { RESEARCH_FEATURES_ENABLED, PAYMENT_FEATURES_ENABLED, isTabEnabled } from "./config/featureFlags";
+const PaymentsPage = React.lazy(() => import("./components/features/payments/PaymentsPage"));
 import {
   AiDiagnosticStudio,
   AiMissionCopilot,
@@ -102,7 +106,17 @@ function App() {
   const [locale, setLocale] = useState(getInitialLocale);
   const [user, setUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
-  const [activeTab, setActiveTab] = useState("smart_calendar");
+  const [activeTab, updateActiveTab] = useState(() => tabFromHash(window.location.hash));
+  const [routeHash, setRouteHash] = useState(window.location.hash);
+  function setActiveTab(tab) {
+    updateActiveTab(tab);
+    if (window.location.hash !== hashForTab(tab)) window.location.hash = hashForTab(tab);
+  }
+  const [paymentBookingId, setPaymentBookingId] = useState("");
+  const openBookingPayment = booking => { setActiveGlobalModal(null); setPaymentBookingId(booking.id); setActiveTab("payments"); };
+  const [resourceSearch, setResourceSearch] = useState("");
+  const [calendarResourceId, setCalendarResourceId] = useState("");
+  const [calendarRevision, setCalendarRevision] = useState(0);
   const [dashboard, setDashboard] = useState(null);
   const [resources, setResources] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -123,6 +137,18 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+
+  const routeUserId = user?.id;
+  useEffect(() => {
+    if (!routeUserId) return;
+    const readRoute = () => { setRouteHash(window.location.hash); updateActiveTab(tabFromHash(window.location.hash)); };
+    window.addEventListener("hashchange", readRoute);
+    // Replace the public login anchor without adding a redundant history entry.
+    if (!window.location.hash.startsWith("#/workspace/")) {
+      window.history.replaceState(null, "", hashForTab(activeTab));
+    }
+    return () => window.removeEventListener("hashchange", readRoute);
+  }, [routeUserId, activeTab]);
 
   useEffect(() => {
     let active = true;
@@ -204,7 +230,7 @@ function App() {
 
   useEffect(() => {
     if (user) loadData();
-  }, [user?.id]);
+  }, [routeUserId, activeTab]);
 
   useEffect(() => {
     if (user && !canAccessTab(user.role, activeTab)) {
@@ -224,24 +250,24 @@ function App() {
   if (!user) {
     if (authMode === "register") {
       return (
-        <AuthRegisterView
+        <div className="public-auth-page"><a className="public-auth-back" href="#dau-trang" onClick={() => setAuthMode("login")}>← Về trang giới thiệu</a><AuthRegisterView
           onRegisterSuccess={(u) => {
             setUser(u);
             setAuthMode("login");
           }}
-          onSwitchToLogin={() => setAuthMode("login")}
+          onSwitchToLogin={() => { setAuthMode("login"); setTimeout(() => document.getElementById("dang-nhap")?.scrollIntoView(), 0); }}
           locale={locale}
           onLocaleChange={changeLocale}
-        />
+        /></div>
       );
     }
     return (
-      <AuthLoginView
+      <PublicLanding onRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }}><AuthLoginView
         onLogin={setUser}
-        onSwitchToRegister={() => setAuthMode("register")}
+        onSwitchToRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }}
         locale={locale}
         onLocaleChange={changeLocale}
-      />
+      /></PublicLanding>
     );
   }
 
@@ -264,25 +290,32 @@ function App() {
       conflictsCount={0}
       loading={loading}
       onRefresh={loadData}
+      onAssistantPrefill={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
       onLogout={async () => {
         await logout();
         setUser(null);
+        updateActiveTab("home");
+        window.history.replaceState(null, "", "#dang-nhap");
       }}
     >
-      {error && <div className="alert danger">{error}</div>}
+      {error && <div className="alert danger" role="alert">{error}</div>}
 
       {/* REQUIRED CORE */}
+      {activeTab === "home" && <WorkspaceHome user={user} bookings={bookings} notifications={notifications} loading={loading} error={error} onRetry={loadData} onNavigate={setActiveTab} onSearch={(query) => { setResourceSearch(query); setActiveTab("resources"); }} />}
+      {PAYMENT_FEATURES_ENABLED && activeTab === "payments" && <React.Suspense fallback={<p role="status">Đang tải thanh toán…</p>}><PaymentsPage user={user} bookingId={paymentBookingId} onClearBooking={() => setPaymentBookingId("")} /></React.Suspense>}
       {activeTab === "smart_calendar" && (
         <SmartCalendarView
           user={user}
+          initialResourceId={calendarResourceId}
+          refreshKey={calendarRevision}
           onOpenBooking={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
         />
       )}
       {activeTab === "admin_management" && <AdminResourceManagementView user={user} />}
-      {activeTab === "escalations" && <NotificationCenter notifications={notifications} onChanged={loadData} />}
-      {activeTab === "dashboard" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {activeTab === "resources" && <ResourceManagementView user={user} />}
-      {activeTab === "bookings" && <BookingOperationsPage user={user} onChanged={loadData} />}
+      {activeTab === "escalations" && <NotificationCenter notifications={notifications} loading={loading} loadError={error} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
+      {activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={loadData} />}
+      {activeTab === "resources" && <ResourceManagementView user={user} initialSearch={resourceSearch} onViewCalendar={(id) => { setCalendarResourceId(id); setActiveTab("smart_calendar"); }} />}
+      {activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={loadData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
       {activeTab === "maintenance" && <MaintenanceView resources={resources} maintenance={maintenance} isStaff={isStaff} onChanged={loadData} />}
       {activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
@@ -317,8 +350,10 @@ function App() {
         isOpen={activeGlobalModal?.type === "quick_booking"}
         onClose={() => setActiveGlobalModal(null)}
         initialSlot={activeGlobalModal?.payload}
-        resources={resources}
-        onConfirmBooking={(bookingData) => {
+        onProceedPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined}
+        onViewBookings={() => { setActiveGlobalModal(null); setActiveTab("bookings"); }}
+        onConfirmBooking={() => {
+          setCalendarRevision(value => value + 1);
           loadData();
         }}
       />

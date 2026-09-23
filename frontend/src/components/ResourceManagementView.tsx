@@ -8,6 +8,10 @@ import {
   RefreshCw,
   Search,
   Server,
+  DoorOpen,
+  Microscope,
+  FlaskConical,
+  Package,
   Wrench
 } from "lucide-react";
 
@@ -47,6 +51,8 @@ interface UserIdentity {
 interface ResourceManagementViewProps {
   user: UserIdentity;
   managementMode?: boolean;
+  initialSearch?: string;
+  onViewCalendar?: (resourceId: string) => void;
 }
 
 interface Filters {
@@ -56,6 +62,7 @@ interface Filters {
   subtype: string;
   operationalStatus: string;
   classification: string;
+  availability: string;
 }
 
 const initialFilters: Filters = {
@@ -64,6 +71,7 @@ const initialFilters: Filters = {
   category: "",
   subtype: "",
   operationalStatus: "",
+  availability: "",
   classification: "ALL"
 };
 
@@ -83,10 +91,12 @@ const emptyForm = {
   model: ""
 };
 
-export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ user, managementMode = false }) => {
+export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ user, managementMode = false, initialSearch = "", onViewCalendar }) => {
   const [resources, setResources] = useState<any[]>([]);
   const [laboratories, setLaboratories] = useState<any[]>([]);
-  const [filters, setFilters] = useState<Filters>(initialFilters);
+  const [filters, setFilters] = useState<Filters>({ ...initialFilters, search: initialSearch });
+  const [sort, setSort] = useState("name");
+  const requestVersion = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -113,15 +123,17 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
   }
 
   async function loadResources() {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError("");
     try {
       const query = queryString();
-      setResources(await apiRequest(`/resources${query ? `?${query}` : ""}`));
+      const result = await apiRequest(`/resources${query ? `?${query}` : ""}`);
+      if (version === requestVersion.current) setResources(result);
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể tải danh mục tài nguyên.");
+      if (version === requestVersion.current) setError(requestError?.message || "Không thể tải danh mục tài nguyên.");
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }
 
@@ -133,8 +145,10 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
 
   useEffect(() => {
     const timer = window.setTimeout(loadResources, filters.search ? 250 : 0);
-    return () => window.clearTimeout(timer);
-  }, [filters.search, filters.laboratoryId, filters.category, filters.subtype, filters.operationalStatus, filters.classification]);
+    return () => { window.clearTimeout(timer); requestVersion.current += 1; };
+  }, [filters.search, filters.laboratoryId, filters.category, filters.subtype, filters.operationalStatus, filters.classification, filters.availability]);
+
+  const visibleResources = [...resources].sort((a, b) => String(sort === "code" ? a.code : a.name).localeCompare(String(sort === "code" ? b.code : b.name), "vi"));
 
   function canManageResource(resource: any) {
     return user.role === "ADMIN" || (Boolean(resource.laboratoryId) && assignedLabIds.has(resource.laboratoryId));
@@ -280,7 +294,10 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
           <button type="button" className="secondary-button resource-clear-filters" disabled={JSON.stringify(filters) === JSON.stringify(initialFilters)} onClick={() => setFilters(initialFilters)}>
             <FilterX size={16} aria-hidden="true" /><span>Xóa bộ lọc</span>
           </button>
+          <label><span>Khả dụng hiện tại</span><select value={filters.availability} onChange={event => setFilters({ ...filters, availability: event.target.value })}><option value="">Tất cả</option><option value="AVAILABLE">Đang khả dụng</option><option value="RESERVED">Đang có lịch đặt</option><option value="UNAVAILABLE">Không khả dụng</option></select></label>
         </div>
+        <div className="catalog-results-bar"><span role="status">{loading ? "Đang tìm tài nguyên…" : error ? "Chưa tải được kết quả" : `${resources.length} tài nguyên phù hợp`}</span><label>Sắp xếp <select value={sort} onChange={event => setSort(event.target.value)}><option value="name">Tên tài nguyên</option><option value="code">Mã tài nguyên</option></select></label></div>
+        <p className="catalog-availability-note">Khả dụng hiện tại không đảm bảo khung giờ trong tương lai. Mở lịch để chọn thời gian sử dụng.</p>
       </section>
 
       {error && <div className="alert danger" role="alert">{error}</div>}
@@ -315,7 +332,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
 
       {loading ? (
         <p className="empty-state" role="status">Đang tải dữ liệu tài nguyên...</p>
-      ) : resources.length === 0 ? (
+      ) : error ? (<div className="empty-state"><p>Không thể hiển thị danh mục lúc này.</p><button className="secondary-button" onClick={loadResources}>Thử lại</button></div>) : resources.length === 0 ? (
         <p className="empty-state">Không có tài nguyên phù hợp với bộ lọc.</p>
       ) : managementMode ? (
         <section className="panel resource-table-panel">
@@ -323,7 +340,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
             <table className="resource-management-table">
               <caption>{resources.length} tài nguyên trong danh mục</caption>
               <thead><tr><th>Tài nguyên</th><th>Phân loại</th><th>Phòng lab</th><th>Vận hành</th><th>Availability</th><th><span className="sr-only">Thao tác</span></th></tr></thead>
-              <tbody>{resources.map((resource) => {
+              <tbody>{visibleResources.map((resource) => {
                 const manageable = canManageResource(resource);
                 return <tr key={resource.id}>
                   <td><strong>{resource.code}</strong><span>{resource.name}</span></td>
@@ -344,23 +361,26 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
         </section>
       ) : (
         <section className="resource-grid" aria-label="Danh sách tài nguyên">
-          {resources.map((resource) => <article className="resource-card canonical-resource-card" key={resource.id}>
+          {visibleResources.map((resource) => <article className="resource-card canonical-resource-card" key={resource.id}>
+            <div className="catalog-category-art" aria-hidden="true">{React.createElement(({ ROOM: DoorOpen, EQUIPMENT: Microscope, MACHINE: Wrench, EXPERIMENT_KIT: FlaskConical, MATERIAL: Package } as Record<string, typeof Server>)[resource.category] || Server, { size: 48, strokeWidth: 1.3 })}<span>{categoryLabels[resource.category] || "Chưa phân loại"}</span></div>
             <div className="resource-body">
               <div className="row between"><div><span className="eyebrow">{resource.code}</span><h2>{resource.name}</h2></div><StatusPill value={resource.availability?.state || resource.operationalStatus} /></div>
               <p>{resource.description || "Chưa có mô tả."}</p>
               <dl className="resource-facts">
                 <div><dt>Nhóm</dt><dd className={resource.category ? "" : "text-warning"}>{resource.category ? categoryLabels[resource.category] : "Chưa phân loại"}</dd></div>
-                <div><dt>Subtype</dt><dd>{resource.subtype}</dd></div>
+                <div><dt>Vị trí</dt><dd>{resource.location || "Chưa cập nhật"}</dd></div>
                 <div><dt>Phòng lab</dt><dd>{resource.laboratory?.name || "Chưa gán"}</dd></div>
                 <div><dt>Vận hành</dt><dd>{statusLabels[resource.operationalStatus] || resource.operationalStatus}</dd></div>
               </dl>
-              <button className="table-action" type="button" onClick={() => openDetail(resource)} disabled={detailLoadingId === resource.id}><Eye size={15} aria-hidden="true" /><span>{detailLoadingId === resource.id ? "Đang tải..." : "Xem chi tiết"}</span></button>
+              <p className="resource-approval-note">{resource.effectiveRequiresApproval ? "Cần cán bộ lab phê duyệt" : "Xác nhận ngay khi hợp lệ"}</p>
+              <div className="resource-discovery-actions">{onViewCalendar && <button className="primary-button" onClick={() => onViewCalendar(resource.id)}>{["AVAILABLE", "IN_USE"].includes(resource.operationalStatus) ? "Xem lịch và đặt chỗ" : "Xem lịch"}</button>}
+              <button className="table-action" type="button" onClick={() => openDetail(resource)} disabled={detailLoadingId === resource.id}><Eye size={15} aria-hidden="true" /><span>{detailLoadingId === resource.id ? "Đang tải..." : "Xem chi tiết"}</span></button></div>
             </div>
           </article>)}
         </section>
       )}
 
-      <ResourceDetailsModal isOpen={Boolean(detail)} onClose={() => setDetail(null)} resource={detail} />
+      <ResourceDetailsModal isOpen={Boolean(detail)} onClose={() => setDetail(null)} resource={detail} onViewCalendar={onViewCalendar} />
       <ResourceStatusModal
         isOpen={Boolean(statusResource)}
         onClose={() => setStatusResource(null)}

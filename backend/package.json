@@ -30,12 +30,17 @@
     "lint": "eslint \"src/**/*.js\" \"prisma/*.js\" \"scripts/**/*.mjs\"",
     "verify:prod-config": "node scripts/verifyProductionConfig.mjs",
     "demo:seed-infrastructure": "node scripts/seedGraduationDemoInfrastructure.mjs",
+    "demo:seed-local": "node scripts/seedLocalDemo.mjs",
+    "demo:local": "node scripts/startLocalDemo.mjs",
     "test:required": "npm run test:core",
     "test:research": "node --test test/concurrency.test.js test/conflictForecasting.test.js test/geneticScheduler.test.js test/hybridDispatch.test.js test/integrations.test.js test/mqttTelemetry.test.js test/multiObjectiveAndBenchmark.test.js test/optimization.test.js test/orchestrationV2.test.js test/reputationScore.test.js test/services.test.js test/smartBookingPlatform.test.js",
     "test:batch7": "cross-env LOG_FORMAT=dev node --test test/batch7.production-demo-hardening.integration.test.js",
     "test:batch8": "cross-env LOG_FORMAT=dev node --test test/batch8.smart-monitoring.integration.test.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/node": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
     "@prisma/client": "^6.1.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

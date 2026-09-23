@@ -4,7 +4,8 @@ import { Header } from "./Header.tsx";
 import { KeyRound, Check, ShieldAlert } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.tsx";
 import { apiRequest } from "../api.js";
-import { RESEARCH_FEATURES_ENABLED } from "../config/featureFlags";
+import { RESEARCH_FEATURES_ENABLED, AI_ASSISTANT_ENABLED } from "../config/featureFlags";
+const LaboratoryAssistant = React.lazy(() => import("./features/assistant/LaboratoryAssistant"));
 import { AiCopilotDrawer, FloatingCopilotFab } from "../research/ResearchFeatureRegistry";
 
 export interface AppLayoutProps {
@@ -25,6 +26,7 @@ export interface AppLayoutProps {
   loading?: boolean;
   onRefresh?: () => void;
   onLogout?: () => void;
+  onAssistantPrefill?: (slot: { resourceId: string; startAt: string; endAt: string }) => void;
   children: React.ReactNode;
 }
 
@@ -36,13 +38,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onLocaleChange,
   notifications = [],
   incidents = [],
-  conflictsCount = 2,
+  conflictsCount = 0,
   loading = false,
   onRefresh,
   onLogout,
+  onAssistantPrefill,
   children
 }) => {
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -60,6 +64,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   // Map activeTab to readable header title
   const tabTitles: Record<string, string> = {
+    home: "Không gian làm việc",
+    payments: "Thanh toán",
     smart_calendar: "Lịch Đặt Khung Giờ",
     ai_analytics: "AI Tính Toán Hiệu Suất",
     ai_advisor: "AI Cố Vấn Lịch Đặt",
@@ -128,6 +134,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   return (
     <div className="app-shell-2026">
+      <a className="skip-link" href="#workspace-main">Đến nội dung chính</a>
       {/* Primary navigation */}
       <Sidebar
         activeTab={activeTab}
@@ -152,13 +159,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           onOpenNotifications={() => onSelectTab("escalations")}
           onOpenChangePassword={() => setChangePasswordOpen(true)}
           onLogout={onLogout}
+          onOpenAssistant={AI_ASSISTANT_ENABLED ? () => setAssistantOpen(true) : undefined}
         />
 
-        <main className="main-body-container-2026">
+        <main id="workspace-main" tabIndex={-1} className="main-body-container-2026">
           {children}
         </main>
+        <footer className="workspace-footer"><span>Lab Resource Manager</span><span>Đặt lịch · Bàn giao · Theo dõi</span><span>Giờ Việt Nam · UTC+07:00</span></footer>
       </div>
 
+      {AI_ASSISTANT_ENABLED && assistantOpen && <React.Suspense fallback={<p role="status">Đang mở trợ lý…</p>}><LaboratoryAssistant onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} /></React.Suspense>}
       {RESEARCH_FEATURES_ENABLED && (
         <React.Suspense fallback={null}>
           <FloatingCopilotFab

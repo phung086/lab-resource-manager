@@ -17,6 +17,7 @@ const ACTION_COPY: Record<BookingAction, { title: string; submit: string; hint: 
   REJECT: { title: "Từ chối yêu cầu đặt lịch", submit: "Xác nhận từ chối", hint: "Lý do từ chối được lưu vào lịch sử và hiển thị cho người đặt." },
   CHECK_OUT: { title: "Bàn giao tài nguyên", submit: "Xác nhận bàn giao", hint: "Ghi nhận tình trạng thực tế trước khi người dùng nhận tài nguyên." },
   RETURN: { title: "Tiếp nhận hoàn trả tài nguyên", submit: "Xác nhận hoàn trả", hint: "Ghi nhận tình trạng thực tế của tài nguyên tại thời điểm nhận lại." },
+  SELF_RETURN: { title: "Trả phòng và kết thúc sử dụng", submit: "Xác nhận trả phòng", hint: "Xác nhận bạn đã rời phòng và mô tả tình trạng sau sử dụng. Phần lịch còn lại được giải phóng ngay; cán bộ lab nhận thông báo để theo dõi." },
   COMPLETE: { title: "Hoàn tất hồ sơ booking", submit: "Hoàn tất workflow", hint: "Hoàn tất hồ sơ sau khi đã đối soát việc bàn giao và hoàn trả." }
 };
 
@@ -42,7 +43,7 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
   }, [isOpen, action, booking?.id]);
 
   const copy = ACTION_COPY[action];
-  const conditionField = action === "CHECK_OUT" ? "conditionBefore" : action === "RETURN" ? "conditionAfter" : null;
+  const conditionField = action === "CHECK_OUT" ? "conditionBefore" : ["RETURN", "SELF_RETURN"].includes(action) ? "conditionAfter" : null;
   const reasonRequired = action === "REJECT";
   const subtitle = useMemo(() => `${booking?.resource?.code || "Tài nguyên"} • ${booking?.title || "Booking"}`, [booking]);
 
@@ -136,7 +137,7 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
               id="booking-condition-evidence"
               value={condition}
               onChange={(event) => setCondition(event.target.value)}
-              placeholder="Mô tả những gì cán bộ lab thực tế quan sát/kiểm tra. Không chọn sẵn kết luận."
+              placeholder="Mô tả tình trạng thực tế bạn quan sát sau khi sử dụng."
               maxLength={2000}
               required
             />
@@ -147,7 +148,7 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
                 </button>
               ))}
             </div>
-            <small>Các gợi ý chỉ hỗ trợ nhập liệu và không được xem là kết quả kiểm tra cho đến khi cán bộ xác nhận.</small>
+            <small>Các gợi ý chỉ hỗ trợ nhập liệu và không được xem là kết quả kiểm tra cho đến khi người thực hiện xác nhận.</small>
           </div>
         )}
       </form>

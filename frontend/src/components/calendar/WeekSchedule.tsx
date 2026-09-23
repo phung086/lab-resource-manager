@@ -3,12 +3,14 @@ import { CheckCircle2, Lock, Wrench, Plus, Clock } from "lucide-react";
 
 export interface WeekScheduleProps {
   slotsData: any;
+  selectedResourceName?: string;
   onSelectSlot: (dateStr: string, timeStr: string) => void;
   onSelectBooking?: (booking: any) => void;
 }
 
 export const WeekSchedule: React.FC<WeekScheduleProps> = ({
   slotsData,
+  selectedResourceName,
   onSelectSlot,
   onSelectBooking
 }) => {
@@ -123,22 +125,29 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                   );
                 }
 
-                // Available slot
+                // Available slot (visually quiet by default, revealed on hover/focus)
                 return (
                   <button
                     type="button"
                     key={`${row.hour}-${idx}`}
                     onClick={() => onSelectSlot(dayHeader?.fullDate, row.time)}
-                    className="calendar-week-cell is-available w-full text-left p-2 group cursor-pointer transition-colors flex flex-col justify-between"
-                    aria-label={`Đặt khung giờ ${row.time} ngày ${dayHeader?.name || ""}`}
-                    title={`Bấm để đặt khung giờ ${row.time} ngày ${dayHeader?.name || ""}`}
+                    className="calendar-week-cell is-available w-full text-left p-1.5 group cursor-pointer transition-colors flex flex-col justify-between"
+                    aria-label={
+                      selectedResourceName
+                        ? `Đặt ${selectedResourceName} lúc ${row.time} ngày ${dayHeader?.dateStr || ""}`
+                        : `Đặt khung giờ ${row.time} ngày ${dayHeader?.dateStr || ""}`
+                    }
+                    title={
+                      selectedResourceName
+                        ? `Đặt ${selectedResourceName} lúc ${row.time} ngày ${dayHeader?.name || ""} (${dayHeader?.dateStr || ""})`
+                        : `Đặt khung giờ ${row.time} ngày ${dayHeader?.name || ""} (${dayHeader?.dateStr || ""})`
+                    }
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-medium">Trống</span>
-                      <Plus size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="w-full flex items-center justify-end">
+                      <Plus size={11} className="calendar-slot-hover-icon opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-blue-600 transition-opacity" aria-hidden="true" />
                     </div>
-                    <div className="calendar-slot-action text-[10px]">
-                      + Đặt ngay
+                    <div className="calendar-slot-action text-[10px] font-medium opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-blue-600 transition-opacity">
+                      + Đặt {row.time}
                     </div>
                   </button>
                 );

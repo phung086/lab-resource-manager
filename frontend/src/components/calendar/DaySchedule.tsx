@@ -1,11 +1,13 @@
 import React from "react";
-import { Plus, Clock, AlertCircle } from "lucide-react";
+import { Plus, Clock } from "lucide-react";
 import { CalendarEventCard } from "./CalendarEventCard.js";
-import { toVietnamHour } from "../../utils/timezone.js";
+import { vietnamTimeToIso } from "../../utils/timezone.js";
 
 export interface DayScheduleProps {
   currentDateStr: string;
   events: any[];
+  selectedResourceName?: string;
+  blocked?: boolean;
   onSelectSlot: (dateStr: string, timeStr: string) => void;
   onSelectBooking: (booking: any) => void;
 }
@@ -15,6 +17,8 @@ const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 export const DaySchedule: React.FC<DayScheduleProps> = ({
   currentDateStr,
   events,
+  selectedResourceName,
+  blocked = false,
   onSelectSlot,
   onSelectBooking
 }) => {
@@ -27,9 +31,9 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
           // Match events covering this hour in Vietnam time
           const matchedEvents = events.filter((ev) => {
             if (!ev.start || !ev.end) return false;
-            const startHour = toVietnamHour(ev.start);
-            const endHour = toVietnamHour(ev.end);
-            return (hour >= startHour && hour < endHour) || startHour === hour;
+            const slotStart = new Date(vietnamTimeToIso(currentDateStr, hourStr)).getTime();
+            const slotEnd = slotStart + 60 * 60 * 1000;
+            return new Date(ev.start).getTime() < slotEnd && new Date(ev.end).getTime() > slotStart;
           });
 
           return (
@@ -53,15 +57,29 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
                       onClick={onSelectBooking}
                     />
                   ))
-                ) : (
+                ) : blocked ? <span className="section-description">Tài nguyên đang tạm ngừng nhận lịch</span> : (
                   <button
                     type="button"
                     onClick={() => onSelectSlot(currentDateStr, hourStr)}
-                    className="calendar-day-available w-full text-left py-2 px-3 rounded border border-dashed text-xs flex items-center justify-between transition-colors group"
-                    aria-label={`Đặt khung giờ ${hourStr} ngày ${currentDateStr}`}
+                    className="calendar-day-available w-full text-left py-2 px-3 rounded text-xs flex items-center justify-between transition-colors cursor-pointer"
+                    aria-label={
+                      selectedResourceName
+                        ? `Đặt ${selectedResourceName} lúc ${hourStr} ngày ${currentDateStr}`
+                        : `Đặt khung giờ ${hourStr} ngày ${currentDateStr}`
+                    }
+                    title={
+                      selectedResourceName
+                        ? `Đặt ${selectedResourceName} lúc ${hourStr} ngày ${currentDateStr}`
+                        : `Đặt khung giờ ${hourStr} ngày ${currentDateStr}`
+                    }
                   >
-                    <span>Khung giờ trống — Bấm để đặt</span>
-                    <Plus size={13} />
+                    <span className="calendar-day-slot-idle" aria-hidden="true">
+                      <span className="calendar-day-idle-dot" />
+                    </span>
+                    <span className="calendar-day-slot-hover font-medium">
+                      + Đặt {hourStr}
+                    </span>
+                    <Plus size={13} className="calendar-day-slot-icon" aria-hidden="true" />
                   </button>
                 )}
               </div>

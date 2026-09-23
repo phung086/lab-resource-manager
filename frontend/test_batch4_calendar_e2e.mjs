@@ -30,6 +30,7 @@ async function login(page, email) {
 }
 
 async function openCalendar(page) {
+  if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
   const calendarNav = page.locator(".sidebar-nav-item-2026", { hasText: "Lịch Đặt Khung Giờ" });
   await calendarNav.waitFor({ timeout: 5000 });
   await calendarNav.click();
@@ -37,11 +38,96 @@ async function openCalendar(page) {
 }
 
 try {
+  console.log("=== 0. ZERO-RESOURCE CALENDAR INTEGRITY & RESOURCE PRECONDITION ===");
+  const zeroResContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const zeroResPage = await zeroResContext.newPage();
+  // Route /api/resources to return empty array []
+  await zeroResPage.route("**/api/resources*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([])
+    });
+  });
+  await login(zeroResPage, "b4.student@lab.test");
+  const zeroNav = zeroResPage.locator(".sidebar-nav-item-2026", { hasText: "Lịch Đặt Khung Giờ" });
+  await zeroNav.waitFor({ timeout: 5000 });
+  await zeroNav.click();
+
+  // Verify truthful empty state
+  await zeroResPage.locator(".calendar-empty-resources-card").waitFor({ timeout: 5000 });
+  const emptyText = await zeroResPage.locator(".calendar-empty-resources-card").innerText();
+  assert.ok(emptyText.includes("Chưa có tài nguyên khả dụng"), "Zero-resource calendar must show truthful empty state title");
+  assert.ok(emptyText.includes("Hiện chưa có phòng hoặc thiết bị để xem lịch và đặt chỗ"), "Zero-resource calendar must show truthful description");
+  assert.ok(emptyText.includes("Vui lòng liên hệ quản trị viên hoặc cán bộ phòng thí nghiệm"), "Zero-resource calendar must show student guidance");
+
+  // Verify 'Đặt Khung Giờ Mới' is disabled
+  const newBookingBtn = zeroResPage.getByRole("button", { name: "Đặt Khung Giờ Mới" });
+  assert.equal(await newBookingBtn.isDisabled(), true, "New booking button must be disabled when 0 resources exist");
+
+  // Verify no availability grid rendered
+  assert.equal(await zeroResPage.locator(".calendar-week-frame").count(), 0, "No calendar week grid rendered when 0 resources exist");
+  assert.equal(await zeroResPage.locator(".calendar-day-frame").count(), 0, "No calendar day grid rendered when 0 resources exist");
+
+  console.log("  Zero-resource empty state and disabled booking guard verified: PASS");
+  await zeroResContext.close();
+
   console.log("=== 1. STUDENT E2E WORKFLOW ===");
   const studentContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const studentPage = await studentContext.newPage();
   await login(studentPage, "b4.student@lab.test");
   await openCalendar(studentPage);
+
+  // Verify resource selection is visible and active resource is displayed
+  console.log("  Verifying resource selection in toolbar and active resource badge...");
+  const resSelect = studentPage.locator("#calendar-resource-select");
+  await resSelect.waitFor({ timeout: 5000 });
+  await studentPage.waitForFunction(() => Boolean(document.querySelector("#calendar-resource-select")?.value));
+  const initialResVal = await resSelect.inputValue();
+  assert.ok(initialResVal && initialResVal.length > 0, "Resource must be selected by default");
+
+  const activeBadge = studentPage.locator(".calendar-active-resource-badge");
+  await activeBadge.waitFor({ timeout: 3000 });
+  const badgeText = await activeBadge.innerText();
+  assert.ok(badgeText.includes("Đang xem lịch:"), "Active resource badge must indicate currently viewed resource");
+  console.log(`  Initial selected resource confirmed: ${badgeText.trim()}`);
+
+  // Test switching resource
+  console.log("  Testing switching resource in calendar toolbar...");
+  const options = await resSelect.locator('option').all();
+  let switchTargetVal = null;
+  let switchTargetText = "";
+  for (const opt of options) {
+    const val = await opt.getAttribute('value');
+    if (val && val !== initialResVal) {
+      switchTargetVal = val;
+      switchTargetText = await opt.innerText();
+      break;
+    }
+  }
+  if (switchTargetVal) {
+    await Promise.all([
+      studentPage.waitForResponse((r) => r.url().includes("/api/calendar/slots") && r.url().includes(switchTargetVal)),
+      resSelect.selectOption(switchTargetVal)
+    ]);
+    const updatedBadgeText = await activeBadge.innerText();
+    const codeSnippet = switchTargetText.split("—")[0].trim();
+    assert.ok(codeSnippet.length > 0 && updatedBadgeText.includes(codeSnippet), "Active badge must update when resource is switched");
+
+    // Switch to GPU-01 for subsequent booking tests
+    const gpuOpt = resSelect.locator('option', { hasText: 'B4-E2E-GPU-01' });
+    if (await gpuOpt.count() > 0) {
+      const gpuVal = await gpuOpt.getAttribute('value');
+      if (gpuVal !== switchTargetVal) {
+        await Promise.all([
+          studentPage.waitForResponse((r) => r.url().includes("/api/calendar/slots") && r.url().includes(gpuVal)),
+          resSelect.selectOption(gpuVal)
+        ]);
+      }
+      const finalBadgeText = await activeBadge.innerText();
+      assert.ok(finalBadgeText.includes("B4-E2E-GPU-01"), "Active badge must show GPU-01 after switching");
+    }
+  }
 
   // 1a. View Switcher: Week -> Month -> Day -> Week
   console.log("  Verifying Week, Month, Day view switches...");
@@ -57,7 +143,7 @@ try {
 
   // Click on the 15:00 slot
   const slotRow15 = studentPage.locator(".calendar-day-row", { hasText: "15:00" });
-  const openSlot15 = slotRow15.locator("text=Khung giờ trống — Bấm để đặt");
+  const openSlot15 = slotRow15.locator(".calendar-day-available");
   await openSlot15.click();
 
   const slotModal = studentPage.getByRole("dialog");
@@ -73,17 +159,19 @@ try {
   assert.ok(dateVal && dateVal.length === 10, "Date must prepopulate with day date");
 
   // Verify Fix 3: Dynamic or truthful policy display (no static hardcoded claim)
-  const policyText = await slotModal.locator(".booking-policy-box").innerText();
+  const policyText = await slotModal.locator(".lab-policy-summary").innerText();
   assert.ok(!policyText.includes("Vui lòng đặt trước ít nhất 1 giờ"), "Must not contain obsolete static claim");
-  assert.ok(policyText.includes("Chính sách lab:") || policyText.includes("Thời gian đặt phải tuân thủ"), "Must display dynamic or truthful policy");
+  for (const label of ["Giờ mở cửa", "Thời lượng tối thiểu", "Thời lượng tối đa", "Đặt trước tối đa", "Thứ 7 & Chủ Nhật", "Phê duyệt"]) {
+    assert.ok(policyText.includes(label), `Policy must explain ${label}`);
+  }
 
-  // Select GPU-01 (policy max 240m = 4h) and verify dynamic 4 tiếng/ca display
+  // Select GPU-01 and verify the persisted 240-minute maximum, without unit rounding.
   const gpuOption = slotModal.locator('#booking-resource-select option', { hasText: 'B4-E2E-GPU-01' });
   if (await gpuOption.count() > 0) {
     const gpuVal = await gpuOption.getAttribute('value');
     await slotModal.locator('#booking-resource-select').selectOption(gpuVal);
-    const gpuPolicyText = await slotModal.locator(".booking-policy-box").innerText();
-    assert.ok(gpuPolicyText.includes("tối đa 4 tiếng/ca"), "Dynamic policy must display 4 tiếng/ca for 240m policy");
+    const maximum = slotModal.locator(".lab-policy-summary dl > div").filter({ hasText: "Thời lượng tối đa" });
+    assert.equal(await maximum.locator("dd").innerText(), "240 phút", "Policy must use the selected LAB's 240-minute maximum");
   }
 
   // Close slot modal via Đóng
@@ -312,6 +400,7 @@ try {
 
   // Staff sees assigned lab resources
   const staffSelect = staffPage.locator('select[aria-label="Chọn tài nguyên lịch"]');
+  await staffSelect.locator("option", { hasText: "B4-E2E-GPU-01" }).waitFor({ state: "attached" });
   const staffOptions = await staffSelect.locator("option").allInnerTexts();
   assert.ok(staffOptions.some((o) => o.includes("B4-E2E-GPU-01")), "Staff must see assigned lab resources");
   console.log("  Staff assigned-lab visibility: PASS");
@@ -323,6 +412,7 @@ try {
   await openCalendar(adminPage);
 
   const adminSelect = adminPage.locator('select[aria-label="Chọn tài nguyên lịch"]');
+  await adminSelect.locator("option", { hasText: "B4-E2E-CNC-01" }).waitFor({ state: "attached" });
   const adminOptions = await adminSelect.locator("option").allInnerTexts();
   assert.ok(adminOptions.some((o) => o.includes("B4-E2E-CNC-01")), "Admin must see resources across all labs");
   console.log("  Admin global visibility: PASS");

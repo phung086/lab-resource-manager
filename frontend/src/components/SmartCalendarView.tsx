@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { apiRequest } from "../api.js";
 import { QuickBookingModal } from "./QuickBookingModal.js";
 import { CalendarToolbar } from "./calendar/CalendarToolbar.js";
@@ -7,25 +7,32 @@ import { DaySchedule } from "./calendar/DaySchedule.js";
 import { MonthSchedule } from "./calendar/MonthSchedule.js";
 import { BookingStatusBadge } from "./BookingStatusBadge.js";
 import { BaseModal2026 } from "./BaseModal2026.js";
-import { Clock, Calendar, User } from "lucide-react";
+import { Clock, Calendar, User, AlertCircle } from "lucide-react";
 import { formatVietnamDateTime, getVietnamTodayDateString, vietnamTimeToIso } from "../utils/timezone.js";
 
 export interface SmartCalendarViewProps {
   onOpenBooking?: (slot?: any) => void;
   onOpenCheckIn?: (booking?: any) => void;
   user?: any;
+  initialResourceId?: string;
+  refreshKey?: number;
 }
 
-export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOpenBooking }) => {
+export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOpenBooking, initialResourceId = "", refreshKey = 0 }) => {
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
-  const [selectedResourceId, setSelectedResourceId] = useState<string>("");
+  const [selectedResourceId, setSelectedResourceId] = useState<string>(initialResourceId);
   const [resources, setResources] = useState<any[]>([]);
+  const [resourcesLoading, setResourcesLoading] = useState(true);
+  const [resourcesError, setResourcesError] = useState("");
+
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
   const [dayOffset, setDayOffset] = useState(0);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const calendarRequest = useRef(0);
 
   // Slots state for Week View
   const [slotsData, setSlotsData] = useState<any>(null);
@@ -38,20 +45,41 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
 
-  // 1. Fetch available resources
-  useEffect(() => {
-    apiRequest("/resources")
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data.items || [];
-        setResources(list);
-        if (list.length > 0 && !selectedResourceId) {
-          setSelectedResourceId(list[0].id);
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load resources for calendar", err);
-      });
+  // 1. Fetch available resources with explicit states
+  const loadResources = useCallback(async () => {
+    setResourcesLoading(true);
+    setResourcesError("");
+    try {
+      const data = await apiRequest("/resources");
+      const list = Array.isArray(data) ? data : data.items || [];
+      setResources(list);
+      if (list.length > 0) {
+        setSelectedResourceId((prev) => {
+          if (prev && list.some((r: any) => r.id === prev)) {
+            return prev;
+          }
+          return list[0].id;
+        });
+      } else {
+        setSelectedResourceId("");
+        setSlotsData(null);
+        setEventsData([]);
+      }
+    } catch (err: any) {
+      console.error("Failed to load resources for calendar", err);
+      setResourcesError(err?.message || "Không thể tải danh sách tài nguyên phòng thí nghiệm.");
+      setResources([]);
+      setSelectedResourceId("");
+      setSlotsData(null);
+      setEventsData([]);
+    } finally {
+      setResourcesLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadResources();
+  }, [loadResources]);
 
   // Compute reference anchor dates
   const getAnchorDate = useCallback(() => {
@@ -69,9 +97,18 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
     return d;
   }, [viewMode, weekOffset, monthOffset, dayOffset]);
 
-  // 2. Fetch Calendar Data whenever dependencies change
+  // 2. Fetch Calendar Data whenever dependencies change (guarded by selectedResourceId)
   const loadCalendarData = useCallback(async () => {
+    const version = ++calendarRequest.current;
+    if (!selectedResourceId) {
+      setSlotsData(null);
+      setEventsData([]);
+      return;
+    }
+
     setLoading(true);
+    setSlotsData(null);
+    setEventsData([]);
     setError("");
     try {
       const anchor = getAnchorDate();
@@ -79,46 +116,47 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
 
       if (viewMode === "week") {
         const queryParams = new URLSearchParams();
-        if (selectedResourceId) queryParams.set("resource_id", selectedResourceId);
+        queryParams.set("resource_id", selectedResourceId);
         queryParams.set("start_date", dateStr);
 
         const data = await apiRequest(`/calendar/slots?${queryParams.toString()}`);
-        setSlotsData(data);
+        if (version === calendarRequest.current) setSlotsData(data);
       } else if (viewMode === "month") {
         const startDate = `${anchor.getUTCFullYear()}-${String(anchor.getUTCMonth() + 1).padStart(2, "0")}-01`;
         const nextMonth = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1));
         const endDate = nextMonth.toISOString().slice(0, 10);
 
         const queryParams = new URLSearchParams();
-        if (selectedResourceId) queryParams.set("resource_id", selectedResourceId);
+        queryParams.set("resource_id", selectedResourceId);
         queryParams.set("start", vietnamTimeToIso(startDate, "00:00"));
         queryParams.set("end", vietnamTimeToIso(endDate, "00:00"));
 
         const data = await apiRequest(`/calendar/events?${queryParams.toString()}`);
-        setEventsData(data.events || []);
+        if (version === calendarRequest.current) setEventsData(data.events || []);
       } else if (viewMode === "day") {
         const nextDay = new Date(anchor);
         nextDay.setUTCDate(nextDay.getUTCDate() + 1);
 
         const queryParams = new URLSearchParams();
-        if (selectedResourceId) queryParams.set("resource_id", selectedResourceId);
+        queryParams.set("resource_id", selectedResourceId);
         queryParams.set("start", vietnamTimeToIso(dateStr, "00:00"));
         queryParams.set("end", vietnamTimeToIso(nextDay.toISOString().slice(0, 10), "00:00"));
 
         const data = await apiRequest(`/calendar/events?${queryParams.toString()}`);
-        setEventsData(data.events || []);
+        if (version === calendarRequest.current) setEventsData(data.events || []);
       }
     } catch (err: any) {
       console.error("Error loading calendar data", err);
-      setError(err.message || "Không thể tải dữ liệu lịch biểu");
+      if (version === calendarRequest.current) setError(err.message || "Không thể tải dữ liệu lịch biểu");
     } finally {
-      setLoading(false);
+      if (version === calendarRequest.current) setLoading(false);
     }
   }, [viewMode, selectedResourceId, getAnchorDate]);
 
   useEffect(() => {
     loadCalendarData();
-  }, [loadCalendarData]);
+    return () => { calendarRequest.current += 1; };
+  }, [loadCalendarData, refreshKey]);
 
   // Handlers for Navigation
   const handlePrev = () => {
@@ -139,8 +177,10 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
     setDayOffset(0);
   };
 
-  // Open booking modal prefilled
+  // Open booking modal prefilled (strictly guarded by selectedResourceId)
   const handleOpenSlotBooking = (dateStr: string, timeStr: string) => {
+    if (!selectedResourceId) return;
+
     const [h, m] = timeStr.split(":").map(Number);
     const endH = String((h || 9) + 1).padStart(2, "0");
     const mStr = String(m || 0).padStart(2, "0");
@@ -184,6 +224,9 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
 
   const anchor = getAnchorDate();
   const currentDateStr = anchor.toISOString().slice(0, 10);
+  const selectedResource = resources.find((r) => r.id === selectedResourceId) || null;
+
+  const blocked = selectedResource && (!["AVAILABLE", "IN_USE"].includes(selectedResource.operationalStatus) || selectedResource.bookingState !== "bookable");
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -196,8 +239,12 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
         onPrev={handlePrev}
         onToday={handleToday}
         onNext={handleNext}
-        onRefresh={loadCalendarData}
+        onRefresh={() => {
+          loadResources();
+          loadCalendarData();
+        }}
         onNewBooking={() => {
+          if (!selectedResourceId) return;
           const slot = { resourceId: selectedResourceId };
           if (onOpenBooking) {
             onOpenBooking(slot);
@@ -211,8 +258,25 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
         onResourceChange={setSelectedResourceId}
       />
 
-      {/* Error Notice */}
-      {error && (
+      {/* Resource Load Error Notice with Retry */}
+      {resourcesError && (
+        <div className="alert danger text-xs flex items-center justify-between" role="alert">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
+            <span>{resourcesError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={loadResources}
+            className="btn btn-secondary text-xs px-2.5 py-1"
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
+
+      {/* Calendar Data Error Notice */}
+      {error && !resourcesError && (
         <div className="alert danger text-xs flex items-center justify-between" role="alert">
           <span>{error}</span>
           <button
@@ -225,31 +289,74 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
         </div>
       )}
 
-      {/* View Content */}
-      {viewMode === "week" && (
-        <WeekSchedule
-          slotsData={slotsData}
-          onSelectSlot={handleOpenSlotBooking}
-          onSelectBooking={(b) => setSelectedBooking(b)}
-        />
+      {/* Resource Loading State */}
+      {resourcesLoading && (
+        <div aria-live="polite" className="calendar-week-loading">
+          Đang tải danh sách tài nguyên phòng thí nghiệm...
+        </div>
       )}
 
-      {viewMode === "month" && (
-        <MonthSchedule
-          anchorDate={anchor}
-          events={eventsData}
-          onSelectSlot={handleOpenSlotBooking}
-          onSelectBooking={(b) => setSelectedBooking(b)}
-        />
+      {/* Honest Empty State when zero resources exist */}
+      {!resourcesLoading && !resourcesError && resources.length === 0 && (
+        <div className="calendar-empty-resources-card card p-8 sm:p-12 text-center flex flex-col items-center justify-center my-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+            <Calendar size={28} aria-hidden="true" />
+          </div>
+          <h3 className="text-base font-semibold text-slate-900 mb-1">
+            Chưa có tài nguyên khả dụng
+          </h3>
+          <p className="text-sm text-slate-600 max-w-md mb-3">
+            Hiện chưa có phòng hoặc thiết bị để xem lịch và đặt chỗ.
+          </p>
+          <div className="text-xs text-slate-500 max-w-md bg-slate-50 border border-slate-200 rounded-lg p-3">
+            {user?.role === "ADMIN" || user?.role === "LAB_STAFF" ? (
+              <span>
+                Vui lòng cấu hình và kích hoạt tài nguyên trong mục <strong>Quản lý tài nguyên</strong> trước khi sử dụng lịch biểu.
+              </span>
+            ) : (
+              <span>
+                Vui lòng liên hệ quản trị viên hoặc cán bộ phòng thí nghiệm để được cấp quyền truy cập tài nguyên.
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
-      {viewMode === "day" && (
-        <DaySchedule
-          currentDateStr={currentDateStr}
-          events={eventsData}
-          onSelectSlot={handleOpenSlotBooking}
-          onSelectBooking={(b) => setSelectedBooking(b)}
-        />
+      {/* View Content (only rendered when a valid resource exists) */}
+      {loading && <p className="empty-state" role="status">Đang tải lịch của tài nguyên…</p>}
+      {!loading && !error && !resourcesLoading && !resourcesError && resources.length > 0 && selectedResourceId && (
+        <>
+          {viewMode === "week" && (
+            <WeekSchedule
+              slotsData={slotsData}
+              selectedResourceName={selectedResource?.name}
+              onSelectSlot={handleOpenSlotBooking}
+              onSelectBooking={(b) => setSelectedBooking(b)}
+            />
+          )}
+
+          {viewMode === "month" && (
+            <MonthSchedule
+              blocked={Boolean(blocked)}
+              anchorDate={anchor}
+              events={eventsData}
+              selectedResourceName={selectedResource?.name}
+              onSelectSlot={handleOpenSlotBooking}
+              onSelectBooking={(b) => setSelectedBooking(b)}
+            />
+          )}
+
+          {viewMode === "day" && (
+            <DaySchedule
+              blocked={Boolean(blocked)}
+              currentDateStr={currentDateStr}
+              events={eventsData}
+              selectedResourceName={selectedResource?.name}
+              onSelectSlot={handleOpenSlotBooking}
+              onSelectBooking={(b) => setSelectedBooking(b)}
+            />
+          )}
+        </>
       )}
 
       {/* Quick Booking Modal */}

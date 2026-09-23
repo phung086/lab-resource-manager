@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Server, ShieldCheck, Lock, Mail, User, BookOpen, ArrowRight, Sparkles, Terminal, CheckCircle2 } from "lucide-react";
+import { AuthIdentity } from "./AuthIdentity";
+import { Eye, EyeOff } from "lucide-react";
 import { register } from "../api.js";
 
 export interface AuthRegisterViewProps {
@@ -18,10 +20,13 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
   const [fullName, setFullName] = useState("");
   const [studentId, setStudentId] = useState("");
   const [email, setEmail] = useState("");
-  const [department, setDepartment] = useState("Khoa CNTT - Bộ Môn Trí Tuệ Nhân Tạo");
+  const [department, setDepartment] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
 
   const perks = [
     { title: "Tài khoản sinh viên mặc định", desc: "Vai trò đặc quyền chỉ do quản trị viên phân công", color: "text-emerald-400" },
@@ -31,6 +36,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     setError("");
 
@@ -51,64 +57,10 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-80 z-20" />
 
         {/* CỘT TRÁI: Quy Chế & Lợi Ích Sinh Viên */}
-        <div className="auth-panel auth-panel-identity flex flex-col justify-between relative overflow-hidden">
-          {/* Top Brand Tag */}
-          <div className="relative z-10">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-blue-950/80 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold">
-                <Server size={18} />
-              </div>
-              <div>
-                <span className="font-heading text-sm font-bold text-white tracking-wider block">
-                  LAB RESOURCE MANAGER
-                </span>
-                <span className="font-mono text-[10.5px] text-blue-400 tracking-wider uppercase">
-                  HỆ THỐNG VẬN HÀNH PHÒNG THÍ NGHIỆM
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <span className="font-mono text-xs font-semibold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">
-                ĐĂNG KÝ HỌC THUẬT & NGHIÊN CỨU
-              </span>
-              <h2 className="text-2xl lg:text-3xl font-bold font-heading text-white tracking-tight mt-3 leading-snug">
-                Truy Cập Hệ Thống Tài Nguyên Phòng Thí Nghiệm
-              </h2>
-              <p className="text-xs lg:text-sm text-slate-400 mt-2 leading-relaxed font-sans max-w-md">
-                Dành cho sinh viên, học viên cao học và cán bộ nghiên cứu thực hiện đồ án tốt nghiệp, đề tài khoa học và thực hành chuyên đề.
-              </p>
-            </div>
-          </div>
-
-          {/* Center: Perks & Quota Benefits */}
-          <div className="auth-benefits my-6 flex flex-col gap-3 relative z-10">
-            {perks.map((p) => (
-              <div
-                key={p.title}
-                className="auth-perk flex items-start gap-3"
-              >
-                <CheckCircle2 size={16} className={`${p.color} shrink-0 mt-0.5`} />
-                <div>
-                  <h4 className="text-xs font-semibold text-white tracking-wide">{p.title}</h4>
-                  <p className="text-[11px] text-slate-400 font-sans mt-0.5">{p.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Bottom Security Footer */}
-          <div className="auth-identity-footer relative z-10 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-white/10 text-[11px] font-mono text-slate-500 mt-6">
-            <span>QUẢN TRỊ TẬP TRUNG · KHOA HỌC DỮ LIỆU & CNTT</span>
-            <span>PHIÊN BẢN CHUẨN HOÁ TỐT NGHIỆP</span>
-          </div>
-        </div>
-
-        {/* CỘT PHẢI: Form Đăng Ký */}
+        <AuthIdentity registration />
         <div className="auth-panel auth-panel-form flex flex-col justify-between">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-blue-400 font-semibold tracking-wider">KHỞI TẠO TÀI KHOẢN MỚI</span>
 
             <div className="auth-language flex items-center gap-2">
               <button
@@ -145,12 +97,12 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 Đăng Ký Tài Khoản
               </h3>
               <p className="text-xs text-slate-400 mt-1 font-sans">
-                Điền thông tin định danh sinh viên / cán bộ để nhận quyền truy cập phòng lab
+                Tạo tài khoản sinh viên để tìm tài nguyên và gửi yêu cầu đặt lịch.
               </p>
             </div>
 
             {error && (
-              <div className="alert danger mb-4 text-xs" role="alert">
+              <div className="alert danger mb-4 text-xs" role="alert" tabIndex={-1} ref={errorRef}>
                 {error}
               </div>
             )}
@@ -162,6 +114,9 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                   <User size={14} className="auth-input-icon text-slate-400" />
                   <input
                     id="register-full-name"
+                    autoComplete="name"
+                    minLength={2}
+                    maxLength={255}
                     type="text"
                     required
                     value={fullName}
@@ -174,11 +129,11 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-student-id" className="font-mono text-[11px] text-slate-300">Mã số sinh viên / CB *</label>
+                  <label htmlFor="register-student-id" className="font-mono text-[11px] text-slate-300">Mã số sinh viên (không bắt buộc)</label>
                   <input
                     id="register-student-id"
                     type="text"
-                    required
+                    maxLength={50}
                     value={studentId}
                     onChange={(e) => setStudentId(e.target.value)}
                     placeholder="VD: 20261456"
@@ -187,9 +142,10 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-email" className="font-mono text-[11px] text-slate-300">Email trường (@edu.vn) *</label>
+                  <label htmlFor="register-email" className="font-mono text-[11px] text-slate-300">Email tài khoản *</label>
                   <input
                     id="register-email"
+                    autoComplete="email"
                     type="email"
                     required
                     value={email}
@@ -201,18 +157,8 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="register-department" className="font-mono text-[11px] text-slate-300">Bộ môn / Khoa trực thuộc *</label>
-                <select
-                  id="register-department"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="auth-form-input w-full text-xs"
-                >
-                  <option value="Khoa CNTT - Bộ Môn Trí Tuệ Nhân Tạo">Khoa CNTT - Bộ Môn Trí Tuệ Nhân Tạo</option>
-                  <option value="Bộ Môn Robotics & Hệ Thống Tự Hành">Bộ Môn Robotics & Hệ Thống Tự Hành</option>
-                  <option value="Khối Đồ Án Tốt Nghiệp Kỹ Sư AI 2026">Khối Đồ Án Tốt Nghiệp Kỹ Sư AI 2026</option>
-                  <option value="Bộ Môn Hệ Thống Nhúng & IoT">Bộ Môn Hệ Thống Nhúng & IoT</option>
-                </select>
+                <label htmlFor="register-department" className="font-mono text-[11px] text-slate-300">Khoa / Bộ môn (không bắt buộc)</label>
+                <input id="register-department" value={department} onChange={e => setDepartment(e.target.value)} maxLength={100} autoComplete="organization" placeholder="Nhập khoa hoặc bộ môn của bạn" className="auth-form-input w-full text-xs" />
               </div>
 
               <div className="flex flex-col gap-1">
@@ -221,13 +167,17 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                   <Lock size={14} className="auth-input-icon text-slate-400" />
                   <input
                     id="register-password"
-                    type="password"
+                    autoComplete="new-password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    minLength={8}
+                    maxLength={128}
                     placeholder="Tối thiểu 8 ký tự..."
-                    className="auth-form-input has-icon w-full text-xs"
+                    className="auth-form-input has-icon password-input w-full text-xs"
                   />
+                  <button className="password-toggle" type="button" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
               </div>
 

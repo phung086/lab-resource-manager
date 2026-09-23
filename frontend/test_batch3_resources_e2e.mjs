@@ -16,6 +16,7 @@ async function login(page, email) {
 }
 
 async function openCatalog(page) {
+  if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page.locator(".sidebar-nav-item-2026", { hasText: "Danh Mục Tài Nguyên" }).click();
   await page.getByText("Kính hiển vi điện tử E2E", { exact: true }).waitFor();
 }
