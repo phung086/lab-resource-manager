@@ -6,7 +6,7 @@
 - External review: `docs/EXTERNAL_BUSINESS_UX_REVIEW_20260924.md` is in open PR [#5](https://github.com/phung086/lab-resource-manager/pull/5), commit `5faa0ac`, and is not yet in `main`. It is an input, not implementation authority.
 - General [CI run 35894836193](https://github.com/phung086/lab-resource-manager/actions/runs/35894836193) passed at this HEAD. [Batch 8 release gate 35894836190](https://github.com/phung086/lab-resource-manager/actions/runs/35894836190), [Batch 7 demo 35894836158](https://github.com/phung086/lab-resource-manager/actions/runs/35894836158), and [Batch 7 regression 35894836132](https://github.com/phung086/lab-resource-manager/actions/runs/35894836132) failed. GitHub job metadata identifies migration deployment/startup steps as the failure points; the external review reports the specific `Prior migration checksum/history precondition failed` error in Batch 8.
 - Local static baseline: backend `npm test` 27/27, backend lint, frontend lint (0 errors, 13 existing warnings), frontend typecheck/build, and `prisma validate` passed. These checks do not establish database or end-to-end correctness.
-- No PostgreSQL listener was found on local ports 5432 or 15436. Docker Desktop's Linux engine is unavailable. Local `psql`/`initdb` are PostgreSQL 18, not the required 16. A fresh PostgreSQL 16 reproduction and `_prisma_migrations` inspection remain unverified locally.
+- No PostgreSQL listener was found on local ports 5432 or 15436. Docker Desktop was started for this audit, but its Linux engine did not respond to `docker info`; local `psql`/`initdb` are PostgreSQL 18, not the required 16. A fresh PostgreSQL 16 reproduction and `_prisma_migrations` inspection remain unverified locally.
 
 ## Current verified gap matrix
 
