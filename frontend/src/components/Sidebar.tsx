@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { RESEARCH_FEATURES_ENABLED, isTabEnabled } from "../config/featureFlags";
 import {
+  Menu, X,
   CalendarCheck,
   Clock,
   Sliders,
@@ -11,6 +12,7 @@ import {
   Layers,
   LayoutDashboard,
   Users,
+  UserRound,
   Wrench,
   Bell,
   ShieldAlert,
@@ -56,6 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   incidents = [],
   locale = "vi"
 }) => {
+  const [expanded, setExpanded] = useState(false);
   const unreadNotifications = notifications.filter((notification) => !notification.readAt).length;
   const openIncidents = incidents.filter((incident) =>
     ["reported", "triaged", "assigned", "investigating"].includes(incident.status || "")
@@ -64,8 +67,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navSections: NavSectionConfig[] = [
     {
       id: "booking_zone",
-      title: "LỊCH & ĐẶT CHỖ",
+      title: "KHÔNG GIAN LÀM VIỆC",
       items: [
+        { id: "home", label: "Tổng quan của bạn", icon: LayoutDashboard },
+        { id: "profile", label: "Hồ Sơ & Ưu Tiên LAB", icon: UserRound },
+        { id: "payments", label: "Thanh toán", icon: ClipboardCheck },
         {
           id: "smart_calendar",
           label: "Lịch Đặt Khung Giờ",
@@ -101,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: "admin_zone",
-      title: "QUẢN TRỊ HỆ THỐNG",
+      title: ["ADMIN", "LAB_STAFF"].includes(user?.role || "") ? "VẬN HÀNH & QUẢN TRỊ" : "THÔNG BÁO & HỖ TRỢ",
       items: [
         {
           id: "dashboard",
@@ -152,7 +158,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="sidebar-2026">
+    <aside className={`sidebar-2026 ${expanded ? "is-expanded" : ""}`}>
       {/* Brand Header */}
       <div className="sidebar-brand-2026">
         <div className="brand-mark-2026">
@@ -164,8 +170,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
+      <button className="mobile-nav-toggle secondary-button" aria-expanded={expanded} aria-controls="primary-navigation" onClick={() => setExpanded(value => !value)}>{expanded ? <X size={18} /> : <Menu size={18} />}<span>{expanded ? "Đóng menu" : "Menu"}</span></button>
       {/* Navigation Sections */}
-      <nav className="sidebar-nav-container-2026" aria-label="Main Navigation">
+      <nav id="primary-navigation" className="sidebar-nav-container-2026" aria-label="Điều hướng chính">
         {navSections
           .filter((section) => section.id !== "ai_zone" || RESEARCH_FEATURES_ENABLED)
           .map((section) => ({
@@ -196,7 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     key={item.id}
                     type="button"
                     title={item.label}
-                    onClick={() => onSelectTab(item.id)}
+                    onClick={() => { onSelectTab(item.id); setExpanded(false); }}
                     className={`sidebar-nav-item-2026 ${isActive ? "is-active" : ""}`}
                     aria-current={isActive ? "page" : undefined}
                   >

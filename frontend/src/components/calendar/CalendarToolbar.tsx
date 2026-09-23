@@ -30,13 +30,47 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
   selectedResourceId,
   onResourceChange
 }) => {
+  const selectedResource = resources.find((r) => r.id === selectedResourceId) || null;
+
   return (
     <div className="calendar-toolbar">
       {/* Control bar */}
       <div className="calendar-toolbar-row">
-        {/* Navigation & Header Title */}
+        {/* 1. Resource Selector (FIRST obvious control in workflow) */}
+        <div className="calendar-resource-filter">
+          <Filter size={13} className="calendar-filter-icon" aria-hidden="true" />
+          <label htmlFor="calendar-resource-select" className="calendar-filter-label font-semibold">
+            Tài nguyên:
+          </label>
+          <select
+            id="calendar-resource-select"
+            value={selectedResourceId}
+            onChange={(e) => onResourceChange(e.target.value)}
+            aria-label="Chọn tài nguyên lịch"
+            disabled={resources.length === 0}
+          >
+            {resources.length === 0 ? (
+              <option value="">(Chưa có tài nguyên khả dụng)</option>
+            ) : (
+              resources.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.code} — {r.name}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
+        {/* 2. Navigation & Header Title */}
         <div className="calendar-nav-group">
           <div className="calendar-nav-controls">
+            <button
+              type="button"
+              onClick={onToday}
+              className="calendar-today-btn"
+            >
+              Hôm nay
+            </button>
             <button
               type="button"
               onClick={onPrev}
@@ -45,13 +79,6 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
               aria-label="Khoảng trước"
             >
               <ChevronLeft size={16} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={onToday}
-              className="calendar-today-btn"
-            >
-              Hôm nay
             </button>
             <button
               type="button"
@@ -81,7 +108,7 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
           </div>
         </div>
 
-        {/* View Switcher (Day / Week / Month) */}
+        {/* 3. View Switcher (Day / Week / Month) */}
         <div role="group" aria-label="Chế độ xem lịch" className="calendar-view-switcher">
           <button
             type="button"
@@ -106,11 +133,13 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
           </button>
         </div>
 
-        {/* Action: New Booking */}
+        {/* 4. Action: New Booking */}
         <button
           type="button"
           onClick={onNewBooking}
-          className="btn btn-primary calendar-new-booking-btn"
+          disabled={!selectedResourceId || resources.length === 0}
+          className="btn btn-primary calendar-new-booking-btn disabled:opacity-50 disabled:cursor-not-allowed"
+          title={!selectedResourceId ? "Vui lòng chọn tài nguyên trước khi đặt lịch" : "Đặt khung giờ mới"}
         >
           <Plus size={14} aria-hidden="true" />
           <span>Đặt Khung Giờ Mới</span>
@@ -119,20 +148,16 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
 
       {/* Filter & Legend bar */}
       <div className="calendar-filter-bar">
-        <div className="calendar-resource-filter">
-          <Filter size={13} className="calendar-filter-icon" aria-hidden="true" />
-          <span className="calendar-filter-label">Tài nguyên:</span>
-          <select
-            value={selectedResourceId}
-            onChange={(e) => onResourceChange(e.target.value)}
-            aria-label="Chọn tài nguyên lịch"
-          >
-            {resources.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.code} — {r.name}
-              </option>
-            ))}
-          </select>
+        <div className="calendar-active-resource-badge text-xs">
+          {selectedResource ? (
+            <span>
+              Đang xem lịch: <strong className="text-blue-700">{selectedResource.name}</strong> ({selectedResource.code})
+            </span>
+          ) : (
+            <span className="text-amber-700 font-medium">
+              Chưa có tài nguyên được chọn
+            </span>
+          )}
         </div>
 
         {/* Legend */}

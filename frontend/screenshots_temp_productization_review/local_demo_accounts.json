@@ -1,0 +1,53 @@
+{
+  "launcher": "npm run demo:local (alternate ports 15005/15180)",
+  "accounts": [
+    {
+      "email": "admin@lrm.local",
+      "role": "ADMIN",
+      "resourceCount": 11,
+      "categories": [
+        "MATERIAL",
+        "EXPERIMENT_KIT",
+        "EQUIPMENT",
+        "MACHINE",
+        "ROOM"
+      ]
+    },
+    {
+      "email": "staff@lrm.local",
+      "role": "LAB_STAFF",
+      "resourceCount": 11,
+      "categories": [
+        "MATERIAL",
+        "EXPERIMENT_KIT",
+        "EQUIPMENT",
+        "MACHINE",
+        "ROOM"
+      ]
+    },
+    {
+      "email": "lecturer@lrm.local",
+      "role": "LECTURER",
+      "resourceCount": 11,
+      "categories": [
+        "MATERIAL",
+        "EXPERIMENT_KIT",
+        "EQUIPMENT",
+        "MACHINE",
+        "ROOM"
+      ]
+    },
+    {
+      "email": "student@lrm.local",
+      "role": "STUDENT",
+      "resourceCount": 11,
+      "categories": [
+        "MATERIAL",
+        "EXPERIMENT_KIT",
+        "EQUIPMENT",
+        "MACHINE",
+        "ROOM"
+      ]
+    }
+  ]
+}

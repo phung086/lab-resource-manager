@@ -10,7 +10,21 @@ export const safeUserSelect = Object.freeze({
   createdAt: true,
   department: true,
   studentId: true,
-  phone: true
+  phone: true,
+  customerType: true,
+  organization: true,
+  passwordResetRequired: true,
+  defaultAddressLine: true,
+  defaultAddressProvinceCode: true,
+  defaultAddressProvinceName: true,
+  defaultAddressWardCode: true,
+  defaultAddressWardName: true,
+  defaultAddressSource: true,
+  defaultAddressVersion: true,
+  loyaltyTier: true,
+  loyaltyPoints: true,
+  loyaltyDiscountBps: true,
+  priorityBoost: true
 });
 
 export async function createManagedUser(client, input) {
@@ -26,7 +40,9 @@ export async function createManagedUser(client, input) {
       isActive: input.isActive,
       studentId: input.studentId || null,
       department: input.department || null,
-      phone: input.phone || null
+      phone: input.phone || null,
+      organization: input.organization || null,
+      customerType: input.customerType || "INTERNAL"
     },
     select: safeUserSelect
   });

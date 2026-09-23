@@ -92,3 +92,35 @@ the working requirement baseline for implementation.
 - Digital Twin, optimization, simulation, genetic scheduling, and research
   modules as production-core features.
 - Fabricated telemetry, audit, usage history, or benchmark evidence.
+# Approved incremental extension — 2026-09-23
+
+The user-approved Open LAB direction extends this historical graduation baseline.
+Track its implementation in `docs/OPEN_LAB_UPGRADE_REPORT.md`; this is not a final
+product release. External identity/fast booking remains pending. Resource-purpose pricing and
+automatic booking-linked charges are implemented at the 2026-09-23 checkpoint;
+payment deadlines and late-callback reconciliation remain pending.
+Canonical role and booking enums are unchanged in the current checkpoint.
+
+Current implemented exception to staff-only return/completion: an authenticated
+owner may self-return a ROOM booking in CHECKED_OUT, supplying condition evidence.
+The server atomically records RETURN then COMPLETE history, completes the booking,
+preserves the planned interval, and records actual end time. It releases future
+availability without requiring staff approval, while preserving any existing hard
+unavailable physical state. EQUIPMENT/MACHINE/KIT/MATERIAL are excluded. Staff
+inspection is not claimed by an owner declaration. Existing staff APIs remain scoped.
+
+Booking creation and each operation notify active administrators and staff assigned
+to the resource's lab; the owner also receives operation outcomes. Delivery is
+persisted in-app; this does not imply email/push delivery or historical backfill.
+
+
+## Approved incremental extension — 2026-09-24 quick booking
+
+External Open LAB users may start from the public catalog, enter personal/contact
+information, select a Vietnamese administrative address, verify email by OTP, and
+continue into booking/payment. The account remains a canonical `STUDENT` role for
+RBAC, with `customerType=EXTERNAL` for business identity. Registration and
+profile store a default address for future equipment lending/delivery workflows.
+Profile loyalty and spending summaries are derived from persisted bookings and
+payment transactions and must not override authorization, staff approval, or LAB
+policy.

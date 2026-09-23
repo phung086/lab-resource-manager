@@ -19,6 +19,7 @@ export interface HeaderProps {
   onOpenNotifications?: () => void;
   onOpenChangePassword?: () => void;
   onLogout?: () => void;
+  onOpenAssistant?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,7 +32,8 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   onOpenNotifications,
   onOpenChangePassword,
-  onLogout
+  onLogout,
+  onOpenAssistant
 }) => {
   // Real-time 2026 Clock State
   const [currentDateTime, setCurrentDateTime] = useState<string>("");
@@ -47,12 +49,11 @@ export const Header: React.FC<HeaderProps> = ({
       const day = String(now.day).padStart(2, "0");
       const hours = String(now.hours).padStart(2, "0");
       const minutes = String(now.minutes).padStart(2, "0");
-      const seconds = String(now.seconds).padStart(2, "0");
-      setCurrentDateTime(`${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC+7`);
+      setCurrentDateTime(`${year}-${month}-${day} ${hours}:${minutes} UTC+7`);
     }
 
     updateClock();
-    const interval = setInterval(updateClock, 1000);
+    const interval = setInterval(updateClock, 60_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -89,6 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right side: Language Segmented Control, Actions & User Profile */}
       <div className="header-right-2026">
+        {onOpenAssistant && <button className="secondary-button" onClick={onOpenAssistant}>Trợ lý AI</button>}
         {/* Ultra-thin Segmented Control for VI / EN */}
         <div className="segmented-control-2026" role="group" aria-label="Language Selector">
           <button
@@ -116,7 +118,8 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             className="header-icon-btn-2026"
-            title="Làm mới dữ liệu telemetry"
+            title="Làm mới dữ liệu"
+            disabled={loading}
             aria-label="Làm mới dữ liệu"
             onClick={onRefresh}
           >
@@ -128,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           className={`header-notification-btn-2026 ${notificationsCount > 0 ? "has-unread" : ""}`}
-          title="Thông báo & Escalation"
+          title="Thông báo"
           aria-label={
             notificationsCount > 0
               ? `Mở thông báo, ${notificationsCount} chưa đọc`
@@ -148,7 +151,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* User Avatar & Dropdown */}
         {user && (
-          <div className="user-dropdown-container-2026" ref={dropdownRef}>
+          <div className="user-dropdown-container-2026" ref={dropdownRef} onKeyDown={event => { if (event.key === "Escape") { setUserMenuOpen(false); dropdownRef.current?.querySelector<HTMLButtonElement>("button")?.focus(); } }}>
             <button
               type="button"
               className="user-avatar-btn-2026"

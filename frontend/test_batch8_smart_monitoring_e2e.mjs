@@ -22,6 +22,7 @@ async function login(page, email) {
 }
 
 async function openMonitoring(page) {
+  if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
   const nav = page.locator(".sidebar-nav-item-2026", { hasText: /Giám Sát Telemetry/i }).first();
   await nav.waitFor({ timeout: 8000 });
   await nav.click();

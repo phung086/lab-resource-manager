@@ -2,12 +2,14 @@ import React from "react";
 import { CalendarClock, History, Server } from "lucide-react";
 
 import { BaseModal2026 } from "./BaseModal2026";
+import { LabPolicySummary } from "./LabPolicySummary";
 import { formatVietnamDateTime } from "../utils/timezone.js";
 
 export interface ResourceDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   resource?: any;
+  onViewCalendar?: (resourceId: string) => void;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -32,7 +34,7 @@ const maintenanceLabels: Record<string, string> = {
   scheduled: "Đã lên lịch", in_progress: "Đang thực hiện", completed: "Hoàn thành", cancelled: "Đã hủy"
 };
 
-export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOpen, onClose, resource }) => {
+export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOpen, onClose, resource, onViewCalendar }) => {
   if (!isOpen || !resource) return null;
   const bookings = resource.schedule?.bookings || resource.upcomingSchedule?.bookings || [];
   const maintenance = resource.schedule?.maintenanceWindows || resource.upcomingSchedule?.maintenanceWindows || [];
@@ -46,7 +48,7 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
       subtitle={resource.location ? `${resource.code} · ${resource.location}` : resource.code}
       icon={Server}
       maxWidth="max-w-4xl"
-      footer={<button type="button" className="secondary-button" onClick={onClose}>Đóng</button>}
+      footer={<><button type="button" className="secondary-button" onClick={onClose}>Đóng</button>{onViewCalendar && <button className="primary-button" onClick={() => { onClose(); onViewCalendar(resource.id); }}>Xem lịch của tài nguyên</button>}</>}
     >
       <div className="resource-detail-status-line">
         <span className={`resource-status-pill status-${String(resource.operationalStatus).toLowerCase()}`}>{operationalLabels[resource.operationalStatus] || resource.operationalStatus}</span>
@@ -54,16 +56,19 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
         {!resource.category && <span className="resource-status-pill status-unresolved">Chưa phân loại</span>}
       </div>
 
+      <p className="section-description">Trạng thái khả dụng phản ánh thời điểm đang xem. Chọn ngày và giờ trong lịch để kiểm tra đặt chỗ; hệ thống sẽ xác nhận lại khi gửi yêu cầu.</p>
       <dl className="resource-detail-grid">
         <Detail label="Nhóm tài nguyên" value={resource.category ? categoryLabels[resource.category] || resource.category : "Chưa phân loại"} />
         <Detail label="Subtype kỹ thuật" value={resource.subtype} />
         <Detail label="Phòng thí nghiệm" value={resource.laboratory ? `${resource.laboratory.code} - ${resource.laboratory.name}` : "Chưa gán phòng"} />
         <Detail label="Chính sách đặt lịch" value={resource.bookingState === "bookable" ? "Cho phép đặt" : resource.bookingState === "restricted" ? "Hạn chế đặt" : "Không cho đặt"} />
         <Detail label="Sức chứa / số lượng" value={String(resource.capacity)} />
-        <Detail label="Yêu cầu phê duyệt" value={resource.requiresApproval ? "Có" : "Không"} />
+        <Detail label="Yêu cầu phê duyệt" value={resource.effectiveRequiresApproval ? "Cần duyệt" : "Xác nhận ngay khi hợp lệ"} />
         <Detail label="Nhà sản xuất" value={resource.manufacturer || "Chưa cập nhật"} />
         <Detail label="Model" value={resource.model || "Chưa cập nhật"} />
       </dl>
+
+      <LabPolicySummary policy={resource.labPolicy || resource.laboratory?.labPolicy} requiresApproval={resource.effectiveRequiresApproval} />
 
       <section className="resource-detail-section">
         <h4>Mô tả</h4>

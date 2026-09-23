@@ -21,6 +21,7 @@ import "../../../styles/operations.css";
 export interface BookingOperationsViewProps {
   user: { id: string; role: string; fullName: string };
   onChanged?: () => void;
+  onPayment?: (booking: BookingRecord) => void;
 }
 
 type FilterKey = "ALL" | "PENDING_APPROVAL" | "CONFIRMED" | "CHECKED_OUT" | "RETURNED" | "HISTORY";
@@ -34,7 +35,7 @@ const STATUS_LABELS: Record<string, string> = {
   RETURNED: "đã hoàn trả", COMPLETED: "hoàn tất", REJECTED: "bị từ chối", CANCELLED: "đã hủy"
 };
 
-export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ user, onChanged }) => {
+export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ user, onChanged, onPayment }) => {
   const isStaff = ["ADMIN", "LAB_STAFF"].includes(user.role);
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
   const [filter, setFilter] = useState<FilterKey>(isStaff ? "PENDING_APPROVAL" : "ALL");
@@ -71,11 +72,13 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     HISTORY: bookings.filter((b) => HISTORY_STATUSES.has(b.status)).length
   }), [bookings]);
 
+  const linkedBookingId = new URLSearchParams(window.location.hash.split("?")[1] || "").get("booking");
   const visibleBookings = useMemo(() => {
+    if (linkedBookingId) return bookings.filter(b => b.id === linkedBookingId);
     if (filter === "ALL") return bookings;
     if (filter === "HISTORY") return bookings.filter((b) => HISTORY_STATUSES.has(b.status));
     return bookings.filter((b) => b.status === filter);
-  }, [bookings, filter]);
+  }, [bookings, filter, linkedBookingId]);
 
   const filters: FilterKey[] = isStaff
     ? ["PENDING_APPROVAL", "CONFIRMED", "CHECKED_OUT", "RETURNED", "HISTORY", "ALL"]
@@ -134,11 +137,10 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     <div className="operations-view" data-testid="operations-view">
       <header className="operations-header">
         <div>
-          <span className="operations-kicker">Quản lý booking phòng lab</span>
           <h2>{isStaff ? "Vận hành booking & bàn giao tài nguyên" : "Lịch đặt và tiến trình sử dụng của tôi"}</h2>
           <p>{isStaff
-            ? "Duyệt yêu cầu, bàn giao, tiếp nhận hoàn trả và hoàn tất workflow từ nguồn dữ liệu thực."
-            : "Theo dõi trạng thái duyệt, lịch sử bàn giao và tình trạng tài nguyên của các booking thuộc tài khoản hiện tại."}</p>
+            ? "Duyệt yêu cầu → ghi nhận bàn giao → tiếp nhận hoàn trả → hoàn tất lịch đặt."
+            : "Theo dõi kết quả duyệt, thời gian sử dụng và lịch sử bàn giao. Bạn có thể hủy lịch còn đủ điều kiện hoặc tự trả phòng LAB đang sử dụng."}</p>
         </div>
         <button type="button" className="btn btn-secondary" onClick={loadBookings} disabled={loading}>
           <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Làm mới
@@ -149,6 +151,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
       {error && <div className="alert danger" role="alert"><AlertCircle size={16} /> {error}</div>}
       {success && <div className="alert success" role="status" aria-live="polite">{success}</div>}
 
+      {linkedBookingId && <p>Đang xem lịch đặt từ thông báo. <a href="#/workspace/booking">Xem tất cả lịch đặt</a></p>}
       <nav className="operations-filter-row" aria-label="Bộ lọc workflow booking">
         {filters.map((key) => (
           <button key={key} type="button" className={filter === key ? "is-active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>
@@ -159,14 +162,16 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
 
       {loading ? (
         <div className="operations-empty"><RefreshCw size={20} className="animate-spin" /> Đang tải dữ liệu thật...</div>
-      ) : visibleBookings.length === 0 ? (
-        <div className="operations-empty"><ClipboardList size={22} /><strong>Không có booking trong nhóm này.</strong><span>Dữ liệu sẽ xuất hiện khi có workflow phù hợp với bộ lọc hiện tại.</span></div>
+      ) : error ? (<div className="operations-empty"><strong>Chưa thể tải lịch đặt.</strong><button className="secondary-button" onClick={loadBookings}>Thử lại</button></div>) : visibleBookings.length === 0 ? (
+        <div className="operations-empty"><ClipboardList size={22} /><strong>Không có booking trong nhóm này.</strong><span>Chọn nhóm khác để xem các lịch đã lưu.</span></div>
       ) : (
         <div className="operations-list">
           {visibleBookings.map((booking) => (
             <BookingOperationCard
               key={booking.id}
+              onPayment={user.role === "ADMIN" || booking.requestedById === user.id ? onPayment : undefined}
               booking={booking}
+              isOwner={booking.requestedById === user.id}
               isStaff={isStaff}
               busy={busyId === booking.id}
               onAction={(action, selected) => setActionState({ action, booking: selected })}

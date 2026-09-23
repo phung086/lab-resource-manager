@@ -3,6 +3,23 @@ import test from "node:test";
 
 import { checkLabPolicyCompliance } from "../../src/services/availabilityService.js";
 
+test("closing boundary rejects next-day and sub-minute overruns in Vietnam time", () => {
+  const now = new Date("2026-09-21T00:00:00Z");
+  const policy = { workDayStartHour: 8, workDayEndHour: 20 };
+  for (const [startAt, endAt] of [
+    ["2026-09-22T23:00:00+07:00", "2026-09-23T00:00:00+07:00"],
+    ["2026-09-22T19:00:00+07:00", "2026-09-23T09:00:00+07:00"],
+    ["2026-09-22T19:00:00+07:00", "2026-09-22T20:00:00.001+07:00"],
+  ]) {
+    assert.throws(() => checkLabPolicyCompliance({ policy, startAt, endAt, now }),
+      error => error.code === "POLICY_VIOLATION" && error.message.includes("closing hour"));
+  }
+  assert.doesNotThrow(() => checkLabPolicyCompliance({ policy, now,
+    startAt: "2026-09-22T19:00:00+07:00", endAt: "2026-09-22T20:00:00+07:00" }));
+  assert.doesNotThrow(() => checkLabPolicyCompliance({ policy: { workDayStartHour: 0, workDayEndHour: 24 }, now,
+    startAt: "2026-09-22T23:00:00+07:00", endAt: "2026-09-23T00:00:00+07:00" }));
+});
+
 test("passes when no policy is provided", () => {
   const now = new Date("2026-09-20T10:00:00Z");
   const startAt = new Date("2026-09-21T10:00:00Z");

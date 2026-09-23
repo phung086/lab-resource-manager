@@ -7,7 +7,7 @@ export type BookingStatus =
   | "REJECTED"
   | "CANCELLED";
 
-export type BookingAction = "APPROVE" | "REJECT" | "CHECK_OUT" | "RETURN" | "COMPLETE";
+export type BookingAction = "APPROVE" | "REJECT" | "CHECK_OUT" | "RETURN" | "COMPLETE" | "SELF_RETURN";
 
 export interface BookingUserSummary {
   id: string;
@@ -22,6 +22,7 @@ export interface BookingResourceSummary {
   name: string;
   laboratoryId?: string | null;
   operationalStatus?: string;
+  category?: string | null;
   laboratory?: {
     id: string;
     code: string;
@@ -30,6 +31,7 @@ export interface BookingResourceSummary {
 }
 
 export interface BookingRecord {
+  feeAmountVnd?: number;
   id: string;
   bookingCode?: string | null;
   resourceId: string;

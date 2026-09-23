@@ -145,7 +145,6 @@ export function AccessUserManagement() {
     <section className="view-section">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">QUẢN LÝ TÀI KHOẢN</span>
           <h2>Quản trị người dùng</h2>
         </div>
         <div className="flex gap-2">

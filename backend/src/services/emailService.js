@@ -74,6 +74,15 @@ export async function sendEmail({ to, subject, html, text }) {
   }
 }
 
+export async function sendRequiredEmail({ to, subject, html, text }) {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  if (!host || !user) {
+    return { success: false, error: "SMTP is not configured" };
+  }
+  return sendEmail({ to, subject, html, text });
+}
+
 /**
  * Send Booking Status HTML Email
  */

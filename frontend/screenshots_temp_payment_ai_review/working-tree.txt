@@ -1,0 +1,47 @@
+ M backend/package-lock.json
+ M backend/package.json
+ M backend/src/app.js
+ M backend/src/assistant/assistantService.js
+ M backend/src/assistant/mcpServer.js
+ M backend/src/assistant/toolHandlers.js
+ M backend/src/config.js
+ M backend/src/routes/assistant.js
+ M backend/src/routes/payments.js
+ M backend/src/services/paymentService.js
+ M frontend/src/App.jsx
+ M frontend/src/components/AppLayout.tsx
+ M frontend/src/components/AuthLoginView.tsx
+ M frontend/src/components/AuthRegisterView.tsx
+ M frontend/src/components/Header.tsx
+ M frontend/src/components/NotificationCenter.jsx
+ M frontend/src/components/QuickBookingModal.tsx
+ M frontend/src/components/ResourceDetailsModal.tsx
+ M frontend/src/components/ResourceManagementView.tsx
+ M frontend/src/components/Sidebar.tsx
+ M frontend/src/components/SmartCalendarView.tsx
+ M frontend/src/components/VietQrPaymentModal.tsx
+ M frontend/src/components/calendar/CalendarToolbar.tsx
+ M frontend/src/components/calendar/DaySchedule.tsx
+ M frontend/src/components/calendar/MonthSchedule.tsx
+ M frontend/src/components/calendar/WeekSchedule.tsx
+ M frontend/src/components/features/operations/BookingOperationCard.tsx
+ M frontend/src/components/features/operations/BookingOperationsView.tsx
+ M frontend/src/config/featureFlags.ts
+ M frontend/src/pages/operations/BookingOperationsPage.tsx
+ M frontend/src/styles/light-redesign.css
+ M frontend/test_batch3_resources_e2e.mjs
+ M frontend/test_batch4_calendar_e2e.mjs
+ M frontend/test_batch5_operations_e2e.mjs
+ M frontend/test_batch6_monitoring_e2e.mjs
+ M frontend/test_batch8_smart_monitoring_e2e.mjs
+?? backend/src/services/paymentProviders.js
+?? backend/test/paymentMcp.integration.test.js
+?? frontend/screenshots_temp_2026_transformation/
+?? frontend/screenshots_temp_calendar_review/
+?? frontend/screenshots_temp_payment_ai_review/
+?? frontend/src/components/AuthIdentity.tsx
+?? frontend/src/components/features/assistant/
+?? frontend/src/components/features/payments/
+?? frontend/src/pages/WorkspaceHome.tsx
+?? frontend/test_lab_room_payment_e2e.mjs
+?? frontend/test_payment_ai_e2e.mjs

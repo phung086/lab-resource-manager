@@ -194,3 +194,61 @@ Compose accepts the host-side `LRM_LOG_FORMAT` variable and maps it to the
 container's `LOG_FORMAT`. This prevents unrelated host tooling variables from
 silently overriding the validated production value. Other production secrets
 and origins remain explicit and fail closed.
+# 2026-09-23 — Open LAB iterative upgrade (user-approved, in progress)
+
+The user approved serving internal and external users with resource/purpose-based
+fees, fast booking with email verification, and automatic account provisioning.
+Phone numbers must not be initial passwords. Pricing, verified external identity,
+Vietnam administrative address selection, and booking-linked VNPAY remain pending
+implementation; approval here is not evidence they have shipped.
+
+Implemented contract extension: a booking owner may return their own ROOM while
+CHECKED_OUT. The server records RETURN and COMPLETE audit events atomically and
+persists COMPLETED with actualEndAt/returnedAt/completedAt and required condition
+evidence. Original planned times stay intact; COMPLETED releases the slot guard.
+This is the owner's declaration, not a fabricated staff inspection. Hard physical
+states remain authoritative. Equipment still requires staff receipt/inspection.
+Existing staff transition endpoints retain their authorization rules.
+
+Booking creation and transitions now notify active ADMIN users and assigned
+LAB_STAFF; owners receive transition outcomes. Notifications commit with the
+booking operation and deduplicate per booking/event/recipient. Historical events
+are not backfilled. See OPEN_LAB_UPGRADE_REPORT.md for tests and remaining work.
+
+## 2026-09-23 — Versioned booking pricing checkpoint
+
+Resource pricing is stored per purpose. Server quotes integer VND, rounded up per
+minute, and verifies the accepted version/amount during booking creation under
+the resource lock. Booking snapshots remain immutable when prices change.
+Positive fees create a charge only when CONFIRMED; CHECK_OUT requires a verified
+successful payment matching the stored amount and currency. Unpriced resources
+remain free. New migration is additive; external roles are still unchanged.
+Payment expiry/late callbacks/refunds and external fast booking remain open in
+OPEN_LAB_UPGRADE_REPORT.md. Do not represent this checkpoint as a final release.
+
+## 2026-09-23 — Booking checkout at VNPAY
+
+A paid confirmed booking opens its own checkout after submission or through its
+booking record. The signed VNPAY URL specifies `vnp_BankCode=VNPAYQR`; VNPAY
+hosts the scannable QR and any bank details entry. The application shows the
+order amount and redirects to that hosted page. The signed return page links
+back to the booking; only verified IPN changes payment status. A historical
+zero-fee booking has no payable transaction or QR. Merchant configuration is
+absent from local demo and cannot be claimed as a live payment integration.
+
+
+## 2026-09-24 — External quick booking identity and LAB loyalty checkpoint
+
+The user approved quick booking for external Open LAB customers. Canonical roles
+remain unchanged: an external customer authenticates as role `STUDENT`, while
+`User.customerType=EXTERNAL` carries the business distinction. The quick booking
+flow requires Vietnamese administrative address selection, email OTP, and
+persisted default address. Per the user's explicit latest instruction, newly
+provisioned external accounts use email as login and phone number as the initial
+password, but the account is marked `passwordResetRequired=true` so the user is
+prompted to establish a real password after first access. OTP sending must use
+real SMTP and fail visibly when SMTP is missing.
+
+LAB loyalty is recorded as a booking/payment signal, not as authorization: points,
+tier, discount, and priority boost never bypass booking policy, approval, RBAC,
+or staff inspection responsibilities.

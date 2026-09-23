@@ -11,7 +11,8 @@ const ACTION_ENDPOINT: Record<BookingAction, string> = {
   REJECT: "reject",
   CHECK_OUT: "check-out",
   RETURN: "return",
-  COMPLETE: "complete"
+  COMPLETE: "complete",
+  SELF_RETURN: "self-return"
 };
 
 export async function listOperationalBookings(): Promise<BookingRecord[]> {

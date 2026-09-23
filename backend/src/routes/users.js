@@ -6,34 +6,116 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { ADMIN, CANONICAL_ROLES, LAB_STAFF } from "../constants/roles.js";
 import { createManagedUser, safeUserSelect } from "../services/userService.js";
+import { validateVietnamAddress } from "../services/addressService.js";
+import { publicCustomerUser } from "../services/guestBookingService.js";
 
 const router = express.Router();
 
+const addressSchema = z.object({
+  addressLine: z.string().trim().min(5).max(300),
+  provinceCode: z.union([z.string(), z.number()]),
+  wardCode: z.union([z.string(), z.number()])
+}).strict();
+
+const updateOwnProfileSchema = z.object({
+  fullName: z.string().trim().min(2).max(255).optional(),
+  phone: z.string().trim().max(20).optional(),
+  organization: z.string().trim().max(160).optional().nullable(),
+  customerType: z.enum(["INTERNAL", "EXTERNAL"]).optional(),
+  address: addressSchema.optional()
+}).strict();
+
+function addressData(address) {
+  if (!address) return {};
+  return {
+    defaultAddressLine: address.addressLine,
+    defaultAddressProvinceCode: address.provinceCode,
+    defaultAddressProvinceName: address.provinceName,
+    defaultAddressWardCode: address.wardCode,
+    defaultAddressWardName: address.wardName,
+    defaultAddressSource: address.source,
+    defaultAddressVersion: address.version
+  };
+}
+
+async function buildProfileResponse(user) {
+  const [paymentStats, bookingStats] = await Promise.all([
+    prisma.paymentTransaction.aggregate({
+      where: { userId: user.id, status: "success" },
+      _sum: { amount: true },
+      _count: { _all: true },
+      _max: { paidAt: true }
+    }),
+    prisma.booking.groupBy({
+      by: ["status"],
+      where: { requestedById: user.id },
+      _count: { _all: true }
+    })
+  ]);
+  const bookingCounts = Object.fromEntries(bookingStats.map(row => [row.status, row._count._all]));
+  const totalSpendVnd = Number(paymentStats._sum.amount || 0);
+  const completedBookings = bookingCounts.COMPLETED || 0;
+  const earnedPoints = Math.floor(totalSpendVnd / 10000) + completedBookings * 10;
+  const suggestedTier = totalSpendVnd >= 5000000 || completedBookings >= 10
+    ? "LAB_PRIORITY"
+    : totalSpendVnd >= 1500000 || completedBookings >= 4
+      ? "LAB_PLUS"
+      : "LAB_STANDARD";
+  return {
+    ...publicCustomerUser(user),
+    createdAt: user.createdAt,
+    spending: {
+      totalSpendVnd,
+      successfulPayments: paymentStats._count._all,
+      lastPaidAt: paymentStats._max.paidAt || null,
+      paidCurrency: "VND"
+    },
+    bookingSummary: {
+      total: Object.values(bookingCounts).reduce((sum, value) => sum + value, 0),
+      completed: completedBookings,
+      active: (bookingCounts.PENDING_APPROVAL || 0) + (bookingCounts.CONFIRMED || 0) + (bookingCounts.CHECKED_OUT || 0) + (bookingCounts.RETURNED || 0),
+      byStatus: bookingCounts
+    },
+    loyalty: {
+      tier: user.loyaltyTier || suggestedTier,
+      configuredTier: user.loyaltyTier || "LAB_STANDARD",
+      suggestedTier,
+      points: Math.max(user.loyaltyPoints || 0, earnedPoints),
+      earnedPoints,
+      discountBps: user.loyaltyDiscountBps || 0,
+      priorityBoost: user.priorityBoost || 0,
+      basis: "Tính từ thanh toán thành công và booking hoàn tất trong database"
+    }
+  };
+}
+
 /**
- * GET /me — Current user profile.
- * Returns canonical fields only; no fabricated quota/reputation fields.
- * No mockStore fallback.
+ * GET /me — Current user profile with Open LAB identity, default address,
+ * persisted spending totals, and LAB loyalty signals. No mockStore fallback.
  */
 router.get("/me", requireAuth, async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id }
-    });
-    if (!user) {
-      throw new HttpError(404, "User not found", undefined, "NOT_FOUND");
-    }
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) throw new HttpError(404, "User not found", undefined, "NOT_FOUND");
+    return res.json(await buildProfileResponse(user));
+  } catch (error) {
+    next(error);
+  }
+});
 
-    return res.json({
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      role: user.role, // Canonical uppercase — no lowercasing
-      isActive: user.isActive,
-      department: user.department || null,
-      studentId: user.studentId || null,
-      phone: user.phone || null,
-      createdAt: user.createdAt
-    });
+router.patch("/me", requireAuth, async (req, res, next) => {
+  try {
+    const data = updateOwnProfileSchema.parse(req.body);
+    const verifiedAddress = data.address ? await validateVietnamAddress(data.address) : null;
+    const update = {
+      ...(data.fullName !== undefined ? { fullName: data.fullName } : {}),
+      ...(data.phone !== undefined ? { phone: data.phone || null } : {}),
+      ...(data.organization !== undefined ? { organization: data.organization || null } : {}),
+      ...(data.customerType !== undefined ? { customerType: data.customerType } : {}),
+      ...addressData(verifiedAddress)
+    };
+    const user = await prisma.user.update({ where: { id: req.user.id }, data: update });
+    return res.json(await buildProfileResponse(user));
   } catch (error) {
     next(error);
   }
@@ -68,7 +150,9 @@ const createUserSchema = z.object({
   isActive: z.boolean().default(true),
   studentId: z.string().trim().max(50).optional(),
   department: z.string().trim().max(100).optional(),
-  phone: z.string().trim().max(20).optional()
+  phone: z.string().trim().max(20).optional(),
+  organization: z.string().trim().max(160).optional(),
+  customerType: z.enum(["INTERNAL", "EXTERNAL"]).default("INTERNAL")
 }).strict();
 
 router.post("/", requireAuth, requireRole(ADMIN), async (req, res, next) => {

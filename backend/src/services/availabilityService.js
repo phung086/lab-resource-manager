@@ -112,7 +112,10 @@ export function checkLabPolicyCompliance({ policy, startAt, endAt, now = new Dat
   }
 
   if (policy.workDayEndHour != null) {
-    if (endParts.hour > policy.workDayEndHour || (endParts.hour === policy.workDayEndHour && endParts.minute > 0)) {
+    // Compare full instants, including date and sub-minute precision. Comparing
+    // only the end hour allowed 23:00 -> next-day 00:00 past a 20:00 closure.
+    const closingAt = Date.UTC(startParts.year, startParts.month - 1, startParts.day, policy.workDayEndHour) - VIETNAM_OFFSET_MS;
+    if (end.getTime() > closingAt) {
       throw new HttpError(
         400,
         `Booking end time (${endParts.hour}:${String(endParts.minute).padStart(2, "0")}) is later than laboratory closing hour (${policy.workDayEndHour}:00)`,

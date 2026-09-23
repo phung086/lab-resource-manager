@@ -1,0 +1,524 @@
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 42dc41e..c371dfb 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -43,6 +43,7 @@ import { BookingOperationsPage } from "./pages/operations/BookingOperationsPage.
+ import { QuickBookingModal } from "./components/QuickBookingModal.tsx";
+ import { AuthLoginView } from "./components/AuthLoginView.tsx";
+ import { AuthRegisterView } from "./components/AuthRegisterView.tsx";
++import { WorkspaceHome } from "./pages/WorkspaceHome";
+ import { AppLayout } from "./components/AppLayout.tsx";
+ import { AccessUserManagement } from "./components/AccessUserManagement.tsx";
+ import { NotificationCenter } from "./components/NotificationCenter.jsx";
+@@ -102,7 +103,10 @@ function App() {
+   const [locale, setLocale] = useState(getInitialLocale);
+   const [user, setUser] = useState(null);
+   const [authChecking, setAuthChecking] = useState(true);
+-  const [activeTab, setActiveTab] = useState("smart_calendar");
++  const [activeTab, setActiveTab] = useState("home");
++  const [resourceSearch, setResourceSearch] = useState("");
++  const [calendarResourceId, setCalendarResourceId] = useState("");
++  const [calendarRevision, setCalendarRevision] = useState(0);
+   const [dashboard, setDashboard] = useState(null);
+   const [resources, setResources] = useState([]);
+   const [bookings, setBookings] = useState([]);
+@@ -267,21 +271,25 @@ function App() {
+       onLogout={async () => {
+         await logout();
+         setUser(null);
++        setActiveTab("home");
+       }}
+     >
+-      {error && <div className="alert danger">{error}</div>}
++      {error && <div className="alert danger" role="alert">{error}</div>}
+ 
+       {/* REQUIRED CORE */}
++      {activeTab === "home" && <WorkspaceHome user={user} bookings={bookings} notifications={notifications} loading={loading} error={error} onRetry={loadData} onNavigate={setActiveTab} onSearch={(query) => { setResourceSearch(query); setActiveTab("resources"); }} />}
+       {activeTab === "smart_calendar" && (
+         <SmartCalendarView
+           user={user}
++          initialResourceId={calendarResourceId}
++          refreshKey={calendarRevision}
+           onOpenBooking={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
+         />
+       )}
+       {activeTab === "admin_management" && <AdminResourceManagementView user={user} />}
+-      {activeTab === "escalations" && <NotificationCenter notifications={notifications} onChanged={loadData} />}
++      {activeTab === "escalations" && <NotificationCenter notifications={notifications} loading={loading} loadError={error} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
+       {activeTab === "dashboard" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
+-      {activeTab === "resources" && <ResourceManagementView user={user} />}
++      {activeTab === "resources" && <ResourceManagementView user={user} initialSearch={resourceSearch} onViewCalendar={(id) => { setCalendarResourceId(id); setActiveTab("smart_calendar"); }} />}
+       {activeTab === "bookings" && <BookingOperationsPage user={user} onChanged={loadData} />}
+       {activeTab === "maintenance" && <MaintenanceView resources={resources} maintenance={maintenance} isStaff={isStaff} onChanged={loadData} />}
+       {activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
+@@ -317,8 +325,9 @@ function App() {
+         isOpen={activeGlobalModal?.type === "quick_booking"}
+         onClose={() => setActiveGlobalModal(null)}
+         initialSlot={activeGlobalModal?.payload}
+-        resources={resources}
+-        onConfirmBooking={(bookingData) => {
++        onViewBookings={() => { setActiveGlobalModal(null); setActiveTab("bookings"); }}
++        onConfirmBooking={() => {
++          setCalendarRevision(value => value + 1);
+           loadData();
+         }}
+       />
+diff --git a/frontend/src/components/AuthLoginView.tsx b/frontend/src/components/AuthLoginView.tsx
+index 9174dd3..1f07508 100644
+--- a/frontend/src/components/AuthLoginView.tsx
++++ b/frontend/src/components/AuthLoginView.tsx
+@@ -1,5 +1,7 @@
+-import React, { useState } from "react";
++import React, { useState, useRef, useEffect } from "react";
+ import { Server, ShieldCheck, Lock, Mail, ArrowRight, Layers } from "lucide-react";
++import { AuthIdentity } from "./AuthIdentity";
++import { Eye, EyeOff } from "lucide-react";
+ import { login } from "../api.js";
+ 
+ export interface AuthLoginViewProps {
+@@ -19,6 +21,9 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
+   const [password, setPassword] = useState("");
+   const [isLoading, setIsLoading] = useState(false);
+   const [error, setError] = useState("");
++  const [showPassword, setShowPassword] = useState(false);
++  const errorRef = useRef<HTMLDivElement>(null);
++  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
+ 
+   const resourceCategories = [
+     { name: "Phòng thực hành", code: "ROOM" },
+@@ -30,6 +35,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
+ 
+   async function handleSubmit(e: React.FormEvent) {
+     e.preventDefault();
++    if (isLoading) return;
+     setIsLoading(true);
+     setError("");
+ 
+@@ -47,70 +53,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
+     <div className="auth-screen min-h-screen w-full flex items-center justify-center font-sans">
+       <div className="auth-split-grid relative border border-white/10 rounded-2xl overflow-hidden shadow-2xl bg-[#111827]">
+         {/* Left Column: Product Identity & Scope */}
+-        <div className="auth-panel auth-panel-identity flex flex-col justify-between relative">
+-          <div className="relative z-10">
+-            {/* Brand Mark */}
+-            <div className="flex items-center gap-3 mb-6">
+-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
+-                <Server size={22} />
+-              </div>
+-              <div>
+-                <h1 className="text-base font-bold font-heading text-white tracking-tight leading-tight">
+-                  LAB RESOURCE MANAGER
+-                </h1>
+-                <p className="text-xs text-slate-400">
+-                  Hệ thống quản lý tài nguyên phòng thí nghiệm
+-                </p>
+-              </div>
+-            </div>
+-
+-            {/* Core Value Proposition */}
+-            <div className="mt-8">
+-              <span className="inline-block text-[11px] font-semibold text-blue-400 font-mono tracking-wider uppercase mb-2">
+-                Vận hành & Đặt lịch
+-              </span>
+-              <h2 className="text-2xl lg:text-3xl font-bold font-heading text-white tracking-tight leading-snug">
+-                Quản lý tập trung tài nguyên phòng thí nghiệm trường đại học
+-              </h2>
+-              <p className="text-xs lg:text-sm text-slate-400 mt-3 leading-relaxed">
+-                Nền tảng hỗ trợ giảng viên, sinh viên và cán bộ lab tra cứu danh mục thiết bị,
+-                đặt lịch sử dụng không trùng lặp, duyệt yêu cầu và quản lý vận hành.
+-              </p>
+-            </div>
+-
+-            {/* 5 Canonical Categories Matrix */}
+-            <div className="auth-scope-overview mt-8 pt-6 border-t border-white/10">
+-              <div className="flex items-center justify-between mb-3">
+-                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+-                  <Layers size={14} className="text-blue-400" />
+-                  <span>PHẠM VI TÀI NGUYÊN</span>
+-                </span>
+-                <span className="text-[11px] text-emerald-400 font-mono font-medium">5 NHÓM CHUẨN</span>
+-              </div>
+-              <div className="auth-category-list">
+-                {resourceCategories.map((cat) => (
+-                  <div
+-                    key={cat.code}
+-                    className="auth-category-chip flex items-center gap-1.5 text-xs"
+-                  >
+-                    <span className="text-slate-300">{cat.name}</span>
+-                    <span className="text-[10px] text-slate-400 font-mono">[{cat.code}]</span>
+-                  </div>
+-                ))}
+-              </div>
+-            </div>
+-          </div>
+-
+-          {/* Security and RBAC footer */}
+-          <div className="auth-identity-footer relative z-10 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-white/10 text-xs text-slate-400 mt-6">
+-            <span className="flex items-center gap-1.5">
+-              <ShieldCheck size={15} className="text-blue-400 shrink-0" />
+-              <span>Phân quyền 4 vai trò: Admin · Staff · Lecturer · Student</span>
+-            </span>
+-          </div>
+-        </div>
+-
+-        {/* Right Column: Authentication Form */}
++        <AuthIdentity />
+         <div className="auth-panel auth-panel-form flex flex-col justify-between">
+           {/* Header & Language Switch */}
+           <div className="flex items-center justify-between">
+@@ -156,7 +99,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
+             </div>
+ 
+             {error && (
+-              <div className="mb-4 p-3.5 bg-rose-950/70 border border-rose-500/40 rounded-xl text-xs text-rose-200" role="alert">
++              <div className="mb-4 p-3.5 bg-rose-950/70 border border-rose-500/40 rounded-xl text-xs text-rose-200" role="alert" tabIndex={-1} ref={errorRef}>
+                 {error}
+               </div>
+             )}
+@@ -189,14 +132,17 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
+                   <Lock size={16} className="auth-input-icon text-slate-400" aria-hidden="true" />
+                   <input
+                     id="login-password"
+-                    type="password"
++                    type={showPassword ? "text" : "password"}
+                     required
+                     autoComplete="current-password"
+                     value={password}
+                     onChange={(e) => setPassword(e.target.value)}
++                    minLength={8}
++                    maxLength={128}
+                     placeholder="••••••••••••"
+-                    className="auth-form-input has-icon w-full text-xs"
++                    className="auth-form-input has-icon password-input w-full text-xs"
+                   />
++                  <button className="password-toggle" type="button" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                 </div>
+               </div>
+ 
+diff --git a/frontend/src/components/AuthRegisterView.tsx b/frontend/src/components/AuthRegisterView.tsx
+index ef2e384..6b2d900 100644
+--- a/frontend/src/components/AuthRegisterView.tsx
++++ b/frontend/src/components/AuthRegisterView.tsx
+@@ -1,5 +1,7 @@
+-import React, { useState } from "react";
++import React, { useState, useRef, useEffect } from "react";
+ import { Server, ShieldCheck, Lock, Mail, User, BookOpen, ArrowRight, Sparkles, Terminal, CheckCircle2 } from "lucide-react";
++import { AuthIdentity } from "./AuthIdentity";
++import { Eye, EyeOff } from "lucide-react";
+ import { register } from "../api.js";
+ 
+ export interface AuthRegisterViewProps {
+@@ -18,10 +20,13 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
+   const [fullName, setFullName] = useState("");
+   const [studentId, setStudentId] = useState("");
+   const [email, setEmail] = useState("");
+-  const [department, setDepartment] = useState("Khoa CNTT - Bộ Môn Trí Tuệ Nhân Tạo");
++  const [department, setDepartment] = useState("");
+   const [password, setPassword] = useState("");
+   const [isLoading, setIsLoading] = useState(false);
+   const [error, setError] = useState("");
++  const [showPassword, setShowPassword] = useState(false);
++  const errorRef = useRef<HTMLDivElement>(null);
++  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
+ 
+   const perks = [
+     { title: "Tài khoản sinh viên mặc định", desc: "Vai trò đặc quyền chỉ do quản trị viên phân công", color: "text-emerald-400" },
+@@ -31,6 +36,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
+ 
+   async function handleSubmit(e: React.FormEvent) {
+     e.preventDefault();
++    if (isLoading) return;
+     setIsLoading(true);
+     setError("");
+ 
+@@ -51,60 +57,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
+         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-80 z-20" />
+ 
+         {/* CỘT TRÁI: Quy Chế & Lợi Ích Sinh Viên */}
+-        <div className="auth-panel auth-panel-identity flex flex-col justify-between relative overflow-hidden">
+-          {/* Top Brand Tag */}
+-          <div className="relative z-10">
+-            <div className="flex items-center gap-2.5 mb-2">
+-              <div className="w-9 h-9 rounded-xl bg-blue-950/80 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold">
+-                <Server size={18} />
+-              </div>
+-              <div>
+-                <span className="font-heading text-sm font-bold text-white tracking-wider block">
+-                  LAB RESOURCE MANAGER
+-                </span>
+-                <span className="font-mono text-[10.5px] text-blue-400 tracking-wider uppercase">
+-                  HỆ THỐNG VẬN HÀNH PHÒNG THÍ NGHIỆM
+-                </span>
+-              </div>
+-            </div>
+-
+-            <div className="mt-8">
+-              <span className="font-mono text-xs font-semibold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">
+-                ĐĂNG KÝ HỌC THUẬT & NGHIÊN CỨU
+-              </span>
+-              <h2 className="text-2xl lg:text-3xl font-bold font-heading text-white tracking-tight mt-3 leading-snug">
+-                Truy Cập Hệ Thống Tài Nguyên Phòng Thí Nghiệm
+-              </h2>
+-              <p className="text-xs lg:text-sm text-slate-400 mt-2 leading-relaxed font-sans max-w-md">
+-                Dành cho sinh viên, học viên cao học và cán bộ nghiên cứu thực hiện đồ án tốt nghiệp, đề tài khoa học và thực hành chuyên đề.
+-              </p>
+-            </div>
+-          </div>
+-
+-          {/* Center: Perks & Quota Benefits */}
+-          <div className="auth-benefits my-6 flex flex-col gap-3 relative z-10">
+-            {perks.map((p) => (
+-              <div
+-                key={p.title}
+-                className="auth-perk flex items-start gap-3"
+-              >
+-                <CheckCircle2 size={16} className={`${p.color} shrink-0 mt-0.5`} />
+-                <div>
+-                  <h4 className="text-xs font-semibold text-white tracking-wide">{p.title}</h4>
+-                  <p className="text-[11px] text-slate-400 font-sans mt-0.5">{p.desc}</p>
+-                </div>
+-              </div>
+-            ))}
+-          </div>
+-
+-          {/* Bottom Security Footer */}
+-          <div className="auth-identity-footer relative z-10 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-white/10 text-[11px] font-mono text-slate-500 mt-6">
+-            <span>QUẢN TRỊ TẬP TRUNG · KHOA HỌC DỮ LIỆU & CNTT</span>
+-            <span>PHIÊN BẢN CHUẨN HOÁ TỐT NGHIỆP</span>
+-          </div>
+-        </div>
+-
+-        {/* CỘT PHẢI: Form Đăng Ký */}
++        <AuthIdentity registration />
+         <div className="auth-panel auth-panel-form flex flex-col justify-between">
+           {/* Header */}
+           <div className="flex items-center justify-between">
+@@ -145,12 +98,12 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
+                 Đăng Ký Tài Khoản
+               </h3>
+               <p className="text-xs text-slate-400 mt-1 font-sans">
+-                Điền thông tin định danh sinh viên / cán bộ để nhận quyền truy cập phòng lab
++                Tạo tài khoản sinh viên để tìm tài nguyên và gửi yêu cầu đặt lịch.
+               </p>
+             </div>
+ 
+             {error && (
+-              <div className="alert danger mb-4 text-xs" role="alert">
++              <div className="alert danger mb-4 text-xs" role="alert" tabIndex={-1} ref={errorRef}>
+                 {error}
+               </div>
+             )}
+@@ -162,6 +115,9 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
+                   <User size={14} className="auth-input-icon text-slate-400" />
+                   <input
+                     id="register-full-name"
++                    autoComplete="name"
++                    minLength={2}
++                    maxLength={255}
+                     type="text"
+                     required
+                     value={fullName}
+@@ -174,11 +130,11 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
+ 
+               <div className="grid grid-cols-2 gap-3">
+                 <div className="flex flex-col gap-1">
+-                  <label htmlFor="register-student-id" className="font-mono text-[11px] text-slate-300">Mã số sinh viên / CB *</label>
++                  <label htmlFor="register-student-id" className="font-mono text-[11px] text-slate-300">Mã số sinh viên (không bắt buộc)</label>
+                   <input
+                     id="register-student-id"
+                     type="text"
+-                    required
++                    maxLength={50}
+                     value={studentId}
+                     onChange={(e) => setStudentId(e.target.value)}
+                     placeholder="VD: 20261456"
+@@ -187,9 +143,10 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
+                 </div>
+ 
+                 <div className="flex flex-col gap-1">
+-                  <label htmlFor="register-email" className="font-mono text-[11px] text-slate-300">Email trường (@edu.vn) *</label>
++                  <label htmlFor="register-email" className="font-mono text-[11px] text-slate-300">Email tài khoản *</label>
+                   <input
+                     id="register-email"
++                    autoComplete="email"
+                     type="email"
+                     required
+                     value={email}
+@@ -201,18 +158,8 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
+               </div>
+ 
+               <div className="flex flex-col gap-1">
+-                <label htmlFor="register-department" className="font-mono text-[11px] text-slate-300">Bộ môn / Khoa trực thuộc *</label>
+-                <select
+-                  id="register-department"
+-                  value={department}
+-                  onChange={(e) => setDepartment(e.target.value)}
+-                  className="auth-form-input w-full text-xs"
+-                >
+-                  <option value="Khoa CNTT - Bộ Môn Trí Tuệ Nhân Tạo">Khoa CNTT - Bộ Môn Trí Tuệ Nhân Tạo</option>
+-                  <option value="Bộ Môn Robotics & Hệ Thống Tự Hành">Bộ Môn Robotics & Hệ Thống Tự Hành</option>
+-                  <option value="Khối Đồ Án Tốt Nghiệp Kỹ Sư AI 2026">Khối Đồ Án Tốt Nghiệp Kỹ Sư AI 2026</option>
+-                  <option value="Bộ Môn Hệ Thống Nhúng & IoT">Bộ Môn Hệ Thống Nhúng & IoT</option>
+-                </select>
++                <label htmlFor="register-department" className="font-mono text-[11px] text-slate-300">Khoa / Bộ môn (không bắt buộc)</label>
++                <input id="register-department" value={department} onChange={e => setDepartment(e.target.value)} maxLength={100} autoComplete="organization" placeholder="Nhập khoa hoặc bộ môn của bạn" className="auth-form-input w-full text-xs" />
+               </div>
+ 
+               <div className="flex flex-col gap-1">
+@@ -221,13 +168,17 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
+                   <Lock size={14} className="auth-input-icon text-slate-400" />
+                   <input
+                     id="register-password"
+-                    type="password"
++                    autoComplete="new-password"
++                    type={showPassword ? "text" : "password"}
+                     required
+                     value={password}
+                     onChange={(e) => setPassword(e.target.value)}
++                    minLength={8}
++                    maxLength={128}
+                     placeholder="Tối thiểu 8 ký tự..."
+-                    className="auth-form-input has-icon w-full text-xs"
++                    className="auth-form-input has-icon password-input w-full text-xs"
+                   />
++                  <button className="password-toggle" type="button" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                 </div>
+               </div>
+ 
+diff --git a/frontend/src/components/ResourceManagementView.tsx b/frontend/src/components/ResourceManagementView.tsx
+index d46ae07..bcfd1e9 100644
+--- a/frontend/src/components/ResourceManagementView.tsx
++++ b/frontend/src/components/ResourceManagementView.tsx
+@@ -47,6 +47,8 @@ interface UserIdentity {
+ interface ResourceManagementViewProps {
+   user: UserIdentity;
+   managementMode?: boolean;
++  initialSearch?: string;
++  onViewCalendar?: (resourceId: string) => void;
+ }
+ 
+ interface Filters {
+@@ -56,6 +58,7 @@ interface Filters {
+   subtype: string;
+   operationalStatus: string;
+   classification: string;
++  availability: string;
+ }
+ 
+ const initialFilters: Filters = {
+@@ -64,6 +67,7 @@ const initialFilters: Filters = {
+   category: "",
+   subtype: "",
+   operationalStatus: "",
++  availability: "",
+   classification: "ALL"
+ };
+ 
+@@ -83,10 +87,12 @@ const emptyForm = {
+   model: ""
+ };
+ 
+-export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ user, managementMode = false }) => {
++export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ user, managementMode = false, initialSearch = "", onViewCalendar }) => {
+   const [resources, setResources] = useState<any[]>([]);
+   const [laboratories, setLaboratories] = useState<any[]>([]);
+-  const [filters, setFilters] = useState<Filters>(initialFilters);
++  const [filters, setFilters] = useState<Filters>({ ...initialFilters, search: initialSearch });
++  const [sort, setSort] = useState("name");
++  const requestVersion = useRef(0);
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState("");
+   const [notice, setNotice] = useState("");
+@@ -113,15 +119,17 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({
+   }
+ 
+   async function loadResources() {
++    const version = ++requestVersion.current;
+     setLoading(true);
+     setError("");
+     try {
+       const query = queryString();
+-      setResources(await apiRequest(`/resources${query ? `?${query}` : ""}`));
++      const result = await apiRequest(`/resources${query ? `?${query}` : ""}`);
++      if (version === requestVersion.current) setResources(result);
+     } catch (requestError: any) {
+-      setError(requestError?.message || "Không thể tải danh mục tài nguyên.");
++      if (version === requestVersion.current) setError(requestError?.message || "Không thể tải danh mục tài nguyên.");
+     } finally {
+-      setLoading(false);
++      if (version === requestVersion.current) setLoading(false);
+     }
+   }
+ 
+@@ -133,8 +141,10 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({
+ 
+   useEffect(() => {
+     const timer = window.setTimeout(loadResources, filters.search ? 250 : 0);
+-    return () => window.clearTimeout(timer);
+-  }, [filters.search, filters.laboratoryId, filters.category, filters.subtype, filters.operationalStatus, filters.classification]);
++    return () => { window.clearTimeout(timer); requestVersion.current += 1; };
++  }, [filters.search, filters.laboratoryId, filters.category, filters.subtype, filters.operationalStatus, filters.classification, filters.availability]);
++
++  const visibleResources = [...resources].sort((a, b) => String(sort === "code" ? a.code : a.name).localeCompare(String(sort === "code" ? b.code : b.name), "vi"));
+ 
+   function canManageResource(resource: any) {
+     return user.role === "ADMIN" || (Boolean(resource.laboratoryId) && assignedLabIds.has(resource.laboratoryId));
+@@ -280,7 +290,10 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({
+           <button type="button" className="secondary-button resource-clear-filters" disabled={JSON.stringify(filters) === JSON.stringify(initialFilters)} onClick={() => setFilters(initialFilters)}>
+             <FilterX size={16} aria-hidden="true" /><span>Xóa bộ lọc</span>
+           </button>
++          <label><span>Khả dụng hiện tại</span><select value={filters.availability} onChange={event => setFilters({ ...filters, availability: event.target.value })}><option value="">Tất cả</option><option value="AVAILABLE">Đang khả dụng</option><option value="RESERVED">Đang có lịch đặt</option><option value="UNAVAILABLE">Không khả dụng</option></select></label>
+         </div>
++        <div className="catalog-results-bar"><span role="status">{loading ? "Đang tìm tài nguyên…" : error ? "Chưa tải được kết quả" : `${resources.length} tài nguyên phù hợp`}</span><label>Sắp xếp <select value={sort} onChange={event => setSort(event.target.value)}><option value="name">Tên tài nguyên</option><option value="code">Mã tài nguyên</option></select></label></div>
++        <p className="catalog-availability-note">Khả dụng hiện tại không đảm bảo khung giờ trong tương lai. Mở lịch để chọn thời gian sử dụng.</p>
+       </section>
+ 
+       {error && <div className="alert danger" role="alert">{error}</div>}
+@@ -315,7 +328,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({
+ 
+       {loading ? (
+         <p className="empty-state" role="status">Đang tải dữ liệu tài nguyên...</p>
+-      ) : resources.length === 0 ? (
++      ) : error ? (<div className="empty-state"><p>Không thể hiển thị danh mục lúc này.</p><button className="secondary-button" onClick={loadResources}>Thử lại</button></div>) : resources.length === 0 ? (
+         <p className="empty-state">Không có tài nguyên phù hợp với bộ lọc.</p>
+       ) : managementMode ? (
+         <section className="panel resource-table-panel">
+@@ -323,7 +336,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({
+             <table className="resource-management-table">
+               <caption>{resources.length} tài nguyên trong danh mục</caption>
+               <thead><tr><th>Tài nguyên</th><th>Phân loại</th><th>Phòng lab</th><th>Vận hành</th><th>Availability</th><th><span className="sr-only">Thao tác</span></th></tr></thead>
+-              <tbody>{resources.map((resource) => {
++              <tbody>{visibleResources.map((resource) => {
+                 const manageable = canManageResource(resource);
+                 return <tr key={resource.id}>
+                   <td><strong>{resource.code}</strong><span>{resource.name}</span></td>
+@@ -344,23 +357,25 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({
+         </section>
+       ) : (
+         <section className="resource-grid" aria-label="Danh sách tài nguyên">
+-          {resources.map((resource) => <article className="resource-card canonical-resource-card" key={resource.id}>
++          {visibleResources.map((resource) => <article className="resource-card canonical-resource-card" key={resource.id}>
+             <div className="resource-body">
+               <div className="row between"><div><span className="eyebrow">{resource.code}</span><h2>{resource.name}</h2></div><StatusPill value={resource.availability?.state || resource.operationalStatus} /></div>
+               <p>{resource.description || "Chưa có mô tả."}</p>
+               <dl className="resource-facts">
+                 <div><dt>Nhóm</dt><dd className={resource.category ? "" : "text-warning"}>{resource.category ? categoryLabels[resource.category] : "Chưa phân loại"}</dd></div>
+-                <div><dt>Subtype</dt><dd>{resource.subtype}</dd></div>
++                <div><dt>Vị trí</dt><dd>{resource.location || "Chưa cập nhật"}</dd></div>
+                 <div><dt>Phòng lab</dt><dd>{resource.laboratory?.name || "Chưa gán"}</dd></div>
+                 <div><dt>Vận hành</dt><dd>{statusLabels[resource.operationalStatus] || resource.operationalStatus}</dd></div>
+               </dl>
+-              <button className="table-action" type="button" onClick={() => openDetail(resource)} disabled={detailLoadingId === resource.id}><Eye size={15} aria-hidden="true" /><span>{detailLoadingId === resource.id ? "Đang tải..." : "Xem chi tiết"}</span></button>
++              <p className="resource-approval-note">{resource.effectiveRequiresApproval ? "Cần cán bộ lab phê duyệt" : "Xác nhận ngay khi hợp lệ"}</p>
++              <div className="resource-discovery-actions">{onViewCalendar && <button className="primary-button" onClick={() => onViewCalendar(resource.id)}>{["AVAILABLE", "IN_USE"].includes(resource.operationalStatus) ? "Xem lịch và đặt chỗ" : "Xem lịch"}</button>}
++              <button className="table-action" type="button" onClick={() => openDetail(resource)} disabled={detailLoadingId === resource.id}><Eye size={15} aria-hidden="true" /><span>{detailLoadingId === resource.id ? "Đang tải..." : "Xem chi tiết"}</span></button></div>
+             </div>
+           </article>)}
+         </section>
+       )}
+ 
+-      <ResourceDetailsModal isOpen={Boolean(detail)} onClose={() => setDetail(null)} resource={detail} />
++      <ResourceDetailsModal isOpen={Boolean(detail)} onClose={() => setDetail(null)} resource={detail} onViewCalendar={onViewCalendar} />
+       <ResourceStatusModal
+         isOpen={Boolean(statusResource)}
+         onClose={() => setStatusResource(null)}

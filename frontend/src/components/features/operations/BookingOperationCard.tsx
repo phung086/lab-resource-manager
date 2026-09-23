@@ -7,14 +7,16 @@ import { formatVietnamDateTime } from "../../../utils/timezone.js";
 export interface BookingOperationCardProps {
   booking: BookingRecord;
   isStaff: boolean;
+  isOwner?: boolean;
   busy?: boolean;
   onAction: (action: BookingAction, booking: BookingRecord) => void;
   onOpenHistory: (booking: BookingRecord) => void;
   onCancel?: (booking: BookingRecord) => void;
+  onPayment?: (booking: BookingRecord) => void;
 }
 
 export const BookingOperationCard: React.FC<BookingOperationCardProps> = ({
-  booking, isStaff, busy = false, onAction, onOpenHistory, onCancel
+  booking, isStaff, isOwner = false, busy = false, onAction, onOpenHistory, onCancel, onPayment
 }) => (
   <article className="operation-card">
     <header className="operation-card-header">
@@ -40,8 +42,10 @@ export const BookingOperationCard: React.FC<BookingOperationCardProps> = ({
     )}
 
     {booking.physicalStateWarning && <div className="alert warning" role="status">{booking.physicalStateWarning}</div>}
+    {Boolean(booking.feeAmountVnd) && <p>Phí sử dụng đã chốt: <strong>{booking.feeAmountVnd?.toLocaleString("vi-VN")} đ</strong>. {booking.status === "PENDING_APPROVAL" ? "Thanh toán sau khi lịch được duyệt." : "Xem chi tiết thanh toán để kiểm tra trạng thái đối soát."}</p>}
 
     <footer className="operation-card-actions">
+      {onPayment && Boolean(booking.feeAmountVnd) && <button type="button" className="btn btn-secondary" onClick={() => onPayment(booking)} disabled={busy}>Thanh toán lịch đặt</button>}
       <button type="button" className="btn btn-secondary" onClick={() => onOpenHistory(booking)} disabled={busy}><History size={15} /> Lịch sử</button>
       <span className="operation-actions-spacer" aria-hidden="true" />
       {isStaff && booking.status === "PENDING_APPROVAL" && <>
@@ -58,6 +62,7 @@ export const BookingOperationCard: React.FC<BookingOperationCardProps> = ({
       {isStaff && booking.status === "CHECKED_OUT" && <button type="button" className="btn btn-primary" onClick={() => onAction("RETURN", booking)} disabled={busy}>
         {busy ? <Loader2 size={15} className="animate-spin" /> : <RotateCcw size={15} />} Nhận hoàn trả
       </button>}
+      {isOwner && booking.resource?.category === "ROOM" && booking.status === "CHECKED_OUT" && <button type="button" className="btn btn-primary" onClick={() => onAction("SELF_RETURN", booking)} disabled={busy}><RotateCcw size={15} /> Trả phòng và hoàn tất</button>}
       {isStaff && booking.status === "RETURNED" && <button type="button" className="btn btn-primary" onClick={() => onAction("COMPLETE", booking)} disabled={busy}>
         {busy ? <Loader2 size={15} className="animate-spin" /> : <PackageCheck size={15} />} Hoàn tất
       </button>}

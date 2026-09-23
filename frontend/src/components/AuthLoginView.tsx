@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Server, ShieldCheck, Lock, Mail, ArrowRight, Layers } from "lucide-react";
+import { AuthIdentity } from "./AuthIdentity";
+import { Eye, EyeOff } from "lucide-react";
 import { login } from "../api.js";
 
 export interface AuthLoginViewProps {
@@ -19,6 +21,9 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
 
   const resourceCategories = [
     { name: "Phòng thực hành", code: "ROOM" },
@@ -30,6 +35,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     setError("");
 
@@ -47,70 +53,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
     <div className="auth-screen min-h-screen w-full flex items-center justify-center font-sans">
       <div className="auth-split-grid relative border border-white/10 rounded-2xl overflow-hidden shadow-2xl bg-[#111827]">
         {/* Left Column: Product Identity & Scope */}
-        <div className="auth-panel auth-panel-identity flex flex-col justify-between relative">
-          <div className="relative z-10">
-            {/* Brand Mark */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
-                <Server size={22} />
-              </div>
-              <div>
-                <h1 className="text-base font-bold font-heading text-white tracking-tight leading-tight">
-                  LAB RESOURCE MANAGER
-                </h1>
-                <p className="text-xs text-slate-400">
-                  Hệ thống quản lý tài nguyên phòng thí nghiệm
-                </p>
-              </div>
-            </div>
-
-            {/* Core Value Proposition */}
-            <div className="mt-8">
-              <span className="inline-block text-[11px] font-semibold text-blue-400 font-mono tracking-wider uppercase mb-2">
-                Vận hành & Đặt lịch
-              </span>
-              <h2 className="text-2xl lg:text-3xl font-bold font-heading text-white tracking-tight leading-snug">
-                Quản lý tập trung tài nguyên phòng thí nghiệm trường đại học
-              </h2>
-              <p className="text-xs lg:text-sm text-slate-400 mt-3 leading-relaxed">
-                Nền tảng hỗ trợ giảng viên, sinh viên và cán bộ lab tra cứu danh mục thiết bị,
-                đặt lịch sử dụng không trùng lặp, duyệt yêu cầu và quản lý vận hành.
-              </p>
-            </div>
-
-            {/* 5 Canonical Categories Matrix */}
-            <div className="auth-scope-overview mt-8 pt-6 border-t border-white/10">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Layers size={14} className="text-blue-400" />
-                  <span>PHẠM VI TÀI NGUYÊN</span>
-                </span>
-                <span className="text-[11px] text-emerald-400 font-mono font-medium">5 NHÓM CHUẨN</span>
-              </div>
-              <div className="auth-category-list">
-                {resourceCategories.map((cat) => (
-                  <div
-                    key={cat.code}
-                    className="auth-category-chip flex items-center gap-1.5 text-xs"
-                  >
-                    <span className="text-slate-300">{cat.name}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">[{cat.code}]</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Security and RBAC footer */}
-          <div className="auth-identity-footer relative z-10 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-white/10 text-xs text-slate-400 mt-6">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={15} className="text-blue-400 shrink-0" />
-              <span>Phân quyền 4 vai trò: Admin · Staff · Lecturer · Student</span>
-            </span>
-          </div>
-        </div>
-
-        {/* Right Column: Authentication Form */}
+        <AuthIdentity />
         <div className="auth-panel auth-panel-form flex flex-col justify-between">
           {/* Header & Language Switch */}
           <div className="flex items-center justify-between">
@@ -156,7 +99,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
             </div>
 
             {error && (
-              <div className="mb-4 p-3.5 bg-rose-950/70 border border-rose-500/40 rounded-xl text-xs text-rose-200" role="alert">
+              <div className="mb-4 p-3.5 bg-rose-950/70 border border-rose-500/40 rounded-xl text-xs text-rose-200" role="alert" tabIndex={-1} ref={errorRef}>
                 {error}
               </div>
             )}
@@ -189,14 +132,17 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
                   <Lock size={16} className="auth-input-icon text-slate-400" aria-hidden="true" />
                   <input
                     id="login-password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    minLength={8}
+                    maxLength={128}
                     placeholder="••••••••••••"
-                    className="auth-form-input has-icon w-full text-xs"
+                    className="auth-form-input has-icon password-input w-full text-xs"
                   />
+                  <button className="password-toggle" type="button" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
               </div>
 

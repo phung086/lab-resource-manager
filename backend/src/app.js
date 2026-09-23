@@ -11,16 +11,24 @@ import { metricsMiddleware, metricsRouter } from "./metrics.js";
 
 // Core Routers
 import authRouter from "./routes/auth.js";
+import addressRouter from "./routes/address.js";
+import guestBookingRouter from "./routes/guestBooking.js";
+import resourceMediaRouter from "./routes/resourceMedia.js";
 import userRouter from "./routes/users.js";
 import resourceRouter from "./routes/resources.js";
 import laboratoryRouter from "./routes/laboratories.js";
 import calendarRouter from "./routes/calendar.js";
 import bookingRouter from "./routes/bookings.js";
+import bookingPricingRouter from "./routes/bookingPricing.js";
 import maintenanceRouter from "./routes/maintenance.js";
 import dashboardRouter from "./routes/dashboard.js";
 import notificationRouter from "./routes/notifications.js";
 import incidentRouter from "./routes/incidents.js";
 import telemetryRouter from "./routes/telemetry.js";
+import paymentRouter from "./routes/payments.js";
+import assistantRouter from "./routes/assistant.js";
+import { handleMcp } from "./assistant/mcpServer.js";
+import { requireAuth } from "./middleware/auth.js";
 
 export function createApp() {
   const app = express();
@@ -83,11 +91,14 @@ export function createApp() {
 
   // 1. Auth & Identity
   app.use("/api/auth", authRouter);
+  app.use("/api/address", addressRouter);
+  app.use("/api/guest-booking", guestBookingRouter);
 
   // 2. Users & Profiles
   app.use("/api/users", userRouter);
 
   // 3. Resources & Catalog
+  app.use("/api/resources", resourceMediaRouter);
   app.use("/api/resources", resourceRouter);
   app.use("/api/laboratories", laboratoryRouter);
 
@@ -96,12 +107,18 @@ export function createApp() {
 
   // 5. Bookings & Lifecycle Workflow
   app.use("/api/bookings", bookingRouter);
+  app.use("/api/booking-pricing", bookingPricingRouter);
 
   // 6. Maintenance Windows & Calibration
   app.use("/api/maintenance", maintenanceRouter);
 
-  // Optional payment and AI/research routers remain unmounted until their
-  // persistence and authorization contracts are reconciled in a later batch.
+  // Optional integrations are independent of the retired research routes.
+  if (config.paymentsEnabled) app.use("/api/payments", paymentRouter);
+  if (config.mcpAssistantEnabled) {
+    app.use("/api/assistant", assistantRouter);
+    app.post("/mcp", requireAuth, handleMcp);
+    app.all("/mcp", requireAuth, (_req, res) => res.sendStatus(405));
+  }
 
   // 7. Dashboard & Notifications
   app.use("/api/dashboard", dashboardRouter);
