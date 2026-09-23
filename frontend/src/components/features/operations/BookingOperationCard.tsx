@@ -42,9 +42,10 @@ export const BookingOperationCard: React.FC<BookingOperationCardProps> = ({
     )}
 
     {booking.physicalStateWarning && <div className="alert warning" role="status">{booking.physicalStateWarning}</div>}
+    {Boolean(booking.feeAmountVnd) && <p>Phí sử dụng đã chốt: <strong>{booking.feeAmountVnd?.toLocaleString("vi-VN")} đ</strong>. {booking.status === "PENDING_APPROVAL" ? "Thanh toán sau khi lịch được duyệt." : "Xem chi tiết thanh toán để kiểm tra trạng thái đối soát."}</p>}
 
     <footer className="operation-card-actions">
-      {onPayment && <button type="button" className="btn btn-secondary" onClick={() => onPayment(booking)} disabled={busy}>Thanh toán lịch đặt</button>}
+      {onPayment && Boolean(booking.feeAmountVnd) && <button type="button" className="btn btn-secondary" onClick={() => onPayment(booking)} disabled={busy}>Thanh toán lịch đặt</button>}
       <button type="button" className="btn btn-secondary" onClick={() => onOpenHistory(booking)} disabled={busy}><History size={15} /> Lịch sử</button>
       <span className="operation-actions-spacer" aria-hidden="true" />
       {isStaff && booking.status === "PENDING_APPROVAL" && <>

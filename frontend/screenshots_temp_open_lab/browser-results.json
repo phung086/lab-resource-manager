@@ -6,7 +6,9 @@
     "mobile overflow",
     "real owner ROOM return from UI",
     "booking deep link and clear",
-    "role route guard"
+    "role route guard",
+    "admin pricing UI",
+    "quote / create / direct checkout / VNPAYQR redirect"
   ],
   "pageErrors": []
 }

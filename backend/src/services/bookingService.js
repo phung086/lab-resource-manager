@@ -22,6 +22,7 @@ import {
 } from "./availabilityService.js";
 import { applyOperationalStatusChange } from "./resourceService.js";
 import { notifyBookingEvent } from "./bookingEventService.js";
+import { quoteBooking, verifyAcceptedQuote, ensureBookingCharge } from "./bookingPricingService.js";
 import {
   scheduleBookingReminders,
   cancelPendingBookingReminders
@@ -147,7 +148,7 @@ export async function checkSlotConflict(resourceId, startAt, endAt, excludeBooki
  * - No mockStore fallback — Prisma error = explicit error
  * - Uses operationalStatus for availability check
  */
-export async function createBooking({ requestedById, resourceId, title, purpose, startAt, endAt }) {
+export async function createBooking({ requestedById, resourceId, title, purpose, startAt, endAt, purposeCode, acceptedQuote }) {
   const start = new Date(startAt);
   const end = new Date(endAt);
 
@@ -156,6 +157,9 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
   }
 
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM resources WHERE id = ${resourceId} FOR UPDATE`;
+    const quote = await quoteBooking(tx, { resourceId, purposeCode, startAt, endAt });
+    verifyAcceptedQuote(quote, acceptedQuote);
     const resource = await tx.resource.findUnique({
       where: { id: resourceId },
       include: { laboratory: { include: { labPolicy: true } } }
@@ -195,7 +199,9 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
         purpose: purpose || "",
         startAt: start,
         endAt: end,
-        status: initialStatus
+        status: initialStatus,
+        feeAmountVnd: quote.amountVnd,
+        feeSnapshot: quote
       },
       include: bookingInclude
     });
@@ -216,6 +222,7 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
     });
 
     if (initialStatus === CONFIRMED) {
+      await ensureBookingCharge(tx, booking);
       await scheduleBookingReminders(tx, booking);
     }
 
@@ -277,6 +284,10 @@ export async function transitionBooking({
     let physicalStateWarning = null;
 
     if (toStatus === CHECKED_OUT) {
+      if (booking.feeAmountVnd > 0) {
+        const paid = await tx.paymentTransaction.findFirst({ where: { bookingId, status: "success", currency: "VND", amount: booking.feeAmountVnd, paidAt: { not: null } } });
+        if (!paid) throw new HttpError(409, "Lịch đặt cần thanh toán đủ phí trước khi bàn giao.", undefined, "BOOKING_PAYMENT_REQUIRED");
+      }
       await tx.$queryRaw`SELECT id FROM resources WHERE id = ${booking.resourceId} FOR UPDATE`;
       const physical = await tx.resource.findUnique({ where: { id: booking.resourceId } });
       if (!physical) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
@@ -370,6 +381,7 @@ export async function transitionBooking({
     }
 
     if (toStatus === CONFIRMED) {
+      await ensureBookingCharge(tx, result);
       await scheduleBookingReminders(tx, result, now);
     } else if (toStatus === CHECKED_OUT) {
       await cancelPendingBookingReminders(tx, booking.id, ["BOOKING_UPCOMING"]);

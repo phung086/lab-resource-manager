@@ -12,6 +12,7 @@ import {
   Layers,
   LayoutDashboard,
   Users,
+  UserRound,
   Wrench,
   Bell,
   ShieldAlert,
@@ -69,6 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: "KHÔNG GIAN LÀM VIỆC",
       items: [
         { id: "home", label: "Tổng quan của bạn", icon: LayoutDashboard },
+        { id: "profile", label: "Hồ Sơ & Ưu Tiên LAB", icon: UserRound },
         { id: "payments", label: "Thanh toán", icon: ClipboardCheck },
         {
           id: "smart_calendar",

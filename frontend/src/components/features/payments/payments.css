@@ -125,6 +125,15 @@
   display: grid;
   gap: 22px;
 }
+.booking-checkout-order{max-width:760px;display:grid;gap:16px;padding:28px}
+.booking-checkout-order h2{margin:0;font-size:1.5rem}
+.booking-checkout-order dl{display:grid;grid-template-columns:minmax(100px,170px) 1fr;gap:10px 20px;margin:8px 0 16px}
+.booking-checkout-order dt{color:var(--text-secondary)}
+.booking-checkout-order dd{margin:0}
+.booking-checkout-payment{display:grid;gap:14px;padding-top:18px;border-top:1px solid var(--border-color,#dbe4f0)}
+.booking-checkout-payment h3,.booking-checkout-payment p{margin:0}
+.booking-checkout-payment .primary-button{justify-self:start;display:inline-flex;align-items:center;gap:8px;min-height:48px}
+.booking-checkout-payment small{max-width:65ch;line-height:1.5}
 @media (max-width: 760px) {
   .payment-list {
     grid-template-columns: 1fr;

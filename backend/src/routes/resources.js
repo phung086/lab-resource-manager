@@ -127,6 +127,7 @@ function overlapWhere(startAt, endAt) {
 
 function availabilityInclude(startAt, endAt) {
   return {
+    media: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
     laboratory: { select: resourceLaboratorySelect },
     bookings: {
       where: { status: { in: ACTIVE_BOOKING_STATUSES }, ...overlapWhere(startAt, endAt) },
@@ -227,6 +228,7 @@ router.get("/:id/schedule", async (req, res, next) => {
     const resource = await prisma.resource.findUnique({
       where: { id: req.params.id },
       include: {
+        media: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
         laboratory: { select: resourceLaboratorySelect },
         bookings: { where: overlapWhere(startAt, endAt), select: { id: true, status: true, startAt: true, endAt: true }, orderBy: { startAt: "asc" } },
         maintenanceWindows: { where: overlapWhere(startAt, endAt), select: { id: true, kind: true, status: true, title: true, startAt: true, endAt: true }, orderBy: { startAt: "asc" } }
@@ -283,6 +285,7 @@ router.get("/:id", async (req, res, next) => {
     const resource = await prisma.resource.findUnique({
       where: { id: req.params.id },
       include: {
+        media: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
         laboratory: { select: resourceLaboratorySelect },
         bookings: { where: { endAt: { gte: now }, status: { in: ACTIVE_BOOKING_STATUSES } }, select: { id: true, startAt: true, endAt: true, status: true }, orderBy: { startAt: "asc" }, take: 10 },
         maintenanceWindows: { where: { endAt: { gte: now }, status: { in: BLOCKING_MAINTENANCE_STATUSES } }, select: { id: true, kind: true, status: true, title: true, startAt: true, endAt: true }, orderBy: { startAt: "asc" }, take: 10 },

@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 
-import { ApiError, apiRequest, getCurrentUser, hasStoredSession, login, logout, register } from "./api.js";
+import { ApiError, apiRequest, getCurrentUser, hasStoredSession, login, logout, register, storeAuthResult } from "./api.js";
 import { SmartCalendarView } from "./components/SmartCalendarView.tsx";
 import { AdminResourceManagementView } from "./components/AdminResourceManagementView.tsx";
 import { ResourceManagementView } from "./components/ResourceManagementView.tsx";
@@ -45,6 +45,7 @@ import { AuthLoginView } from "./components/AuthLoginView.tsx";
 import { AuthRegisterView } from "./components/AuthRegisterView.tsx";
 import { PublicLanding } from "./components/PublicLanding.tsx";
 import { WorkspaceHome } from "./pages/WorkspaceHome";
+import { ProfilePage } from "./pages/ProfilePage.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import { AccessUserManagement } from "./components/AccessUserManagement.tsx";
 import { NotificationCenter } from "./components/NotificationCenter.jsx";
@@ -112,10 +113,36 @@ function App() {
     updateActiveTab(tab);
     if (window.location.hash !== hashForTab(tab)) window.location.hash = hashForTab(tab);
   }
-  const [paymentBookingId, setPaymentBookingId] = useState("");
-  const openBookingPayment = booking => { setActiveGlobalModal(null); setPaymentBookingId(booking.id); setActiveTab("payments"); };
+  const [paymentBookingId, setPaymentBookingId] = useState(() => new URLSearchParams(window.location.hash.split("?")[1] || "").get("booking") || "");
+  const openBookingPayment = booking => {
+    setActiveGlobalModal(null);
+    setPaymentBookingId(booking.id);
+    updateActiveTab("payments");
+    window.location.hash = `${hashForTab("payments")}?booking=${encodeURIComponent(booking.id)}`;
+  };
+  const handleGuestBookingComplete = result => {
+    const stored = storeAuthResult(result);
+    setUser(stored.user);
+    setAuthMode("login");
+    if (PAYMENT_FEATURES_ENABLED && Number(stored.booking?.feeAmountVnd || 0) > 0) {
+      setPaymentBookingId(stored.booking.id);
+      updateActiveTab("payments");
+      window.history.replaceState(null, "", `${hashForTab("payments")}?booking=${encodeURIComponent(stored.booking.id)}`);
+    } else {
+      updateActiveTab("bookings");
+      window.history.replaceState(null, "", hashForTab("bookings"));
+    }
+  };
   const [resourceSearch, setResourceSearch] = useState("");
   const [calendarResourceId, setCalendarResourceId] = useState("");
+  useEffect(() => {
+    if (!user) return;
+    const pending = sessionStorage.getItem("lrm_pending_resource");
+    if (!pending) return;
+    sessionStorage.removeItem("lrm_pending_resource");
+    setCalendarResourceId(pending);
+    setActiveTab("smart_calendar");
+  }, [user?.id]);
   const [calendarRevision, setCalendarRevision] = useState(0);
   const [dashboard, setDashboard] = useState(null);
   const [resources, setResources] = useState([]);
@@ -141,7 +168,13 @@ function App() {
   const routeUserId = user?.id;
   useEffect(() => {
     if (!routeUserId) return;
-    const readRoute = () => { setRouteHash(window.location.hash); updateActiveTab(tabFromHash(window.location.hash)); };
+    const readRoute = () => {
+      setRouteHash(window.location.hash);
+      updateActiveTab(tabFromHash(window.location.hash));
+      if (tabFromHash(window.location.hash) === "payments") {
+        setPaymentBookingId(new URLSearchParams(window.location.hash.split("?")[1] || "").get("booking") || "");
+      }
+    };
     window.addEventListener("hashchange", readRoute);
     // Replace the public login anchor without adding a redundant history entry.
     if (!window.location.hash.startsWith("#/workspace/")) {
@@ -262,7 +295,7 @@ function App() {
       );
     }
     return (
-      <PublicLanding onRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }}><AuthLoginView
+      <PublicLanding onRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }} onViewSchedule={(id) => { sessionStorage.setItem("lrm_pending_resource", id); document.getElementById("dang-nhap")?.scrollIntoView({ behavior: "smooth" }); }} onGuestBookingComplete={handleGuestBookingComplete}><AuthLoginView
         onLogin={setUser}
         onSwitchToRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }}
         locale={locale}
@@ -299,10 +332,12 @@ function App() {
       }}
     >
       {error && <div className="alert danger" role="alert">{error}</div>}
+      {user.passwordResetRequired && <div className="alert" role="status">Tài khoản của bạn được tạo nhanh từ thông tin đặt lịch. Vui lòng đổi mật khẩu trong menu tài khoản sau khi hoàn tất thanh toán hoặc theo dõi booking.</div>}
 
       {/* REQUIRED CORE */}
       {activeTab === "home" && <WorkspaceHome user={user} bookings={bookings} notifications={notifications} loading={loading} error={error} onRetry={loadData} onNavigate={setActiveTab} onSearch={(query) => { setResourceSearch(query); setActiveTab("resources"); }} />}
-      {PAYMENT_FEATURES_ENABLED && activeTab === "payments" && <React.Suspense fallback={<p role="status">Đang tải thanh toán…</p>}><PaymentsPage user={user} bookingId={paymentBookingId} onClearBooking={() => setPaymentBookingId("")} /></React.Suspense>}
+      {activeTab === "profile" && <ProfilePage user={user} onUserUpdated={setUser} />}
+      {PAYMENT_FEATURES_ENABLED && activeTab === "payments" && <React.Suspense fallback={<p role="status">Đang tải thanh toán…</p>}><PaymentsPage user={user} bookingId={paymentBookingId} onClearBooking={() => { setPaymentBookingId(""); setActiveTab("payments"); }} /></React.Suspense>}
       {activeTab === "smart_calendar" && (
         <SmartCalendarView
           user={user}

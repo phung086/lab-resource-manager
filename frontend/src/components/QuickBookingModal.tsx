@@ -66,6 +66,34 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [pricingRules, setPricingRules] = useState<any[]>([]);
+  const [purposeCode, setPurposeCode] = useState("");
+  const [quote, setQuote] = useState<any>(null);
+  const [quoteError, setQuoteError] = useState("");
+  const [pricingLoaded, setPricingLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setPricingRules([]); setPurposeCode(""); setQuote(null); setPricingLoaded(false);
+    if (isOpen && resourceId) apiRequest(`/booking-pricing/${encodeURIComponent(resourceId)}`)
+      .then(rows => { if (active) { setPricingRules(rows); setPurposeCode(rows[0]?.purposeCode || ""); setPricingLoaded(true); } })
+      .catch(e => { if (active) setQuoteError(e.message); });
+    return () => { active = false; };
+  }, [isOpen, resourceId]);
+
+  const quoteKey = `${resourceId}|${purposeCode}|${selectedDate}|${startTime}|${endTime}`;
+  useEffect(() => {
+    let active = true;
+    setQuote(null); setQuoteError("");
+    if (!isOpen || !resourceId || !selectedDate || !pricingLoaded || (pricingRules.length > 0 && !purposeCode)) return;
+    const timer = setTimeout(async () => {
+      try {
+        const result = await apiRequest("/booking-pricing/quote", { method: "POST", body: JSON.stringify({ resourceId, ...(purposeCode ? { purposeCode } : {}), startAt: vietnamTimeToIso(selectedDate, startTime), endAt: vietnamTimeToIso(selectedDate, endTime) }) });
+        if (active) setQuote({ ...result, key: quoteKey });
+      } catch (e: any) { if (active) setQuoteError(e.message || "Không thể tính phí."); }
+    }, 200);
+    return () => { active = false; clearTimeout(timer); };
+  }, [isOpen, resourceId, purposeCode, selectedDate, startTime, endTime, pricingLoaded, pricingRules.length, quoteKey]);
 
   // Load resources if not passed or empty
   useEffect(() => {
@@ -164,6 +192,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (isSubmitting) return;
+    if (!quote || quote.key !== quoteKey) { setErrorMessage("Vui lòng chờ mức phí được cập nhật trước khi xác nhận."); return; }
     setErrorMessage("");
 
     if (!resourceId || !resources.some((r) => r.id === resourceId)) {
@@ -200,6 +229,8 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
         resourceId,
         title: title.trim() || `Đặt chỗ: ${currentResource?.name || "Tài nguyên"}`,
         purpose: purpose.trim() || "Nghiên cứu & Thực hành phòng thí nghiệm",
+        ...(purposeCode ? { purposeCode } : {}),
+        acceptedQuote: { amountVnd: quote.amountVnd, version: quote.version },
         startAt: startAtIso,
         endAt: endAtIso
       };
@@ -214,6 +245,9 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
       if (onConfirmBooking) {
         onConfirmBooking(booking);
+      }
+      if (booking.feeAmountVnd > 0 && booking.status === "CONFIRMED" && onProceedPayment) {
+        onProceedPayment(booking);
       }
     } catch (err: any) {
       const msg = err instanceof ApiError ? err.message : err?.message || "Không thể tạo lịch đặt.";
@@ -272,7 +306,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             <button
               type="submit"
               form="quick-booking-form"
-              disabled={isSubmitting || loadingResources || resources.length === 0 || !resourceId}
+              disabled={isSubmitting || loadingResources || resources.length === 0 || !resourceId || !quote || quote.key !== quoteKey}
               className="btn btn-primary text-xs px-5 py-2.5 flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>{isSubmitting ? "Đang gửi..." : "Xác nhận đặt lịch"}</span>
@@ -324,7 +358,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               </div>
             )}
           </div>
-          {onProceedPayment && createdBooking?.id && <div className="alert"><p>Thanh toán đặt phòng LAB được xử lý theo khoản thu do quản trị viên tạo. Nếu chưa có khoản thu, bạn chưa cần thanh toán.</p><button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>Xem khoản thanh toán của lịch đặt</button></div>}
+          {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>Phí đã chốt: {createdBooking.feeAmountVnd.toLocaleString("vi-VN")} đ. {createdBooking.status === "PENDING_APPROVAL" ? "Khoản thanh toán được tạo sau khi cán bộ duyệt lịch." : "Vui lòng thanh toán trước khi nhận bàn giao."}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>Xem khoản thanh toán của lịch đặt</button>}</div>}
         </div>
       ) : (
         <form id="quick-booking-form" onSubmit={handleSubmit} className="booking-form">
@@ -405,6 +439,8 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           </div>
 
           {/* Purpose */}
+          {pricingRules.length > 0 && <label className="booking-field">Mục đích tính phí<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{pricingRules.map(rule => <option key={rule.id} value={rule.purposeCode}>{rule.label} — {rule.hourlyRateVnd.toLocaleString("vi-VN")} đ/giờ</option>)}</select></label>}
+          <div className="alert" aria-live="polite">{quoteError ? <span role="alert">{quoteError}</span> : quote?.key === quoteKey ? <span>Phí sử dụng: <strong>{quote.amountVnd.toLocaleString("vi-VN")} đ</strong>{quote.amountVnd > 0 ? " · Thanh toán sau khi lịch được xác nhận, trước khi nhận bàn giao." : " · Không cần thanh toán."}</span> : "Đang cập nhật phí sử dụng…"}</div>
           <div className="booking-field">
             <label htmlFor="booking-purpose" className="booking-label">
               Mục đích sử dụng

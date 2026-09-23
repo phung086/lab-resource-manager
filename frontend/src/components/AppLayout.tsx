@@ -65,6 +65,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   // Map activeTab to readable header title
   const tabTitles: Record<string, string> = {
     home: "Không gian làm việc",
+    profile: "Hồ sơ & ưu tiên LAB",
     payments: "Thanh toán",
     smart_calendar: "Lịch Đặt Khung Giờ",
     ai_analytics: "AI Tính Toán Hiệu Suất",

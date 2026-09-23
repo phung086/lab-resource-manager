@@ -3,6 +3,7 @@ import { Server, ShieldCheck, Lock, Mail, User, BookOpen, ArrowRight, Sparkles, 
 import { AuthIdentity } from "./AuthIdentity";
 import { Eye, EyeOff } from "lucide-react";
 import { register } from "../api.js";
+import { VietnamAddressSelector } from "./VietnamAddressSelector";
 
 export interface AuthRegisterViewProps {
   onRegisterSuccess: (user: any) => void;
@@ -21,6 +22,10 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
   const [studentId, setStudentId] = useState("");
   const [email, setEmail] = useState("");
   const [department, setDepartment] = useState("");
+  const [phone, setPhone] = useState("");
+  const [organization, setOrganization] = useState("");
+  const [customerType, setCustomerType] = useState("INTERNAL");
+  const [address, setAddress] = useState({ addressLine: "", provinceCode: "", wardCode: "" });
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,7 +46,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
     setError("");
 
     try {
-      const result = await register({ email, password, fullName, studentId, department });
+      const result = await register({ email, password, fullName, studentId, department, phone, organization, customerType, address });
       onRegisterSuccess(result.user);
     } catch (requestError: any) {
       setError(requestError?.message || "Không thể đăng ký tài khoản.");
@@ -97,7 +102,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 Đăng Ký Tài Khoản
               </h3>
               <p className="text-xs text-slate-400 mt-1 font-sans">
-                Tạo tài khoản sinh viên để tìm tài nguyên và gửi yêu cầu đặt lịch.
+                Tạo tài khoản LAB để đặt phòng, theo dõi thanh toán và lưu địa chỉ mặc định cho các nghiệp vụ mượn thiết bị sau này.
               </p>
             </div>
 
@@ -156,10 +161,32 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label htmlFor="register-department" className="font-mono text-[11px] text-slate-300">Khoa / Bộ môn (không bắt buộc)</label>
-                <input id="register-department" value={department} onChange={e => setDepartment(e.target.value)} maxLength={100} autoComplete="organization" placeholder="Nhập khoa hoặc bộ môn của bạn" className="auth-form-input w-full text-xs" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="register-department" className="font-mono text-[11px] text-slate-300">Khoa / Bộ môn</label>
+                  <input id="register-department" value={department} onChange={e => setDepartment(e.target.value)} maxLength={100} autoComplete="organization" placeholder="Nội bộ trường" className="auth-form-input w-full text-xs" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="register-organization" className="font-mono text-[11px] text-slate-300">Đơn vị / tổ chức</label>
+                  <input id="register-organization" value={organization} onChange={e => setOrganization(e.target.value)} maxLength={160} autoComplete="organization" placeholder="Khách ngoài trường nếu có" className="auth-form-input w-full text-xs" />
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="register-phone" className="font-mono text-[11px] text-slate-300">Số điện thoại *</label>
+                  <input id="register-phone" required value={phone} onChange={e => setPhone(e.target.value)} maxLength={20} autoComplete="tel" placeholder="Dùng cho liên hệ bàn giao" className="auth-form-input w-full text-xs" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="register-customer-type" className="font-mono text-[11px] text-slate-300">Nhóm sử dụng</label>
+                  <select id="register-customer-type" value={customerType} onChange={e => setCustomerType(e.target.value)} className="auth-form-input w-full text-xs">
+                    <option value="INTERNAL">Nội bộ trường</option>
+                    <option value="EXTERNAL">Khách / đơn vị ngoài trường</option>
+                  </select>
+                </div>
+              </div>
+
+              <VietnamAddressSelector value={address} onChange={setAddress} required compact />
 
               <div className="flex flex-col gap-1">
                 <label htmlFor="register-password" className="font-mono text-[11px] text-slate-300">Mật khẩu khởi tạo *</label>

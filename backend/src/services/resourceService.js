@@ -82,6 +82,7 @@ export function serializeCanonicalResource(resource, interval) {
     code: resource.code,
     name: resource.name,
     description: resource.description || null,
+    media: resource.media || [],
     laboratoryId: resource.laboratoryId || null,
     laboratory: resource.laboratory || null,
     labPolicy,

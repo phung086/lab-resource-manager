@@ -165,7 +165,9 @@ export function buildVnpayUrl(row, ip) {
     vnp_CurrCode: "VND",
     vnp_TxnRef: row.txnRef,
     vnp_OrderInfo: `LRM ${row.txnRef}`,
-    vnp_OrderType: "other",
+      vnp_OrderType: "other",
+      // VNPAY renders the scannable QR on its hosted checkout page.
+      vnp_BankCode: "VNPAYQR",
     vnp_Locale: "vn",
     vnp_ReturnUrl: c.returnUrl,
     vnp_IpAddr: ip?.replace(/^::ffff:/, "") || "127.0.0.1",

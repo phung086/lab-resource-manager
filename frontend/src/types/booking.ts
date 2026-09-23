@@ -31,6 +31,7 @@ export interface BookingResourceSummary {
 }
 
 export interface BookingRecord {
+  feeAmountVnd?: number;
   id: string;
   bookingCode?: string | null;
   resourceId: string;

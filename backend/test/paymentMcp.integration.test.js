@@ -392,6 +392,7 @@ test(
         const url = new URL(r.body.paymentUrl),
           params = Object.fromEntries(url.searchParams);
         assert.equal(url.hostname, "sandbox.vnpayment.vn");
+        assert.equal(params.vnp_BankCode, "VNPAYQR");
         assert.equal(params.vnp_Amount, "2500000");
         assert.equal(params.vnp_TxnRef, first.txnRef);
         const hash = params.vnp_SecureHash;
@@ -444,11 +445,9 @@ test(
             .RspCode,
           "99",
         );
-        assert.equal(
-          (await http.get("/api/payments/vnpay/return").query(callback(first)))
-            .status,
-          200,
-        );
+        const returned = await http.get("/api/payments/vnpay/return").query(callback(first));
+        assert.equal(returned.status, 200);
+        assert.match(returned.text, /#\/workspace\/thanh-toan\?booking=booking-0/);
         assert.equal(
           (
             await prisma.paymentTransaction.findUnique({

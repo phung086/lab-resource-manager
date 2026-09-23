@@ -3,6 +3,8 @@ import { apiRequest } from "../../../api.js";
 import { BaseModal2026 } from "../../BaseModal2026";
 import { formatVietnamDateTime } from "../../../utils/timezone";
 import "./payments.css";
+import { ResourcePricingEditor } from "./ResourcePricingEditor";
+import { BookingCheckout } from "./BookingCheckout";
 type Payment = {
   id: string;
   txnRef: string;
@@ -39,7 +41,15 @@ const money = (v: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
     v,
   );
-export default function PaymentsPage({
+export default function PaymentsPage(props: {
+  user: { id: string; role: string };
+  bookingId?: string;
+  onClearBooking?: () => void;
+}) {
+  return props.bookingId ? <BookingCheckout bookingId={props.bookingId} onClearBooking={props.onClearBooking} /> : <PaymentsLedger {...props} />;
+}
+
+function PaymentsLedger({
   user,
   bookingId,
   onClearBooking,
@@ -179,6 +189,7 @@ export default function PaymentsPage({
   }
   return (
     <section className="content-stack payment-page">
+      {admin && <ResourcePricingEditor />}
       <header className="page-section-header">
         <div>
           <h1>
@@ -189,7 +200,7 @@ export default function PaymentsPage({
                 : "Thanh toán của tôi"}
           </h1>
           <p className="section-description">
-            Chỉ các yêu cầu thu tiền được quản trị viên tạo mới xuất hiện ở đây.
+            Khoản thu được tạo theo phí đã chốt khi lịch đặt được xác nhận, hoặc do quản trị viên lập.
             Trạng thái thanh toán được theo dõi riêng cho từng lịch đặt.
           </p>
         </div>
@@ -209,7 +220,7 @@ export default function PaymentsPage({
           </p>
           <p>
             Chọn yêu cầu thanh toán bên dưới để tiếp tục qua VNPAY Sandbox hoặc
-            VietQR. Nếu chưa có yêu cầu thu, hệ thống không tự tính phí.
+            VietQR. Lịch cần duyệt chỉ có khoản thu sau khi được xác nhận; lịch miễn phí không cần thanh toán.
           </p>
           <button className="secondary-button" onClick={onClearBooking}>
             Xem tất cả giao dịch
@@ -262,8 +273,7 @@ export default function PaymentsPage({
               />
             </label>
             <p>
-              Nhập khoản thu đã được xác định. Hệ thống không tự tính phí đặt
-              lịch.
+              Lịch có bảng giá đã tự tạo khoản thu khi được xác nhận. Chỉ lập thủ công cho khoản thu đã được xác định và chưa có giao dịch.
             </p>
             <button className="primary-button" disabled={!!busy}>
               Tạo yêu cầu

@@ -10,6 +10,8 @@ import { prisma } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { STUDENT, isCanonicalRole } from "../constants/roles.js";
+import { validateVietnamAddress } from "../services/addressService.js";
+import { publicCustomerUser } from "../services/guestBookingService.js";
 
 const router = express.Router();
 
@@ -26,13 +28,22 @@ const loginSchema = z.object({
   password: z.string().min(8)
 }).strict();
 
+const addressSchema = z.object({
+  addressLine: z.string().trim().min(5).max(300),
+  provinceCode: z.union([z.string(), z.number()]),
+  wardCode: z.union([z.string(), z.number()])
+}).strict();
+
 const registerSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
   password: z.string().min(8).max(128),
   fullName: z.string().trim().min(2).max(255),
   studentId: z.string().trim().max(50).optional(),
   department: z.string().trim().max(100).optional(),
-  phone: z.string().trim().max(20).optional()
+  phone: z.string().trim().max(20).optional(),
+  organization: z.string().trim().max(160).optional(),
+  customerType: z.enum(["INTERNAL", "EXTERNAL"]).optional(),
+  address: addressSchema.optional()
 }).strict();
 
 const changePasswordSchema = z.object({
@@ -48,15 +59,19 @@ const changePasswordSchema = z.object({
  * Role is returned in canonical uppercase. No nonexistent fields are fabricated.
  */
 function publicUser(user) {
+  return publicCustomerUser(user);
+}
+
+function addressData(address) {
+  if (!address) return {};
   return {
-    id: user.id,
-    email: user.email,
-    fullName: user.fullName,
-    role: user.role, // Canonical uppercase — no lowercasing
-    isActive: user.isActive,
-    studentId: user.studentId || null,
-    department: user.department || null,
-    phone: user.phone || null
+    defaultAddressLine: address.addressLine,
+    defaultAddressProvinceCode: address.provinceCode,
+    defaultAddressProvinceName: address.provinceName,
+    defaultAddressWardCode: address.wardCode,
+    defaultAddressWardName: address.wardName,
+    defaultAddressSource: address.source,
+    defaultAddressVersion: address.version
   };
 }
 
@@ -74,6 +89,7 @@ router.post("/register", authRateLimit, async (req, res, next) => {
       throw new HttpError(409, "Email already registered", { field: "email" }, "DUPLICATE_EMAIL");
     }
 
+    const verifiedAddress = data.address ? await validateVietnamAddress(data.address) : null;
     const passwordHash = await bcrypt.hash(data.password, 12);
     const user = await prisma.user.create({
       data: {
@@ -82,10 +98,14 @@ router.post("/register", authRateLimit, async (req, res, next) => {
         fullName: data.fullName,
         role: STUDENT, // Canonical uppercase
         passwordHash,
-        studentId: data.studentId,
-        department: data.department,
-        phone: data.phone,
-        isActive: true
+        studentId: data.studentId || null,
+        department: data.department || null,
+        phone: data.phone || null,
+        organization: data.organization || null,
+        customerType: data.customerType || "INTERNAL",
+        passwordResetRequired: false,
+        isActive: true,
+        ...addressData(verifiedAddress)
       }
     });
 
@@ -174,7 +194,7 @@ router.post("/change-password", requireAuth, async (req, res, next) => {
       throw new HttpError(400, "Current password is incorrect", undefined, "CURRENT_PASSWORD_INVALID");
     }
     const passwordHash = await bcrypt.hash(data.newPassword, 12);
-    await prisma.user.update({ where: { id: req.user.id }, data: { passwordHash } });
+    await prisma.user.update({ where: { id: req.user.id }, data: { passwordHash, passwordResetRequired: false } });
     res.status(204).end();
   } catch (error) {
     next(error);

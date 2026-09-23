@@ -11,6 +11,8 @@ import {
   paymentReceipt,
 } from "../services/paymentService.js";
 import { verifyVnpay } from "../services/paymentProviders.js";
+import { prisma } from "../db.js";
+import { config } from "../config.js";
 const router = express.Router();
 const route = (handler) => async (req, res, next) => {
   try {
@@ -58,10 +60,19 @@ router.get(
   "/vnpay/return",
   route(async (req, res) => {
     verifyVnpay(req.query);
+    const transaction = await prisma.paymentTransaction.findUnique({ where: { txnRef: req.query.vnp_TxnRef }, select: { bookingId: true } });
+    const appOrigin = process.env.PAYMENT_APP_URL || config.corsOrigins[0];
+    const target = new URL(appOrigin);
+    if (!["https:", "http:"].includes(target.protocol) || (config.isProduction && target.protocol !== "https:")) {
+      throw new Error("PAYMENT_APP_URL must be a valid application URL");
+    }
+    target.hash = transaction?.bookingId
+      ? `#/workspace/thanh-toan?booking=${encodeURIComponent(transaction.bookingId)}`
+      : "#/workspace/thanh-toan";
     res
       .type("html")
       .send(
-        '<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Kết quả VNPAY Sandbox</title><main><h1>Đã trở về từ VNPAY Sandbox</h1><p>Thông tin trả về có chữ ký hợp lệ. Trạng thái thanh toán chỉ được cập nhật sau khi hệ thống nhận IPN xác minh.</p><p>Quay lại ứng dụng và chọn Làm mới để xem trạng thái đã lưu.</p></main></html>',
+        `<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Quay lại lịch đặt LAB</title><main><h1>Đã trở về từ VNPAY</h1><p>Hệ thống đang chờ thông báo xác thực giao dịch. Mở lịch đặt để xem kết quả đã lưu.</p><a href="${target.toString().replaceAll("&", "&amp;").replaceAll('"', "&quot;")}">Xem thanh toán lịch đặt</a></main></html>`,
       );
   }),
 );

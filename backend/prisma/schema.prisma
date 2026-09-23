@@ -252,6 +252,20 @@ model User {
   studentId                    String?
   department                   String?
   phone                        String?
+  customerType                 String                @default("INTERNAL")
+  organization                 String?
+  passwordResetRequired        Boolean               @default(false)
+  defaultAddressLine           String?
+  defaultAddressProvinceCode   String?
+  defaultAddressProvinceName   String?
+  defaultAddressWardCode       String?
+  defaultAddressWardName       String?
+  defaultAddressSource         String?
+  defaultAddressVersion        String?
+  loyaltyTier                  String                @default("LAB_STANDARD")
+  loyaltyPoints                Int                   @default(0)
+  loyaltyDiscountBps           Int                   @default(0)
+  priorityBoost                Int                   @default(0)
   isActive                     Boolean               @default(true)
   createdAt                    DateTime              @default(now())
   updatedAt                    DateTime              @default(now()) @updatedAt
@@ -270,11 +284,31 @@ model User {
   labAssignments               UserLabAssignment[]
   acknowledgedMonitoringAlerts MonitoringAlert[]     @relation("MonitoringAlertAcknowledgement")
   cameraAccessAudits           CameraAccessAudit[]
+  emailOtps                    EmailOtp[]
 
   @@map("users")
 }
 
+model EmailOtp {
+  id          String    @id
+  email       String
+  purpose     String
+  codeHash    String
+  attempts    Int       @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([email, purpose, consumedAt, expiresAt])
+  @@index([userId])
+  @@map("email_otps")
+}
+
 model Resource {
+  pricingRules         ResourcePricingRule[]
+  media               ResourceMedia[]
   id                String            @id
   laboratoryId      String?
   code              String            @unique
@@ -323,6 +357,25 @@ model Resource {
   @@index([operationalStatus])
   @@index([bookingState])
   @@map("resources")
+}
+
+model ResourceMedia {
+  id           String   @id
+  resourceId   String
+  kind         String
+  url          String   @db.Text
+  objectKey    String?  @unique
+  title        String
+  altText      String
+  sourceUrl    String?  @db.Text
+  credit       String?
+  license      String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  resource     Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId, sortOrder])
+  @@map("resource_media")
 }
 
 model ResourceCapability {
@@ -404,6 +457,8 @@ model UserCertification {
 
 // PostgreSQL bookings_no_active_overlap is preserved externally; Prisma cannot model EXCLUDE.
 model Booking {
+  feeAmountVnd      Int                   @default(0)
+  feeSnapshot       Json                  @default("{}")
   id                String                @id
   bookingCode       String?               @unique
   resourceId        String
@@ -1002,4 +1057,17 @@ model UserLabAssignment {
   @@id([userId, laboratoryId])
   @@index([laboratoryId])
   @@map("user_lab_assignments")
+}
+model ResourcePricingRule {
+  id            String   @id
+  resourceId    String
+  purposeCode   String
+  label         String
+  hourlyRateVnd Int
+  version       Int      @default(1)
+  updatedAt     DateTime @updatedAt
+  resource      Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, purposeCode])
+  @@map("resource_pricing_rules")
 }

@@ -17,6 +17,7 @@ import {
 
 import { apiRequest } from "../api.js";
 import { ResourceDetailsModal } from "./ResourceDetailsModal.tsx";
+import { ResourceMediaEditor } from "./ResourceMediaEditor.tsx";
 import { ResourceStatusModal } from "./ResourceStatusModal.tsx";
 
 const categories = ["ROOM", "EQUIPMENT", "MACHINE", "EXPERIMENT_KIT", "MATERIAL"];
@@ -303,6 +304,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       {error && <div className="alert danger" role="alert">{error}</div>}
       {notice && <div className="alert success" role="status">{notice}</div>}
 
+      {managementMode && canManage && <ResourceMediaEditor resources={resources} />}
       {managementMode && showForm && (
         <section className="panel resource-editor" aria-labelledby="resource-editor-title">
           <div className="panel-title"><Edit3 aria-hidden="true" /><h2 id="resource-editor-title">{editing ? `Chỉnh sửa ${editing.code}` : "Tạo tài nguyên mới"}</h2></div>

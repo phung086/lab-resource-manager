@@ -15,6 +15,7 @@ const include = {
       id: true,
       title: true,
       status: true,
+      feeAmountVnd: true,
       resource: { select: { id: true, name: true, code: true } },
     },
   },
@@ -124,7 +125,7 @@ export async function createCharge(actor, data) {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`charge:${data.bookingId}`}))::text`;
     const booking = await tx.booking.findUnique({
       where: { id: data.bookingId },
-      select: { requestedById: true },
+      select: { requestedById: true, feeAmountVnd: true, status: true },
     });
     if (!booking)
       throw new HttpError(
@@ -133,6 +134,9 @@ export async function createCharge(actor, data) {
         undefined,
         "BOOKING_NOT_FOUND",
       );
+    if (booking.feeAmountVnd > 0 && (booking.status !== "CONFIRMED" || data.amount !== booking.feeAmountVnd)) {
+      throw new HttpError(409, "Khoản thu phải khớp phí đã chốt và lịch đã duyệt.", undefined, "BOOKING_PAYMENT_INVALID");
+    }
     if (
       await tx.paymentTransaction.findFirst({
         where: {
@@ -171,6 +175,9 @@ export async function initiatePayment(id, actor, provider, ip) {
     });
     assertOwner(current, actor, false);
     assertPending(current);
+    if (current.booking && ["PENDING_APPROVAL", "REJECTED", "CANCELLED"].includes(current.booking.status)) {
+      throw new HttpError(409, "Lịch đặt chưa được duyệt hoặc đã kết thúc yêu cầu; không thể thanh toán.", undefined, "BOOKING_PAYMENT_INVALID");
+    }
     // A sent payment cannot switch providers: an older signed callback may still arrive.
     if (!["unselected", provider].includes(current.provider))
       throw new HttpError(

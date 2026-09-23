@@ -38,14 +38,18 @@ export async function apiRequest(path, options = {}) {
   return body;
 }
 
+export function storeAuthResult(result) {
+  localStorage.setItem("lrm_token", result.accessToken);
+  localStorage.setItem("lrm_user", JSON.stringify(result.user));
+  return result;
+}
+
 export async function login(email, password) {
   const result = await apiRequest("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password })
   });
-  localStorage.setItem("lrm_token", result.accessToken);
-  localStorage.setItem("lrm_user", JSON.stringify(result.user));
-  return result;
+  return storeAuthResult(result);
 }
 
 export async function register(userData) {
@@ -53,9 +57,7 @@ export async function register(userData) {
     method: "POST",
     body: JSON.stringify(userData)
   });
-  localStorage.setItem("lrm_token", result.accessToken);
-  localStorage.setItem("lrm_user", JSON.stringify(result.user));
-  return result;
+  return storeAuthResult(result);
 }
 
 export async function logout() {

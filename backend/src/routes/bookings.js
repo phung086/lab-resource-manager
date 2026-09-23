@@ -20,6 +20,8 @@ const createBookingSchema = z.object({
   resourceId: z.string().min(1),
   title: z.string().min(2).max(255),
   purpose: z.string().max(2000).optional().default(""),
+  purposeCode: z.enum(["STUDY", "TEACHING", "RESEARCH", "SERVICE"]).optional(),
+  acceptedQuote: z.object({ amountVnd: z.number().int().min(0), version: z.number().int().min(0) }).strict().optional(),
   startAt: z.string().or(z.date()),
   endAt: z.string().or(z.date())
 }).strict();
@@ -218,6 +220,8 @@ router.post("/", requireAuth, async (req, res, next) => {
       resourceId: data.resourceId,
       title: data.title,
       purpose: data.purpose,
+      purposeCode: data.purposeCode,
+      acceptedQuote: data.acceptedQuote,
       startAt: data.startAt,
       endAt: data.endAt
     });

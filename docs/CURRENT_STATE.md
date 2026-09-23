@@ -7,6 +7,9 @@ resource/purpose fees, fast booking with verified email, ROOM self-return,
 administrative booking notifications, and separate operations/telemetry screens.
 This is **in progress, not final**. Read [OPEN_LAB_UPGRADE_REPORT.md](OPEN_LAB_UPGRADE_REPORT.md)
 for implementation and verification status before continuing local agent work.
+Checkpoint 2026-09-23: routing, split monitoring views, ROOM self-return, booking
+notifications and versioned resource/purpose pricing with automatic charges are
+implemented and tested. Fast booking/OTP/address and payment expiry remain pending.
 The closure statements below describe historical milestones, not this upgrade.
 
 Last synchronized: 2026-09-21
@@ -197,3 +200,9 @@ replacement for physical safety systems or laboratory procedures.
 Before future work, read `AGENTS.md`, the `.agent/` rules, this file,
 `docs/DECISIONS.md`, the Batch 7 and Batch 8 reports/walkthroughs, and
 `docs/FINAL_ASSIGNMENT_CLOSURE_AUDIT.md`.
+
+## 2026-09-24 — Open LAB quick booking checkpoint
+
+Code checkpoint implemented for external quick booking: public catalog detail can collect external customer identity, Vietnamese administrative address, email OTP, quote, booking creation, and handoff to bookings/payment; normal registration/profile now persist default address and profile exposes spending/loyalty signals from real payment/booking data. External customers keep canonical role `STUDENT` with `customerType=EXTERNAL`; no new role or booking status was introduced.
+
+Verification completed without live DB: Prisma validate/generate, backend lint, frontend lint/typecheck/build, and address source smoke. Local `DATABASE_URL` points to PostgreSQL on `localhost:5432`, but that server and Docker Desktop are not running in the current environment, so `prisma migrate deploy`, OTP live flow, booking creation, and browser smoke remain pending. SMTP variables are also absent; OTP must fail with `EMAIL_NOT_CONFIGURED` until real SMTP is configured.

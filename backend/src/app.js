@@ -11,11 +11,15 @@ import { metricsMiddleware, metricsRouter } from "./metrics.js";
 
 // Core Routers
 import authRouter from "./routes/auth.js";
+import addressRouter from "./routes/address.js";
+import guestBookingRouter from "./routes/guestBooking.js";
+import resourceMediaRouter from "./routes/resourceMedia.js";
 import userRouter from "./routes/users.js";
 import resourceRouter from "./routes/resources.js";
 import laboratoryRouter from "./routes/laboratories.js";
 import calendarRouter from "./routes/calendar.js";
 import bookingRouter from "./routes/bookings.js";
+import bookingPricingRouter from "./routes/bookingPricing.js";
 import maintenanceRouter from "./routes/maintenance.js";
 import dashboardRouter from "./routes/dashboard.js";
 import notificationRouter from "./routes/notifications.js";
@@ -87,11 +91,14 @@ export function createApp() {
 
   // 1. Auth & Identity
   app.use("/api/auth", authRouter);
+  app.use("/api/address", addressRouter);
+  app.use("/api/guest-booking", guestBookingRouter);
 
   // 2. Users & Profiles
   app.use("/api/users", userRouter);
 
   // 3. Resources & Catalog
+  app.use("/api/resources", resourceMediaRouter);
   app.use("/api/resources", resourceRouter);
   app.use("/api/laboratories", laboratoryRouter);
 
@@ -100,6 +107,7 @@ export function createApp() {
 
   // 5. Bookings & Lifecycle Workflow
   app.use("/api/bookings", bookingRouter);
+  app.use("/api/booking-pricing", bookingPricingRouter);
 
   // 6. Maintenance Windows & Calibration
   app.use("/api/maintenance", maintenanceRouter);
