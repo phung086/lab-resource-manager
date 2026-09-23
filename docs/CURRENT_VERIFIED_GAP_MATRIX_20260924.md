@@ -41,3 +41,7 @@ The SHA-256 values below compare the embedded predecessor checksum with a fresh 
 ## Boundary and next action
 
 This report completes Phase 0's evidence matrix. No runtime code, schema, migration, or GitHub PR was changed. The first implementation phase is G-01 only. The byte-level cause is established by the tracked blobs, `.gitattributes`, and hash comparison; an isolated PostgreSQL 16 run is still required to validate the deployment mechanism and the values Prisma records. Do not edit historical migration SQL or `_prisma_migrations` to force a green result.
+
+### Proposed Phase 1 deployment direction
+
+Prefer a separately versioned **clean-install baseline** generated from the canonical final schema plus required hand-written constraints, triggers, and indexes. Keep the existing migration lineage available only for databases that already carry it; do not rewrite its files or recorded checksums. A deployment selector must positively identify an empty database versus an existing migration history and fail closed for unknown/partial history. Future schema changes must have a documented path for both lineages until old installations are retired. Validate the baseline on fresh PostgreSQL 16 and the legacy path on an existing verified copy before adopting it, then make both tests required CI gates. This is a proposal, not a completed migration solution; the baseline SQL and selector have not been built or tested.
