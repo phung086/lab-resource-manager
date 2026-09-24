@@ -191,7 +191,7 @@ export function catalogFingerprint(rows) {
   return stableSha256(rows.map(row => ({
     kind: row.kind,
     identity: row.identity,
-    definition: row.definition
+    definition: row.definition.replace(/\r\n?/g, "\n")
   })));
 }
 

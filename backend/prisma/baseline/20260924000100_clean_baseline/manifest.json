@@ -3,7 +3,7 @@
   "hashContract": "UTF-8 text, optional BOM removed, CRLF/CR normalized to LF, trailing newline preserved",
   "baselineSqlSha256": "dac2b1a49e817f537cbbbfd269cd92ff1d7990efd03c06ba53fcce439ba56f8b",
   "baselineSchemaSha256": "f22ba45d711c8da92ad7b6b81b79ef5ff139657e1fa174e41109afc022a36066",
-  "catalogFingerprintSha256": "3083d76b8c91758925020f8e6d69cf52c205e3b3ddb4bdb2c0633f2c9d6e50b2",
+  "catalogFingerprintSha256": "c5fda97e20c410dc77cb8aea06c72a5c2551994c3a6fd14ab115954d549b36d8",
   "includedMigrations": [
     { "name": "20260723000100_init", "sourceSha256": "72ac44a7ade4651672ddae60e542b0137530ace6920fc7a5c43b6c25f2ac86e3" },
     { "name": "20260723000200_remove_resource_owner_default", "sourceSha256": "66a1614148472e82df95e52c3649e6119a54c9029fc0d4b4bc71e25a688939aa" },

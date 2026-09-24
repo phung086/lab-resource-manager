@@ -46,7 +46,9 @@ baseline ID and directory; ordinary migrations must never regenerate or mutate
 The catalog fingerprint covers public tables and partitioned tables, views,
 materialized views, sequences, enum/domain types, columns/defaults, primary and
 foreign keys, unique/check constraints, indexes, non-extension public
-functions, non-internal triggers, and public extensions. It therefore includes
+functions, non-internal triggers, and public extensions. Catalog definition
+text is normalized to LF so the stored function body is identical across clean
+Linux and existing Windows-origin baselines. The fingerprint therefore includes
 the 42 baseline relations plus `btree_gist`, `bookings_no_active_overlap`, both
 valid-time constraints, `enforce_resource_schedule_integrity()`, and both
 schedule-integrity triggers. `_prisma_migrations` is excluded because Prisma
