@@ -15,6 +15,24 @@ Mandatory training is also not enforced in `createBooking`; guest OTP/account
 and booking use separate transactions. These are current gaps, despite the
 historical verified milestones below.
 
+## Phase 1 migration reproducibility — 2026-09-24
+
+P0 fresh deployment is repaired on branch
+`feature/fresh-migration-reproducibility`. The root cause was confirmed on a
+fresh Windows checkout and PostgreSQL 16: `.gitattributes` produced CRLF bytes
+whose Prisma checksums differed from the historical mixed-line-ending values
+embedded in the reconciliation migration. No historical migration was edited.
+
+`npm run db:migrate` now applies a reviewed clean-install baseline only to a
+truly empty database, records the twelve included migrations using Prisma
+`migrate resolve`, then applies later forward migrations normally. Existing
+databases preserve their lineage. Unknown non-empty schemas fail closed and an
+interrupted baseline can resume. Fresh deploy, repeat deploy, interrupted
+resume, existing-lineage upgrade, fail-closed behavior, schema equivalence,
+Prisma validation/generation, backend lint, and core tests were verified on an
+isolated PostgreSQL 16 container. See
+[PHASE1_MIGRATION_REPRODUCIBILITY_REPORT.md](PHASE1_MIGRATION_REPRODUCIBILITY_REPORT.md).
+
 ## Active local work — 2026-09-23
 
 User has approved an iterative Open LAB upgrade for internal/external users,

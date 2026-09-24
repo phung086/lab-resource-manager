@@ -1,0 +1,18 @@
+{
+  "baselineId": "20260924000100_clean_baseline",
+  "schemaSha256": "f22ba45d711c8da92ad7b6b81b79ef5ff139657e1fa174e41109afc022a36066",
+  "includedMigrations": [
+    "20260723000100_init",
+    "20260723000200_remove_resource_owner_default",
+    "20260723000300_require_explicit_resource_fields",
+    "20260727000100_add_i18n_message_keys",
+    "20260817000100_add_maintenance_windows",
+    "20260820000100_add_booking_guard_constraint",
+    "20260820000200_add_orchestration_provenance_and_policy",
+    "20260917000100_reconcile_canonical_persistence",
+    "20260921000100_add_smart_monitoring",
+    "20260923000100_booking_pricing",
+    "20260923000200_resource_media",
+    "20260923000300_guest_identity_loyalty"
+  ]
+}

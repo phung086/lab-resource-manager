@@ -76,17 +76,24 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 The backend production container runs:
 
 ```text
-Prisma migrate deploy
+Canonical migration deployment (`npm run db:migrate`)
 -> Prisma migration status verification
 -> canonical first-admin seed
 -> start API
 ```
 
-Batch 7 finalization reconfirmed ordinary tracked `prisma migrate deploy` on a
-clean PostgreSQL 16 database in both the host environment and the Linux
-production image. The temporary checksum-compatibility bridge is retired.
-Tracked historical migration SQL is never edited, `_prisma_migrations` is never
-edited manually, and production does not run `prisma db push`.
+The canonical migration command distinguishes two safe cases:
+
+- a completely empty PostgreSQL database receives the reviewed baseline in
+  `backend/prisma/baseline/20260924000100_clean_baseline`, then the included
+  historical migrations are recorded with Prisma's official `migrate resolve`;
+- an existing database with Prisma migration history keeps that lineage and
+  receives only pending forward migrations.
+
+A non-empty database without recognized Prisma history or the clean-baseline
+marker fails closed. Interrupted clean baselining is resumable from its persisted
+marker. Tracked historical migration SQL is never edited, `_prisma_migrations`
+is never edited manually, and production does not run `prisma db push`.
 
 ## 4. Verify runtime
 

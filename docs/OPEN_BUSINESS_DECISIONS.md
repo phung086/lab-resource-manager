@@ -17,6 +17,6 @@ This list records questions that affect future implementation. It does not block
 | D-11 | What is audit/PII retention and deletion policy? | Preserve existing audit history; do not claim a retention schedule. |
 | D-12 | How much maintenance detail may be visible publicly? | Public schedule should reveal unavailable periods without private operational notes. |
 | D-13 | Is loyalty an academic access signal, commercial discount, or both? | It must never bypass training, RBAC, approval, quota or safety. |
-| D-14 | Which fresh-deployment migration strategy replaces the broken current path? | Phase 0 found mixed-line-ending checksum expectations incompatible with fresh CRLF checkout. A new clean baseline lineage is the preferred durable direction, subject to PostgreSQL 16 verification and explicit migration-path documentation. Historical SQL and `_prisma_migrations` stay immutable. |
+| D-14 | RESOLVED — clean deployment strategy | ADR-021 adopts a reviewed clean-install baseline for empty databases and preserves the historical lineage for existing databases. PostgreSQL 16 verification is recorded in the Phase 1 report. |
 
 The user explicitly requested an email login with phone number as the initial password for quick-created accounts. This remains the current product decision. Security hardening must enforce a prompt password change at the backend and limit use of that temporary credential; replacing the login model requires a new product decision.

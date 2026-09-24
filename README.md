@@ -84,9 +84,12 @@ Telemetry sources are provisioned by an administrator. Each source receives a
 one-time credential whose derived hash is stored in PostgreSQL; there is no
 shared production telemetry key.
 
-Clean deployment uses ordinary tracked `prisma migrate deploy`. Historical
-migration SQL remains immutable, and production never edits
-`_prisma_migrations` manually.
+Run `npm run db:migrate` from `backend/` for deployment. A completely empty
+database receives the reviewed clean-install baseline and Prisma records the
+included historical migrations through the official `migrate resolve` command.
+An existing database keeps its current lineage and receives only pending
+forward migrations. Unknown non-empty schemas fail closed. Historical migration
+SQL remains immutable, and production never edits `_prisma_migrations` manually.
 
 Kiểm tra cấu hình Compose:
 

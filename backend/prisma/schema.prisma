@@ -7,6 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Internal deployment provenance for the reviewed clean-install baseline.
+// Existing databases keep this table empty; clean installs retain one marker.
+model DeploymentBaseline {
+  baselineId   String   @id @map("baseline_id")
+  schemaSha256 String   @map("schema_sha256")
+  installedAt  DateTime @default(now()) @map("installed_at") @db.Timestamptz(6)
+
+  @@map("_lrm_deployment_baselines")
+}
+
 enum Role {
   ADMIN
   LAB_STAFF

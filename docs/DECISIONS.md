@@ -252,3 +252,18 @@ real SMTP and fail visibly when SMTP is missing.
 LAB loyalty is recorded as a booking/payment signal, not as authorization: points,
 tier, discount, and priority boost never bypass booking policy, approval, RBAC,
 or staff inspection responsibilities.
+
+## ADR-021 - Clean Installs Use A Reviewed Prisma Baseline
+
+Status: Accepted; supersedes ADR-015 for completely empty databases.
+
+Historical applied migration SQL and `_prisma_migrations` remain immutable.
+Because fresh checkout line-ending normalization changes the predecessor
+checksums expected by the historical reconciliation migration, a completely
+empty database uses the reviewed baseline at
+`backend/prisma/baseline/20260924000100_clean_baseline`. The deployment command
+records its included historical migrations through Prisma's official
+`migrate resolve`, then applies later forward migrations normally. Existing
+databases retain their original Prisma lineage. A non-empty database without
+recognized history fails closed. The normal required CI includes fresh
+PostgreSQL 16 deployment and an idempotent repeat deployment.
