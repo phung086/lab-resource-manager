@@ -1,18 +1,21 @@
 {
   "baselineId": "20260924000100_clean_baseline",
-  "schemaSha256": "f22ba45d711c8da92ad7b6b81b79ef5ff139657e1fa174e41109afc022a36066",
+  "hashContract": "UTF-8 text, optional BOM removed, CRLF/CR normalized to LF, trailing newline preserved",
+  "baselineSqlSha256": "dac2b1a49e817f537cbbbfd269cd92ff1d7990efd03c06ba53fcce439ba56f8b",
+  "baselineSchemaSha256": "f22ba45d711c8da92ad7b6b81b79ef5ff139657e1fa174e41109afc022a36066",
+  "catalogFingerprintSha256": "3083d76b8c91758925020f8e6d69cf52c205e3b3ddb4bdb2c0633f2c9d6e50b2",
   "includedMigrations": [
-    "20260723000100_init",
-    "20260723000200_remove_resource_owner_default",
-    "20260723000300_require_explicit_resource_fields",
-    "20260727000100_add_i18n_message_keys",
-    "20260817000100_add_maintenance_windows",
-    "20260820000100_add_booking_guard_constraint",
-    "20260820000200_add_orchestration_provenance_and_policy",
-    "20260917000100_reconcile_canonical_persistence",
-    "20260921000100_add_smart_monitoring",
-    "20260923000100_booking_pricing",
-    "20260923000200_resource_media",
-    "20260923000300_guest_identity_loyalty"
+    { "name": "20260723000100_init", "sourceSha256": "72ac44a7ade4651672ddae60e542b0137530ace6920fc7a5c43b6c25f2ac86e3" },
+    { "name": "20260723000200_remove_resource_owner_default", "sourceSha256": "66a1614148472e82df95e52c3649e6119a54c9029fc0d4b4bc71e25a688939aa" },
+    { "name": "20260723000300_require_explicit_resource_fields", "sourceSha256": "df6b0f54b676d92cda13592f3c55bad7b829d9f79058bc1092bf4894e03b9fa7" },
+    { "name": "20260727000100_add_i18n_message_keys", "sourceSha256": "10b67a12359efa91038b95890c1505666e10648d7dd6a12823088544df2c6ed0" },
+    { "name": "20260817000100_add_maintenance_windows", "sourceSha256": "030a4964d697a5b847f94e38e8e5bbecbf921808867a73f15232864b9597022f" },
+    { "name": "20260820000100_add_booking_guard_constraint", "sourceSha256": "658716b3be743f2bbd81b1c2f4dee5248eb1b9751a8eea693ed19b5a2b32eedb" },
+    { "name": "20260820000200_add_orchestration_provenance_and_policy", "sourceSha256": "ca0da76bb6ef6c8d1f04a518cc8398446e499c0c11bcf70e3155937b61b691c3" },
+    { "name": "20260917000100_reconcile_canonical_persistence", "sourceSha256": "b19f268755ca741d74bcdc1c42019da3bd9dbdd9c661df6bd4ee6645d63e3632" },
+    { "name": "20260921000100_add_smart_monitoring", "sourceSha256": "ffd7012cad5c47937cafb35dfcc070c252e4c878045377cab84a4653a789b8d8" },
+    { "name": "20260923000100_booking_pricing", "sourceSha256": "0379b7d3b544a4775f81fdfcb8ac1fefa00eeee33945257256e016eef24d0a81" },
+    { "name": "20260923000200_resource_media", "sourceSha256": "0e58c872bd6e091ca7bb1d2e140935008541a30e40195ac8198e865d80ce4245" },
+    { "name": "20260923000300_guest_identity_loyalty", "sourceSha256": "0905e18ead259f6755dcc33863b81297a49280bc40c9de4e67967259aef68b20" }
   ]
 }
