@@ -35,7 +35,8 @@
     "test:required": "npm run test:core",
     "test:research": "node --test test/concurrency.test.js test/conflictForecasting.test.js test/geneticScheduler.test.js test/hybridDispatch.test.js test/integrations.test.js test/mqttTelemetry.test.js test/multiObjectiveAndBenchmark.test.js test/optimization.test.js test/orchestrationV2.test.js test/reputationScore.test.js test/services.test.js test/smartBookingPlatform.test.js",
     "test:batch7": "cross-env LOG_FORMAT=dev node --test test/batch7.production-demo-hardening.integration.test.js",
-    "test:batch8": "cross-env LOG_FORMAT=dev node --test test/batch8.smart-monitoring.integration.test.js"
+    "test:batch8": "cross-env LOG_FORMAT=dev node --test test/batch8.smart-monitoring.integration.test.js",
+    "test:migration-safety": "node test/migrationSafetyMatrix.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1138.0",

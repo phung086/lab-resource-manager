@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -6,14 +5,31 @@ import { fileURLToPath } from "node:url";
 
 import { PrismaClient } from "@prisma/client";
 
+import {
+  DATABASE_CLASSIFICATION,
+  catalogFingerprint,
+  catalogFingerprintSummary,
+  classifyDatabase,
+  listMigrationNames,
+  readPublicCatalog,
+  verifyFrozenBaselineArtifacts
+} from "./migrationDeploymentContract.mjs";
+
 const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const prismaRoot = path.join(backendRoot, "prisma");
+const defaultPrismaRoot = path.join(backendRoot, "prisma");
+const testRootOverride = process.env.LRM_MIGRATION_TEST_ROOT;
+if (testRootOverride && process.env.LRM_MIGRATION_TEST_MODE !== "1") {
+  throw new Error("Canonical migration deployment stopped: fixture root override is restricted to explicit migration tests");
+}
+const prismaRoot = testRootOverride ? path.resolve(testRootOverride) : defaultPrismaRoot;
 const schemaPath = path.join(prismaRoot, "schema.prisma");
+const migrationsRoot = path.join(prismaRoot, "migrations");
 const baselineRoot = path.join(prismaRoot, "baseline", "20260924000100_clean_baseline");
 const baselineSqlPath = path.join(baselineRoot, "migration.sql");
 const manifest = JSON.parse(fs.readFileSync(path.join(baselineRoot, "manifest.json"), "utf8"));
 const prismaCli = path.join(backendRoot, "node_modules", "prisma", "build", "index.js");
 const prisma = new PrismaClient();
+const includedMigrationNames = manifest.includedMigrations.map(entry => entry.name);
 
 function fail(message) {
   throw new Error(`Canonical migration deployment stopped: ${message}`);
@@ -31,95 +47,127 @@ function runPrisma(args) {
   if (result.status !== 0) fail(`Prisma command failed: prisma ${args.join(" ")}`);
 }
 
-function verifyBaselineFiles() {
-  const normalizedSchema = fs.readFileSync(schemaPath, "utf8").replace(/\r\n/g, "\n");
-  const schemaSha256 = crypto.createHash("sha256").update(normalizedSchema).digest("hex");
-  if (schemaSha256 !== manifest.schemaSha256) {
-    fail("schema.prisma changed without regenerating and reviewing the clean-install baseline");
+async function assertTestOverrideTargetsIsolatedDatabase() {
+  if (!testRootOverride) return;
+  const [row] = await prisma.$queryRawUnsafe("SELECT current_database() AS name");
+  if (!/(?:^|_)(?:test|ci)(?:_|$)/i.test(row?.name || "")) {
+    fail("fixture root override requires a database name containing an explicit test or ci marker");
   }
+}
 
-  const migrationNames = fs.readdirSync(path.join(prismaRoot, "migrations"), { withFileTypes: true })
-    .filter(entry => entry.isDirectory())
-    .map(entry => entry.name);
-  for (const migrationName of manifest.includedMigrations) {
-    if (!migrationNames.includes(migrationName)) {
-      fail(`baseline manifest references missing migration ${migrationName}`);
-    }
+async function migrationState() {
+  const [relation] = await prisma.$queryRawUnsafe(`
+    SELECT c.relkind::text AS relkind
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = '_prisma_migrations'
+  `);
+  if (!relation) return { present: false, rows: [] };
+  if (!["r", "p"].includes(relation.relkind)) fail("_prisma_migrations exists but is not a table");
+  const rows = await prisma.$queryRawUnsafe(`
+    SELECT migration_name, checksum, started_at, finished_at, rolled_back_at, logs
+    FROM public._prisma_migrations
+    ORDER BY started_at, migration_name
+  `);
+  return { present: true, rows };
+}
+
+async function markerState() {
+  const [relation] = await prisma.$queryRawUnsafe(`
+    SELECT c.relkind::text AS relkind
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = '_lrm_deployment_baselines'
+  `);
+  if (!relation) return { present: false, marker: null };
+  if (!["r", "p"].includes(relation.relkind)) fail("baseline marker exists but is not a table");
+  const rows = await prisma.$queryRawUnsafe(
+    "SELECT baseline_id, schema_sha256 FROM public._lrm_deployment_baselines WHERE baseline_id = $1",
+    manifest.baselineId
+  );
+  if (rows.length > 1) fail("baseline marker contains duplicate baseline identities");
+  const marker = rows[0] || null;
+  if (marker && marker.schema_sha256 !== manifest.baselineSchemaSha256) {
+    fail("baseline marker does not match the frozen baseline schema artifact");
   }
+  return { present: true, marker };
 }
 
 async function inspectDatabase() {
   const [schema] = await prisma.$queryRawUnsafe("SELECT current_schema() AS name");
   if (schema?.name !== "public") fail(`expected PostgreSQL schema public, received ${schema?.name || "unknown"}`);
+  const [catalogRows, migrations, marker] = await Promise.all([
+    readPublicCatalog(prisma),
+    migrationState(),
+    markerState()
+  ]);
+  const repositoryMigrations = listMigrationNames(migrationsRoot);
+  const result = classifyDatabase({
+    catalogRows,
+    markerTablePresent: marker.present,
+    marker: marker.marker,
+    migrationTablePresent: migrations.present,
+    migrationRows: migrations.rows,
+    repositoryMigrations,
+    includedMigrationNames
+  });
+  return { ...result, catalogRows, migrations, marker, repositoryMigrations };
+}
 
-  const tables = await prisma.$queryRawUnsafe(
-    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name"
-  );
-  const tableNames = new Set(tables.map(row => row.table_name));
-  let marker = null;
-  if (tableNames.has("_lrm_deployment_baselines")) {
-    marker = await prisma.$queryRawUnsafe(
-      "SELECT baseline_id, schema_sha256 FROM public._lrm_deployment_baselines WHERE baseline_id = $1",
-      manifest.baselineId
-    );
-    marker = marker[0] || null;
+function verifyBaselineCatalog(state) {
+  const actual = catalogFingerprint(state.catalogRows);
+  if (actual !== manifest.catalogFingerprintSha256) {
+    fail(`clean baseline catalog fingerprint mismatch (expected ${manifest.catalogFingerprintSha256}, received ${actual}; diagnostic ${JSON.stringify(catalogFingerprintSummary(state.catalogRows))})`);
   }
-  return { tableNames, marker, hasMigrationHistory: tableNames.has("_prisma_migrations") };
 }
 
-async function migrationRows() {
-  const exists = await prisma.$queryRawUnsafe("SELECT to_regclass('public._prisma_migrations')::text AS name");
-  if (!exists[0]?.name) return [];
-  return prisma.$queryRawUnsafe(
-    "SELECT migration_name, finished_at, rolled_back_at, logs FROM public._prisma_migrations ORDER BY started_at"
-  );
-}
-
-async function applyOrResumeCleanBaseline(state) {
-  if (state.tableNames.size === 0) {
-    console.log(`Empty database detected; applying reviewed baseline ${manifest.baselineId}.`);
+async function applyOrResumeCleanBaseline(initialState) {
+  let state = initialState;
+  if (state.classification === DATABASE_CLASSIFICATION.EMPTY) {
+    console.log(`Empty database detected; applying frozen baseline ${manifest.baselineId}.`);
     runPrisma(["db", "execute", "--file", baselineSqlPath]);
+    state = await inspectDatabase();
+    if (state.classification !== DATABASE_CLASSIFICATION.CLEAN_BASELINE) {
+      fail(`baseline SQL did not produce a resumable clean baseline; classified ${state.classification}`);
+    }
   } else {
-    if (!state.marker || state.marker.schema_sha256 !== manifest.schemaSha256) {
-      fail("database is not empty and has no matching resumable clean-baseline marker");
-    }
-    for (const requiredTable of ["users", "resources", "bookings"]) {
-      if (!state.tableNames.has(requiredTable)) fail(`resumable baseline is missing required table ${requiredTable}`);
-    }
-    console.log(`Resuming reviewed baseline ${manifest.baselineId}.`);
+    console.log(`Resuming structurally verified baseline ${manifest.baselineId}.`);
   }
 
-  const rows = await migrationRows();
-  const knownMigrations = new Set(
-    fs.readdirSync(path.join(prismaRoot, "migrations"), { withFileTypes: true })
-      .filter(entry => entry.isDirectory())
-      .map(entry => entry.name)
-  );
-  for (const row of rows) {
-    if (!knownMigrations.has(row.migration_name) || !row.finished_at || row.rolled_back_at || row.logs) {
-      fail(`unexpected or failed migration history while resuming baseline: ${row.migration_name}`);
-    }
-  }
-  const applied = new Set(rows.map(row => row.migration_name));
-  for (const migrationName of manifest.includedMigrations) {
-    if (!applied.has(migrationName)) {
-      runPrisma(["migrate", "resolve", "--applied", migrationName]);
-    }
+  verifyBaselineCatalog(state);
+  const applied = new Set(state.appliedNames);
+  for (const migrationName of includedMigrationNames) {
+    if (!applied.has(migrationName)) runPrisma(["migrate", "resolve", "--applied", migrationName]);
   }
 }
 
 async function main() {
   if (!process.env.DATABASE_URL) fail("DATABASE_URL is required");
-  verifyBaselineFiles();
-  const state = await inspectDatabase();
-  if (state.tableNames.size === 0 || state.marker) {
-    await applyOrResumeCleanBaseline(state);
-  } else {
-    if (!state.hasMigrationHistory) {
-      fail("non-empty database has neither Prisma migration history nor a matching clean-baseline marker");
-    }
-    console.log("Existing database detected; preserving its migration lineage.");
+  await assertTestOverrideTargetsIsolatedDatabase();
+  try {
+    verifyFrozenBaselineArtifacts({ baselineRoot, migrationsRoot, manifest });
+  } catch (error) {
+    fail(error.message);
   }
+
+  const state = await inspectDatabase();
+  console.log(`Database classification: ${state.classification}.`);
+  switch (state.classification) {
+    case DATABASE_CLASSIFICATION.EMPTY:
+    case DATABASE_CLASSIFICATION.CLEAN_BASELINE:
+      await applyOrResumeCleanBaseline(state);
+      break;
+    case DATABASE_CLASSIFICATION.RECOGNIZED_PRISMA_LINEAGE:
+      console.log("Recognized canonical Prisma lineage; preserving all historical migration rows.");
+      break;
+    case DATABASE_CLASSIFICATION.UNKNOWN_NONEMPTY:
+    case DATABASE_CLASSIFICATION.INVALID_OR_PARTIAL:
+      fail(`${state.classification}: ${state.reason || "database is not a recognized canonical lineage"}`);
+      break;
+    default:
+      fail(`unsupported database classification ${state.classification}`);
+  }
+
   runPrisma(["migrate", "deploy"]);
   runPrisma(["migrate", "status"]);
 }

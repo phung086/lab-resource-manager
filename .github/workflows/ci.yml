@@ -43,6 +43,39 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_fresh?schema=public
         run: npm run db:migrate
 
+  migration-safety:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lrm_ci_migration_safety
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run db:generate
+      - name: Run PostgreSQL 16 migration safety matrix
+        env:
+          MIGRATION_SAFETY_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_migration_safety?schema=public
+        run: npm run test:migration-safety
+
   backend:
     runs-on: ubuntu-latest
     defaults:

@@ -1,72 +1,134 @@
 # Phase 1 — migration reproducibility report
 
 Date: 2026-09-24
-Branch: `feature/fresh-migration-reproducibility`
+Source branch: `feature/fresh-migration-reproducibility` at
+`c1f9d1e888ccd5475e393f481a1f254ac46ff8af`
+Hardening branch: `fix/migration-baseline-hardening`
 
 ## Status
 
-**PASS locally and in GitHub Actions on isolated PostgreSQL 16.** CI run
-[#35944430756](https://github.com/phung086/lab-resource-manager/actions/runs/35944430756)
-completed successfully from a fresh Linux checkout.
+**PASS on an isolated PostgreSQL 16 container.** The required CI jobs are part
+of the normal workflow; the exact final commit and workflow run are recorded in
+the pull request checks and final handoff after GitHub executes them.
 
 ## Root cause
 
 The historical reconciliation migration expects SHA-256 values captured from
 the original Windows files, which contain mixed line endings. Git stores LF
-blobs and `.gitattributes` checks migration SQL out as CRLF. A genuinely fresh
-checkout therefore changes the bytes of all seven predecessor migrations.
-Prisma records those new hashes, and the reconciliation migration rejects them.
+blobs and `.gitattributes` checks historical migration SQL out as CRLF. A fresh
+checkout therefore changes the bytes of predecessor migrations. Prisma records
+those new hashes, and the reconciliation migration rejects them.
 
-The failure was reproduced on a fresh checkout against PostgreSQL 16.15. The
-first seven migrations applied and Prisma recorded the predicted CRLF hashes;
-`20260917000100_reconcile_canonical_persistence` then failed. The same database
-chain from the original mixed-byte worktree applied all twelve prior migrations,
-confirming that the failure is byte/checksum portability rather than schema SQL.
+The first Phase 1 implementation restored clean deployment, but coupled the
+baseline guard to the live `backend/prisma/schema.prisma` hash and trusted any
+database that merely contained `_prisma_migrations`. That would reject an
+ordinary future forward migration and could accept foreign or incomplete
+migration history.
 
-## Implementation
+## Frozen baseline contract
 
-- Added a reviewed schema-only clean baseline generated from the successfully
-  migrated canonical PostgreSQL 16 schema.
-- Added an explicit manifest listing the twelve migrations represented by that
-  baseline and a normalized `schema.prisma` SHA-256 guard.
-- Added `deployCanonicalMigrations.mjs`:
-  - baselines only a completely empty `public` schema;
-  - uses Prisma `migrate resolve --applied`, never direct migration-table edits;
-  - resumes an interrupted baseline through durable deployment metadata;
-  - preserves existing Prisma migration lineages;
-  - rejects unknown non-empty schemas;
-  - runs normal forward `migrate deploy` and `migrate status` afterward.
-- Added one forward migration for deployment-baseline metadata. Historical
-  migrations were not edited.
-- Added fresh PostgreSQL 16 deploy and idempotent repeat deploy to normal CI.
+`backend/prisma/baseline/20260924000100_clean_baseline` is an immutable
+historical deployment artifact containing:
+
+- `migration.sql`, the reviewed PostgreSQL 16 schema at the baseline cut;
+- `schema.prisma`, the frozen Prisma schema snapshot at that cut;
+- `manifest.json`, which records canonical hashes for both artifacts, every
+  included historical migration, and the expected PostgreSQL catalog
+  fingerprint.
+
+Hashes use UTF-8 text with an optional BOM removed, CRLF and CR normalized to
+LF, and the trailing newline preserved. The current live `schema.prisma` is not
+compared to the baseline snapshot. It may evolve through later forward
+migrations without changing this baseline. A future baseline requires a new
+baseline ID and directory; ordinary migrations must never regenerate or mutate
+`20260924000100_clean_baseline`.
+
+The catalog fingerprint covers public tables and partitioned tables, views,
+materialized views, sequences, enum/domain types, columns/defaults, primary and
+foreign keys, unique/check constraints, indexes, non-extension public
+functions, non-internal triggers, and public extensions. Catalog definition
+text is normalized to LF so the stored function body is identical across clean
+Linux and existing Windows-origin baselines. The fingerprint therefore includes
+the 42 baseline relations plus `btree_gist`, `bookings_no_active_overlap`, both
+valid-time constraints, `enforce_resource_schedule_integrity()`, and both
+schedule-integrity triggers. `_prisma_migrations` is excluded because Prisma
+creates it during the later official resolve step.
+
+## Database classification
+
+The deployment selector classifies the database as one of:
+
+- `EMPTY`: no relevant user-created object exists in `public`;
+- `CLEAN_BASELINE`: the accepted marker exists, included migration resolution
+  is an allowed prefix, and the frozen catalog fingerprint matches;
+- `RECOGNIZED_PRISMA_LINEAGE`: migration rows form a completed canonical
+  repository prefix beginning at the accepted origin;
+- `UNKNOWN_NONEMPTY`: user-created objects exist without recognized history;
+- `INVALID_OR_PARTIAL`: migration history or marker state is empty, foreign,
+  duplicated, failed, rolled back, out of order, or otherwise inconsistent.
+
+Only `EMPTY`, structurally verified `CLEAN_BASELINE`, and
+`RECOGNIZED_PRISMA_LINEAGE` continue. Unknown and invalid states fail closed.
+`prisma migrate resolve --applied` is used only after the frozen catalog
+fingerprint has passed; it is never a generic migration-error bypass.
+
+## Recovery boundary
+
+Baseline SQL application is not claimed to be globally resumable. The marker is
+written at the end of the baseline SQL. Automatic resume begins only after the
+entire baseline SQL and marker have completed and the catalog fingerprint still
+matches. If baseline SQL itself is interrupted, the database is classified as
+unknown or partial and fails closed; the operator must recreate that initially
+empty database and rerun deployment. Once the marker exists, interruption while
+recording the twelve included migrations is resumable.
 
 ## Database impact
 
-Existing databases receive one additive internal table:
-`_lrm_deployment_baselines`. It remains empty for historical lineages. Clean
-installs retain one row identifying the reviewed baseline. No application data,
-canonical enum, booking constraint, role, or business model was changed.
+Historical migration SQL and historical `_prisma_migrations` rows are not
+modified. Existing recognized lineages keep their row identities, checksums,
+timestamps, and logs; only a genuinely pending forward migration may append a
+row. Clean databases receive the frozen baseline, official resolve records for
+the twelve represented migrations, and all later forward migrations through
+normal `prisma migrate deploy`.
 
-## Verification
+## Local verification
 
-| Check | Result |
+The PostgreSQL 16 safety matrix executed all cases below against an isolated
+database whose name contains an explicit test marker:
+
+| Case | Result |
 | --- | --- |
-| Reproduce old fresh-checkout failure on PostgreSQL 16 | PASS |
-| Capture Prisma's seven predecessor checksums | PASS; matched predicted fresh CRLF hashes |
-| Clean baseline deploy to empty PostgreSQL 16 | PASS |
-| Repeat canonical deploy | PASS; no pending migrations |
-| Resume after only 3/12 baseline resolves | PASS |
-| Upgrade existing 12-migration lineage with forward metadata migration | PASS |
-| Reject unknown non-empty schema | PASS |
-| Clean-baseline schema vs existing-lineage schema-only dump | PASS; identical |
-| Prisma schema diff against clean baseline database | PASS; no difference |
-| `prisma validate` and client generation | PASS |
-| Backend lint | PASS |
-| Backend required/core tests | PASS, 27/27 |
-| GitHub CI: backend/frontend/Compose/fresh PostgreSQL 16 | PASS, 4/4 jobs |
+| Fresh empty database | PASS |
+| Idempotent repeat deployment | PASS |
+| Resume after 3 of 12 resolve records | PASS |
+| Existing legitimate lineage; preserve old rows and append a pending migration | PASS |
+| Unknown table | PASS; failed closed |
+| Foreign Prisma history | PASS; failed closed |
+| Empty `_prisma_migrations` | PASS; failed closed |
+| Non-table public object | PASS; failed closed |
+| Tampered baseline SQL | PASS; integrity failure |
+| Tampered historical migration | PASS; integrity failure |
+| Baseline trigger/fingerprint mismatch | PASS before any resolve record |
+| Updated current schema plus future forward migration, frozen baseline untouched | PASS |
 
-## Remaining risk
+Additional local gates include Prisma validation/client generation, backend
+lint, required backend tests, frontend lint/typecheck/build, and production
+Compose configuration. Their final results are recorded in the branch handoff.
 
-Future changes to `schema.prisma` must regenerate and review the clean baseline
-or the deployment script will fail closed on its schema hash guard. Phase 1 does
-not implement training eligibility or guest-booking changes.
+## CI-enforced verification
+
+The normal CI workflow retains `fresh-database` for a fresh deploy and repeat
+deploy, and adds `migration-safety` for the complete PostgreSQL 16 matrix above.
+Backend, frontend, and production Compose jobs remain required. CI evidence is
+valid only when every job is green on the exact final PR-head commit.
+
+## Remaining risks
+
+- The baseline catalog fingerprint is PostgreSQL 16-specific by design;
+  PostgreSQL major-version upgrades require a separate reviewed migration and
+  release exercise.
+- Baseline SQL interruption before its marker completes requires recreating the
+  initially empty database; deployment does not attempt unsafe inference or
+  repair.
+- This phase does not implement training eligibility, guest-booking atomicity,
+  payment reconciliation, or other business changes.
