@@ -5,8 +5,9 @@ Branch: `feature/fresh-migration-reproducibility`
 
 ## Status
 
-**PASS locally on isolated PostgreSQL 16.15.** GitHub CI confirmation remains a
-merge gate after the branch is pushed.
+**PASS locally and in GitHub Actions on isolated PostgreSQL 16.** CI run
+[#35944430756](https://github.com/phung086/lab-resource-manager/actions/runs/35944430756)
+completed successfully from a fresh Linux checkout.
 
 ## Root cause
 
@@ -62,10 +63,10 @@ canonical enum, booking constraint, role, or business model was changed.
 | `prisma validate` and client generation | PASS |
 | Backend lint | PASS |
 | Backend required/core tests | PASS, 27/27 |
+| GitHub CI: backend/frontend/Compose/fresh PostgreSQL 16 | PASS, 4/4 jobs |
 
 ## Remaining risk
 
-The branch still requires a successful GitHub Actions run from a Linux fresh
-checkout. Future changes to `schema.prisma` must regenerate and review the clean
-baseline or the deployment script will fail closed on its schema hash guard.
-Phase 1 does not implement training eligibility or guest-booking changes.
+Future changes to `schema.prisma` must regenerate and review the clean baseline
+or the deployment script will fail closed on its schema hash guard. Phase 1 does
+not implement training eligibility or guest-booking changes.
