@@ -27,7 +27,7 @@ The SHA-256 values below compare the embedded predecessor checksum with a fresh 
 
 | ID | Area | Current evidence | Risk | Priority | Proposed fix | Requires business decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| G-01 | Fresh DB migration | **RESOLVED IN PHASE 1.** PostgreSQL 16 recorded the predicted fresh-checkout hashes and reproduced the reconciliation failure. The reviewed clean baseline now handles empty databases; existing lineages continue with forward migrations. Required CI run #35944430756 passed fresh deploy and repeat deploy from Linux checkout. | Future schema changes must update/review the baseline or deployment fails closed. | P0 resolved | Keep the baseline/schema manifest synchronized. | Resolved by ADR-021. |
+| G-01 | Fresh DB migration | **RESOLVED AND HARDENED IN PHASE 1.** PostgreSQL 16 reproduced the historical checksum failure. The clean baseline is now a frozen SQL/schema artifact with per-migration hashes and a catalog fingerprint; current schema changes proceed through forward migrations without changing it. Database classification validates canonical history and fails closed for unknown or partial states. | Baseline SQL interruption before its marker requires recreating the initially empty database; PostgreSQL major-version upgrades require a new release exercise. | P0 resolved | Keep the accepted baseline immutable; use forward migrations or a new baseline ID. | Resolved by ADR-021. |
 | G-02 | Training eligibility | `schema.prisma` has `TrainingRequirement` and `UserCertification`; `createBooking` in `bookingService.js` checks quote, resource state, LabPolicy and availability, but never queries training requirements or certificates. | A user without mandatory training can reserve a restricted resource. | P0 | Enforce all mandatory active certifications inside booking authority and test expired/revoked/other-user/multiple-course cases. | Training applicability per resource and override policy need explicit ownership; default is no override. |
 | G-03 | Guest booking atomicity | `guestBookingService.js` consumes OTP and creates/updates user in one transaction, then calls `createBooking()` in a second transaction. | Conflict, stale quote or policy denial leaves consumed OTP and mutated/account data without a booking. | P0 | Put identity, OTP consumption and booking creation behind one coherent transaction boundary while retaining DB overlap protection; test rollback cases. | No for consistency behavior. |
 | G-04 | Existing identity classification | Guest completion always writes `customerType: "EXTERNAL"` to an existing email's user record. Registration and `PATCH /users/me` also accept self-supplied customer type. | Trusted internal classification can be overwritten and later used for pricing/priority. | P0/P1 | Preserve existing classification in guest flow; separate declared from verified business identity before using type as an entitlement. | Yes: who verifies INTERNAL/EXTERNAL. |
@@ -40,8 +40,16 @@ The SHA-256 values below compare the embedded predecessor checksum with a fresh 
 
 ## Boundary and next action
 
-This report completes Phase 0's evidence matrix. No runtime code, schema, migration, or GitHub PR was changed. The first implementation phase is G-01 only. The byte-level cause is established by the tracked blobs, `.gitattributes`, and hash comparison; an isolated PostgreSQL 16 run is still required to validate the deployment mechanism and the values Prisma records. Do not edit historical migration SQL or `_prisma_migrations` to force a green result.
+This report began as Phase 0's read-only evidence matrix. G-01 was subsequently
+implemented and hardened in Phase 1 without editing historical migration SQL or
+directly modifying `_prisma_migrations`. G-02 and later gaps remain outside this
+batch.
 
 ### Proposed Phase 1 deployment direction
 
-Prefer a separately versioned **clean-install baseline** generated from the canonical final schema plus required hand-written constraints, triggers, and indexes. Keep the existing migration lineage available only for databases that already carry it; do not rewrite its files or recorded checksums. A deployment selector must positively identify an empty database versus an existing migration history and fail closed for unknown/partial history. Future schema changes must have a documented path for both lineages until old installations are retired. Validate the baseline on fresh PostgreSQL 16 and the legacy path on an existing verified copy before adopting it, then make both tests required CI gates. This is a proposal, not a completed migration solution; the baseline SQL and selector have not been built or tested.
+The accepted direction is now implemented: an immutable, separately versioned
+clean-install baseline preserves required handwritten PostgreSQL objects;
+recognized existing lineages continue through forward migrations; unknown and
+partial databases fail closed. A PostgreSQL 16 matrix covers fresh, repeat,
+resume, existing lineage, tamper, fingerprint, and future migration cases. See
+`PHASE1_MIGRATION_REPRODUCIBILITY_REPORT.md` for the exact contract and evidence.

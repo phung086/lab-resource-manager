@@ -262,8 +262,17 @@ Because fresh checkout line-ending normalization changes the predecessor
 checksums expected by the historical reconciliation migration, a completely
 empty database uses the reviewed baseline at
 `backend/prisma/baseline/20260924000100_clean_baseline`. The deployment command
-records its included historical migrations through Prisma's official
-`migrate resolve`, then applies later forward migrations normally. Existing
-databases retain their original Prisma lineage. A non-empty database without
-recognized history fails closed. The normal required CI includes fresh
-PostgreSQL 16 deployment and an idempotent repeat deployment.
+verifies frozen SQL/schema artifacts and each represented historical migration,
+then records included migrations through Prisma's official `migrate resolve`
+only after a deterministic PostgreSQL catalog fingerprint passes. The baseline
+is tied to its own frozen `schema.prisma` snapshot, never to the current live
+schema. Forward migrations may evolve the live schema without changing the old
+baseline; a future baseline requires a new ID and directory.
+
+Existing databases retain their original Prisma lineage only when completed
+migration rows form an accepted canonical prefix. Foreign, empty, failed,
+rolled-back, duplicated, out-of-order, unknown non-empty, and structurally
+damaged baseline states fail closed. Automatic resume begins after baseline SQL
+and its final marker complete; interruption inside baseline SQL requires
+recreating that initially empty database. Required CI includes fresh and repeat
+deployment plus the PostgreSQL 16 migration-safety matrix.

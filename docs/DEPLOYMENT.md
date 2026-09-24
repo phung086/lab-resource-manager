@@ -82,18 +82,36 @@ Canonical migration deployment (`npm run db:migrate`)
 -> start API
 ```
 
-The canonical migration command distinguishes two safe cases:
+The canonical migration command verifies immutable baseline artifacts and then
+classifies the database before it changes migration state:
 
 - a completely empty PostgreSQL database receives the reviewed baseline in
   `backend/prisma/baseline/20260924000100_clean_baseline`, then the included
   historical migrations are recorded with Prisma's official `migrate resolve`;
-- an existing database with Prisma migration history keeps that lineage and
-  receives only pending forward migrations.
+- a clean baseline whose SQL and marker completed may resume an interrupted
+  resolve only after its complete PostgreSQL catalog fingerprint matches;
+- an existing database is accepted only when its finished, non-rolled-back
+  Prisma migration rows form a canonical repository prefix beginning at the
+  accepted project origin. It keeps that lineage and receives only pending
+  forward migrations.
 
-A non-empty database without recognized Prisma history or the clean-baseline
-marker fails closed. Interrupted clean baselining is resumable from its persisted
-marker. Tracked historical migration SQL is never edited, `_prisma_migrations`
-is never edited manually, and production does not run `prisma db push`.
+Relevant public tables, partitioned tables, views, materialized views,
+sequences, enum/domain types, and public functions make a database non-empty.
+Foreign, empty, failed, rolled-back, duplicated, or out-of-order Prisma history
+fails closed. A marker alone never authorizes resolve.
+
+The baseline directory contains frozen SQL and Prisma schema snapshots plus a
+manifest that hashes those artifacts and every represented historical
+migration using normalized UTF-8/LF text. The live `schema.prisma` may evolve
+through later forward migrations without changing the old baseline. A new
+baseline requires a new ID and directory.
+
+The resume boundary is exact: automatic resume applies only after baseline SQL
+and its final marker completed. If baseline SQL itself is interrupted, recreate
+that initially empty database and rerun deployment. Do not attempt to repair or
+resolve it in place. Tracked historical migration SQL is never edited,
+`_prisma_migrations` is never edited manually, and production does not run
+`prisma db push`.
 
 ## 4. Verify runtime
 

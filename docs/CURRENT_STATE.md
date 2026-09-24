@@ -24,13 +24,19 @@ whose Prisma checksums differed from the historical mixed-line-ending values
 embedded in the reconciliation migration. No historical migration was edited.
 
 `npm run db:migrate` now applies a reviewed clean-install baseline only to a
-truly empty database, records the twelve included migrations using Prisma
-`migrate resolve`, then applies later forward migrations normally. Existing
-databases preserve their lineage. Unknown non-empty schemas fail closed and an
-interrupted baseline can resume. Fresh deploy, repeat deploy, interrupted
-resume, existing-lineage upgrade, fail-closed behavior, schema equivalence,
-Prisma validation/generation, backend lint, and core tests were verified on an
-isolated PostgreSQL 16 container. See
+truly empty database. Hardening on `fix/migration-baseline-hardening` freezes the
+baseline SQL and Prisma schema snapshot, verifies normalized hashes for every
+represented migration, and fingerprints the complete critical PostgreSQL
+catalog before any official `migrate resolve`. Current `schema.prisma` may now
+evolve through forward migrations without regenerating the old baseline.
+
+Existing databases preserve their lineage only when migration rows form a
+completed canonical prefix. Unknown objects, foreign/empty/failed/rolled-back
+history, and damaged baseline structures fail closed. Resume is supported after
+baseline SQL and its marker complete; interruption inside baseline SQL requires
+recreating the initially empty database. The 12-case PostgreSQL 16 local safety
+matrix passes, including historical-row preservation and future forward
+migration compatibility. See
 [PHASE1_MIGRATION_REPRODUCIBILITY_REPORT.md](PHASE1_MIGRATION_REPRODUCIBILITY_REPORT.md).
 
 ## Active local work — 2026-09-23
