@@ -8,6 +8,7 @@ import { PrismaClient } from "@prisma/client";
 import {
   DATABASE_CLASSIFICATION,
   catalogFingerprint,
+  catalogFingerprintSummary,
   classifyDatabase,
   listMigrationNames,
   readPublicCatalog,
@@ -116,7 +117,7 @@ async function inspectDatabase() {
 function verifyBaselineCatalog(state) {
   const actual = catalogFingerprint(state.catalogRows);
   if (actual !== manifest.catalogFingerprintSha256) {
-    fail(`clean baseline catalog fingerprint mismatch (expected ${manifest.catalogFingerprintSha256}, received ${actual})`);
+    fail(`clean baseline catalog fingerprint mismatch (expected ${manifest.catalogFingerprintSha256}, received ${actual}; diagnostic ${JSON.stringify(catalogFingerprintSummary(state.catalogRows))})`);
   }
 }
 

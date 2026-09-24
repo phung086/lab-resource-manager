@@ -195,6 +195,14 @@ export function catalogFingerprint(rows) {
   })));
 }
 
+export function catalogFingerprintSummary(rows) {
+  const kinds = [...new Set(rows.map(row => row.kind))].sort();
+  return Object.fromEntries(kinds.map(kind => {
+    const entries = rows.filter(row => row.kind === kind);
+    return [kind, { count: entries.length, sha256: catalogFingerprint(entries) }];
+  }));
+}
+
 export function validateMigrationRows(rows, repositoryMigrations) {
   if (rows.length === 0) throw new Error("Prisma migration history is empty");
   const seen = new Set();
