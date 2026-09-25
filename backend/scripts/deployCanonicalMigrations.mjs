@@ -8,6 +8,7 @@ import { PrismaClient } from "@prisma/client";
 import {
   DATABASE_CLASSIFICATION,
   catalogFingerprint,
+  buildAcceptedMigrationChecksums,
   catalogFingerprintSummary,
   classifyDatabase,
   listMigrationNames,
@@ -102,6 +103,7 @@ async function inspectDatabase() {
     markerState()
   ]);
   const repositoryMigrations = listMigrationNames(migrationsRoot);
+  const acceptedChecksumsByMigration = buildAcceptedMigrationChecksums(migrationsRoot);
   const result = classifyDatabase({
     catalogRows,
     markerTablePresent: marker.present,
@@ -109,7 +111,8 @@ async function inspectDatabase() {
     migrationTablePresent: migrations.present,
     migrationRows: migrations.rows,
     repositoryMigrations,
-    includedMigrationNames
+    includedMigrationNames,
+    acceptedChecksumsByMigration
   });
   return { ...result, catalogRows, migrations, marker, repositoryMigrations };
 }
