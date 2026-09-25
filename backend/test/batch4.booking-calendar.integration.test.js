@@ -1082,7 +1082,20 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
   });
 
   await t.test("19. Guest reuse preserves INTERNAL classification and successful OTP is single-use", async () => {
-    const email = `studentA-${marker}@example.test`;
+    const email = `internal-guest-${marker}@example.test`;
+    const internalUserId = id();
+    await isolated.user.create({
+      data: {
+        id: internalUserId,
+        email,
+        fullName: "Existing Internal User",
+        role: "STUDENT",
+        passwordHash: await bcrypt.hash(password, 4),
+        customerType: "INTERNAL",
+        isActive: true
+      }
+    });
+
     const code = "135790";
     const otpId = id();
     await isolated.emailOtp.create({
