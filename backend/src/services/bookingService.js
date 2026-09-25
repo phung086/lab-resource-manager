@@ -149,7 +149,7 @@ export async function checkSlotConflict(resourceId, startAt, endAt, excludeBooki
  * - No mockStore fallback — Prisma error = explicit error
  * - Uses operationalStatus for availability check
  */
-export async function createBooking({ requestedById, resourceId, title, purpose, startAt, endAt, purposeCode, acceptedQuote }) {
+export async function createBookingWithTransaction(tx, { requestedById, resourceId, title, purpose, startAt, endAt, purposeCode, acceptedQuote }) {
   const start = new Date(startAt);
   const end = new Date(endAt);
 
@@ -157,8 +157,7 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
     throw new HttpError(400, "Start time must be before end time", undefined, "VALIDATION_ERROR");
   }
 
-  return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM resources WHERE id = ${resourceId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM resources WHERE id = ${resourceId} FOR UPDATE`;
     const quote = await quoteBooking(tx, { resourceId, purposeCode, startAt, endAt });
     verifyAcceptedQuote(quote, acceptedQuote);
     const resource = await tx.resource.findUnique({
@@ -235,8 +234,11 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
 
     await notifyBookingEvent(tx, booking, "REQUEST");
 
-    return booking;
-  });
+  return booking;
+}
+
+export async function createBooking(input) {
+  return prisma.$transaction((tx) => createBookingWithTransaction(tx, input));
 }
 
 /**
