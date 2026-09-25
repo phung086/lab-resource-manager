@@ -134,7 +134,7 @@ export async function sendGuestBookingOtp({ email, fullName }, dependencies = {}
 }
 
 async function findAndLockOtp(tx, otpId) {
-  await tx.$queryRaw`SELECT id FROM email_otps WHERE id = ${otpId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM public.email_otps WHERE id = ${otpId} FOR UPDATE`;
   return tx.emailOtp.findUnique({ where: { id: otpId } });
 }
 
