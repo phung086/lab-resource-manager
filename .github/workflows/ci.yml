@@ -60,6 +60,20 @@ jobs:
             'DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_fresh?schema=public' \
             > .env
           npm run test:batch4
+      - name: Create isolated Batch 2 authentication database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c 'CREATE DATABASE "lab_resources_b2_auth_ci_reset";'
+      - name: Deploy canonical schema for authentication integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_b2_auth_ci_reset?schema=public
+        run: npm run db:migrate
+      - name: Run authentication and temporary credential integration
+        env:
+          BATCH2_DATABASE: lab_resources_b2_auth_ci_reset
+        run: npm run test:batch2
 
   migration-safety:
     runs-on: ubuntu-latest
