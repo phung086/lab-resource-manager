@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { config } from "../config.js";
 import { prisma } from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuthAllowPasswordReset } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { STUDENT, isCanonicalRole } from "../constants/roles.js";
 import { validateVietnamAddress } from "../services/addressService.js";
@@ -176,17 +176,17 @@ router.post("/login", authRateLimit, async (req, res, next) => {
 /**
  * GET /me — Return the current authenticated user's profile.
  */
-router.get("/me", requireAuth, (req, res) => {
+router.get("/me", requireAuthAllowPasswordReset, (req, res) => {
   res.json(publicUser(req.user));
 });
 
 // Bearer tokens are stateless. Logout acknowledges a valid session; the client
 // remains responsible for discarding its token.
-router.post("/logout", requireAuth, (_req, res) => {
+router.post("/logout", requireAuthAllowPasswordReset, (_req, res) => {
   res.status(204).end();
 });
 
-router.post("/change-password", requireAuth, async (req, res, next) => {
+router.post("/change-password", requireAuthAllowPasswordReset, async (req, res, next) => {
   try {
     const data = changePasswordSchema.parse(req.body);
     const currentMatches = await bcrypt.compare(data.currentPassword, req.user.passwordHash);
