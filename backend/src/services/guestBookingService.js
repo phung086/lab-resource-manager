@@ -65,14 +65,16 @@ export function publicCustomerUser(user) {
   };
 }
 
-export async function sendGuestBookingOtp({ email, fullName }) {
+export async function sendGuestBookingOtp({ email, fullName }, dependencies = {}) {
+  const db = dependencies.db || prisma;
+  const mailer = dependencies.mailer || sendRequiredEmail;
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
     throw new HttpError(400, "Email không hợp lệ.", { field: "email" }, "VALIDATION_ERROR");
   }
 
   const now = new Date();
-  const recent = await prisma.emailOtp.findFirst({
+  const recent = await db.emailOtp.findFirst({
     where: {
       email: normalizedEmail,
       purpose: PURPOSE,
@@ -91,7 +93,7 @@ export async function sendGuestBookingOtp({ email, fullName }) {
   }
 
   const code = String(crypto.randomInt(100000, 999999));
-  const otp = await prisma.emailOtp.create({
+  const otp = await db.emailOtp.create({
     data: {
       id: crypto.randomUUID(),
       email: normalizedEmail,
@@ -102,7 +104,7 @@ export async function sendGuestBookingOtp({ email, fullName }) {
   });
 
   const name = String(fullName || "bạn").trim() || "bạn";
-  const result = await sendRequiredEmail({
+  const result = await mailer({
     to: normalizedEmail,
     subject: "[Lab Resource Manager] Mã xác thực đặt nhanh",
     text: `Mã OTP đặt nhanh LAB của ${name}: ${code}. Mã hết hạn sau 10 phút.`,
@@ -110,11 +112,11 @@ export async function sendGuestBookingOtp({ email, fullName }) {
   });
 
   if (!result.success) {
-    await prisma.emailOtp.delete({ where: { id: otp.id } }).catch(() => null);
+    await db.emailOtp.delete({ where: { id: otp.id } }).catch(() => null);
     throw new HttpError(503, "Chưa cấu hình SMTP để gửi OTP thật.", undefined, "EMAIL_NOT_CONFIGURED");
   }
 
-  await prisma.emailOtp.updateMany({
+  await db.emailOtp.updateMany({
     where: {
       id: { not: otp.id },
       email: normalizedEmail,
@@ -136,11 +138,11 @@ async function findAndLockOtp(tx, otpId) {
   return tx.emailOtp.findUnique({ where: { id: otpId } });
 }
 
-async function verifyGuestOtpAttempt(email, code) {
+async function verifyGuestOtpAttempt(db, email, code) {
   const normalizedEmail = normalizeEmail(email);
   const submittedHash = codeHash(normalizedEmail, String(code || "").trim());
 
-  const outcome = await prisma.$transaction(async (tx) => {
+  const outcome = await db.$transaction(async (tx) => {
     const candidate = await tx.emailOtp.findFirst({
       where: {
         email: normalizedEmail,
@@ -203,7 +205,9 @@ async function assertAndConsumeOtpInTransaction(tx, { otpId, email, code }) {
   });
 }
 
-export async function completeGuestBooking(payload) {
+export async function completeGuestBooking(payload, dependencies = {}) {
+  const db = dependencies.db || prisma;
+  const addressValidator = dependencies.addressValidator || validateVietnamAddress;
   const email = normalizeEmail(payload.email);
   const phone = normalizePhone(payload.phone);
   if (!phone || phone.length < 9 || phone.length > 20) {
@@ -219,10 +223,10 @@ export async function completeGuestBooking(payload) {
     throw new HttpError(400, "Họ tên không hợp lệ.", { field: "fullName" }, "VALIDATION_ERROR");
   }
 
-  const otpId = await verifyGuestOtpAttempt(email, payload.otpCode);
-  const address = await validateVietnamAddress(payload.address);
+  const otpId = await verifyGuestOtpAttempt(db, email, payload.otpCode);
+  const address = await addressValidator(payload.address);
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     await assertAndConsumeOtpInTransaction(tx, {
       otpId,
       email,
