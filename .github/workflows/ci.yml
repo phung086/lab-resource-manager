@@ -42,6 +42,24 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_fresh?schema=public
         run: npm run db:migrate
+      - name: Create isolated Batch 4 integration database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c 'CREATE DATABASE "lab_resources_b4_booking_ci_training";'
+      - name: Deploy canonical schema for booking integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_b4_booking_ci_training?schema=public
+        run: npm run db:migrate
+      - name: Run booking policy and training integration
+        env:
+          BATCH4_DATABASE: lab_resources_b4_booking_ci_training
+        run: |
+          printf '%s\n' \
+            'DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_fresh?schema=public' \
+            > .env
+          npm run test:batch4
 
   migration-safety:
     runs-on: ubuntu-latest
