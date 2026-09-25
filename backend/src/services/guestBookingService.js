@@ -75,6 +75,7 @@ export function publicCustomerUser(user) {
     department: user.department || null,
     phone: user.phone || null,
     customerType: user.customerType || "INTERNAL",
+    customerTypeSemantics: "SELF_DECLARED_UNVERIFIED",
     organization: user.organization || null,
     passwordResetRequired: Boolean(user.passwordResetRequired),
     defaultAddress: user.defaultAddressProvinceCode ? {

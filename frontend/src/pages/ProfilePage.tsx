@@ -104,7 +104,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
           <label><span className="profile-label">Họ tên</span><input className="profile-input" value={fullName} onChange={e => setFullName(e.target.value)} required minLength={2} maxLength={255} /></label>
           <label><span className="profile-label">Số điện thoại</span><input className="profile-input" value={phone} onChange={e => setPhone(e.target.value)} maxLength={20} autoComplete="tel" /></label>
           <label><span className="profile-label">Đơn vị / khoa / tổ chức</span><input className="profile-input" value={organization} onChange={e => setOrganization(e.target.value)} maxLength={160} autoComplete="organization" /></label>
-          <label><span className="profile-label">Nhóm sử dụng</span><select className="profile-input" value={customerType} onChange={e => setCustomerType(e.target.value)}><option value="INTERNAL">Nội bộ trường</option><option value="EXTERNAL">Đơn vị / khách ngoài trường</option></select></label>
+          <label><span className="profile-label">Nhóm sử dụng tự khai</span><select className="profile-input" value={customerType} onChange={e => setCustomerType(e.target.value)}><option value="INTERNAL">Nội bộ trường (chưa xác minh)</option><option value="EXTERNAL">Đơn vị / khách ngoài trường</option></select><small>Thông tin này không cấp quyền, ưu đãi, hạn mức hoặc bỏ qua điều kiện đào tạo.</small></label>
         </div>
         <VietnamAddressSelector value={address} onChange={setAddress} required />
         <button className="profile-save" type="submit" disabled={saving}>{saving ? <Loader2 className="spin" size={17} /> : <Save size={17} />} Lưu hồ sơ</button>
