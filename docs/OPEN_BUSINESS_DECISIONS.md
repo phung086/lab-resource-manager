@@ -20,3 +20,16 @@ This list records questions that affect future implementation. It does not block
 | D-14 | RESOLVED — clean deployment strategy | ADR-021 adopts a reviewed clean-install baseline for empty databases and preserves the historical lineage for existing databases. PostgreSQL 16 verification is recorded in the Phase 1 report. |
 
 The user explicitly requested an email login with phone number as the initial password for quick-created accounts. This remains the current product decision. Security hardening must enforce a prompt password change at the backend and limit use of that temporary credential; replacing the login model requires a new product decision.
+
+## Phase D implementation note — 2026-09-25
+
+- D-03 remains open. Guest completion cannot overwrite an existing trusted
+  classification, and no current pricing/access/training/quota authority reads
+  client-declared `customerType`. A later verified-classification model needs a
+  separate approved schema decision.
+- Policy for allowing a public guest submission to update an existing
+  EXTERNAL user's name, phone, organization, or address is undefined. Phase D
+  therefore reuses that account without overwriting any stored profile field.
+- The approved phone-based initial password remains. Phase D now forces the
+  password-change lifecycle in backend middleware; replacing it with a
+  password-setup token or passwordless login remains a product decision.

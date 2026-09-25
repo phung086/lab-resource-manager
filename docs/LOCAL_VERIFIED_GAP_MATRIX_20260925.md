@@ -34,6 +34,19 @@ reset.
 | LV-09 | Temporary credentials | `passwordResetRequired` exists, while the audit reports normal authenticated access is not server-gated. | Not re-executed in this boundary. | P1 security | Enforce the approved temporary-credential lifecycle without changing the canonical four roles. | Auth middleware and sensitive-route tests. |
 | LV-10 | External integrations | SMTP, VNPAY merchant/IPN, R2/S3 and physical telemetry/camera credentials or hardware were not supplied. | Local software paths only. | External blocker | Preserve fail-closed behavior and verify when real credentials/hardware are available. | Real service/hardware evidence; local fixtures must not be described as production verification. |
 
+## Phase D closure update
+
+| ID | Resolution evidence |
+| --- | --- |
+| LV-06 | **RESOLVED on `fix/guest-booking-integrity`.** PostgreSQL 16 integration proves failed attempts persist, the fifth failure locks, the sixth cannot validate, resend cooldown is email-aware, the prior code is invalidated, only one outstanding challenge remains, and storage is HMAC-only. |
+| LV-07 | **RESOLVED on `fix/guest-booking-integrity`.** OTP verification/consumption, new account/address persistence, and authoritative booking creation share one transaction. Conflict, stale quote, missing training, unavailable resource, and forced PostgreSQL write failure leave no new user/booking and leave the OTP unconsumed. |
+| LV-09 | **RESOLVED on `fix/guest-booking-integrity`.** Backend authentication restricts temporary credentials to me/profile, change-password, and logout. Protected booking access returns `PASSWORD_RESET_REQUIRED` until the password is changed. Existing accounts receive no OTP-derived session. |
+
+Phase D used disposable database `lab_resources_guest_phase_d_test` on
+PostgreSQL 16. The focused suite passed 13/13; migration 14/14, core 33/33,
+Batch 4 32/32, all backend batches, and browser Batch 2/3/4/5/6/8 also passed.
+No schema or historical migration changed.
+
 ## Locally verified flows at this boundary
 
 | Flow | Result | Evidence |

@@ -272,3 +272,106 @@ to preserve the requested full matrix.
 This chronology commit changes documentation only. Its resulting final SHA is
 also required to complete the same 13/13 matrix before Phase C is declared
 complete; the final SHA is reported with the pull request evidence.
+
+## Phase D — guest booking, OTP, and identity integrity
+
+**BASE BRANCH:** `fix/release-gate-reliability`
+
+**BASE SHA:** `eb6a6876be2797d0b9903694e377c8e78497c487`
+
+**WORK BRANCH:** `fix/guest-booking-integrity`
+
+### Before
+
+The pre-change guest service incremented `EmailOtp.attempts` and then threw in
+the same Prisma transaction, so an invalid attempt rolled back. Repeated sends
+created multiple outstanding challenges. Successful OTP verification and
+account provisioning committed before the authoritative `createBooking`
+transaction, leaving a consumed OTP and created/rewritten user when conflict,
+training, quote, policy, resource, or database booking checks failed. Existing
+users were rewritten from the public payload, including changing trusted
+`INTERNAL` classification to `EXTERNAL`. Guest completion also issued a normal
+JWT for every matching email, and `passwordResetRequired` had no backend gate.
+
+| Scenario | OTP state before fix | User state before fix | Booking state before fix | Result before fix | Required result |
+| --- | --- | --- | --- | --- | --- |
+| Valid send | New hashed row | unchanged | unchanged | success only with required SMTP | one active challenge |
+| Wrong OTP | increment attempted, then rolled back | unchanged | none | `OTP_INVALID`, attempts remained 0 | persist attempt |
+| Five wrong OTPs | attempts remained below limit | unchanged | none | effective lock not reached | fifth failure locks |
+| Expired OTP | outstanding expired row | unchanged | none | generic invalid response | `OTP_EXPIRED` |
+| Resend | another outstanding row | unchanged | none | multiple active challenges | old challenge invalidated |
+| Old OTP after resend | old row still outstanding | could proceed | could be created | old OTP could still validate | old OTP rejected |
+| Successful OTP | consumed before booking | created/rewritten | second transaction | partial state possible | one atomic outcome |
+| New external user | consumed | new `EXTERNAL`, phone password, reset flag | later transaction | normal JWT issued | restricted setup session |
+| Existing EXTERNAL | consumed | submitted profile overwrote stored profile | later transaction | normal JWT issued | reuse without overwrite or OTP login |
+| Existing INTERNAL | consumed | silently changed to `EXTERNAL` | later transaction | trusted identity lost | preserve `INTERNAL` |
+| Conflict/stale quote/resource/training failure | already consumed | create/update already committed | rejected | harmful partial state | roll back OTP/account |
+| Invalid address | unchanged | unchanged | none | rejected before transaction | preserve behavior |
+| SMTP unavailable | created row deleted | unchanged | none | fail closed | fail closed, retain audit row as consumed |
+
+### After
+
+- A PostgreSQL transaction-scoped advisory lock serializes each normalized
+  `email + purpose` identity for send, resend, attempt, and consumption.
+- A 60-second per-email cooldown applies in addition to the existing route/IP
+  limiter. Resend consumes prior outstanding rows, preserves them as evidence,
+  creates one new challenge, and resets attempts.
+- Invalid verification returns an outcome from the transaction. This commits
+  the atomic attempt increment before the route throws the stable API error.
+- Valid OTP verification, new-account provisioning, address persistence,
+  authoritative booking creation, and OTP consumption now commit in one
+  database transaction. `createBookingWithTransaction` is the sole booking
+  rule path; `createBooking` remains a compatibility wrapper.
+- Existing accounts are reused without profile, address, password, reset flag,
+  role, or `customerType` overwrite. Existing users receive no OTP-derived JWT
+  and must use their established login.
+- New quick-booking accounts retain the approved phone-based temporary
+  credential, receive a normal signed JWT with a server-enforced restricted
+  state, and may use only profile/me, password change, and logout until reset.
+- OTP is generated with `crypto.randomInt`, stored only as HMAC-SHA256, compared
+  with `timingSafeEqual`, expires after ten minutes, permits five failures, and
+  is single-use. Plaintext interception exists only behind `NODE_ENV=test`.
+
+### PostgreSQL 16 evidence
+
+Primary guest database: `lab_resources_guest_phase_d_test`. The database name
+contains `_test`, was created inside disposable container
+`lrm-local-engineering-pg16-test-20260925`, and reported PostgreSQL 16.x.
+Guest integration passed 13/13 assertions, including hashed storage, persistent
+attempts, fifth-attempt lock, expiration, resend, single use, new/existing
+identity behavior, temporary credential restriction, conflict/training/stale
+quote/unavailable/database rollback, address failures, SMTP failure, retry, and
+simultaneous consumption.
+
+| Gate | Result |
+| --- | --- |
+| Migration safety | PASS, 14/14 |
+| Required core | PASS, 33/33 |
+| Batch 1E | PASS, 11/11 |
+| Batch 2 backend | PASS, 10/10 |
+| Batch 3 backend | PASS, 9/9 |
+| Batch 4 policy/PostgreSQL | PASS, 32/32 |
+| Batch 5 backend | PASS, 13/13 |
+| Batch 6 backend | PASS, 11/11 |
+| Batch 7 backend | PASS, 6/6 |
+| Batch 8 backend | PASS, 12/12 |
+| Guest integrity/PostgreSQL | PASS, 13/13 |
+| Backend lint / production config | PASS / PASS |
+| Frontend lint / typecheck / build | PASS with 13 existing warnings / PASS / PASS |
+| Browser Batch 2/3/4/5/6/8 | PASS / PASS / PASS / PASS / PASS / PASS |
+
+No Prisma schema change or migration was needed. Historical migrations and the
+frozen baseline were unchanged; `prisma db push` was not used. The migration
+safety matrix used `lab_resources_migration_phase_d_test`. Its direct
+`_prisma_migrations` fixture writes remained confined to
+`backend/test/migrationSafetyMatrix.mjs`; runtime and production deployment
+code contain no direct writes to that table.
+
+### Limitations and decisions
+
+Real SMTP credentials were not supplied, so local delivery was verified with
+an explicit test-only interceptor and the production path was verified to fail
+closed without SMTP. D-03 remains open: self-declared `customerType` exists in
+registration/profile, but current pricing, access, training, quota, and booking
+authority do not consume it. Existing external profile updates from a public
+guest submission are intentionally disabled pending an approved policy.
