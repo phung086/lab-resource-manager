@@ -13,9 +13,10 @@ import {
 
 const database = assertBatch4Database(process.env.BATCH4_DATABASE || "");
 const databaseUrl = await configureBatch4TestEnvironment(database);
-const [{ createApp }, { prisma }] = await Promise.all([
+const [{ createApp }, { prisma }, { completeGuestBooking, sendGuestBookingOtp }] = await Promise.all([
   import("../src/app.js"),
-  import("../src/db.js")
+  import("../src/db.js"),
+  import("../src/services/guestBookingService.js")
 ]);
 
 const app = createApp();
@@ -178,6 +179,48 @@ function tokenFor(userId, role) {
     process.env.JWT_SECRET,
     { algorithm: "HS256", expiresIn: "1h" }
   );
+}
+
+function guestOtpHash(email, code) {
+  return crypto
+    .createHmac("sha256", process.env.JWT_SECRET)
+    .update(`${email.toLowerCase()}:${code}`)
+    .digest("hex");
+}
+
+function testAddress(address = {}) {
+  return {
+    addressLine: address.addressLine || "123 Test Street",
+    provinceCode: "79",
+    provinceName: "Thành phố Hồ Chí Minh",
+    wardCode: "26734",
+    wardName: "Phường Test",
+    source: "batch4-test-address",
+    version: "test-v1",
+    fullAddress: "123 Test Street, Phường Test, Thành phố Hồ Chí Minh"
+  };
+}
+
+function guestPayload({ email, otpCode, resourceId, startAt, endAt, fullName = "External Guest" }) {
+  return {
+    email,
+    otpCode,
+    fullName,
+    phone: "0901234567",
+    organization: "External Research Partner",
+    address: {
+      addressLine: "123 Test Street",
+      provinceCode: "79",
+      wardCode: "26734"
+    },
+    booking: {
+      resourceId,
+      title: "External Open LAB booking",
+      purpose: "Guest booking integration test",
+      startAt: startAt.toISOString(),
+      endAt: endAt.toISOString()
+    }
+  };
 }
 
 test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (t) => {
@@ -914,6 +957,201 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     assert.equal(wrongUser.status, 403);
     assert.equal(wrongUser.body.error?.code, "BOOKING_TRAINING_REQUIRED");
   });
+
+  await t.test("16. Guest OTP failed attempts persist and lock after five failures", async () => {
+    const email = `otp-attempts-${marker}@example.test`;
+    const correctCode = "123456";
+    const otpId = id();
+    await isolated.emailOtp.create({
+      data: {
+        id: otpId,
+        email,
+        purpose: "GUEST_QUICK_BOOKING",
+        codeHash: guestOtpHash(email, correctCode),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+      }
+    });
+
+    const startAt = futureVietnamTime(9, 9);
+    const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+    const payload = guestPayload({
+      email,
+      otpCode: "654321",
+      resourceId: fixture.resources.immediate,
+      startAt,
+      endAt
+    });
+
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      await assert.rejects(
+        () => completeGuestBooking(payload, { db: isolated, addressValidator: testAddress }),
+        (error) => error?.code === "OTP_INVALID" && error?.status === 400
+      );
+      const row = await isolated.emailOtp.findUnique({ where: { id: otpId } });
+      assert.equal(row.attempts, attempt, `OTP attempt ${attempt} must persist`);
+      assert.equal(row.consumedAt, null);
+    }
+
+    await assert.rejects(
+      () => completeGuestBooking(payload, { db: isolated, addressValidator: testAddress }),
+      (error) => error?.code === "OTP_LOCKED" && error?.status === 429
+    );
+    const locked = await isolated.emailOtp.findUnique({ where: { id: otpId } });
+    assert.equal(locked.attempts, 5, "Fifth wrong attempt must persist and lock the challenge");
+
+    await assert.rejects(
+      () => completeGuestBooking({ ...payload, otpCode: correctCode }, { db: isolated, addressValidator: testAddress }),
+      (error) => error?.code === "OTP_LOCKED" && error?.status === 429
+    );
+  });
+
+  await t.test("17. Guest OTP resend enforces cooldown and replaces the previous active challenge", async () => {
+    const email = `otp-resend-${marker}@example.test`;
+    const mailer = async () => ({ success: true });
+
+    const first = await sendGuestBookingOtp(
+      { email, fullName: "Resend Guest" },
+      { db: isolated, mailer }
+    );
+    assert.equal(first.resendAfterSeconds, 60);
+
+    await assert.rejects(
+      () => sendGuestBookingOtp({ email, fullName: "Resend Guest" }, { db: isolated, mailer }),
+      (error) => error?.code === "OTP_RESEND_COOLDOWN" && error?.status === 429
+    );
+
+    const firstRow = await isolated.emailOtp.findFirst({
+      where: { email, purpose: "GUEST_QUICK_BOOKING" },
+      orderBy: { createdAt: "asc" }
+    });
+    assert.ok(firstRow);
+    await isolated.emailOtp.update({
+      where: { id: firstRow.id },
+      data: { createdAt: new Date(Date.now() - 2 * 60 * 1000) }
+    });
+
+    await sendGuestBookingOtp(
+      { email, fullName: "Resend Guest" },
+      { db: isolated, mailer }
+    );
+
+    const rows = await isolated.emailOtp.findMany({
+      where: { email, purpose: "GUEST_QUICK_BOOKING" },
+      orderBy: { createdAt: "asc" }
+    });
+    assert.equal(rows.length, 2);
+    assert.ok(rows[0].consumedAt, "Previous OTP must be invalidated after successful resend");
+    assert.equal(rows[1].consumedAt, null, "Newest OTP remains active");
+  });
+
+  await t.test("18. Guest account, OTP consumption, and booking rollback atomically when booking fails", async () => {
+    const email = `guest-rollback-${marker}@example.test`;
+    const code = "246810";
+    const otpId = id();
+    await isolated.emailOtp.create({
+      data: {
+        id: otpId,
+        email,
+        purpose: "GUEST_QUICK_BOOKING",
+        codeHash: guestOtpHash(email, code),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+      }
+    });
+
+    const trainingResource = await isolated.resource.findFirst({
+      where: { code: { startsWith: "RES-TRAIN-" } },
+      select: { id: true }
+    });
+    assert.ok(trainingResource, "Training-gated resource from test 15 must exist");
+
+    const startAt = futureVietnamTime(10, 10);
+    const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+
+    await assert.rejects(
+      () => completeGuestBooking(
+        guestPayload({ email, otpCode: code, resourceId: trainingResource.id, startAt, endAt }),
+        { db: isolated, addressValidator: testAddress }
+      ),
+      (error) => error?.code === "BOOKING_TRAINING_REQUIRED"
+    );
+
+    assert.equal(await isolated.user.findUnique({ where: { email } }), null, "Failed booking must not leave an orphan user");
+    const otp = await isolated.emailOtp.findUnique({ where: { id: otpId } });
+    assert.equal(otp.consumedAt, null, "Failed booking must roll back OTP consumption");
+    assert.equal(otp.attempts, 0);
+  });
+
+  await t.test("19. Guest reuse preserves INTERNAL classification and successful OTP is single-use", async () => {
+    const email = `internal-guest-${marker}@example.test`;
+    const internalUserId = id();
+    await isolated.user.create({
+      data: {
+        id: internalUserId,
+        email,
+        fullName: "Existing Internal User",
+        role: "STUDENT",
+        passwordHash: await bcrypt.hash(password, 4),
+        customerType: "INTERNAL",
+        isActive: true
+      }
+    });
+
+    const code = "135790";
+    const otpId = id();
+    await isolated.emailOtp.create({
+      data: {
+        id: otpId,
+        email,
+        purpose: "GUEST_QUICK_BOOKING",
+        codeHash: guestOtpHash(email, code),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+      }
+    });
+
+    const before = await isolated.user.findUnique({ where: { email } });
+    assert.ok(before);
+    assert.equal(before.customerType, "INTERNAL");
+
+    const startAt = futureVietnamTime(11, 10);
+    const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+    const payload = guestPayload({
+      email,
+      otpCode: code,
+      resourceId: fixture.resources.immediate,
+      startAt,
+      endAt,
+      fullName: "Existing Internal User"
+    });
+
+    const completed = await completeGuestBooking(payload, {
+      db: isolated,
+      addressValidator: testAddress
+    });
+    assert.equal(completed.user.id, before.id);
+    assert.equal(completed.user.customerType, "INTERNAL");
+    assert.equal(completed.booking.requestedById, before.id);
+
+    const after = await isolated.user.findUnique({ where: { email } });
+    assert.equal(after.customerType, "INTERNAL", "Public guest flow must not overwrite trusted INTERNAL classification");
+    const consumed = await isolated.emailOtp.findUnique({ where: { id: otpId } });
+    assert.ok(consumed.consumedAt, "Successful booking must consume OTP");
+
+    await assert.rejects(
+      () => completeGuestBooking(payload, { db: isolated, addressValidator: testAddress }),
+      (error) => error?.code === "OTP_INVALID"
+    );
+
+    const matchingBookings = await isolated.booking.count({
+      where: {
+        requestedById: before.id,
+        title: "External Open LAB booking",
+        startAt,
+        endAt
+      }
+    });
+    assert.equal(matchingBookings, 1, "Consumed OTP must not create a duplicate booking");
+  });
+
 });
 
 test.after(async () => {
