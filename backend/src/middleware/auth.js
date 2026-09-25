@@ -11,7 +11,7 @@ import { isCanonicalRole, CANONICAL_ROLES } from "../constants/roles.js";
  * - Inactive users are rejected.
  * - Unsupported role values are rejected.
  */
-export async function requireAuth(req, res, next) {
+async function authenticateUser(req, res, next, { allowPasswordReset = false } = {}) {
   const header = req.headers.authorization || "";
   const match = /^Bearer ([^\s]+)$/.exec(header);
   const token = match?.[1] || "";
@@ -60,8 +60,25 @@ export async function requireAuth(req, res, next) {
     return res.status(403).json({ error: { code: "FORBIDDEN", message: "User role is not recognized" } });
   }
 
+  if (user.passwordResetRequired && !allowPasswordReset) {
+    return res.status(403).json({
+      error: {
+        code: "PASSWORD_RESET_REQUIRED",
+        message: "You must change the temporary password before using protected laboratory functions"
+      }
+    });
+  }
+
   req.user = user;
   next();
+}
+
+export function requireAuth(req, res, next) {
+  return authenticateUser(req, res, next, { allowPasswordReset: false });
+}
+
+export function requireAuthAllowPasswordReset(req, res, next) {
+  return authenticateUser(req, res, next, { allowPasswordReset: true });
 }
 
 /**
@@ -82,7 +99,7 @@ export async function optionalAuth(req, res, next) {
     const payload = jwt.verify(token, config.jwtSecret, { algorithms: ["HS256"] });
     if (payload?.sub) {
       const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-      if (user && user.isActive && isCanonicalRole(user.role)) {
+      if (user && user.isActive && isCanonicalRole(user.role) && !user.passwordResetRequired) {
         req.user = user;
       } else {
         req.user = null;
