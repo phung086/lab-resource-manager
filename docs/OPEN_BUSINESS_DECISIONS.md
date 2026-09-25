@@ -6,7 +6,7 @@ This list records questions that affect future implementation. It does not block
 | --- | --- | --- |
 | D-01 | Which resources require mandatory training, and which courses qualify? | Booking now enforces every configured mandatory `TrainingRequirement`; product owners still decide which resource/course rows to configure. The implementation does not invent requirements. |
 | D-02 | May staff override missing/expired training? | No accepted override policy. Phase B deliberately implements no override. |
-| D-03 | Who verifies INTERNAL vs EXTERNAL classification? | Self-registration/profile currently accept the value; it must not grant price or access benefits until verified. |
+| D-03 | Who verifies INTERNAL vs EXTERNAL classification? | Phase E defines every current value as `SELF_DECLARED_UNVERIFIED`. Self-registration/profile may declare it, but it grants no price, access, training, quota, priority or loyalty benefit. Institutional verification still needs an approved actor, evidence source, upgrade/downgrade rules and audit model before any schema expansion. |
 | D-04 | Is full Vietnamese address mandatory for ROOM-only booking? | The approved quick-booking checkpoint collects it, but data minimization should be decided before making it a permanent room policy. |
 | D-05 | Will a real VNPAY Sandbox round trip be shown during the defense? | Checkout exists; merchant/IPN credentials are not configured locally and no real round trip is verified. |
 | D-06 | What are cancellation and no-show rules, especially after payment? | Keep existing canonical statuses and do not invent refund deadlines or fees. |
@@ -18,6 +18,9 @@ This list records questions that affect future implementation. It does not block
 | D-12 | How much maintenance detail may be visible publicly? | Public schedule should reveal unavailable periods without private operational notes. |
 | D-13 | Is loyalty an academic access signal, commercial discount, or both? | It must never bypass training, RBAC, approval, quota or safety. |
 | D-14 | RESOLVED — clean deployment strategy | ADR-021 adopts a reviewed clean-install baseline for empty databases and preserves the historical lineage for existing databases. PostgreSQL 16 verification is recorded in the Phase 1 report. |
+| D-15 | May a public guest submission update an existing EXTERNAL profile? | No policy exists for reconciling submitted name, phone, organization or address with stored identity data. Preserve the current profile without overwrite until ownership/reverification and field-by-field rules are approved. |
+| D-16 | Should phone-based temporary credentials be replaced by an OTP-bound password-setup session? | The current backend-restricted lifecycle is verified, but the initial password remains predictable from phone data. A setup token/session is the recommended future improvement; it is deferred because it changes the authentication contract. |
+| D-17 | What immutable global audit events and retention rules are required? | Current domain evidence is adequate for resource/booking operations, but user administration, guest identity reuse and payment-admin action need a generic audit model plus retention/access policy. Do not encode these as fake resource usage events. |
 
 The user explicitly requested an email login with phone number as the initial password for quick-created accounts. This remains the current product decision. Security hardening must enforce a prompt password change at the backend and limit use of that temporary credential; replacing the login model requires a new product decision.
 
@@ -33,3 +36,16 @@ The user explicitly requested an email login with phone number as the initial pa
 - The approved phone-based initial password remains. Phase D now forces the
   password-change lifecycle in backend middleware; replacing it with a
   password-setup token or passwordless login remains a product decision.
+
+## Phase E governance note — 2026-09-25
+
+- `customerType` is a declaration, not `Role` and not verified institutional
+  identity. No current server policy consumes it for authority or benefit.
+- Full resource provenance is operational audit data for administrators and
+  assigned lab staff. Ordinary users receive a separate safe timeline rather
+  than internal audit fields.
+- Existing EXTERNAL profile preservation remains the fail-safe rule under
+  D-15. Phase E makes no silent profile reconciliation policy.
+- General audit persistence and retention remain D-17. A future migration must
+  define actor, target, timestamp, from/to state, reason and metadata without
+  storing secrets or raw sensitive request bodies.

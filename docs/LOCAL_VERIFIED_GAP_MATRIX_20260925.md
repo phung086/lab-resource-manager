@@ -34,6 +34,22 @@ reset.
 | LV-09 | Temporary credentials | `passwordResetRequired` exists, while the audit reports normal authenticated access is not server-gated. | Not re-executed in this boundary. | P1 security | Enforce the approved temporary-credential lifecycle without changing the canonical four roles. | Auth middleware and sensitive-route tests. |
 | LV-10 | External integrations | SMTP, VNPAY merchant/IPN, R2/S3 and physical telemetry/camera credentials or hardware were not supplied. | Local software paths only. | External blocker | Preserve fail-closed behavior and verify when real credentials/hardware are available. | Real service/hardware evidence; local fixtures must not be described as production verification. |
 
+## Phase E closure update
+
+| ID | Resolution evidence |
+| --- | --- |
+| LV-08 | **RESOLVED on `fix/privacy-audit-governance`.** The endpoint now separates persisted raw events from an actor-aware projection. Student/Lecturer responses contain safe status/maintenance events and only their own booking activity; assigned staff/admin retain provenance; foreign or unassigned staff receive `403`. Phase E PostgreSQL integration covers all five actor classes and verifies redaction of actor/reporter IDs, internal reasons, maintenance title, incident title, private metadata and unrelated booking IDs. |
+| LV-09 | Phase D server gating remains intact. Phase E additionally proves direct booking and payment API requests fail while the temporary flag is set, logout remains available, password change removes the restriction and the old phone-based credential no longer authenticates. |
+
+New verified/deferred items:
+
+| ID | Area | Evidence | Status |
+| --- | --- | --- | --- |
+| LV-11 | Customer classification authority | Repository-wide search found `customerType` only in identity input/output and guest preservation paths. Booking authority, training, RBAC, quota and pricing do not read it. Public responses/UI now label it `SELF_DECLARED_UNVERIFIED`; API tests prove an `INTERNAL` declaration remains role `STUDENT` with no admin/resource mutation authority. | Safe current semantics verified; institutional verification remains deferred. |
+| LV-12 | General audit completeness | Existing domain audit covers resource mutation/status, pricing, booking lifecycle, maintenance/calibration and incidents. Role/active changes, assignment deletion, guest account create/reuse and payment-admin actions lack a suitable global audit model. | Explicit schema gap; no fake resource `UsageLog` created. |
+| LV-13 | Cross-domain privacy | Payment lookups return non-enumerating `404` to foreign users; incidents follow owner or assigned-lab scope; notifications list/read only the authenticated recipient. | PASS in Phase E integration and preserved Batch 6 coverage. |
+| LV-14 | Legacy generic seed | `npm run db:seed` points to `seedBookingPlatform.js`; earlier isolated execution fails because the fixture omits required `User.id`. Assignment audit already classifies it as an explicit development fixture, and current CI/demo uses dedicated guarded seeds. | LEGACY; do not use as supported bootstrap until separately repaired or retired. |
+
 ## Phase D closure update
 
 | ID | Resolution evidence |
