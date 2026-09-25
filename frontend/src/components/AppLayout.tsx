@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
 import { Header } from "./Header.tsx";
 import { KeyRound, Check, ShieldAlert } from "lucide-react";
@@ -17,6 +17,7 @@ export interface AppLayoutProps {
     email?: string;
     quotaUsed?: number;
     quotaTotal?: number;
+    passwordResetRequired?: boolean;
   } | null;
   locale: string;
   onLocaleChange: (locale: string) => void;
@@ -26,6 +27,7 @@ export interface AppLayoutProps {
   loading?: boolean;
   onRefresh?: () => void;
   onLogout?: () => void;
+  onPasswordChanged?: () => void;
   onAssistantPrefill?: (slot: { resourceId: string; startAt: string; endAt: string }) => void;
   children: React.ReactNode;
 }
@@ -42,6 +44,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   loading = false,
   onRefresh,
   onLogout,
+  onPasswordChanged,
   onAssistantPrefill,
   children
 }) => {
@@ -55,8 +58,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const [passwordError, setPasswordError] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
 
+  useEffect(() => {
+    if (user?.passwordResetRequired) setChangePasswordOpen(true);
+  }, [user?.passwordResetRequired]);
+
   function closePasswordModal() {
     if (passwordBusy) return;
+    if (user?.passwordResetRequired && !passwordSuccess) return;
     setChangePasswordOpen(false);
     setPasswordError("");
     setPasswordSuccess(false);
@@ -123,6 +131,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         body: JSON.stringify({ currentPassword, newPassword })
       });
       setPasswordSuccess(true);
+      onPasswordChanged?.();
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -191,13 +200,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       <BaseModal2026
         isOpen={changePasswordOpen}
         onClose={closePasswordModal}
-        dismissible={!passwordBusy}
-        title="Đổi mật khẩu"
-        subtitle="Cập nhật mật khẩu truy cập tài khoản phòng lab"
+        dismissible={!passwordBusy && (!user?.passwordResetRequired || passwordSuccess)}
+        title={user?.passwordResetRequired ? "Thiết lập mật khẩu mới" : "Đổi mật khẩu"}
+        subtitle={user?.passwordResetRequired ? "Mật khẩu hiện tại là số điện thoại đã dùng khi đặt nhanh. Bạn phải đổi mật khẩu trước khi dùng các chức năng khác." : "Cập nhật mật khẩu truy cập tài khoản phòng lab"}
         icon={KeyRound}
         maxWidth="max-w-md"
         footer={<>
-          <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>Đóng</button>
+          {(!user?.passwordResetRequired || passwordSuccess) && <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>Đóng</button>}
           {!passwordSuccess && <button type="submit" form="change-password-form" className="btn btn-primary" disabled={passwordBusy}>{passwordBusy ? "Đang cập nhật..." : "Cập nhật mật khẩu"}</button>}
         </>}
       >

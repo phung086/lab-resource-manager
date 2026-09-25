@@ -121,6 +121,10 @@ export function GuestQuickBookingPanel({ resource, onComplete }: { resource: Res
           }
         })
       });
+      if (result.requiresLogin) {
+        setOtpCode("");
+        setMessage("Đặt lịch thành công. Tài khoản đã tồn tại; vui lòng đăng nhập bằng mật khẩu hiện tại để tiếp tục.");
+      }
       onComplete(result);
     } catch (cause: any) {
       setError(cause?.message || "Không hoàn tất được đặt lịch.");

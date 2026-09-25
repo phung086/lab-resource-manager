@@ -284,3 +284,22 @@ Before future work, read `AGENTS.md`, the `.agent/` rules, this file,
 Code checkpoint implemented for external quick booking: public catalog detail can collect external customer identity, Vietnamese administrative address, email OTP, quote, booking creation, and handoff to bookings/payment; normal registration/profile now persist default address and profile exposes spending/loyalty signals from real payment/booking data. External customers keep canonical role `STUDENT` with `customerType=EXTERNAL`; no new role or booking status was introduced.
 
 Verification completed without live DB: Prisma validate/generate, backend lint, frontend lint/typecheck/build, and address source smoke. Local `DATABASE_URL` points to PostgreSQL on `localhost:5432`, but that server and Docker Desktop are not running in the current environment, so `prisma migrate deploy`, OTP live flow, booking creation, and browser smoke remain pending. SMTP variables are also absent; OTP must fail with `EMAIL_NOT_CONFIGURED` until real SMTP is configured.
+
+## 2026-09-25 — Phase D guest integrity closure
+
+Guest quick booking is now verified on isolated PostgreSQL 16. OTP challenges
+are HMAC-only, single-use, limited to five persistent failures, serialized by
+normalized email/purpose, protected by a 60-second resend cooldown, and retain
+invalidated history. Required email remains fail-closed.
+
+Successful completion uses one database transaction for valid OTP, new account
+and address persistence, the canonical booking rules, and OTP consumption.
+Booking failure rolls back the entire business outcome. Existing accounts are
+reused without public profile or `customerType` overwrite; `INTERNAL` remains
+`INTERNAL`. Existing accounts receive no OTP-derived JWT. New accounts retain
+the approved temporary phone credential, while backend middleware limits the
+session to password setup/me/logout until a real password is established.
+
+Verification: guest PostgreSQL suite 13/13, migration safety 14/14, core 33/33,
+Batch 4 32/32, all backend batches green, frontend lint/typecheck/build green,
+and browser Batch 2/3/4/5/6/8 green. No schema or migration changed.

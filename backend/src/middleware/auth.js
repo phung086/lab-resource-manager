@@ -4,6 +4,18 @@ import { config } from "../config.js";
 import { prisma } from "../db.js";
 import { isCanonicalRole, CANONICAL_ROLES } from "../constants/roles.js";
 
+const PASSWORD_RESET_ALLOWLIST = new Set([
+  "GET /api/auth/me",
+  "GET /api/users/me",
+  "POST /api/auth/change-password",
+  "POST /api/auth/logout"
+]);
+
+function passwordResetRouteKey(req) {
+  const path = String(req.originalUrl || req.url || "").split("?")[0];
+  return `${String(req.method || "GET").toUpperCase()} ${path}`;
+}
+
 /**
  * Requires a valid, database-backed authenticated user.
  *
@@ -61,6 +73,14 @@ export async function requireAuth(req, res, next) {
   }
 
   req.user = user;
+  if (user.passwordResetRequired && !PASSWORD_RESET_ALLOWLIST.has(passwordResetRouteKey(req))) {
+    return res.status(403).json({
+      error: {
+        code: "PASSWORD_RESET_REQUIRED",
+        message: "Set a new password before accessing this endpoint"
+      }
+    });
+  }
   next();
 }
 
@@ -111,4 +131,3 @@ export function requireRole(...roles) {
     next();
   };
 }
-

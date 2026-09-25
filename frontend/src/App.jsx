@@ -121,6 +121,11 @@ function App() {
     window.location.hash = `${hashForTab("payments")}?booking=${encodeURIComponent(booking.id)}`;
   };
   const handleGuestBookingComplete = result => {
+    if (result.requiresLogin || !result.accessToken) {
+      setAuthMode("login");
+      setTimeout(() => document.getElementById("dang-nhap")?.scrollIntoView({ behavior: "smooth" }), 0);
+      return;
+    }
     const stored = storeAuthResult(result);
     setUser(stored.user);
     setAuthMode("login");
@@ -330,9 +335,14 @@ function App() {
         updateActiveTab("home");
         window.history.replaceState(null, "", "#dang-nhap");
       }}
+      onPasswordChanged={() => {
+        const updatedUser = { ...user, passwordResetRequired: false };
+        localStorage.setItem("lrm_user", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      }}
     >
       {error && <div className="alert danger" role="alert">{error}</div>}
-      {user.passwordResetRequired && <div className="alert" role="status">Tài khoản của bạn được tạo nhanh từ thông tin đặt lịch. Vui lòng đổi mật khẩu trong menu tài khoản sau khi hoàn tất thanh toán hoặc theo dõi booking.</div>}
+      {user.passwordResetRequired && <div className="alert" role="status">Tài khoản đặt nhanh đang dùng mật khẩu tạm thời. Bạn phải thiết lập mật khẩu mới trước khi dùng các chức năng khác.</div>}
 
       {/* REQUIRED CORE */}
       {activeTab === "home" && <WorkspaceHome user={user} bookings={bookings} notifications={notifications} loading={loading} error={error} onRetry={loadData} onNavigate={setActiveTab} onSearch={(query) => { setResourceSearch(query); setActiveTab("resources"); }} />}
