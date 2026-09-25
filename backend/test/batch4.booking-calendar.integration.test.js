@@ -802,6 +802,118 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
       "Persisted status must be PENDING_APPROVAL when lab policy requires approval"
     );
   });
+
+  await t.test("15. Mandatory training is enforced by authoritative booking creation", async () => {
+    const trainingResourceId = id();
+    const courseA = id();
+    const courseB = id();
+
+    await isolated.resource.create({
+      data: {
+        id: trainingResourceId,
+        laboratoryId: fixture.lab,
+        code: `RES-TRAIN-${marker.slice(0, 6)}`,
+        name: "Laser Safety Training Target",
+        subtype: "OTHER",
+        category: "EQUIPMENT",
+        location: "Safety Lab",
+        operationalStatus: "AVAILABLE",
+        requiresApproval: false
+      }
+    });
+
+    await isolated.trainingCourse.createMany({
+      data: [
+        { id: courseA, code: `SAFE-A-${marker.slice(0, 6)}`, name: "General Lab Safety" },
+        { id: courseB, code: `SAFE-B-${marker.slice(0, 6)}`, name: "Laser Safety" }
+      ]
+    });
+    await isolated.trainingRequirement.createMany({
+      data: [
+        { id: id(), resourceId: trainingResourceId, courseId: courseA, isMandatory: true },
+        { id: id(), resourceId: trainingResourceId, courseId: courseB, isMandatory: true }
+      ]
+    });
+
+    const trainingStart = futureVietnamTime(8, 10);
+    const trainingEnd = new Date(trainingStart.getTime() + 60 * 60 * 1000);
+    const bookingPayload = {
+      resourceId: trainingResourceId,
+      title: "Training-gated equipment booking",
+      purpose: "Verify mandatory safety qualification",
+      startAt: trainingStart.toISOString(),
+      endAt: trainingEnd.toISOString()
+    };
+
+    const missingAll = await request(app)
+      .post("/api/bookings")
+      .set(bearer(tokens.studentA))
+      .send(bookingPayload);
+    assert.equal(missingAll.status, 403);
+    assert.equal(missingAll.body.error?.code, "BOOKING_TRAINING_REQUIRED");
+    assert.deepEqual(
+      missingAll.body.error?.details?.missingTraining.map((row) => row.code).sort(),
+      [`SAFE-A-${marker.slice(0, 6)}`, `SAFE-B-${marker.slice(0, 6)}`].sort()
+    );
+
+    await isolated.userCertification.create({
+      data: {
+        id: id(),
+        userId: fixture.users.studentA,
+        courseId: courseA,
+        status: "active",
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      }
+    });
+    await isolated.userCertification.create({
+      data: {
+        id: id(),
+        userId: fixture.users.studentA,
+        courseId: courseB,
+        status: "revoked"
+      }
+    });
+
+    const revoked = await request(app)
+      .post("/api/bookings")
+      .set(bearer(tokens.studentA))
+      .send(bookingPayload);
+    assert.equal(revoked.status, 403);
+    assert.equal(revoked.body.error?.code, "BOOKING_TRAINING_REQUIRED");
+    assert.deepEqual(
+      revoked.body.error?.details?.missingTraining.map((row) => row.code),
+      [`SAFE-B-${marker.slice(0, 6)}`]
+    );
+
+    await isolated.userCertification.update({
+      where: { userId_courseId: { userId: fixture.users.studentA, courseId: courseB } },
+      data: {
+        status: "active",
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      }
+    });
+
+    const qualified = await request(app)
+      .post("/api/bookings")
+      .set(bearer(tokens.studentA))
+      .send(bookingPayload);
+    assert.equal(qualified.status, 201);
+    assert.equal(qualified.body.status, "CONFIRMED");
+
+    const otherUserStart = new Date(trainingEnd);
+    const otherUserEnd = new Date(otherUserStart.getTime() + 60 * 60 * 1000);
+    const wrongUser = await request(app)
+      .post("/api/bookings")
+      .set(bearer(tokens.studentB))
+      .send({
+        ...bookingPayload,
+        title: "Other user without certifications",
+        startAt: otherUserStart.toISOString(),
+        endAt: otherUserEnd.toISOString()
+      });
+    assert.equal(wrongUser.status, 403);
+    assert.equal(wrongUser.body.error?.code, "BOOKING_TRAINING_REQUIRED");
+  });
 });
 
 test.after(async () => {
