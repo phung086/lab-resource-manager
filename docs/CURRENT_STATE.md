@@ -1,5 +1,35 @@
 # Current Project State
 
+## Phase E privacy, audit and customer classification governance — 2026-09-25
+
+Branch `fix/privacy-audit-governance` starts from the exact accepted Phase D
+SHA `c4a4aa921a9352fbb775bfb184ebb44844f41d82`. The authenticated resource
+history endpoint no longer returns one full provenance DTO to every role.
+`STUDENT` and `LECTURER` now receive an anonymous operational timeline plus
+their own booking events; actor/reporter identity, internal reasons, record
+identifiers, unrelated booking events and private metadata are removed.
+Assigned `LAB_STAFF` and `ADMIN` retain the full operational view. Unassigned
+or foreign-lab staff fail closed with `403`.
+
+`customerType` remains compatibility metadata and is now explicitly returned
+and displayed as `SELF_DECLARED_UNVERIFIED`. It does not grant RBAC, training
+bypass, quota, priority, discount or institution-only pricing. Profile writes
+remain strict and allowlisted; role, active state, lab assignment, training and
+loyalty configuration cannot be mass-assigned through `/api/users/me`.
+
+The audit inventory confirms durable resource, booking, maintenance,
+calibration, incident and pricing evidence in existing domain records. The
+schema still has no general system-audit model for role/activation changes,
+lab-assignment deletion, guest account create/reuse or payment-admin action.
+Phase E does not fabricate those events in resource-scoped `UsageLog`; these
+gaps remain explicit forward-schema work. The sample-only `AuditLogsView`
+under Advanced/Research is not treated as runtime evidence.
+
+Local PostgreSQL 16 verification is green: Phase E 5/5, migration safety
+14/14, required core 33/33, guest integrity 13/13, backend Batch 1E–8,
+frontend lint/typecheck/build, and browser Batch 2/3/4/5/6/8. No schema or
+migration changed, and `prisma db push` was not used.
+
 ## Phase 3 release gate reliability — 2026-09-25
 
 Branch `fix/release-gate-reliability` starts from the exact accepted Phase B

@@ -37,6 +37,7 @@
     "test:batch7": "cross-env LOG_FORMAT=dev node --test test/batch7.production-demo-hardening.integration.test.js",
     "test:batch8": "cross-env LOG_FORMAT=dev node --test test/batch8.smart-monitoring.integration.test.js",
     "test:guest-integrity": "cross-env LOG_FORMAT=dev node --test test/guestBookingIntegrity.integration.test.js",
+    "test:phase-e": "cross-env LOG_FORMAT=dev node --test test/phaseE.privacy-governance.integration.test.js",
     "test:migration-safety": "node test/migrationSafetyMatrix.mjs"
   },
   "dependencies": {

@@ -375,3 +375,113 @@ closed without SMTP. D-03 remains open: self-declared `customerType` exists in
 registration/profile, but current pricing, access, training, quota, and booking
 authority do not consume it. Existing external profile updates from a public
 guest submission are intentionally disabled pending an approved policy.
+
+## Phase E — privacy, audit and customer classification governance
+
+**BASE BRANCH:** `fix/guest-booking-integrity`
+
+**BASE SHA:** `c4a4aa921a9352fbb775bfb184ebb44844f41d82`
+
+**WORK BRANCH:** `fix/privacy-audit-governance`
+
+### Resource history privacy matrix
+
+| Actor | Own booking details | Anonymous operational history | Staff identity | Incident reporter | Full metadata |
+| --- | --- | --- | --- | --- | --- |
+| Unauthenticated | no endpoint (`401`) | no | no | no | no |
+| `STUDENT` | yes | status and maintenance/calibration periods | no | no | no |
+| `LECTURER` | yes | status and maintenance/calibration periods | no | no | no |
+| assigned `LAB_STAFF` | operational scope | full assigned-lab provenance | yes | yes | yes |
+| foreign/unassigned `LAB_STAFF` | no (`403`) | no | no | no | no |
+| `ADMIN` | global | full provenance | yes | yes | yes |
+
+Before Phase E, every authenticated actor received the same timeline with user
+IDs/names/roles, maintenance creator, incident reporter, booking and audit
+record IDs, internal reasons and arbitrary metadata. The implementation now
+loads authoritative persisted events in `getResourceHistory` and applies the
+role/scope DTO in `projectResourceHistoryForActor`. Ordinary events use opaque
+response-local IDs and remove internal references; only an actor's own booking
+ID and safe booking state/times remain.
+
+### Audit completeness matrix
+
+| Action | Current evidence | Actor / target / time | From / to / reason / metadata | Phase E decision |
+| --- | --- | --- | --- | --- |
+| User role change | updated `User` only | target/time via row update only; actor absent | no durable before/after/reason | gap: generic audit model required |
+| User active/inactive | updated `User` only | target/time via row update only; actor absent | no durable before/after/reason | gap |
+| Lab assignment add/remove | assignment row has create time | target present; actor absent; deletion loses row | no tombstone/reason | gap |
+| Resource create/update | `UsageLog` | actor/resource/time | changed fields and selected metadata; reason optional | adequate domain evidence |
+| Operational status/retire | `ResourceStatusHistory` + `UsageLog` | actor/resource/time | from/to/reason/metadata | complete for current contract |
+| Pricing change | `UsageLog` + versioned pricing row | actor/resource/time | new rate/version; prior rate not copied into audit | usable, previous-value gap |
+| Booking request/approve/reject/cancel/check-out/return/complete | `UsageLog` + booking timestamps | actor/booking/resource/time | from/to, reason and handover conditions where applicable | complete for current lifecycle |
+| Maintenance/calibration | persisted window + `UsageLog` | actor/resource/time | current window state; limited before/after on edits | usable, delta detail gap |
+| Incident create/triage/investigate/resolve | incident + `UsageLog` | actor/incident/resource/time | status/reason/metadata; resolution persisted | complete for current workflow |
+| Training certification/override | eligibility reads persisted certification; no mounted certification writer or override | n/a | n/a | no override exists; future writer needs audit |
+| Guest account created/reused | user/OTP/booking records | business outcome persisted; explicit reuse actor event absent | no dedicated account-created/reused event | gap |
+| Payment admin action | payment row records owner/transaction/time | initiating admin is not persisted | no generic admin action record | gap |
+
+Ordinary users have no general audit API. Camera access audits remain limited to
+`ADMIN` and assigned `LAB_STAFF`. The frontend `AuditLogsView` contains sample
+research data and is not treated as persistence evidence. No password hash,
+OTP hash, JWT, provider secret or raw request body was added to history or
+audit output.
+
+### Customer type authority matrix
+
+| Feature | Uses `customerType`? | Security/business impact |
+| --- | --- | --- |
+| RBAC and route access | no | canonical `Role` remains authoritative |
+| Lab assignment scope | no | `UserLabAssignment` remains authoritative |
+| Booking ownership/approval | no | requester, role, lab and policy checks apply |
+| Mandatory training | no | active course certification remains required |
+| Conflict/availability | no | PostgreSQL guard and persisted schedule apply |
+| Pricing/discount | no | resource-purpose rule and snapshotted fee apply |
+| Quota/priority | no | no authority is granted |
+| Loyalty display | no | persisted payment/booking aggregates and configured fields apply |
+| Registration/profile | yes | self-declared compatibility metadata only |
+| Guest completion | yes | new account starts `EXTERNAL`; existing value is preserved |
+
+Public registration/profile responses now include
+`customerTypeSemantics=SELF_DECLARED_UNVERIFIED`, and the UI uses “nhóm sử
+dụng tự khai”. Strict profile validation rejects `role`, `isActive` and other
+unknown server-controlled fields without applying a partial update.
+
+### PostgreSQL 16 and regression evidence
+
+Focused database: `lab_resources_phase_e_test_20260925` in disposable container
+`lrm-local-engineering-pg16-test-20260925`. The database name contains `_test`
+and the suite asserts both the database name and PostgreSQL major version before
+seeding. Phase E passed 5/5 tests.
+
+| Gate | Result |
+| --- | --- |
+| Phase E privacy/governance | PASS, 5/5 |
+| Migration safety | PASS, 14/14 on `lab_resources_migration_phase_e_test` |
+| Required core/training | PASS, 33/33 |
+| Guest integrity | PASS, 13/13 on `lab_resources_guest_phase_e_test` |
+| Batch 1E / 2 / 3 | PASS, 11/11 / 10/10 / 9/9 |
+| Batch 4 / 5 / 6 / 7 / 8 | PASS, 32/32 / 13/13 / 11/11 / 6/6 / 12/12 |
+| Backend lint | PASS |
+| Frontend lint / typecheck / build | PASS with 13 existing warnings / PASS / PASS |
+| Browser Batch 2/3/4/5/6/8 | PASS / PASS / PASS / PASS / PASS / PASS |
+
+The migration safety direct writes for foreign, forged and verified-legacy
+lineage remained confined to `backend/test/migrationSafetyMatrix.mjs`. Runtime,
+seed and deployment code do not directly mutate `_prisma_migrations`.
+Historical migrations and the frozen baseline are unchanged, no schema
+migration was added, and `prisma db push` was not used.
+
+### Deferred decisions and optional seed
+
+Existing EXTERNAL account details remain preserved during public guest
+completion until D-15 defines safe reconciliation. The phone-based initial
+password remains behind the verified restricted-session gate; an OTP-bound
+password-setup session is recommended but deferred under D-16.
+
+The generic `npm run db:seed` target remains a legacy explicit-development
+fixture. It is not used by current CI or the guarded demo seeds and previously
+failed on the required `User.id`. Phase E did not alter it after classifying it
+as `LEGACY`; repairing or retiring it belongs in a separate scope.
+
+GitHub CI evidence is added after the final Phase E SHA completes the required
+workflow matrix.
