@@ -183,3 +183,76 @@ untrained user to reserve restricted equipment.
 Per the requested phase boundary, stop after opening the Phase B pull request.
 The next recommended phase is Phase C guest identity/OTP consistency and must
 begin from the accepted Phase B head.
+
+## Phase C — release gate reliability
+
+**PHASE:** C — required CI and browser release gates
+
+**BASE BRANCH:** `feat/booking-training-eligibility`
+
+**BASE SHA:** `91f9d0892a2bcd160cf20917660b92ee58a11ab4`
+
+**WORK BRANCH:** `fix/release-gate-reliability`
+
+### Previous red-gate evidence
+
+The Phase B head completed 10 of 13 GitHub jobs. Both full-stack chains and the
+smart-monitoring browser job were red. Local reproduction preserved the exact
+causes instead of changing product behavior:
+
+- Batch 4 consumed the global 180-request window across sequential browser
+  contexts. The first rejected calls were `GET /api/resources` and
+  `GET /api/booking-pricing/:resourceId`, with HTTP 429,
+  `X-RateLimit-Limit: 180`, remaining 0 and `Retry-After`.
+- Batch 6 opened the Operations Dashboard and expected telemetry-only states
+  that the approved split IA renders on the Telemetry page.
+- Batch 8 clicked Telemetry correctly but waited for the old Operations heading.
+
+### Changes
+
+- Batch 6 now opens `Giám Sát Telemetry` before asserting source scope,
+  `HEALTHY`, `WARNING`, `STALE`, `UNAVAILABLE`, `NO_DATA`, truthful missing-data
+  text and mobile telemetry cards.
+- Batch 8 waits for the semantic `Giám sát telemetry` heading. Alert
+  acknowledgement, source health, camera truthfulness, denial and mobile
+  assertions remain intact.
+- The Batch 5 and Batch 6 full-stack workflow processes set
+  `RATE_LIMIT_MAX=1000` next to `NODE_ENV=test`. Each suite already starts a
+  fresh backend process, so limiter state is isolated between suites. Runtime
+  code, the secure default of 180 and production configuration are unchanged.
+
+### Local verification
+
+| Gate | Result |
+| --- | --- |
+| Backend generate, lint and production config | PASS |
+| Required backend core | PASS, 33/33 |
+| Batch 4 policy + PostgreSQL integration | PASS, 32/32 |
+| Migration safety matrix | PASS, 14/14 |
+| Frontend lint | PASS, 0 errors and 13 existing warnings |
+| Frontend typecheck and production build | PASS |
+| Batch 2 auth E2E | PASS |
+| Batch 3 resource E2E | PASS |
+| Batch 4 calendar E2E | PASS twice consecutively on one backend process |
+| Batch 5 operations E2E | PASS |
+| Batch 6 monitoring E2E | PASS |
+| Batch 8 smart-monitoring E2E | PASS |
+| 1440, 1280, 768, 390 and 360 viewport smoke | PASS |
+
+The viewport smoke covered the public resource catalog, booking calendar,
+staff booking operations and Telemetry page, including horizontal-overflow
+checks. Browser suites rewrote tracked screenshots during execution; those
+generated files were restored and are not part of this change.
+
+### Database and product impact
+
+All browser runs used new disposable PostgreSQL 16 databases ending in
+`_test`. No schema, migration, training policy, booking policy, route, heading
+or runtime limiter implementation changed. No `prisma db push` was used, and
+no production/runtime code directly wrote `_prisma_migrations`.
+
+### GitHub status
+
+The exact final pushed SHA, workflow run IDs and final job conclusions are
+recorded after the branch is pushed and GitHub Actions completes. Phase C is
+not complete until every required check on that SHA is green.
