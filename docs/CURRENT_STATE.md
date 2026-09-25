@@ -18,8 +18,10 @@ unchanged.
 Local PostgreSQL 16 verification is green: required core 33/33, Batch 4
 policy/integration 32/32, migration safety 14/14, frontend lint/typecheck/build,
 Batch 2/3/4/5/6/8 browser suites, two consecutive Batch 4 runs, and responsive
-smoke at 1440, 1280, 768, 390 and 360 pixels. Phase C remains pending until all
-required GitHub checks on the final pushed SHA pass.
+smoke at 1440, 1280, 768, 390 and 360 pixels. GitHub candidate
+`ba302e13eec39bf7d5c4670a7fdec2286fa8f371` passed the requested 13/13 job
+matrix. The final documentation-only evidence commit must independently retain
+13/13 before Phase C is closed.
 
 ## Phase 2 mandatory training eligibility — 2026-09-25
 

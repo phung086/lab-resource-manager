@@ -253,6 +253,22 @@ no production/runtime code directly wrote `_prisma_migrations`.
 
 ### GitHub status
 
-The exact final pushed SHA, workflow run IDs and final job conclusions are
-recorded after the branch is pushed and GitHub Actions completes. Phase C is
-not complete until every required check on that SHA is green.
+Release candidate `ba302e13eec39bf7d5c4670a7fdec2286fa8f371` completed
+13/13 checks successfully. Pull-request path filters started ten jobs; the
+three backend-regression workflows were explicitly dispatched on the same SHA
+to preserve the requested full matrix.
+
+| Workflow run | Jobs | Conclusion |
+| --- | --- | --- |
+| `36137301540` | backend, frontend, docker, fresh-database, migration-safety | SUCCESS |
+| `36137301542` | Batch 6 fullstack-e2e | SUCCESS |
+| `36137301620` | Batch 5 fullstack-e2e | SUCCESS |
+| `36137301560` | required-regression, smart-monitoring-e2e | SUCCESS |
+| `36137301578` | production-like-demo | SUCCESS |
+| `36137371600` | backend-regression | SUCCESS |
+| `36137374819` | backend-regression | SUCCESS |
+| `36137378056` | backend-regression | SUCCESS |
+
+This chronology commit changes documentation only. Its resulting final SHA is
+also required to complete the same 13/13 matrix before Phase C is declared
+complete; the final SHA is reported with the pull request evidence.
