@@ -186,6 +186,7 @@ try {
   });
 
   await runCase("6b canonical migration name with forged checksum fails closed", async () => {
+    await prisma.$executeRawUnsafe("CREATE TABLE public.foreign_app (id text PRIMARY KEY)");
     await createPrismaHistoryTable();
     await prisma.$executeRawUnsafe(`
       INSERT INTO public._prisma_migrations
