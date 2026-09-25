@@ -17,7 +17,7 @@
     "import:resources": "node scripts/importResources.js",
     "db:seed": "node prisma/seedBookingPlatform.js",
     "test": "npm run test:required",
-    "test:core": "cross-env LOG_FORMAT=dev node --test test/bookingOverlap.test.js test/dataContract.test.js test/batch1e/bookingStateMachine.test.js test/batch1e/dataContract.test.js test/batch1e/errors.test.js test/batch1e/labScope.test.js test/batch1e/mockSafety.test.js test/batch1e/roleConstants.test.js",
+    "test:core": "cross-env LOG_FORMAT=dev node --test test/bookingOverlap.test.js test/dataContract.test.js test/trainingEligibility.test.js test/batch1e/bookingStateMachine.test.js test/batch1e/dataContract.test.js test/batch1e/errors.test.js test/batch1e/labScope.test.js test/batch1e/mockSafety.test.js test/batch1e/roleConstants.test.js",
     "test:batch1:concurrency": "cross-env LOG_FORMAT=dev node --test test/bookingConcurrency.db.test.js",
     "test:batch1:persistence": "cross-env LOG_FORMAT=dev node --test test/persistenceMigration.test.js",
     "test:batch1e-runtime": "cross-env LOG_FORMAT=dev node --test test/batch1e/integration.runtime.test.js",

@@ -23,6 +23,7 @@ import {
 import { applyOperationalStatusChange } from "./resourceService.js";
 import { notifyBookingEvent } from "./bookingEventService.js";
 import { quoteBooking, verifyAcceptedQuote, ensureBookingCharge } from "./bookingPricingService.js";
+import { assertBookingTrainingEligibility } from "./trainingEligibilityService.js";
 import {
   scheduleBookingReminders,
   cancelPendingBookingReminders
@@ -171,6 +172,12 @@ export async function createBooking({ requestedById, resourceId, title, purpose,
     if (HARD_UNAVAILABLE_RESOURCE_STATES.has(resource.operationalStatus)) {
       throw new HttpError(400, "Resource is not available for booking", undefined, "RESOURCE_UNAVAILABLE");
     }
+
+    await assertBookingTrainingEligibility(tx, {
+      userId: requestedById,
+      resourceId,
+      now: new Date()
+    });
 
     if (resource.laboratory?.labPolicy) {
       checkLabPolicyCompliance({

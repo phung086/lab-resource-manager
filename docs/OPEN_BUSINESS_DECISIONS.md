@@ -4,8 +4,8 @@ This list records questions that affect future implementation. It does not block
 
 | ID | Decision needed | Current evidence / safe interim rule |
 | --- | --- | --- |
-| D-01 | Which resources require mandatory training, and which courses qualify? | `TrainingRequirement` exists; booking does not enforce it. Enforce configured mandatory requirements; do not invent new requirements. |
-| D-02 | May staff override missing/expired training? | No accepted override policy. Default to no override. |
+| D-01 | Which resources require mandatory training, and which courses qualify? | Booking now enforces every configured mandatory `TrainingRequirement`; product owners still decide which resource/course rows to configure. The implementation does not invent requirements. |
+| D-02 | May staff override missing/expired training? | No accepted override policy. Phase B deliberately implements no override. |
 | D-03 | Who verifies INTERNAL vs EXTERNAL classification? | Self-registration/profile currently accept the value; it must not grant price or access benefits until verified. |
 | D-04 | Is full Vietnamese address mandatory for ROOM-only booking? | The approved quick-booking checkpoint collects it, but data minimization should be decided before making it a permanent room policy. |
 | D-05 | Will a real VNPAY Sandbox round trip be shown during the defense? | Checkout exists; merchant/IPN credentials are not configured locally and no real round trip is verified. |
