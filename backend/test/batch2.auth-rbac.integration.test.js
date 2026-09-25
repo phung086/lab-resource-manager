@@ -32,7 +32,7 @@ const fixture = {
   building: id(),
   labs: { assigned: id(), foreign: id() },
   users: {
-    admin: id(), staff: id(), unassigned: id(), lecturer: id(), studentA: id(), studentB: id(), inactive: id(), roleTarget: id()
+    admin: id(), staff: id(), unassigned: id(), lecturer: id(), studentA: id(), studentB: id(), inactive: id(), roleTarget: id(), tempReset: id()
   },
   resources: { assigned: id(), foreign: id() }
 };
@@ -40,7 +40,7 @@ const fixture = {
 const userRows = [
   ["admin", "ADMIN", true], ["staff", "LAB_STAFF", true], ["unassigned", "LAB_STAFF", true],
   ["lecturer", "LECTURER", true], ["studentA", "STUDENT", true], ["studentB", "STUDENT", true],
-  ["inactive", "STUDENT", false], ["roleTarget", "STUDENT", true]
+  ["inactive", "STUDENT", false], ["roleTarget", "STUDENT", true], ["tempReset", "STUDENT", true, true]
 ];
 
 async function seed() {
@@ -54,9 +54,9 @@ async function seed() {
     { id: fixture.labs.assigned, buildingId: fixture.building, name: "Assigned Lab", code: `B2LA-${marker}` },
     { id: fixture.labs.foreign, buildingId: fixture.building, name: "Foreign Lab", code: `B2LF-${marker}` }
   ] });
-  await prisma.user.createMany({ data: userRows.map(([key, role, isActive]) => ({
+  await prisma.user.createMany({ data: userRows.map(([key, role, isActive, passwordResetRequired = false]) => ({
     id: fixture.users[key], email: `${key.toLowerCase()}-${marker}@example.test`, fullName: `Batch 2 ${key}`,
-    role, isActive, passwordHash
+    role, isActive, passwordHash, passwordResetRequired
   })) });
   await prisma.userLabAssignment.create({ data: { userId: fixture.users.staff, laboratoryId: fixture.labs.assigned } });
   await prisma.resource.createMany({ data: [
@@ -85,7 +85,7 @@ async function createBooking(token, resourceId, day, extra = {}) {
 test("Batch 2 authentication, RBAC, ownership and lab scope", { timeout: 180000 }, async (t) => {
   await seed();
   const logins = Object.fromEntries(await Promise.all(
-    ["admin", "staff", "unassigned", "lecturer", "studentA", "studentB", "roleTarget"]
+    ["admin", "staff", "unassigned", "lecturer", "studentA", "studentB", "roleTarget", "tempReset"]
       .map(async (key) => [key, await login(key)])
   ));
   const tokens = Object.fromEntries(Object.entries(logins).map(([key, response]) => [key, response.body.accessToken]));
@@ -217,6 +217,40 @@ test("Batch 2 authentication, RBAC, ownership and lab scope", { timeout: 180000 
     const after = await request(app).get("/api/auth/me").set(bearer(tokens.lecturer));
     assert.equal(after.status, 401);
     assert.equal(after.body.error.code, "ACCOUNT_INACTIVE");
+  });
+
+  await t.test("temporary credential is restricted until password reset completes", async () => {
+    assert.equal(logins.tempReset.status, 200);
+    assert.equal(logins.tempReset.body.user.passwordResetRequired, true);
+
+    const meBefore = await request(app).get("/api/auth/me").set(bearer(tokens.tempReset));
+    assert.equal(meBefore.status, 200);
+    assert.equal(meBefore.body.passwordResetRequired, true);
+
+    const blockedBooking = await createBooking(tokens.tempReset, fixture.resources.assigned, 24);
+    assert.equal(blockedBooking.status, 403);
+    assert.equal(blockedBooking.body.error.code, "PASSWORD_RESET_REQUIRED");
+
+    const blockedProfile = await request(app).get("/api/users/me").set(bearer(tokens.tempReset));
+    assert.equal(blockedProfile.status, 403);
+    assert.equal(blockedProfile.body.error.code, "PASSWORD_RESET_REQUIRED");
+
+    const temporaryNewPassword = "TempReset!Changed";
+    const changed = await request(app)
+      .post("/api/auth/change-password")
+      .set(bearer(tokens.tempReset))
+      .send({ currentPassword: password, newPassword: temporaryNewPassword });
+    assert.equal(changed.status, 204);
+
+    const meAfter = await request(app).get("/api/auth/me").set(bearer(tokens.tempReset));
+    assert.equal(meAfter.status, 200);
+    assert.equal(meAfter.body.passwordResetRequired, false);
+
+    const allowedBooking = await createBooking(tokens.tempReset, fixture.resources.assigned, 24);
+    assert.equal(allowedBooking.status, 201);
+
+    assert.equal((await login("tempReset", password)).status, 401);
+    assert.equal((await login("tempReset", temporaryNewPassword)).status, 200);
   });
 
   await t.test("password change verifies current password and persists a bcrypt hash", async () => {
