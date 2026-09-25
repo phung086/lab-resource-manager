@@ -181,7 +181,7 @@ function App() {
       window.history.replaceState(null, "", hashForTab(activeTab));
     }
     return () => window.removeEventListener("hashchange", readRoute);
-  }, [routeUserId, activeTab]);
+  }, [routeUserId, activeTab, user?.passwordResetRequired]);
 
   useEffect(() => {
     let active = true;
@@ -220,7 +220,7 @@ function App() {
   const researchFeaturesEnabled = RESEARCH_FEATURES_ENABLED;
 
   async function loadData() {
-    if (!user) return;
+    if (!user || user.passwordResetRequired) return;
     setLoading(true);
     setError("");
     try {
@@ -323,6 +323,11 @@ function App() {
       conflictsCount={0}
       loading={loading}
       onRefresh={loadData}
+      onPasswordChanged={async () => {
+        const currentUser = await getCurrentUser();
+        localStorage.setItem("lrm_user", JSON.stringify(currentUser));
+        setUser(currentUser);
+      }}
       onAssistantPrefill={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
       onLogout={async () => {
         await logout();
@@ -332,7 +337,7 @@ function App() {
       }}
     >
       {error && <div className="alert danger" role="alert">{error}</div>}
-      {user.passwordResetRequired && <div className="alert" role="status">Tài khoản của bạn được tạo nhanh từ thông tin đặt lịch. Vui lòng đổi mật khẩu trong menu tài khoản sau khi hoàn tất thanh toán hoặc theo dõi booking.</div>}
+      {user.passwordResetRequired && <div className="alert warning" role="status">Tài khoản này đang dùng mật khẩu tạm. Hãy thiết lập mật khẩu mới trước khi sử dụng các chức năng phòng lab.</div>}
 
       {/* REQUIRED CORE */}
       {activeTab === "home" && <WorkspaceHome user={user} bookings={bookings} notifications={notifications} loading={loading} error={error} onRetry={loadData} onNavigate={setActiveTab} onSearch={(query) => { setResourceSearch(query); setActiveTab("resources"); }} />}
