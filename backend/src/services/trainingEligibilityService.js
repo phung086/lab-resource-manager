@@ -8,7 +8,7 @@ export async function getTrainingEligibility(client, { userId, resourceId, now =
         select: { id: true, code: true, name: true }
       }
     },
-    orderBy: [{ course: { code: "asc" } }, { courseId: "asc" }]
+    orderBy: { courseId: "asc" }
   });
 
   if (requirements.length === 0) {
