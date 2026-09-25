@@ -27,6 +27,50 @@ export function stableSha256(value) {
   return crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
+// Verified checksums captured from the Batch 1B historical database before the
+// clean-baseline deployment path existed. These values are provenance evidence,
+// not a generic bypass: a recorded checksum must still match either the current
+// migration artifact (LF/CRLF equivalent) or one of these reviewed legacy values.
+export const LEGACY_VERIFIED_PRISMA_CHECKSUMS = Object.freeze({
+  "20260723000100_init": ["c942177016dabbfa0c3465a5e923bd0edf490f238021b6ca96ab65cdca03be96"],
+  "20260723000200_remove_resource_owner_default": ["66a1614148472e82df95e52c3649e6119a54c9029fc0d4b4bc71e25a688939aa"],
+  "20260723000300_require_explicit_resource_fields": ["df6b0f54b676d92cda13592f3c55bad7b829d9f79058bc1092bf4894e03b9fa7"],
+  "20260727000100_add_i18n_message_keys": ["10b67a12359efa91038b95890c1505666e10648d7dd6a12823088544df2c6ed0"],
+  "20260817000100_add_maintenance_windows": ["030a4964d697a5b847f94e38e8e5bbecbf921808867a73f15232864b9597022f"],
+  "20260820000100_add_booking_guard_constraint": ["658716b3be743f2bbd81b1c2f4dee5248eb1b9751a8eea693ed19b5a2b32eedb"],
+  "20260820000200_add_orchestration_provenance_and_policy": ["ca0da76bb6ef6c8d1f04a518cc8398446e499c0c11bcf70e3155937b61b691c3"]
+});
+
+function sha256Buffer(buffer) {
+  return crypto.createHash("sha256").update(buffer).digest("hex");
+}
+
+export function migrationChecksumVariants(filePath) {
+  const raw = fs.readFileSync(filePath);
+  const canonical = canonicalTextBuffer(filePath);
+  const canonicalText = canonical.toString("utf8");
+  const crlf = Buffer.from(canonicalText.replace(/\n/g, "\r\n"), "utf8");
+  return new Set([
+    sha256Buffer(raw),
+    sha256Buffer(canonical),
+    sha256Buffer(crlf)
+  ]);
+}
+
+export function buildAcceptedMigrationChecksums(
+  migrationsRoot,
+  legacyChecksums = LEGACY_VERIFIED_PRISMA_CHECKSUMS
+) {
+  const accepted = new Map();
+  for (const name of listMigrationNames(migrationsRoot)) {
+    const migrationPath = path.join(migrationsRoot, name, "migration.sql");
+    const values = migrationChecksumVariants(migrationPath);
+    for (const checksum of legacyChecksums[name] || []) values.add(checksum);
+    accepted.set(name, values);
+  }
+  return accepted;
+}
+
 export function listMigrationNames(migrationsRoot) {
   return fs.readdirSync(migrationsRoot, { withFileTypes: true })
     .filter(entry => entry.isDirectory() && fs.existsSync(path.join(migrationsRoot, entry.name, "migration.sql")))
@@ -203,7 +247,7 @@ export function catalogFingerprintSummary(rows) {
   }));
 }
 
-export function validateMigrationRows(rows, repositoryMigrations) {
+export function validateMigrationRows(rows, repositoryMigrations, acceptedChecksumsByMigration) {
   if (rows.length === 0) throw new Error("Prisma migration history is empty");
   const seen = new Set();
   for (const row of rows) {
@@ -215,6 +259,10 @@ export function validateMigrationRows(rows, repositoryMigrations) {
     if (!row.finished_at || row.rolled_back_at || (row.logs && String(row.logs).trim())) {
       throw new Error(`unfinished, failed, or rolled-back Prisma migration ${row.migration_name}`);
     }
+    const accepted = acceptedChecksumsByMigration?.get(row.migration_name);
+    if (!accepted || !accepted.has(String(row.checksum || "").toLowerCase())) {
+      throw new Error(`Prisma migration checksum is not accepted for ${row.migration_name}`);
+    }
   }
   const appliedNames = rows.map(row => row.migration_name);
   for (const [index, name] of appliedNames.entries()) {
@@ -225,7 +273,7 @@ export function validateMigrationRows(rows, repositoryMigrations) {
   return appliedNames;
 }
 
-export function classifyDatabase({ catalogRows, markerTablePresent, marker, migrationTablePresent, migrationRows, repositoryMigrations, includedMigrationNames }) {
+export function classifyDatabase({ catalogRows, markerTablePresent, marker, migrationTablePresent, migrationRows, repositoryMigrations, includedMigrationNames, acceptedChecksumsByMigration }) {
   const hasUserObjects = catalogRows.length > 0;
   if (!hasUserObjects && !migrationTablePresent) {
     return { classification: DATABASE_CLASSIFICATION.EMPTY, appliedNames: [] };
@@ -234,7 +282,7 @@ export function classifyDatabase({ catalogRows, markerTablePresent, marker, migr
   let appliedNames = [];
   if (migrationTablePresent) {
     try {
-      appliedNames = validateMigrationRows(migrationRows, repositoryMigrations);
+      appliedNames = validateMigrationRows(migrationRows, repositoryMigrations, acceptedChecksumsByMigration);
     } catch (error) {
       return { classification: DATABASE_CLASSIFICATION.INVALID_OR_PARTIAL, reason: error.message, appliedNames: [] };
     }

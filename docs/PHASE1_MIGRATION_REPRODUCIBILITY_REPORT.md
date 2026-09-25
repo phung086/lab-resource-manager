@@ -62,13 +62,21 @@ The deployment selector classifies the database as one of:
 - `CLEAN_BASELINE`: the accepted marker exists, included migration resolution
   is an allowed prefix, and the frozen catalog fingerprint matches;
 - `RECOGNIZED_PRISMA_LINEAGE`: migration rows form a completed canonical
-  repository prefix beginning at the accepted origin;
+  repository prefix beginning at the accepted origin **and every recorded
+  checksum matches an accepted current or explicitly reviewed legacy checksum**;
 - `UNKNOWN_NONEMPTY`: user-created objects exist without recognized history;
 - `INVALID_OR_PARTIAL`: migration history or marker state is empty, foreign,
   duplicated, failed, rolled back, out of order, or otherwise inconsistent.
 
-Only `EMPTY`, structurally verified `CLEAN_BASELINE`, and
+Only `EMPTY`, structurally verified `CLEAN_BASELINE`, and checksum-verified
 `RECOGNIZED_PRISMA_LINEAGE` continue. Unknown and invalid states fail closed.
+
+For existing Prisma lineage, accepted checksums are derived from the tracked
+migration artifact (raw checkout bytes plus LF/CRLF-equivalent variants) and
+the small set of legacy checksums already captured and reviewed by Batch 1B.
+A canonical migration name with an unrecognized checksum is rejected before
+`prisma migrate deploy`.
+
 `prisma migrate resolve --applied` is used only after the frozen catalog
 fingerprint has passed; it is never a generic migration-error bypass.
 
@@ -104,6 +112,8 @@ database whose name contains an explicit test marker:
 | Existing legitimate lineage; preserve old rows and append a pending migration | PASS |
 | Unknown table | PASS; failed closed |
 | Foreign Prisma history | PASS; failed closed |
+| Canonical migration name + forged checksum + foreign schema | PASS; failed closed |
+| Verified legacy checksum on recognized lineage | PASS |
 | Empty `_prisma_migrations` | PASS; failed closed |
 | Non-table public object | PASS; failed closed |
 | Tampered baseline SQL | PASS; integrity failure |
@@ -118,7 +128,9 @@ Compose configuration. Their final results are recorded in the branch handoff.
 ## CI-enforced verification
 
 The normal CI workflow retains `fresh-database` for a fresh deploy and repeat
-deploy, and adds `migration-safety` for the complete PostgreSQL 16 matrix above.
+deploy, and runs `migration-safety` for the complete PostgreSQL 16 matrix above,
+including forged canonical-name lineage rejection and verified legacy-checksum
+compatibility.
 Backend, frontend, and production Compose jobs remain required. CI evidence is
 valid only when every job is green on the exact final PR-head commit.
 
