@@ -8,10 +8,12 @@ import { STUDENT } from "../constants/roles.js";
 import { HttpError } from "../middleware/errors.js";
 import { sendRequiredEmail } from "./emailService.js";
 import { validateVietnamAddress } from "./addressService.js";
-import { createBooking } from "./bookingService.js";
+import { createBookingInTransaction } from "./bookingService.js";
 
 const PURPOSE = "GUEST_QUICK_BOOKING";
 const OTP_TTL_MS = 10 * 60 * 1000;
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -68,6 +70,26 @@ export async function sendGuestBookingOtp({ email, fullName }) {
   if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
     throw new HttpError(400, "Email không hợp lệ.", { field: "email" }, "VALIDATION_ERROR");
   }
+
+  const now = new Date();
+  const recent = await prisma.emailOtp.findFirst({
+    where: {
+      email: normalizedEmail,
+      purpose: PURPOSE,
+      createdAt: { gt: new Date(now.getTime() - OTP_RESEND_COOLDOWN_MS) }
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true }
+  });
+  if (recent) {
+    throw new HttpError(
+      429,
+      "Vui lòng chờ trước khi yêu cầu mã OTP mới.",
+      { retryAfterSeconds: OTP_RESEND_COOLDOWN_MS / 1000 },
+      "OTP_RESEND_COOLDOWN"
+    );
+  }
+
   const code = String(crypto.randomInt(100000, 999999));
   const otp = await prisma.emailOtp.create({
     data: {
@@ -75,9 +97,10 @@ export async function sendGuestBookingOtp({ email, fullName }) {
       email: normalizedEmail,
       purpose: PURPOSE,
       codeHash: codeHash(normalizedEmail, code),
-      expiresAt: new Date(Date.now() + OTP_TTL_MS)
+      expiresAt: new Date(now.getTime() + OTP_TTL_MS)
     }
   });
+
   const name = String(fullName || "bạn").trim() || "bạn";
   const result = await sendRequiredEmail({
     to: normalizedEmail,
@@ -85,27 +108,99 @@ export async function sendGuestBookingOtp({ email, fullName }) {
     text: `Mã OTP đặt nhanh LAB của ${name}: ${code}. Mã hết hạn sau 10 phút.`,
     html: `<p>Xin chào <strong>${name}</strong>,</p><p>Mã OTP đặt nhanh LAB của bạn là:</p><p style="font-size:24px;font-weight:700;letter-spacing:4px">${code}</p><p>Mã hết hạn sau 10 phút. Không chia sẻ mã này cho người khác.</p>`
   });
+
   if (!result.success) {
     await prisma.emailOtp.delete({ where: { id: otp.id } }).catch(() => null);
     throw new HttpError(503, "Chưa cấu hình SMTP để gửi OTP thật.", undefined, "EMAIL_NOT_CONFIGURED");
   }
-  return { email: normalizedEmail, expiresInSeconds: OTP_TTL_MS / 1000 };
+
+  await prisma.emailOtp.updateMany({
+    where: {
+      id: { not: otp.id },
+      email: normalizedEmail,
+      purpose: PURPOSE,
+      consumedAt: null
+    },
+    data: { consumedAt: new Date() }
+  });
+
+  return {
+    email: normalizedEmail,
+    expiresInSeconds: OTP_TTL_MS / 1000,
+    resendAfterSeconds: OTP_RESEND_COOLDOWN_MS / 1000
+  };
 }
 
-async function verifyGuestOtp(tx, email, code) {
+async function findAndLockOtp(tx, otpId) {
+  await tx.$queryRaw`SELECT id FROM email_otps WHERE id = ${otpId} FOR UPDATE`;
+  return tx.emailOtp.findUnique({ where: { id: otpId } });
+}
+
+async function verifyGuestOtpAttempt(email, code) {
   const normalizedEmail = normalizeEmail(email);
-  const otp = await tx.emailOtp.findFirst({
-    where: { email: normalizedEmail, purpose: PURPOSE, consumedAt: null, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: "desc" }
+  const submittedHash = codeHash(normalizedEmail, String(code || "").trim());
+
+  const outcome = await prisma.$transaction(async (tx) => {
+    const candidate = await tx.emailOtp.findFirst({
+      where: {
+        email: normalizedEmail,
+        purpose: PURPOSE,
+        consumedAt: null,
+        expiresAt: { gt: new Date() }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    if (!candidate) return { ok: false, code: "OTP_INVALID", status: 400 };
+    const otp = await findAndLockOtp(tx, candidate.id);
+    if (!otp || otp.consumedAt || otp.expiresAt <= new Date()) {
+      return { ok: false, code: "OTP_INVALID", status: 400 };
+    }
+    if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+      return { ok: false, code: "OTP_LOCKED", status: 429 };
+    }
+    if (otp.codeHash !== submittedHash) {
+      const updated = await tx.emailOtp.update({
+        where: { id: otp.id },
+        data: { attempts: { increment: 1 } },
+        select: { attempts: true }
+      });
+      return {
+        ok: false,
+        code: updated.attempts >= OTP_MAX_ATTEMPTS ? "OTP_LOCKED" : "OTP_INVALID",
+        status: updated.attempts >= OTP_MAX_ATTEMPTS ? 429 : 400
+      };
+    }
+    return { ok: true, otpId: otp.id };
   });
-  if (!otp) throw new HttpError(400, "Mã OTP đã hết hạn hoặc không tồn tại.", undefined, "OTP_INVALID");
-  if (otp.attempts >= 5) throw new HttpError(429, "Bạn đã nhập sai OTP quá nhiều lần.", undefined, "OTP_LOCKED");
-  const expected = codeHash(normalizedEmail, String(code || "").trim());
-  if (otp.codeHash !== expected) {
-    await tx.emailOtp.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
-    throw new HttpError(400, "Mã OTP không đúng.", undefined, "OTP_INVALID");
+
+  if (!outcome.ok) {
+    if (outcome.code === "OTP_LOCKED") {
+      throw new HttpError(429, "Bạn đã nhập sai OTP quá nhiều lần.", undefined, "OTP_LOCKED");
+    }
+    throw new HttpError(400, "Mã OTP không đúng, đã hết hạn hoặc không tồn tại.", undefined, "OTP_INVALID");
   }
-  await tx.emailOtp.update({ where: { id: otp.id }, data: { consumedAt: new Date() } });
+  return outcome.otpId;
+}
+
+async function assertAndConsumeOtpInTransaction(tx, { otpId, email, code }) {
+  const otp = await findAndLockOtp(tx, otpId);
+  const normalizedEmail = normalizeEmail(email);
+  if (
+    !otp ||
+    otp.email !== normalizedEmail ||
+    otp.purpose !== PURPOSE ||
+    otp.consumedAt ||
+    otp.expiresAt <= new Date() ||
+    otp.attempts >= OTP_MAX_ATTEMPTS ||
+    otp.codeHash !== codeHash(normalizedEmail, String(code || "").trim())
+  ) {
+    throw new HttpError(400, "Mã OTP không còn hợp lệ.", undefined, "OTP_INVALID");
+  }
+  await tx.emailOtp.update({
+    where: { id: otp.id },
+    data: { consumedAt: new Date() }
+  });
 }
 
 export async function completeGuestBooking(payload) {
@@ -114,16 +209,32 @@ export async function completeGuestBooking(payload) {
   if (!phone || phone.length < 9 || phone.length > 20) {
     throw new HttpError(400, "Số điện thoại không hợp lệ.", { field: "phone" }, "VALIDATION_ERROR");
   }
+
+  const profile = {
+    fullName: String(payload.fullName || "").trim(),
+    phone,
+    organization: String(payload.organization || "").trim() || null
+  };
+  if (profile.fullName.length < 2 || profile.fullName.length > 255) {
+    throw new HttpError(400, "Họ tên không hợp lệ.", { field: "fullName" }, "VALIDATION_ERROR");
+  }
+
+  const otpId = await verifyGuestOtpAttempt(email, payload.otpCode);
   const address = await validateVietnamAddress(payload.address);
-  let user;
-  await prisma.$transaction(async tx => {
-    await verifyGuestOtp(tx, email, payload.otpCode);
+
+  const result = await prisma.$transaction(async (tx) => {
+    await assertAndConsumeOtpInTransaction(tx, {
+      otpId,
+      email,
+      code: payload.otpCode
+    });
+
     const existing = await tx.user.findUnique({ where: { email } });
-    const profile = {
-      fullName: String(payload.fullName || "").trim(),
-      phone,
-      organization: String(payload.organization || "").trim() || null,
-      customerType: "EXTERNAL",
+    if (existing && !existing.isActive) {
+      throw new HttpError(401, "Tài khoản này đang bị khóa.", undefined, "ACCOUNT_INACTIVE");
+    }
+
+    const addressData = {
       defaultAddressLine: address.addressLine,
       defaultAddressProvinceCode: address.provinceCode,
       defaultAddressProvinceName: address.provinceName,
@@ -132,41 +243,45 @@ export async function completeGuestBooking(payload) {
       defaultAddressSource: address.source,
       defaultAddressVersion: address.version
     };
-    if (profile.fullName.length < 2 || profile.fullName.length > 255) {
-      throw new HttpError(400, "Họ tên không hợp lệ.", { field: "fullName" }, "VALIDATION_ERROR");
-    }
-    if (existing) {
-      if (!existing.isActive) throw new HttpError(401, "Tài khoản này đang bị khóa.", undefined, "ACCOUNT_INACTIVE");
-      user = await tx.user.update({ where: { id: existing.id }, data: profile });
-      return;
-    }
-    user = await tx.user.create({
-      data: {
-        id: crypto.randomUUID(),
-        email,
-        role: STUDENT,
-        passwordHash: await bcrypt.hash(phone, 12),
-        passwordResetRequired: true,
-        isActive: true,
-        ...profile
-      }
+
+    const user = existing
+      ? await tx.user.update({
+          where: { id: existing.id },
+          data: { ...profile, ...addressData }
+        })
+      : await tx.user.create({
+          data: {
+            id: crypto.randomUUID(),
+            email,
+            role: STUDENT,
+            passwordHash: await bcrypt.hash(phone, 12),
+            passwordResetRequired: true,
+            isActive: true,
+            customerType: "EXTERNAL",
+            ...profile,
+            ...addressData
+          }
+        });
+
+    const booking = await createBookingInTransaction(tx, {
+      requestedById: user.id,
+      resourceId: payload.booking.resourceId,
+      title: payload.booking.title,
+      purpose: payload.booking.purpose,
+      purposeCode: payload.booking.purposeCode,
+      acceptedQuote: payload.booking.acceptedQuote,
+      startAt: payload.booking.startAt,
+      endAt: payload.booking.endAt
     });
+
+    return { user, booking };
   });
 
-  const booking = await createBooking({
-    requestedById: user.id,
-    resourceId: payload.booking.resourceId,
-    title: payload.booking.title,
-    purpose: payload.booking.purpose,
-    purposeCode: payload.booking.purposeCode,
-    acceptedQuote: payload.booking.acceptedQuote,
-    startAt: payload.booking.startAt,
-    endAt: payload.booking.endAt
-  });
   return {
-    accessToken: authToken(user),
+    accessToken: authToken(result.user),
     tokenType: "Bearer",
-    user: publicCustomerUser(user),
-    booking
+    user: publicCustomerUser(result.user),
+    booking: result.booking
   };
 }
+
