@@ -185,6 +185,40 @@ try {
     assert.match(deploy({ expectSuccess: false }), /foreign or unknown Prisma migration/);
   });
 
+  await runCase("6b canonical migration name with forged checksum fails closed", async () => {
+    await createPrismaHistoryTable();
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO public._prisma_migrations
+        (id, checksum, migration_name, started_at, finished_at, applied_steps_count)
+      VALUES (
+        'forged-canonical-id',
+        repeat('f', 64),
+        '20260723000100_init',
+        now(),
+        now(),
+        1
+      )
+    `);
+    assert.match(
+      deploy({ expectSuccess: false }),
+      /Prisma migration checksum is not accepted for 20260723000100_init/
+    );
+  });
+
+  await runCase("6c verified legacy checksum remains accepted", async () => {
+    deploy();
+    await prisma.$executeRawUnsafe("DELETE FROM public._lrm_deployment_baselines");
+    await prisma.$executeRawUnsafe(`
+      UPDATE public._prisma_migrations
+      SET checksum = 'c942177016dabbfa0c3465a5e923bd0edf490f238021b6ca96ab65cdca03be96'
+      WHERE migration_name = '20260723000100_init'
+    `);
+    const before = comparableRows(await migrationRows());
+    const output = deploy();
+    assert.match(output, /RECOGNIZED_PRISMA_LINEAGE/);
+    assert.deepEqual(comparableRows(await migrationRows()), before);
+  });
+
   await runCase("7 empty Prisma migration history fails closed", async () => {
     await createPrismaHistoryTable();
     assert.match(deploy({ expectSuccess: false }), /Prisma migration history is empty/);
