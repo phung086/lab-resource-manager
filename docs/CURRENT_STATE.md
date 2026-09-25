@@ -1,5 +1,28 @@
 # Current Project State
 
+## Phase 3 release gate reliability — 2026-09-25
+
+Branch `fix/release-gate-reliability` starts from the exact accepted Phase B
+SHA `91f9d0892a2bcd160cf20917660b92ee58a11ab4`. The previous GitHub result was
+10/13: two full-stack E2E jobs and smart-monitoring E2E were red.
+
+Local reproduction verified three test-infrastructure mismatches. Batch 4
+exhausted the 180-request global limiter across sequential browser contexts;
+Batch 6 expected telemetry states on the intentionally separate Operations
+page; Batch 8 opened Telemetry but waited for the old Operations heading. The
+E2E selectors now follow the approved Telemetry page, and full-stack workflow
+backend processes use an explicit `RATE_LIMIT_MAX=1000` only beside
+`NODE_ENV=test`. Production runtime code and the default limit of 180 are
+unchanged.
+
+Local PostgreSQL 16 verification is green: required core 33/33, Batch 4
+policy/integration 32/32, migration safety 14/14, frontend lint/typecheck/build,
+Batch 2/3/4/5/6/8 browser suites, two consecutive Batch 4 runs, and responsive
+smoke at 1440, 1280, 768, 390 and 360 pixels. GitHub candidate
+`ba302e13eec39bf7d5c4670a7fdec2286fa8f371` passed the requested 13/13 job
+matrix. The final documentation-only evidence commit must independently retain
+13/13 before Phase C is closed.
+
 ## Phase 2 mandatory training eligibility — 2026-09-25
 
 Branch `feat/booking-training-eligibility` now enforces every configured

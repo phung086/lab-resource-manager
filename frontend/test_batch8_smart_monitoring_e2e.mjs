@@ -26,7 +26,7 @@ async function openMonitoring(page) {
   const nav = page.locator(".sidebar-nav-item-2026", { hasText: /Giám Sát Telemetry/i }).first();
   await nav.waitFor({ timeout: 8000 });
   await nav.click();
-  await page.locator("main").getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
+  await page.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
 }
 
 try {

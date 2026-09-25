@@ -135,6 +135,7 @@ jobs:
               PORT=5002 \
               REMINDER_SCHEDULER_ENABLED=false \
               NODE_ENV=test \
+              RATE_LIMIT_MAX=1000 \
               node backend/src/server.js >"$BACKEND_LOG" 2>&1 &
             BACKEND_PID=$!
 

@@ -104,9 +104,9 @@ try {
   ]);
   await staffPage.screenshot({ path: path.join(screenshotDir, "staff_incident_resolution.png"), fullPage: true });
 
-  console.log("=== BATCH 6 REAL DASHBOARD & TELEMETRY STATES ===");
-  await openNav(staffPage, /Bảng Điều Khiển Vận Hành/i);
-  await staffPage.locator("main").getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
+  console.log("=== BATCH 6 TELEMETRY STATES ===");
+  await openNav(staffPage, /Giám Sát Telemetry/i);
+  await staffPage.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
   const dashboardText = await staffPage.locator("main").innerText();
   for (const state of ["HEALTHY", "WARNING", "STALE", "UNAVAILABLE", "NO_DATA"]) {
     assert.ok(dashboardText.includes(state), `Dashboard must show ${state}`);
@@ -127,8 +127,8 @@ try {
   await foreignPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
   assert.equal(await foreignPage.getByText("Batch 6 sự cố phòng B").count(), 1);
   assert.equal(await foreignPage.getByText("Batch 6 quạt làm mát bất thường").count(), 0);
-  await openNav(foreignPage, /Bảng Điều Khiển Vận Hành/i);
-  await foreignPage.locator("main").getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
+  await openNav(foreignPage, /Giám Sát Telemetry/i);
+  await foreignPage.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
   const foreignDashboard = await foreignPage.locator("main").innerText();
   assert.ok(foreignDashboard.includes("Thiết bị phòng B"));
   assert.equal(foreignDashboard.includes("Máy đo môi trường A"), false);
@@ -138,8 +138,8 @@ try {
   const adminContext = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const adminPage = await adminContext.newPage();
   await login(adminPage, "b6.admin@lab.test");
-  await openNav(adminPage, /Bảng Điều Khiển Vận Hành/i);
-  await adminPage.locator("main").getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
+  await openNav(adminPage, /Giám Sát Telemetry/i);
+  await adminPage.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
   const adminDashboard = await adminPage.locator("main").innerText();
   assert.ok(adminDashboard.includes("Máy đo môi trường A"));
   assert.ok(adminDashboard.includes("Thiết bị phòng B"));
@@ -149,8 +149,8 @@ try {
   const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const mobilePage = await mobileContext.newPage();
   await login(mobilePage, "b6.staff@lab.test");
-  await openNav(mobilePage, /Bảng Điều Khiển Vận Hành/i);
-  await mobilePage.locator("main").getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
+  await openNav(mobilePage, /Giám Sát Telemetry/i);
+  await mobilePage.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
   assert.equal(await mobilePage.locator(".telemetry-status-card").first().isVisible(), true);
   await mobilePage.screenshot({ path: path.join(screenshotDir, "staff_dashboard_mobile.png"), fullPage: true });
   await mobileContext.close();
