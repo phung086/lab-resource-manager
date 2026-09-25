@@ -1,5 +1,21 @@
 # Current Project State
 
+## Phase 2 mandatory training eligibility — 2026-09-25
+
+Branch `feat/booking-training-eligibility` now enforces every configured
+mandatory `TrainingRequirement` in authoritative booking creation. A requester
+must have an `active`, non-expired `UserCertification` for the same course;
+missing, expired, revoked, other-user and incomplete multi-course cases fail
+with `403 BOOKING_TRAINING_REQUIRED`. No override policy was invented.
+
+Local verification on disposable PostgreSQL 16 passed the required core suite
+33/33 and Batch 4 policy/integration suite 32/32. The latter preserves booking
+conflict, half-open interval, approval, availability and state-machine behavior
+while exercising the training gate at the API boundary. This phase changes no
+schema or migration. See `docs/LOCAL_ENGINEERING_VERIFICATION.md` and
+`docs/LOCAL_VERIFIED_GAP_MATRIX_20260925.md` for current local evidence and the
+remaining release/guest/security gaps.
+
 ## Phase 0 verified gap audit — 2026-09-24
 
 The current `main` HEAD is `dbab294`. The external business/UX review is in
