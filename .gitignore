@@ -17,3 +17,5 @@ logs/
 
 # Local browser verification artifacts (existing tracked references remain tracked)
 frontend/screenshot_*.png
+frontend/screenshots_phase_g*/
+frontend/baseline_results.json
