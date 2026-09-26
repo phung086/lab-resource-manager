@@ -117,8 +117,6 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
         </div>
       </div>
 
-      <TelemetryStatusGrid telemetry={dashboard.telemetry} />
-
       <div className="card dashboard-data-panel">
         <div className="panel-heading">
           <ShieldAlert size={17} />
@@ -147,6 +145,8 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
           </div>
         ) : <div className="empty-state">Không có cảnh báo giám sát đang hoạt động.</div>}
       </div>
+
+      <TelemetryStatusGrid telemetry={dashboard.telemetry} />
 
       <div className="card dashboard-data-panel">
         <div className="panel-heading">
