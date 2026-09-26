@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { PrismaClient } from "@prisma/client";
+import { listMigrationNames } from "../scripts/migrationDeploymentContract.mjs";
 
 const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const canonicalPrismaRoot = path.join(backendRoot, "prisma");
@@ -20,6 +21,7 @@ if (!/(?:^|_)(?:test|ci)(?:_|$)/i.test(databaseName)) {
 }
 
 const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
+const expectedMigrationCount = listMigrationNames(path.join(canonicalPrismaRoot, "migrations")).length;
 const results = [];
 
 function command(command, args, options = {}) {
@@ -84,7 +86,7 @@ function fixtureCopy() {
   return root;
 }
 
-function addForwardMigrationFixture(root, name = "20260925000100_test_forward_probe") {
+function addForwardMigrationFixture(root, name = "20260926000100_test_forward_probe") {
   const migrationRoot = path.join(root, "migrations", name);
   fs.mkdirSync(migrationRoot, { recursive: true });
   fs.writeFileSync(path.join(migrationRoot, "migration.sql"), [
@@ -130,7 +132,7 @@ async function runCase(name, test) {
 try {
   await runCase("1 fresh PostgreSQL 16 deployment", async () => {
     deploy();
-    assert.equal((await migrationRows()).length, 13);
+    assert.equal((await migrationRows()).length, expectedMigrationCount);
   });
 
   await runCase("2 idempotent repeat deployment", async () => {
@@ -149,7 +151,7 @@ try {
     }
     assert.equal((await migrationRows()).length, 3);
     deploy();
-    assert.equal((await migrationRows()).length, 13);
+    assert.equal((await migrationRows()).length, expectedMigrationCount);
   });
 
   await runCase("4 existing legitimate lineage preserves rows and applies forward migration", async () => {
@@ -158,7 +160,7 @@ try {
     const before = comparableRows(await migrationRows());
     const fixture = fixtureCopy();
     try {
-      const forwardName = addForwardMigrationFixture(fixture, "20260925000100_test_existing_lineage_forward");
+      const forwardName = addForwardMigrationFixture(fixture, "20260926000100_test_existing_lineage_forward");
       const output = deploy({ fixtureRoot: fixture });
       assert.match(output, /RECOGNIZED_PRISMA_LINEAGE/);
       assert.doesNotMatch(output, /marked as applied/);

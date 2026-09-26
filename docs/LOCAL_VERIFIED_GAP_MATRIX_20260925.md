@@ -34,6 +34,12 @@ reset.
 | LV-09 | Temporary credentials | `passwordResetRequired` exists, while the audit reports normal authenticated access is not server-gated. | Not re-executed in this boundary. | P1 security | Enforce the approved temporary-credential lifecycle without changing the canonical four roles. | Auth middleware and sensitive-route tests. |
 | LV-10 | External integrations | SMTP, VNPAY merchant/IPN, R2/S3 and physical telemetry/camera credentials or hardware were not supplied. | Local software paths only. | External blocker | Preserve fail-closed behavior and verify when real credentials/hardware are available. | Real service/hardware evidence; local fixtures must not be described as production verification. |
 
+## Phase F closure update
+
+| ID | Resolution evidence |
+| --- | --- |
+| LV-12 | **RESOLVED on `feat/system-audit-accountability`.** A generic append-only `SystemAuditEvent` model (migration `20260925000200_add_system_audit_events`) captures role updates, active transitions, lab assignment add/remove, pricing adjustments, guest account creation/reuse, and admin payment charges. All mutations are transaction-coupled with rollback on failure; secret sanitization strips sensitive data prior to insert. RBAC restricts read access to ADMIN (global) and LAB_STAFF (strictly scoped to assigned labs); ordinary users receive 403. PostgreSQL 16 suite passed 9/9; migration safety passed 14/14. |
+
 ## Phase E closure update
 
 | ID | Resolution evidence |
@@ -46,7 +52,7 @@ New verified/deferred items:
 | ID | Area | Evidence | Status |
 | --- | --- | --- | --- |
 | LV-11 | Customer classification authority | Repository-wide search found `customerType` only in identity input/output and guest preservation paths. Booking authority, training, RBAC, quota and pricing do not read it. Public responses/UI now label it `SELF_DECLARED_UNVERIFIED`; API tests prove an `INTERNAL` declaration remains role `STUDENT` with no admin/resource mutation authority. | Safe current semantics verified; institutional verification remains deferred. |
-| LV-12 | General audit completeness | Existing domain audit covers resource mutation/status, pricing, booking lifecycle, maintenance/calibration and incidents. Role/active changes, assignment deletion, guest account create/reuse and payment-admin actions lack a suitable global audit model. | Explicit schema gap; no fake resource `UsageLog` created. |
+| LV-12 | General audit completeness | Generic `SystemAuditEvent` table persists transaction-coupled administrative events with strict RBAC and data minimization. | RESOLVED on `feat/system-audit-accountability` |
 | LV-13 | Cross-domain privacy | Payment lookups return non-enumerating `404` to foreign users; incidents follow owner or assigned-lab scope; notifications list/read only the authenticated recipient. | PASS in Phase E integration and preserved Batch 6 coverage. |
 | LV-14 | Legacy generic seed | `npm run db:seed` points to `seedBookingPlatform.js`; earlier isolated execution fails because the fixture omits required `User.id`. Assignment audit already classifies it as an explicit development fixture, and current CI/demo uses dedicated guarded seeds. | LEGACY; do not use as supported bootstrap until separately repaired or retired. |
 

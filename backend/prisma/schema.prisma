@@ -230,6 +230,7 @@ model Laboratory {
   monitoringAlerts    MonitoringAlert[]
   cameras             Camera[]
   cameraAccessAudits  CameraAccessAudit[]
+  systemAuditEvents   SystemAuditEvent[]             @relation("SystemAuditLab")
 
   @@index([buildingId])
   @@map("laboratories")
@@ -295,6 +296,7 @@ model User {
   acknowledgedMonitoringAlerts MonitoringAlert[]     @relation("MonitoringAlertAcknowledgement")
   cameraAccessAudits           CameraAccessAudit[]
   emailOtps                    EmailOtp[]
+  systemAuditEvents          SystemAuditEvent[]    @relation("SystemAuditActor")
 
   @@map("users")
 }
@@ -362,6 +364,7 @@ model Resource {
   monitoringAlerts     MonitoringAlert[]
   cameras              Camera[]
   cameraAccessAudits   CameraAccessAudit[]
+  systemAuditEvents  SystemAuditEvent[]              @relation("SystemAuditResource")
 
   @@index([laboratoryId])
   @@index([operationalStatus])
@@ -1080,4 +1083,33 @@ model ResourcePricingRule {
 
   @@unique([resourceId, purposeCode])
   @@map("resource_pricing_rules")
+}
+
+// Append-only immutable audit trail for security-sensitive administrative actions.
+// Coupled transactionally to the mutation it records - if audit insertion fails,
+// the entire transaction rolls back.
+model SystemAuditEvent {
+  id                String    @id
+  actorId           String?   @map("actor_id")
+  actorRoleSnapshot Role?     @map("actor_role_snapshot")
+  action            String    @db.VarChar(64)
+  targetType        String    @map("target_type") @db.VarChar(64)
+  targetId          String    @map("target_id")
+  labId             String?   @map("lab_id")
+  resourceId        String?   @map("resource_id")
+  beforeState       Json?     @map("before_state")
+  afterState        Json?     @map("after_state")
+  reason            String?
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor      User?        @relation("SystemAuditActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  laboratory Laboratory?  @relation("SystemAuditLab", fields: [labId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  resource   Resource?    @relation("SystemAuditResource", fields: [resourceId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId, createdAt])
+  @@index([labId, createdAt])
+  @@map("system_audit_events")
 }

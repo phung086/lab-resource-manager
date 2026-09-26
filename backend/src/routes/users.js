@@ -8,6 +8,7 @@ import { ADMIN, CANONICAL_ROLES, LAB_STAFF } from "../constants/roles.js";
 import { createManagedUser, safeUserSelect } from "../services/userService.js";
 import { validateVietnamAddress } from "../services/addressService.js";
 import { publicCustomerUser } from "../services/guestBookingService.js";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "../services/systemAuditService.js";
 
 const router = express.Router();
 
@@ -225,9 +226,21 @@ router.post("/:id/lab-assignments", requireAuth, requireRole(ADMIN), async (req,
       throw new HttpError(409, "Laboratory assignment already exists", undefined, "DUPLICATE_ASSIGNMENT");
     }
 
-    const assignment = await prisma.userLabAssignment.create({
-      data: { userId: user.id, laboratoryId },
-      include: { laboratory: true }
+    const assignment = await prisma.$transaction(async (tx) => {
+      const created = await tx.userLabAssignment.create({
+        data: { userId: user.id, laboratoryId },
+        include: { laboratory: true }
+      });
+      await recordSystemAuditEvent(tx, {
+        actor: req.user,
+        action: AUDIT_ACTIONS.LAB_ASSIGNMENT_ADDED,
+        targetType: AUDIT_TARGET_TYPES.LAB_ASSIGNMENT,
+        targetId: `${user.id}:${laboratoryId}`,
+        labId: laboratoryId,
+        afterState: { userId: user.id, laboratoryId, laboratoryCode: laboratory.code },
+        metadata: { source: "admin_user_management" }
+      });
+      return created;
     });
     res.status(201).json(assignment);
   } catch (error) {
@@ -246,13 +259,24 @@ router.delete("/:id/lab-assignments/:laboratoryId", requireAuth, requireRole(ADM
       }
     });
     if (!existing) throw new HttpError(404, "Laboratory assignment not found", undefined, "NOT_FOUND");
-    await prisma.userLabAssignment.delete({
-      where: {
-        userId_laboratoryId: {
-          userId: req.params.id,
-          laboratoryId: req.params.laboratoryId
+    await prisma.$transaction(async (tx) => {
+      await tx.userLabAssignment.delete({
+        where: {
+          userId_laboratoryId: {
+            userId: req.params.id,
+            laboratoryId: req.params.laboratoryId
+          }
         }
-      }
+      });
+      await recordSystemAuditEvent(tx, {
+        actor: req.user,
+        action: AUDIT_ACTIONS.LAB_ASSIGNMENT_REMOVED,
+        targetType: AUDIT_TARGET_TYPES.LAB_ASSIGNMENT,
+        targetId: `${req.params.id}:${req.params.laboratoryId}`,
+        labId: req.params.laboratoryId,
+        beforeState: { userId: req.params.id, laboratoryId: req.params.laboratoryId },
+        metadata: { source: "admin_user_management" }
+      });
     });
     res.status(204).end();
   } catch (error) {
@@ -305,6 +329,15 @@ router.patch("/:id/role", requireAuth, requireRole(ADMIN), async (req, res, next
       if (data.role !== LAB_STAFF) {
         await tx.userLabAssignment.deleteMany({ where: { userId: req.params.id } });
       }
+      await recordSystemAuditEvent(tx, {
+        actor: req.user,
+        action: AUDIT_ACTIONS.USER_ROLE_CHANGED,
+        targetType: AUDIT_TARGET_TYPES.USER,
+        targetId: saved.id,
+        beforeState: { role: user.role },
+        afterState: { role: saved.role },
+        metadata: { source: "admin_user_management" }
+      });
       return saved;
     });
 
@@ -335,9 +368,26 @@ router.patch("/:id/active", requireAuth, requireRole(ADMIN), async (req, res, ne
       throw new HttpError(409, "You cannot deactivate your own account", undefined, "SELF_LOCKOUT_FORBIDDEN");
     }
 
-    const updated = await prisma.user.update({
-      where: { id: req.params.id },
-      data: { isActive: data.isActive }
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!user) {
+      throw new HttpError(404, "User not found", undefined, "NOT_FOUND");
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const saved = await tx.user.update({
+        where: { id: req.params.id },
+        data: { isActive: data.isActive }
+      });
+      await recordSystemAuditEvent(tx, {
+        actor: req.user,
+        action: AUDIT_ACTIONS.USER_ACTIVATION_CHANGED,
+        targetType: AUDIT_TARGET_TYPES.USER,
+        targetId: saved.id,
+        beforeState: { isActive: user.isActive },
+        afterState: { isActive: saved.isActive },
+        metadata: { source: "admin_user_management" }
+      });
+      return saved;
     });
 
     return res.json({
