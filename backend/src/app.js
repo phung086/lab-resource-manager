@@ -15,6 +15,7 @@ import addressRouter from "./routes/address.js";
 import guestBookingRouter from "./routes/guestBooking.js";
 import resourceMediaRouter from "./routes/resourceMedia.js";
 import userRouter from "./routes/users.js";
+import auditEventsRouter from "./routes/auditEvents.js";
 import resourceRouter from "./routes/resources.js";
 import laboratoryRouter from "./routes/laboratories.js";
 import calendarRouter from "./routes/calendar.js";
@@ -96,6 +97,7 @@ export function createApp() {
 
   // 2. Users & Profiles
   app.use("/api/users", userRouter);
+  app.use("/api/audit-events", auditEventsRouter);
 
   // 3. Resources & Catalog
   app.use("/api/resources", resourceMediaRouter);
