@@ -226,9 +226,21 @@ router.post("/:id/lab-assignments", requireAuth, requireRole(ADMIN), async (req,
       throw new HttpError(409, "Laboratory assignment already exists", undefined, "DUPLICATE_ASSIGNMENT");
     }
 
-    const assignment = await prisma.userLabAssignment.create({
-      data: { userId: user.id, laboratoryId },
-      include: { laboratory: true }
+    const assignment = await prisma.$transaction(async (tx) => {
+      const created = await tx.userLabAssignment.create({
+        data: { userId: user.id, laboratoryId },
+        include: { laboratory: true }
+      });
+      await recordSystemAuditEvent(tx, {
+        actor: req.user,
+        action: AUDIT_ACTIONS.LAB_ASSIGNMENT_ADDED,
+        targetType: AUDIT_TARGET_TYPES.LAB_ASSIGNMENT,
+        targetId: `${user.id}:${laboratoryId}`,
+        labId: laboratoryId,
+        afterState: { userId: user.id, laboratoryId, laboratoryCode: laboratory.code },
+        metadata: { source: "admin_user_management" }
+      });
+      return created;
     });
     res.status(201).json(assignment);
   } catch (error) {
@@ -247,13 +259,24 @@ router.delete("/:id/lab-assignments/:laboratoryId", requireAuth, requireRole(ADM
       }
     });
     if (!existing) throw new HttpError(404, "Laboratory assignment not found", undefined, "NOT_FOUND");
-    await prisma.userLabAssignment.delete({
-      where: {
-        userId_laboratoryId: {
-          userId: req.params.id,
-          laboratoryId: req.params.laboratoryId
+    await prisma.$transaction(async (tx) => {
+      await tx.userLabAssignment.delete({
+        where: {
+          userId_laboratoryId: {
+            userId: req.params.id,
+            laboratoryId: req.params.laboratoryId
+          }
         }
-      }
+      });
+      await recordSystemAuditEvent(tx, {
+        actor: req.user,
+        action: AUDIT_ACTIONS.LAB_ASSIGNMENT_REMOVED,
+        targetType: AUDIT_TARGET_TYPES.LAB_ASSIGNMENT,
+        targetId: `${req.params.id}:${req.params.laboratoryId}`,
+        labId: req.params.laboratoryId,
+        beforeState: { userId: req.params.id, laboratoryId: req.params.laboratoryId },
+        metadata: { source: "admin_user_management" }
+      });
     });
     res.status(204).end();
   } catch (error) {
