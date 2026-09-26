@@ -64,3 +64,19 @@ export const emptyResourceForm = {
   requiresApproval: true,
   specsText: ""
 };
+
+export const CANONICAL_BOOKING_STATUS_LABELS = {
+  PENDING_APPROVAL: "Chờ phê duyệt",
+  CONFIRMED: "Đã xác nhận",
+  CHECKED_OUT: "Đang sử dụng",
+  RETURNED: "Đã hoàn trả",
+  COMPLETED: "Hoàn tất",
+  REJECTED: "Từ chối",
+  CANCELLED: "Đã hủy"
+};
+
+export const CANONICAL_CUSTOMER_TYPE_LABELS = {
+  INTERNAL: "Nội bộ trường (tự khai)",
+  EXTERNAL: "Khách ngoài / đối tác (tự khai)"
+};
+
