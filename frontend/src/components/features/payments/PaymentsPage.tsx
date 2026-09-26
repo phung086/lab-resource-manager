@@ -194,7 +194,7 @@ function PaymentsLedger({
         <div>
           <h1>
             {bookingId
-              ? "Thanh toán đặt phòng LAB"
+              ? "Thanh toán lịch đặt LAB"
               : admin
                 ? "Sổ giao dịch thanh toán"
                 : "Thanh toán của tôi"}

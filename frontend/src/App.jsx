@@ -171,12 +171,19 @@ function App() {
   }, [locale]);
 
   const routeUserId = user?.id;
+  const isPasswordResetRequired = Boolean(user?.passwordResetRequired);
   useEffect(() => {
     if (!routeUserId) return;
     const readRoute = () => {
       setRouteHash(window.location.hash);
-      updateActiveTab(tabFromHash(window.location.hash));
-      if (tabFromHash(window.location.hash) === "payments") {
+      const targetTab = tabFromHash(window.location.hash);
+      if (isPasswordResetRequired && !["home", "profile"].includes(targetTab)) {
+        window.history.replaceState(null, "", hashForTab("home"));
+        updateActiveTab("home");
+        return;
+      }
+      updateActiveTab(targetTab);
+      if (targetTab === "payments") {
         setPaymentBookingId(new URLSearchParams(window.location.hash.split("?")[1] || "").get("booking") || "");
       }
     };
@@ -186,7 +193,7 @@ function App() {
       window.history.replaceState(null, "", hashForTab(activeTab));
     }
     return () => window.removeEventListener("hashchange", readRoute);
-  }, [routeUserId, activeTab]);
+  }, [routeUserId, activeTab, isPasswordResetRequired]);
 
   useEffect(() => {
     let active = true;
@@ -335,20 +342,65 @@ function App() {
         updateActiveTab("home");
         window.history.replaceState(null, "", "#dang-nhap");
       }}
-      onPasswordChanged={() => {
-        const updatedUser = { ...user, passwordResetRequired: false };
-        localStorage.setItem("lrm_user", JSON.stringify(updatedUser));
-        setUser(updatedUser);
+      onPasswordChanged={async () => {
+        try {
+          const freshUser = await getCurrentUser();
+          localStorage.setItem("lrm_user", JSON.stringify(freshUser));
+          setUser(freshUser);
+        } catch {
+          const updatedUser = { ...user, passwordResetRequired: false };
+          localStorage.setItem("lrm_user", JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        }
       }}
     >
       {error && <div className="alert danger" role="alert">{error}</div>}
-      {user.passwordResetRequired && <div className="alert" role="status">Tài khoản đặt nhanh đang dùng mật khẩu tạm thời. Bạn phải thiết lập mật khẩu mới trước khi dùng các chức năng khác.</div>}
+      {user.passwordResetRequired && (
+        <div className="card temporary-password-card" style={{ maxWidth: 680, margin: "1.5rem auto", padding: "1.75rem", border: "1px solid #fde68a", background: "#fffdf5", borderRadius: 16 }}>
+          <div className="alert warning" style={{ marginBottom: "1.25rem", display: "flex", gap: "0.85rem", alignItems: "flex-start" }}>
+            <span style={{ fontSize: "1.5rem" }} aria-hidden="true">🔒</span>
+            <div>
+              <strong style={{ fontSize: "1.05rem", display: "block", marginBottom: "0.35rem", color: "#92400e" }}>
+                Yêu cầu thiết lập mật khẩu cho tài khoản đặt nhanh
+              </strong>
+              <p style={{ margin: 0, fontSize: "0.92rem", color: "#78350f", lineHeight: 1.5 }}>
+                Tài khoản vừa tạo qua luồng Đặt lịch nhanh đang dùng mật khẩu tạm thời. Để bảo mật tài khoản và dữ liệu phòng LAB, bạn bắt buộc phải thiết lập mật khẩu mới trước khi có thể truy cập lịch đặt, thanh toán hoặc các tài nguyên khác.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ width: "100%", justifyContent: "center", padding: "0.75rem", fontSize: "0.95rem" }}
+            onClick={() => window.dispatchEvent(new CustomEvent("lrm:open-password-setup"))}
+          >
+            Đổi mật khẩu ngay
+          </button>
+        </div>
+      )}
 
-      {/* REQUIRED CORE */}
-      {activeTab === "home" && <WorkspaceHome user={user} bookings={bookings} notifications={notifications} loading={loading} error={error} onRetry={loadData} onNavigate={setActiveTab} onSearch={(query) => { setResourceSearch(query); setActiveTab("resources"); }} />}
+      {/* REQUIRED CORE — Gated when passwordResetRequired */}
+      {!user.passwordResetRequired && activeTab === "home" && (
+        <WorkspaceHome
+          user={user}
+          bookings={bookings}
+          notifications={notifications}
+          incidents={incidents}
+          trainings={trainings}
+          loading={loading}
+          error={error}
+          onRetry={loadData}
+          onNavigate={setActiveTab}
+          onSearch={(query) => { setResourceSearch(query); setActiveTab("resources"); }}
+        />
+      )}
       {activeTab === "profile" && <ProfilePage user={user} onUserUpdated={setUser} />}
-      {PAYMENT_FEATURES_ENABLED && activeTab === "payments" && <React.Suspense fallback={<p role="status">Đang tải thanh toán…</p>}><PaymentsPage user={user} bookingId={paymentBookingId} onClearBooking={() => { setPaymentBookingId(""); setActiveTab("payments"); }} /></React.Suspense>}
-      {activeTab === "smart_calendar" && (
+      {!user.passwordResetRequired && PAYMENT_FEATURES_ENABLED && activeTab === "payments" && (
+        <React.Suspense fallback={<p role="status">Đang tải thanh toán…</p>}>
+          <PaymentsPage user={user} bookingId={paymentBookingId} onClearBooking={() => { setPaymentBookingId(""); setActiveTab("payments"); }} />
+        </React.Suspense>
+      )}
+      {!user.passwordResetRequired && activeTab === "smart_calendar" && (
         <SmartCalendarView
           user={user}
           initialResourceId={calendarResourceId}
@@ -356,13 +408,13 @@ function App() {
           onOpenBooking={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
         />
       )}
-      {activeTab === "admin_management" && <AdminResourceManagementView user={user} />}
-      {activeTab === "escalations" && <NotificationCenter notifications={notifications} loading={loading} loadError={error} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
-      {activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {activeTab === "resources" && <ResourceManagementView user={user} initialSearch={resourceSearch} onViewCalendar={(id) => { setCalendarResourceId(id); setActiveTab("smart_calendar"); }} />}
-      {activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={loadData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
-      {activeTab === "maintenance" && <MaintenanceView resources={resources} maintenance={maintenance} isStaff={isStaff} onChanged={loadData} />}
-      {activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
+      {!user.passwordResetRequired && activeTab === "admin_management" && <AdminResourceManagementView user={user} />}
+      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter notifications={notifications} loading={loading} loadError={error} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
+      {!user.passwordResetRequired && activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={loadData} />}
+      {!user.passwordResetRequired && activeTab === "resources" && <ResourceManagementView user={user} initialSearch={resourceSearch} onViewCalendar={(id) => { setCalendarResourceId(id); setActiveTab("smart_calendar"); }} />}
+      {!user.passwordResetRequired && activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={loadData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
+      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenanceView resources={resources} maintenance={maintenance} isStaff={isStaff} onChanged={loadData} />}
+      {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
       {activeTab === "users" && <AccessUserManagement />}
 
