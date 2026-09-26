@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { prisma } from "../db.js";
 import { HttpError } from "../middleware/errors.js";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "./systemAuditService.js";
 import {
   buildVnpayUrl,
   buildVietqr,
@@ -151,7 +152,7 @@ export async function createCharge(actor, data) {
         undefined,
         "DUPLICATE_CHARGE",
       );
-    return tx.paymentTransaction.create({
+    const transaction = await tx.paymentTransaction.create({
       data: {
         ...data,
         id: crypto.randomUUID(),
@@ -163,6 +164,22 @@ export async function createCharge(actor, data) {
       },
       include,
     });
+    await recordSystemAuditEvent(tx, {
+      actor,
+      action: AUDIT_ACTIONS.PAYMENT_CHARGE_CREATED,
+      targetType: AUDIT_TARGET_TYPES.PAYMENT,
+      targetId: transaction.id,
+      afterState: {
+        amount: data.amount,
+        bookingId: data.bookingId,
+        status: "pending"
+      },
+      metadata: {
+        bookingId: data.bookingId,
+        source: "admin_charge"
+      }
+    });
+    return transaction;
   });
 }
 export async function initiatePayment(id, actor, provider, ip) {

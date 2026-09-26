@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { PURPOSE_CODES, quoteBooking } from "../services/bookingPricingService.js";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "../services/systemAuditService.js";
 
 const router = express.Router();
 router.use(requireAuth);
@@ -16,10 +17,23 @@ router.put("/:resourceId", requireRole("ADMIN"), async (req, res, next) => {
     const data = z.object({ purposeCode: z.enum(PURPOSE_CODES), label: z.string().trim().min(2).max(100), hourlyRateVnd: z.number().int().min(0).max(100000000) }).strict().parse(req.body);
     res.json(await prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM resources WHERE id = ${req.params.resourceId} FOR UPDATE`;
+      const existing = await tx.resourcePricingRule.findUnique({
+        where: { resourceId_purposeCode: { resourceId: req.params.resourceId, purposeCode: data.purposeCode } }
+      });
       const rule = await tx.resourcePricingRule.upsert({
         where: { resourceId_purposeCode: { resourceId: req.params.resourceId, purposeCode: data.purposeCode } },
         create: { id: crypto.randomUUID(), resourceId: req.params.resourceId, ...data },
         update: { ...data, version: { increment: 1 } }
+      });
+      await recordSystemAuditEvent(tx, {
+        actor: req.user,
+        action: AUDIT_ACTIONS.RESOURCE_PRICING_CHANGED,
+        targetType: AUDIT_TARGET_TYPES.PRICING_RULE,
+        targetId: rule.id,
+        resourceId: req.params.resourceId,
+        beforeState: existing ? { hourlyRateVnd: existing.hourlyRateVnd, version: existing.version, label: existing.label } : null,
+        afterState: { hourlyRateVnd: rule.hourlyRateVnd, version: rule.version, purposeCode: rule.purposeCode, label: rule.label },
+        metadata: { source: "admin_pricing_management" }
       });
       await tx.usageLog.create({ data: { id: crypto.randomUUID(), resourceId: req.params.resourceId, userId: req.user.id, action: "STATUS_CHANGE", message: "Cập nhật bảng giá sử dụng tài nguyên", metadata: { pricingRuleId: rule.id, purposeCode: rule.purposeCode, hourlyRateVnd: rule.hourlyRateVnd, version: rule.version } } });
       return rule;

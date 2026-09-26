@@ -9,6 +9,7 @@ import { HttpError } from "../middleware/errors.js";
 import { sendRequiredEmail } from "./emailService.js";
 import { validateVietnamAddress } from "./addressService.js";
 import { createBookingWithTransaction } from "./bookingService.js";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "./systemAuditService.js";
 
 const PURPOSE = "GUEST_QUICK_BOOKING";
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -265,6 +266,45 @@ export async function completeGuestBooking(payload) {
     if (consumed.count !== 1) {
       throw new HttpError(409, "Mã OTP đã được sử dụng.", undefined, "OTP_ALREADY_USED");
     }
+
+    if (!existing) {
+      await recordSystemAuditEvent(tx, {
+        actor: null,
+        action: AUDIT_ACTIONS.GUEST_ACCOUNT_CREATED,
+        targetType: AUDIT_TARGET_TYPES.USER,
+        targetId: user.id,
+        resourceId: payload.booking.resourceId,
+        afterState: {
+          role: user.role,
+          customerType: user.customerType,
+          customerTypeSemantics: "SELF_DECLARED_UNVERIFIED",
+          passwordResetRequired: true
+        },
+        metadata: {
+          bookingId: booking.id,
+          source: "guest_booking"
+        }
+      });
+    } else {
+      await recordSystemAuditEvent(tx, {
+        actor: null,
+        action: AUDIT_ACTIONS.GUEST_ACCOUNT_REUSED,
+        targetType: AUDIT_TARGET_TYPES.USER,
+        targetId: user.id,
+        resourceId: payload.booking.resourceId,
+        beforeState: {
+          customerType: user.customerType
+        },
+        afterState: {
+          customerType: user.customerType
+        },
+        metadata: {
+          bookingId: booking.id,
+          source: "guest_booking"
+        }
+      });
+    }
+
     return { user, booking, accountCreated: !existing };
   });
 
