@@ -276,3 +276,35 @@ damaged baseline states fail closed. Automatic resume begins after baseline SQL
 and its final marker complete; interruption inside baseline SQL requires
 recreating that initially empty database. Required CI includes fresh and repeat
 deployment plus the PostgreSQL 16 migration-safety matrix.
+
+## ADR-022 - System Audit Trail And Administrative Accountability
+
+Status: Accepted
+
+A generic, append-only `SystemAuditEvent` table provides durable accountability
+for security-sensitive administrative and business events that lack complete
+transactional provenance in specialized domain models:
+- User role changes (`USER_ROLE_CHANGED`)
+- User activation/deactivation (`USER_ACTIVATION_CHANGED`)
+- Laboratory assignment additions and removals (`LAB_ASSIGNMENT_ADDED`, `LAB_ASSIGNMENT_REMOVED`)
+- Resource pricing changes (`RESOURCE_PRICING_CHANGED`)
+- Guest account creation and reuse (`GUEST_ACCOUNT_CREATED`, `GUEST_ACCOUNT_REUSED`)
+- Administrative financial actions (`PAYMENT_CHARGE_CREATED`)
+
+Key governance and security guarantees:
+1. Append-only and immutable: no update (`PUT`/`PATCH`) or deletion (`DELETE`)
+   endpoints exist for system audit events.
+2. Transactional coupling: the audit event must be persisted inside the same
+   atomic Prisma transaction as the underlying mutation. If the audit write
+   fails, the business mutation rolls back.
+3. Survivability: target IDs and snapshots survive row deletions (such as
+   revoked lab assignments or removed users via `ON DELETE SET NULL` on foreign
+   keys and string-based target references).
+4. Strict RBAC: ordinary users (`STUDENT`, `LECTURER`) and unauthenticated
+   clients fail closed (`403`). `LAB_STAFF` can only read audit records scoped
+   to their assigned laboratories. `ADMIN` has global read access.
+5. Data minimization and secret prevention: passwords, tokens, OTP codes, and
+   secrets are strictly sanitized before persistence. Before and after states
+   capture only the minimal mutated attributes.
+6. Retention: automated destructive cleanup is not implemented and remains
+   an open business policy decision.

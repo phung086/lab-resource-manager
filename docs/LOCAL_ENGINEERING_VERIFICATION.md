@@ -485,3 +485,71 @@ as `LEGACY`; repairing or retiring it belongs in a separate scope.
 
 GitHub CI evidence is added after the final Phase E SHA completes the required
 workflow matrix.
+
+## Phase F — system audit trail & administrative accountability
+
+**PHASE:** F — system audit trail & administrative accountability  
+**BASE BRANCH:** `fix/privacy-audit-governance`  
+**BASE SHA:** `c40b2d541b818bda0724e49d8c91e132d936da02`  
+**WORK BRANCH:** `feat/system-audit-accountability`  
+
+### System audit coverage before Phase F
+
+Prior to Phase F, security-critical administrative actions lacked durable,
+transactionally coupled audit logs:
+- `PATCH /api/users/:id/role`: Mutated `User.role` without actor, prior role, or audit record.
+- `PATCH /api/users/:id/active`: Mutated `User.isActive` without audit event.
+- `POST`/`DELETE /api/users/:id/lab-assignments`: Deleted assignments completely removed the row without a tombstone or actor trail.
+- `PUT /api/booking-pricing/:resourceId`: Stored new rates in `UsageLog` but did not snapshot the preceding rate.
+- Guest booking: Created or reused accounts without dedicated account lifecycle audit events.
+- Payments: Admin-initiated charges did not record initiating actor identity in an audit trail.
+
+### Target system audit model
+
+The additive migration `20260925000200_add_system_audit_events` created
+`public.system_audit_events`:
+- `id` (text, PK)
+- `actor_id` (text, FK to `users.id` with `ON DELETE SET NULL`)
+- `actor_role_snapshot` (`Role` enum snapshot)
+- `action` (varchar(64))
+- `target_type` (varchar(64))
+- `target_id` (text, durable reference even if target row is deleted)
+- `lab_id` (text, FK to `laboratories.id` with `ON DELETE SET NULL`)
+- `resource_id` (text, FK to `resources.id` with `ON DELETE SET NULL`)
+- `before_state` (jsonb, minimized attributes)
+- `after_state` (jsonb, minimized attributes)
+- `reason` (text, optional note)
+- `metadata` (jsonb, contextual metadata)
+- `created_at` (timestamptz)
+
+Indexes: `created_at`, `(actor_id, created_at)`, `(target_type, target_id, created_at)`, `(lab_id, created_at)`.
+
+### Authorization and RBAC
+
+- `ADMIN`: Global read access across all system audit events.
+- `LAB_STAFF`: Strictly scoped to audit events where `labId` matches an assigned laboratory. Queries for unassigned labs fail with `403 FORBIDDEN`.
+- `STUDENT`, `LECTURER`, and unauthenticated clients: Fail closed (`403 FORBIDDEN`).
+- No mutation endpoints: The audit trail is strictly append-only. No `PUT`, `PATCH`, or `DELETE` endpoints exist for audit records.
+
+### Transaction guarantees and data minimization
+
+- Every audit record is created inside the same Prisma `$transaction` as the mutation. If the audit insert fails (e.g., constraint violation), the business mutation rolls back completely.
+- `sanitizeAuditData` recursively strips any keys matching `/password|secret|token|otp|codeHash|hash/i` before persistence.
+- `beforeState` and `afterState` are strictly minimized to changed attributes only (e.g. `{ role: "STUDENT" }` -> `{ role: "LECTURER" }`), preventing leakage of entire entity rows or unrelated metadata.
+
+### Verification evidence
+
+Focused database: `lab_resources_phase_f_test` on PostgreSQL 16.
+
+| Gate | Result |
+| --- | --- |
+| Phase F system audit integration (`test:phase-f`) | PASS, 9/9 |
+| Migration safety matrix (`test:migration-safety`) | PASS, 14/14 |
+| Required core/training (`test:core`) | PASS, 33/33 |
+| Guest integrity (`test:guest-integrity`) | PASS, 13/13 |
+| Phase E privacy/governance (`test:phase-e`) | PASS, 5/5 |
+| Backend lint | PASS, 0 errors |
+| Frontend lint | PASS, 0 errors, 13 existing warnings |
+| Frontend typecheck | PASS, 0 errors |
+| Frontend production build | PASS, built in ~8.6s |
+

@@ -1,5 +1,40 @@
 # Current Project State
 
+## Phase F system audit trail and administrative accountability — 2026-09-26
+
+Branch `feat/system-audit-accountability` starts from the exact accepted Phase E
+SHA `c40b2d541b818bda0724e49d8c91e132d936da02`. An append-only
+`SystemAuditEvent` model has been introduced to provide transactional
+accountability for administrative and security mutations that previously lacked
+durable audit records.
+
+Key architectural highlights:
+1. Target mutations covered:
+   - User role changes (`USER_ROLE_CHANGED`) with before/after role snapshots.
+   - User active/inactive transitions (`USER_ACTIVATION_CHANGED`).
+   - Lab assignment additions and removals (`LAB_ASSIGNMENT_ADDED`, `LAB_ASSIGNMENT_REMOVED`),
+     ensuring complete survivability after assignment deletion.
+   - Resource pricing rule modifications (`RESOURCE_PRICING_CHANGED`) with
+     before/after rate snapshots.
+   - Guest account creation (`GUEST_ACCOUNT_CREATED`) and reuse
+     (`GUEST_ACCOUNT_REUSED`).
+   - Admin payment charge creation (`PAYMENT_CHARGE_CREATED`).
+2. Transaction coupling: Every audited mutation and its audit event commit
+   inside the same Prisma transaction; a failed audit write rolls back the
+   business mutation.
+3. Strict authorization and RBAC:
+   - `ADMIN`: Global read access across all audit records.
+   - `LAB_STAFF`: Read access strictly scoped to their assigned laboratories.
+   - `STUDENT`, `LECTURER`, and unauthenticated callers: Denied (`403 FORBIDDEN`).
+4. Data minimization: Sanitization strips passwords, hashes, JWTs, and secrets
+   before persistence. Before and after states record only changed attributes.
+5. Migration safety: Forward migration `20260925000200_add_system_audit_events`
+   is purely additive. Historical migrations and the frozen baseline are untouched;
+   the 14-case migration safety matrix passed.
+6. Verification status: Local PostgreSQL 16 testing passed 9/9 Phase F tests,
+   14/14 migration safety scenarios, 33/33 core tests, 13/13 guest integrity tests,
+   5/5 Phase E tests, backend lint, frontend lint/typecheck/build.
+
 ## Phase E privacy, audit and customer classification governance — 2026-09-25
 
 Branch `fix/privacy-audit-governance` starts from the exact accepted Phase D

@@ -20,7 +20,7 @@ This list records questions that affect future implementation. It does not block
 | D-14 | RESOLVED — clean deployment strategy | ADR-021 adopts a reviewed clean-install baseline for empty databases and preserves the historical lineage for existing databases. PostgreSQL 16 verification is recorded in the Phase 1 report. |
 | D-15 | May a public guest submission update an existing EXTERNAL profile? | No policy exists for reconciling submitted name, phone, organization or address with stored identity data. Preserve the current profile without overwrite until ownership/reverification and field-by-field rules are approved. |
 | D-16 | Should phone-based temporary credentials be replaced by an OTP-bound password-setup session? | The current backend-restricted lifecycle is verified, but the initial password remains predictable from phone data. A setup token/session is the recommended future improvement; it is deferred because it changes the authentication contract. |
-| D-17 | What immutable global audit events and retention rules are required? | Current domain evidence is adequate for resource/booking operations, but user administration, guest identity reuse and payment-admin action need a generic audit model plus retention/access policy. Do not encode these as fake resource usage events. |
+| D-17 | RESOLVED — generic system audit model | ADR-022 establishes an append-only `SystemAuditEvent` model for role changes, activation, assignment mutation, pricing, guest identity, and admin charges with strict transaction coupling and RBAC. Audit retention period remains an open policy question. |
 
 The user explicitly requested an email login with phone number as the initial password for quick-created accounts. This remains the current product decision. Security hardening must enforce a prompt password change at the backend and limit use of that temporary credential; replacing the login model requires a new product decision.
 
@@ -49,3 +49,17 @@ The user explicitly requested an email login with phone number as the initial pa
 - General audit persistence and retention remain D-17. A future migration must
   define actor, target, timestamp, from/to state, reason and metadata without
   storing secrets or raw sensitive request bodies.
+
+## Phase F accountability note — 2026-09-26
+
+- D-17 is resolved regarding generic system audit persistence: the
+  `SystemAuditEvent` model now captures user role updates, user activations,
+  lab assignment lifecycle, pricing adjustments, guest account lifecycle, and
+  admin financial charges.
+- Data minimization and secret sanitization are enforced before database
+  insertion.
+- Transactional coupling guarantees mutations roll back if audit persistence
+  fails.
+- Audit retention period (D-11 / D-17 retention schedule) remains an open
+  business decision. No destructive retention job is implemented; all audit
+  records are currently retained permanently.
