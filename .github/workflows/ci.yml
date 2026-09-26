@@ -60,6 +60,20 @@ jobs:
             'DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_fresh?schema=public' \
             > .env
           npm run test:batch4
+      - name: Create isolated Phase F integration database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c 'CREATE DATABASE "lab_resources_phase_f_ci";'
+      - name: Deploy canonical schema for Phase F integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_phase_f_ci?schema=public
+        run: npm run db:migrate
+      - name: Run Phase F system audit integration
+        env:
+          PHASE_F_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_phase_f_ci?schema=public
+        run: npm run test:phase-f
 
   migration-safety:
     runs-on: ubuntu-latest

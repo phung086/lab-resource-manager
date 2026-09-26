@@ -88,7 +88,8 @@ jobs:
             lab_resources_b6_monitoring_ci \
             lab_resources_b7_demo_ci \
             lab_resources_b8_monitoring_ci \
-            lab_resources_guest_phase_d_ci
+            lab_resources_guest_phase_d_ci \
+            lab_resources_phase_f_ci
           do
             psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";"
           done
@@ -108,7 +109,8 @@ jobs:
             lab_resources_b6_monitoring_ci \
             lab_resources_b7_demo_ci \
             lab_resources_b8_monitoring_ci \
-            lab_resources_guest_phase_d_ci
+            lab_resources_guest_phase_d_ci \
+            lab_resources_phase_f_ci
           do
             echo "::group::migrate:$db"
             DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/$db?schema=public" npm run db:migrate
@@ -133,6 +135,7 @@ jobs:
           BATCH7_DATABASE=lab_resources_b7_demo_ci npm run test:batch7
           BATCH8_DATABASE=lab_resources_b8_monitoring_ci npm run test:batch8
           GUEST_PHASE_D_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_guest_phase_d_ci?schema=public" npm run test:guest-integrity
+          PHASE_F_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_phase_f_ci?schema=public" npm run test:phase-f
 
   smart-monitoring-e2e:
     runs-on: ubuntu-latest
