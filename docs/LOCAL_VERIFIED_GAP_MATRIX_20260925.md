@@ -102,3 +102,20 @@ verified-legacy lineage cases. Runtime and canonical deployment code contain no
 direct INSERT/UPDATE/DELETE of `_prisma_migrations`; production deployment still
 uses Prisma-supported `migrate deploy` and the reviewed baseline-only
 `migrate resolve --applied` path.
+
+## Phase G — UX & Product Workflow Refinement Verification (2026-09-26)
+
+| Surface / Workflow | Baseline State | Phase G Refined State | Verification Gate |
+| --- | --- | --- | --- |
+| Guest Quick Booking | Monolithic dense form, error codes raw, lack of clear steps | 3-stage guided wizard: 1. Resource & Booking, 2. Customer Info, 3. OTP & Review | Unit tests + Playwright E2E PASS |
+| OTP Error Handling | Generic or stack errors possible | Domain error codes cleanly translated (`OTP_INVALID`, `OTP_EXPIRED`, `OTP_ATTEMPTS_EXCEEDED`, `OTP_ALREADY_USED`, `OTP_RESEND_TOO_SOON`, `EMAIL_DELIVERY_FAILED`) | PASS, unit tests |
+| Booking Timezone | Local `new Date().toISOString().slice(0, 10)` caused date shifts | Centralized `frontend/src/utils/timezone.ts` (`Asia/Ho_Chi_Minh` UTC+07:00) | PASS, UTC boundary tests |
+| Resource Detail | Calendar shown without upfront eligibility | "Tôi có thể sử dụng tài nguyên này không?" eligibility verdict top: Đủ điều kiện / Chưa đào tạo / Hết hạn cert | PASS, Playwright E2E |
+| Public Catalog | Commercial tone ("Giỏ hàng", "Mua ngay") | Laboratory badges: Available, Maintenance, Approval required, Training required. CTA: "Xem lịch & đặt" | PASS, Playwright E2E |
+| User Overview | Decorative metrics outranked actions | 6 actionable buckets: Upcoming booking, Approval/payment, Training/access, Return due, Incident, Notices | PASS, Playwright E2E |
+| Profile Hierarchy | Mixed information without explicit identity semantics | 7 sections: Identity, Security, Access (`SELF_DECLARED_UNVERIFIED`), Training, Contact, Bookings, Loyalty last | PASS, Playwright E2E |
+| Temporary Account | Unclear restriction on forced password change | Non-dismissible setup modal, routes blocked until password updated, auto-refresh on change | PASS, Playwright E2E |
+| Mobile Telemetry | Vertical scroll overload on small viewports | Critical alerts at top, compact resource cards, sensor details collapsible with `<details>` | PASS, 390x844 & 360x800 |
+| Status Labels | Redundant/inconsistent label dicts | Centralized `CANONICAL_BOOKING_STATUS_LABELS` and `CANONICAL_CUSTOMER_TYPE_LABELS` | PASS, typecheck & build |
+| Responsive Viewports | Potential horizontal overflow | Tested 1440x960, 1280x900, 768x1024, 390x844, 360x800: 0 whole-page horizontal overflow | PASS, Playwright E2E |
+

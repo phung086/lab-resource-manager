@@ -553,3 +553,131 @@ Focused database: `lab_resources_phase_f_test` on PostgreSQL 16.
 | Frontend typecheck | PASS, 0 errors |
 | Frontend production build | PASS, built in ~8.6s |
 
+---
+
+## 2026-09-26 — Phase G: UX & Product Workflow Refinement
+
+### Base State and Branch
+- Repository: `phung086/lab-resource-manager`
+- Base Branch: `feat/system-audit-accountability`
+- Base SHA: `e52e558d75a54ee5e9b7b9029efe7697fb978f2c`
+- Work Branch: `feat/ux-product-workflow-refinement`
+- Authority: Backend remains the single source of truth for training eligibility, resource operational status, pricing quotes, OTP validation, and RBAC authorization. Frontend provides strictly presentation and guided workflow.
+
+### 1. Viewport Matrix and Baseline Audit
+Audited 12 screens across 5 target viewports (1440x960, 1280x900, 768x1024, 390x844, 360x800). Verified zero whole-page horizontal scroll across all breakpoints:
+
+| Screen | 1440x960 | 1280x900 | 768x1024 | 390x844 | 360x800 | Main Verification & Layout Strategy |
+| --- | :---: | :---: | :---: | :---: | :---: | --- |
+| Public Landing | PASS | PASS | PASS | PASS | PASS | Fluid hero grid, responsive quick CTA |
+| Public Catalog | PASS | PASS | PASS | PASS | PASS | 3-column -> 2-column -> 1-column responsive card grid |
+| Resource Detail | PASS | PASS | PASS | PASS | PASS | Sticky sidebar stacks vertically on mobile, eligibility badge top |
+| Guest Quick Booking | PASS | PASS | PASS | PASS | PASS | 3-stage guided wizard replaces dense single form |
+| Login / Register | PASS | PASS | PASS | PASS | PASS | Centered modal/card with full mobile width padding |
+| User Overview | PASS | PASS | PASS | PASS | PASS | Actionable priority stack (1 to 6) replaces decorative metrics |
+| Calendar | PASS | PASS | PASS | PASS | PASS | Component-local horizontal scroll table for time grid |
+| My Bookings | PASS | PASS | PASS | PASS | PASS | Responsive cards with canonical status badges |
+| Profile | PASS | PASS | PASS | PASS | PASS | 7-section hierarchy with explicit unverified semantics |
+| Staff Operations | PASS | PASS | PASS | PASS | PASS | Card-based queue, responsive filter controls |
+| Telemetry | PASS | PASS | PASS | PASS | PASS | Mobile: critical alerts first, collapsible `<details>` cards |
+| Admin Users | PASS | PASS | PASS | PASS | PASS | Filterable list with responsive role chips |
+
+### 2. Guest Quick Booking — 3-Step Guided Wizard
+Refactored `GuestQuickBookingPanel.tsx` from an overwhelming monolithic form into 3 structured steps:
+- **Step 1: Tài nguyên & Lịch đặt (Resource & Booking):**
+  - Displays resource details, category, location, and approval/mandatory training prerequisites.
+  - Controlled inputs for booking title, research purpose, and time slot.
+  - Automatically fetches pricing quote and surfaces fee expectation.
+  - CTA: "Tiếp tục".
+- **Step 2: Thông tin người đặt (Customer Information):**
+  - Collects only strictly required attributes: Full name, Email, Phone number, optional Organization, and Vietnam address selector (`VietnamAddressSelector`).
+  - Does not collect arbitrary unneeded fields.
+  - Navigation: "Quay lại" (preserves all Step 1 inputs) and "Tiếp tục sang bước OTP".
+- **Step 3: Xác thực OTP & Chốt lịch (OTP & Final Review):**
+  - Final review summary card displaying resource, schedule, applicant details, fee, and approval/payment expectations.
+  - Dedicated OTP challenge triggering (`sendOtp`) with a 60-second cooldown timer.
+  - 6-digit numeric input with auto-formatting.
+  - CTA: "Xác nhận đặt lịch".
+  - Retains all inputs if the user clicks "Quay lại thông tin".
+- **Domain Error Code Mapping:**
+  All server-side OTP error codes are cleanly translated into friendly Vietnamese guidance without leaking database errors or account existence:
+  - `OTP_INVALID`: Mã OTP không chính xác. Vui lòng kiểm tra lại email.
+  - `OTP_EXPIRED`: Mã OTP đã hết hạn sau 10 phút. Vui lòng gửi lại mã mới.
+  - `OTP_ATTEMPTS_EXCEEDED`: Bạn đã nhập sai OTP quá 5 lần. Yêu cầu đã bị khóa để bảo mật; vui lòng gửi lại mã mới.
+  - `OTP_ALREADY_USED`: Mã OTP này đã được sử dụng. Vui lòng gửi lại mã mới.
+  - `OTP_RESEND_TOO_SOON`: Vui lòng chờ hết thời gian đếm ngược trước khi gửi lại OTP.
+  - `EMAIL_DELIVERY_FAILED`: Không thể gửi email OTP đến địa chỉ này. Vui lòng kiểm tra lại địa chỉ email.
+
+### 3. Vietnam Timezone Standardization (`Asia/Ho_Chi_Minh`, UTC+07:00)
+- Created centralized utility `frontend/src/utils/timezone.ts` providing:
+  - `parseVietnamParts`, `toVietnamDateString`, `toVietnamTimeString`, `toVietnamHour`, `vietnamTimeToIso`, `formatVietnamDateTime`, `getVietnamTodayDateString`, `getVietnamTomorrowDateString`.
+- Eliminated all client-side `new Date().toISOString().slice(0, 10)` calculations in booking panels, calendars, and date selectors, which previously caused date shifts when accessed from non-UTC+7 client machines.
+- Added boundary tests (`frontend/test_timezone_vietnam.mjs`) verifying:
+  - Exact UTC boundary `16:59:59.000Z` maps to `2026-09-26 23:59:00` VN.
+  - Exact UTC boundary `17:00:00.000Z` maps to `2026-09-27 00:00:00` VN.
+  - All tests PASS.
+
+### 4. Resource Detail — Eligibility First
+- Updated `PublicResourceCatalog.tsx` to prioritize the question: *"Tôi có thể sử dụng tài nguyên này không?"* before displaying calendar availability.
+- Surfaces authoritative backend training requirements and operational state:
+  - **Đủ điều kiện (Eligible):** Active required certifications present and resource available.
+  - **Chưa hoàn thành đào tạo (Missing Training):** Shows exact missing safety courses required to operate.
+  - **Chứng nhận hết hạn (Expired Certification):** Indicates recertification is required before booking.
+  - **Tài nguyên đang bảo trì/hiệu chuẩn (In Maintenance):** Clear warning blocking booking operations.
+- Replaced commercial e-commerce terms ("Mua ngay", "Giỏ hàng") with laboratory operations terms ("Xem lịch & đặt", "Đăng ký sử dụng").
+
+### 5. Profile Hierarchy (7 Structured Sections)
+Reordered `ProfilePage.tsx` according to laboratory identity governance:
+1. **Định danh người dùng (Identity):** Full name, email, department/student ID.
+2. **Tài khoản & Bảo mật (Account & Security):** Inline password change form with strength validation.
+3. **Phân loại người dùng & Quyền truy cập (Access Classification):**
+   - Explicitly displays `customerTypeSemantics = SELF_DECLARED_UNVERIFIED`.
+   - Clear banner stating this declaration grants zero RBAC authority, pricing privileges, or safety rule bypass.
+4. **Chứng chỉ đào tạo & An toàn LAB (Training & Safety Certifications):** Active, expired, and revoked certifications with validity dates.
+5. **Thông tin liên hệ & Địa chỉ (Contact & Address):** Phone, organization, structured Vietnam address.
+6. **Tổng hợp lịch đặt (Booking Summary):** Breakdown of pending, confirmed, completed, and returned bookings.
+7. **Thông tin mở rộng & Hạng thành viên (Loyalty/Commercial Information):** Positioned strictly last.
+
+### 6. Actionable User Overview (`WorkspaceHome`)
+Restructured `WorkspaceHome.tsx` into 6 actionable priority buckets:
+1. `priority-upcoming`: Lịch đặt sắp diễn ra (Upcoming bookings within 48h)
+2. `priority-approval`: Lịch chờ phê duyệt & Thanh toán (Action required)
+3. `priority-training`: Trạng thái đào tạo & Tuân thủ an toàn (Prerequisites)
+4. `priority-return`: Thiết bị mượn đến hạn hoàn trả (Pending handovers)
+5. `priority-incident`: Báo cáo sự cố cần xử lý (Open incidents)
+6. `priority-notices`: Thông báo hệ thống quan trọng (Unread notifications)
+
+### 7. Temporary Account Experience
+- When `user.passwordResetRequired === true` (e.g. newly provisioned guest account):
+  - Client navigation intercepts any attempt to access booking or payment routes (`hashchange` and tab switches).
+  - Displays a focused, non-dismissible password setup modal.
+  - Upon successful password change, session state updates immediately (`onPasswordChanged`), lifting the restriction and enabling safe navigation.
+
+### 8. Mobile Telemetry UX Simplification
+- Reordered `MonitoringDashboardPage.tsx` and `TelemetryStatusGrid.tsx` for mobile viewports:
+  - Critical and warning alerts are rendered first at the top of the viewport.
+  - Resource cards display compact operational state (health score, latest sample time, active alert count).
+  - Detailed sensor timeseries and camera streams are placed within collapsible `<details>` blocks to prevent vertical scroll fatigue.
+
+### 9. Verification Evidence
+
+| Gate | Scope | Result |
+| --- | --- | --- |
+| Migration safety matrix | `test:migration-safety` (PostgreSQL 16) | PASS (14/14) |
+| Training / Core tests | `test:core` | PASS (33/33) |
+| Guest integrity | `test:guest-integrity` | PASS (13/13) |
+| Phase E privacy / governance | `test:phase-e` | PASS (5/5) |
+| Phase F system audit | `test:phase-f` | PASS (9/9) |
+| Batch 2 Auth / RBAC | `test:batch2` | PASS (10/10) |
+| Batch 3 Resources | `test:batch3` | PASS (9/9) |
+| Batch 4 Booking & Training | `test:batch4` | PASS (32/32) |
+| Batch 5 Operations | `test:batch5` | PASS (13/13) |
+| Batch 6 Notifications & Incidents | `test:batch6` | PASS (11/11) |
+| Batch 8 Smart Monitoring | `test:batch8` | PASS (12/12) |
+| Phase G Unit Suite | `test:phase-g` (TZ, OTP errors, eligibility, temp account) | PASS |
+| Frontend Lint | `npm run lint` | PASS (0 errors, 13 pre-existing warnings) |
+| Frontend Typecheck | `npm run typecheck` | PASS (0 errors) |
+| Frontend Build | `npm run build` | PASS (~3.28s) |
+| Browser E2E & Screenshots | `test_phase_g_e2e.mjs` (Playwright) | PASS (11 screens captured across desktop & mobile) |
+
+

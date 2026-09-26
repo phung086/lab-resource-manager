@@ -1,5 +1,48 @@
 # Current Project State
 
+## Phase G UX & Product Workflow Refinement — 2026-09-26
+
+Branch `feat/ux-product-workflow-refinement` builds on the verified Phase F base (`e52e558d75a54ee5e9b7b9029efe7697fb978f2c`) to align the user experience with the platform's core positioning: **Laboratory Resource Access & Operations Platform**.
+
+Key improvements implemented and verified:
+1. **Guest Quick Booking 3-Stage Wizard:**
+   - Transformed dense single form into 3 guided steps:
+     - Step 1: Resource & Booking (details, schedule, quote, prerequisite checks)
+     - Step 2: Customer Information (strictly required fields: name, email, phone, address)
+     - Step 3: OTP Verification & Final Review (challenge triggering, 60s cooldown, summary, confirm)
+   - Input state is fully preserved when navigating back and forth.
+   - Domain error code mapping (`OTP_INVALID`, `OTP_EXPIRED`, `OTP_ATTEMPTS_EXCEEDED`, `OTP_ALREADY_USED`, `OTP_RESEND_TOO_SOON`, `EMAIL_DELIVERY_FAILED`) without database or account leakage.
+   - Phase D security invariants preserved (one challenge, 5 attempts, cooldown, atomic transaction, restricted temporary account).
+2. **Vietnam Timezone Standardization (`Asia/Ho_Chi_Minh` UTC+07:00):**
+   - Centralized shared timezone logic in `frontend/src/utils/timezone.ts`.
+   - Replaced all local date skew calculations (`new Date().toISOString().slice(0, 10)`).
+   - Validated against UTC midnight boundaries.
+3. **Resource Detail — Eligibility First:**
+   - Directly answers: *"Tôi có thể sử dụng tài nguyên này không?"* before displaying calendar availability.
+   - Authoritative verification for: Available, In Maintenance, Training Required, Expired Certification, or Eligible.
+4. **Public Resource Catalog:**
+   - Replaced commercial e-commerce metaphors with lab-oriented status badges (Available, Maintenance, Approval required, Training required, Fee/free) and primary CTA *"Xem lịch & đặt"*.
+5. **Actionable Workspace Overview (`WorkspaceHome`):**
+   - Replaced decorative metrics with 6 actionable priority queues:
+     1. Upcoming bookings
+     2. Pending approval & payment
+     3. Training & access prerequisites
+     4. Due returns
+     5. Open incidents
+     6. System notices
+6. **Profile Hierarchy (7 Sections):**
+   - Reordered to: 1. Identity, 2. Security (inline password change), 3. Access Classification (`customerTypeSemantics = SELF_DECLARED_UNVERIFIED` with explicit non-authority warning), 4. Training/certifications, 5. Contact/address, 6. Bookings, 7. Loyalty/commercial last.
+7. **Temporary Account Enforcement:**
+   - Server-side and client-side gated access when `passwordResetRequired === true`.
+   - Forces focused password setup modal; unblocks navigation upon successful change.
+8. **Mobile Telemetry Simplification:**
+   - Prioritizes critical alerts at viewport top.
+   - Resource status cards feature compact health metrics with expandable `<details>` disclosures for sensor history.
+9. **Responsive Validation:**
+   - Audited across 1440x960, 1280x900, 768x1024, 390x844, 360x800: zero whole-page horizontal scroll.
+10. **Verification Status:**
+    - Migration safety: 14/14 PASS. Core: 33/33 PASS. Guest: 13/13 PASS. Privacy: 5/5 PASS. Audit: 9/9 PASS. Batches 2,3,4,5,6,8: PASS. Phase G unit tests: PASS. Frontend lint, typecheck, build: PASS. Playwright browser E2E: PASS.
+
 ## Phase F system audit trail and administrative accountability — 2026-09-26
 
 Branch `feat/system-audit-accountability` starts from the exact accepted Phase E
