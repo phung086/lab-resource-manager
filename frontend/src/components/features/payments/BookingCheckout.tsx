@@ -27,7 +27,7 @@ export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: stri
       setBooking(bookingRow);
       setCharge(charges.find((row: Charge) => row.status === "success") || charges.find((row: Charge) => row.status === "pending") || charges[0] || null);
       setVnpayReady(Boolean(paymentList.providers?.vnpay));
-    } catch (cause: any) { setError(cause.message || "Không thể tải đơn đặt phòng."); }
+    } catch (cause: any) { setError(cause.message || "Không thể tải lịch đặt LAB."); }
     finally { setLoading(false); }
   }, [bookingId]);
 
@@ -48,7 +48,7 @@ export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: stri
 
   return <section className="content-stack payment-page booking-checkout" aria-labelledby="booking-checkout-heading">
     <header className="page-section-header">
-      <div><h1 id="booking-checkout-heading">Thanh toán đặt phòng LAB</h1><p className="section-description">Xem lại đơn đặt phòng và thanh toán bằng QR tại cổng VNPAY.</p></div>
+      <div><h1 id="booking-checkout-heading">Thanh toán lịch đặt LAB</h1><p className="section-description">Xem lại lịch đặt LAB và thanh toán bằng QR tại cổng VNPAY.</p></div>
       <button type="button" className="secondary-button" onClick={load} disabled={loading || redirecting}><RefreshCw size={16} /> Làm mới</button>
     </header>
     {error && <p className="alert danger" role="alert">{error}</p>}
@@ -61,7 +61,7 @@ export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: stri
         <dt>Phí sử dụng</dt><dd><strong className="payment-amount">{money(booking.feeAmountVnd)}</strong></dd>
         {charge && <><dt>Mã thanh toán</dt><dd className="payment-ref">{charge.txnRef}</dd></>}
       </dl>
-      {booking.feeAmountVnd === 0 ? <div className="alert" role="status">Lịch đặt này không có phí sử dụng, nên không có QR thanh toán. Nếu phòng có bảng giá mới, mức giá đó chỉ áp dụng cho booking tạo sau khi bảng giá được lưu.</div>
+      {booking.feeAmountVnd === 0 ? <div className="alert" role="status">Lịch đặt này không có phí sử dụng, nên không có QR thanh toán. Nếu tài nguyên có bảng giá mới, mức giá đó chỉ áp dụng cho booking tạo sau khi bảng giá được lưu.</div>
         : booking.status === "PENDING_APPROVAL" ? <div className="alert" role="status">Yêu cầu đang chờ cán bộ lab duyệt. Sau khi được duyệt, hệ thống tạo khoản thu và bạn có thể thanh toán tại đây.</div>
         : ["REJECTED", "CANCELLED"].includes(booking.status) ? <div className="alert" role="status">Lịch đặt đã {booking.status === "REJECTED" ? "bị từ chối" : "hủy"}. Không thể thanh toán booking này.</div>
         : charge?.status === "success" ? <div className="alert success" role="status"><ShieldCheck size={18} /> Đã xác minh thanh toán {money(charge.amount)} lúc {charge.paidAt ? formatVietnamDateTime(charge.paidAt) : "—"}.</div>

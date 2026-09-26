@@ -102,7 +102,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 Đăng Ký Tài Khoản
               </h3>
               <p className="text-xs text-slate-400 mt-1 font-sans">
-                Tạo tài khoản LAB để đặt phòng, theo dõi thanh toán và lưu địa chỉ mặc định cho các nghiệp vụ mượn thiết bị sau này.
+                Tạo tài khoản LAB để đặt lịch tài nguyên, theo dõi thanh toán và lưu địa chỉ mặc định cho các nghiệp vụ mượn thiết bị sau này.
               </p>
             </div>
 

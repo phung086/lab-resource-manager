@@ -40,7 +40,7 @@ function addressData(address) {
 }
 
 async function buildProfileResponse(user) {
-  const [paymentStats, bookingStats] = await Promise.all([
+  const [paymentStats, bookingStats, userCerts] = await Promise.all([
     prisma.paymentTransaction.aggregate({
       where: { userId: user.id, status: "success" },
       _sum: { amount: true },
@@ -51,6 +51,13 @@ async function buildProfileResponse(user) {
       by: ["status"],
       where: { requestedById: user.id },
       _count: { _all: true }
+    }),
+    prisma.userCertification.findMany({
+      where: { userId: user.id },
+      include: {
+        course: { select: { id: true, code: true, name: true } }
+      },
+      orderBy: { createdAt: "desc" }
     })
   ]);
   const bookingCounts = Object.fromEntries(bookingStats.map(row => [row.status, row._count._all]));
@@ -65,6 +72,15 @@ async function buildProfileResponse(user) {
   return {
     ...publicCustomerUser(user),
     createdAt: user.createdAt,
+    certifications: userCerts.map((c) => ({
+      id: c.id,
+      courseId: c.courseId,
+      code: c.course.code,
+      name: c.course.name,
+      status: c.status,
+      issuedAt: c.issuedAt,
+      expiresAt: c.expiresAt
+    })),
     spending: {
       totalSpendVnd,
       successfulPayments: paymentStats._count._all,

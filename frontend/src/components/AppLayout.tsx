@@ -62,6 +62,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     if (user?.passwordResetRequired) setChangePasswordOpen(true);
   }, [user?.passwordResetRequired]);
 
+  useEffect(() => {
+    const handleOpen = () => setChangePasswordOpen(true);
+    window.addEventListener("lrm:open-password-setup", handleOpen);
+    return () => window.removeEventListener("lrm:open-password-setup", handleOpen);
+  }, []);
+
+  function handleSelectTab(tab: string) {
+    if (user?.passwordResetRequired && !passwordSuccess) {
+      setChangePasswordOpen(true);
+      return;
+    }
+    onSelectTab(tab);
+  }
+
   function closePasswordModal() {
     if (passwordBusy) return;
     if (user?.passwordResetRequired && !passwordSuccess) return;
@@ -148,7 +162,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       {/* Primary navigation */}
       <Sidebar
         activeTab={activeTab}
-        onSelectTab={onSelectTab}
+        onSelectTab={handleSelectTab}
         user={user}
         notifications={notifications}
         incidents={incidents}
@@ -166,7 +180,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           notificationsCount={unreadCount}
           loading={loading}
           onRefresh={onRefresh}
-          onOpenNotifications={() => onSelectTab("escalations")}
+          onOpenNotifications={() => handleSelectTab("escalations")}
           onOpenChangePassword={() => setChangePasswordOpen(true)}
           onLogout={onLogout}
           onOpenAssistant={AI_ASSISTANT_ENABLED ? () => setAssistantOpen(true) : undefined}
@@ -190,7 +204,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             onClose={() => setCopilotOpen(false)}
             onActionTrigger={(action) => {
               if (action === "auto_resolve_sla" || action === "thermal_throttle_rebalance") {
-                onSelectTab("conflict_queue");
+                handleSelectTab("conflict_queue");
               }
             }}
           />
