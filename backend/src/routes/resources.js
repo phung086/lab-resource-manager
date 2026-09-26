@@ -277,12 +277,19 @@ router.get("/:id", async (req, res, next) => {
         laboratory: { select: resourceLaboratorySelect },
         bookings: { where: { endAt: { gte: now }, status: { in: ACTIVE_BOOKING_STATUSES } }, select: { id: true, startAt: true, endAt: true, status: true }, orderBy: { startAt: "asc" }, take: 10 },
         maintenanceWindows: { where: { endAt: { gte: now }, status: { in: BLOCKING_MAINTENANCE_STATUSES } }, select: { id: true, kind: true, status: true, title: true, startAt: true, endAt: true }, orderBy: { startAt: "asc" }, take: 10 },
+        trainingRequirements: { where: { isMandatory: true }, include: { course: { select: { id: true, code: true, name: true } } } },
         _count: { select: { bookings: true, maintenanceWindows: true, incidents: true, usageLogs: true } }
       }
     });
     if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
     res.json({
       ...serializeCanonicalResource(resource, interval),
+      trainingRequirements: (resource.trainingRequirements || []).map((row) => ({
+        id: row.id,
+        courseId: row.courseId,
+        code: row.course?.code,
+        name: row.course?.name
+      })),
       counts: resource._count,
       upcomingSchedule: {
         bookings: resource.bookings.map((row) => ({ ...row, startAt: row.startAt.toISOString(), endAt: row.endAt.toISOString() })),
