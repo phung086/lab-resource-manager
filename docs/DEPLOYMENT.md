@@ -44,6 +44,22 @@ Recommended/defaulted:
   `LOG_FORMAT`; this avoids accidental host-environment collisions)
 - `VITE_ENABLE_RESEARCH_FEATURES=false`
 
+Optional backend integrations are disabled or unavailable until their complete
+configuration is supplied:
+
+- Email and guest OTP: set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`,
+  and `EMAIL_FROM`. Guest OTP fails closed when SMTP is unavailable; production
+  never reports a development/test email transport as successful.
+- Booking-linked VNPAY: keep `PAYMENTS_ENABLED=false` and
+  `VNPAY_ENABLED=false` unless the approved merchant configuration is ready.
+  When enabled, set `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`,
+  `VNPAY_PAYMENT_URL`, `VNPAY_RETURN_URL`, `VNPAY_IPN_URL`, and
+  `PAYMENT_APP_URL`. Startup validation rejects incomplete or insecure values.
+- Resource media upload: set `MEDIA_S3_ENDPOINT`, `MEDIA_S3_BUCKET`,
+  `MEDIA_S3_REGION`, `MEDIA_S3_ACCESS_KEY_ID`,
+  `MEDIA_S3_SECRET_ACCESS_KEY`, and `MEDIA_PUBLIC_BASE_URL`. Restrict
+  `MEDIA_EXTERNAL_HOSTS` to approved HTTPS image hosts.
+
 The production backend refuses to boot when critical production configuration is invalid.
 
 Telemetry devices do not share an environment secret. Provision a source as an
@@ -180,7 +196,7 @@ After the laboratory exists, resources are created through the canonical resourc
 
 Do not run the legacy importer against production merely because the file exists.
 
-## 7. Research/optional features
+## 7. Optional integrations and research features
 
 Default production/demo:
 
@@ -188,9 +204,10 @@ Default production/demo:
 VITE_ENABLE_RESEARCH_FEATURES=false
 ```
 
-This keeps optional/research surfaces outside the default graduation workflow, including examples such as:
+This keeps research surfaces outside the default graduation workflow, including examples such as:
 
-- payment/VietQR demonstrations;
+- legacy payment/VietQR demonstrations that are not part of the approved
+  booking-linked VNPAY lifecycle;
 - fake QR/door/SSH flows;
 - static AI analytics/advisory;
 - Digital Twin;
@@ -200,6 +217,10 @@ This keeps optional/research surfaces outside the default graduation workflow, i
 - fake audit/policy screens.
 
 Research source can remain in the repository for later approved work, but it is not REQUIRED CORE production functionality.
+
+The approved VNPAY lifecycle is a separate optional product extension. It
+remains disabled by default and becomes available only when both payment flags
+and the validated merchant configuration described in section 1 are present.
 
 ## 8. Telemetry
 
