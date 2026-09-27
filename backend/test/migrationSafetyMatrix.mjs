@@ -51,6 +51,12 @@ function prismaCommand(args, fixtureRoot = canonicalPrismaRoot) {
 }
 
 async function resetDatabase() {
+  const [identity] = await prisma.$queryRawUnsafe(`
+    SELECT current_database() AS database, current_setting('server_version') AS version
+  `);
+  assert.equal(identity.database, databaseName, "connected database must match the requested migration safety fixture");
+  assert.match(identity.database, /(?:^|_)(?:test|ci)(?:_|$)/i, "connected database must have a test or ci marker");
+  assert.match(identity.version, /^16\./, "migration safety matrix requires PostgreSQL 16");
   await prisma.$executeRawUnsafe("DROP EXTENSION IF EXISTS btree_gist CASCADE");
   await prisma.$executeRawUnsafe("DROP SCHEMA IF EXISTS public CASCADE");
   await prisma.$executeRawUnsafe("CREATE SCHEMA public");
