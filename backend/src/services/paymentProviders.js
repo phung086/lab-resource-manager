@@ -34,12 +34,21 @@ const failConfig = () => {
 };
 export function requireVnpay() {
   const c = paymentConfiguration().vnpay;
+  let paymentUrl;
+  try {
+    paymentUrl = new URL(c.url);
+  } catch {
+    failConfig();
+  }
   if (
     !c.enabled ||
     !/^[a-zA-Z0-9]{8}$/.test(c.tmnCode) ||
     !c.secret ||
     c.version !== "2.1.0" ||
-    c.url !== "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+    paymentUrl.protocol !== "https:" ||
+    paymentUrl.username ||
+    paymentUrl.password ||
+    !/(^|\.)vnpay(?:ment)?\.vn$/i.test(paymentUrl.hostname)
   )
     failConfig();
   for (const value of [c.returnUrl, c.ipnUrl]) {
@@ -137,6 +146,7 @@ export function verifyVnpay(query) {
     query.vnp_TmnCode !== c.tmnCode ||
     !/^\d{1,12}$/.test(query.vnp_Amount || "") ||
     !/^[a-zA-Z0-9]{1,100}$/.test(query.vnp_TxnRef || "") ||
+    !/^\d{1,32}$/.test(query.vnp_TransactionNo || "") ||
     !/^\d{2}$/.test(query.vnp_ResponseCode || "") ||
     !/^\d{2}$/.test(query.vnp_TransactionStatus || "")
   )
@@ -154,9 +164,8 @@ export function vietnamPaymentDate(date) {
     .slice(0, 19)
     .replace(/[-T:]/g, "");
 }
-export function buildVnpayUrl(row, ip) {
+export function buildVnpayUrl(row, ip, now = new Date(), expiresAt = new Date(now.getTime() + 15 * 60000)) {
   const c = requireVnpay();
-  const now = new Date();
   const params = {
     vnp_Version: c.version,
     vnp_Command: "pay",
@@ -172,7 +181,7 @@ export function buildVnpayUrl(row, ip) {
     vnp_ReturnUrl: c.returnUrl,
     vnp_IpAddr: ip?.replace(/^::ffff:/, "") || "127.0.0.1",
     vnp_CreateDate: vietnamPaymentDate(now),
-    vnp_ExpireDate: vietnamPaymentDate(new Date(now.getTime() + 15 * 60000)),
+    vnp_ExpireDate: vietnamPaymentDate(expiresAt),
   };
   return `${c.url}?${vnpayQuery(params)}&vnp_SecureHash=${signVnpay(params, c.secret)}`;
 }

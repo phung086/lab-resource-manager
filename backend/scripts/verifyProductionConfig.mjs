@@ -73,4 +73,20 @@ expectFail(
   /LOG_FORMAT/
 );
 
+expectFail(
+  "payments enabled without VNPAY merchant configuration",
+  { PAYMENTS_ENABLED: "true" },
+  /VNPAY_/
+);
+
+expectPass("payments enabled with complete VNPAY configuration", {
+  PAYMENTS_ENABLED: "true",
+  VNPAY_ENABLED: "true",
+  VNPAY_TMN_CODE: "PROD0001",
+  VNPAY_HASH_SECRET: "production-verification-secret-only",
+  VNPAY_PAYMENT_URL: "https://pay.vnpay.vn/vpcpay.html",
+  VNPAY_RETURN_URL: "https://lab.example.edu.vn/api/payments/vnpay/return",
+  VNPAY_IPN_URL: "https://api.lab.example.edu.vn/api/payments/vnpay/ipn"
+});
+
 console.log("Production configuration verification: PASS");

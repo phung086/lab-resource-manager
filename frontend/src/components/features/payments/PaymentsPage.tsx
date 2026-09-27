@@ -16,6 +16,10 @@ type Payment = {
   description: string;
   createdAt: string;
   paidAt: string | null;
+  paymentUrlExpiresAt: string | null;
+  reconciliationStatus: string;
+  reconciliationReason: string | null;
+  reconciledAt: string | null;
   booking: {
     id: string;
     title: string;
@@ -35,6 +39,7 @@ const labels: Record<string, string> = {
   pending: "Chờ thanh toán",
   success: "Đã xác minh thanh toán",
   failed: "Thanh toán thất bại",
+  expired: "Phiên đã hết hạn",
   refunded: "Đã hoàn tiền",
 };
 const money = (v: number) =>
@@ -70,7 +75,8 @@ function PaymentsLedger({
   const [selected, setSelected] = useState<Payment | null>(null),
     [qr, setQr] = useState<Qr | null>(null),
     [url, setUrl] = useState(""),
-    [copied, setCopied] = useState("");
+    [copied, setCopied] = useState(""),
+    [reconciliationReason, setReconciliationReason] = useState("");
   const [receipt, setReceipt] = useState<{
     title: string;
     disclaimer: string;
@@ -129,7 +135,6 @@ function PaymentsLedger({
         method: "POST",
         body: JSON.stringify({
           bookingId: data.get("bookingId"),
-          amount: Number(data.get("amount")),
           description: data.get("description"),
         }),
       });
@@ -171,6 +176,24 @@ function PaymentsLedger({
     setError("");
     try {
       setReceipt(await apiRequest(`/payments/${row.id}/receipt`));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
+  async function resolveReconciliation() {
+    if (!selected || busy || reconciliationReason.trim().length < 3) return;
+    setBusy("reconciliation");
+    setError("");
+    try {
+      const saved = await apiRequest(`/payments/${selected.id}/reconciliation/resolve`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reconciliationReason.trim() }),
+      });
+      setSelected(saved);
+      setReconciliationReason("");
+      await load();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -253,17 +276,6 @@ function PaymentsLedger({
               </select>
             </label>
             <label>
-              Số tiền (VND)
-              <input
-                name="amount"
-                type="number"
-                min="1"
-                max="9999999999"
-                step="1"
-                required
-              />
-            </label>
-            <label>
               Nội dung yêu cầu
               <input
                 name="description"
@@ -273,7 +285,7 @@ function PaymentsLedger({
               />
             </label>
             <p>
-              Lịch có bảng giá đã tự tạo khoản thu khi được xác nhận. Chỉ lập thủ công cho khoản thu đã được xác định và chưa có giao dịch.
+              Số tiền luôn lấy từ phí VND đã chốt trên booking. Lịch miễn phí hoặc chưa được duyệt không thể tạo khoản thu.
             </p>
             <button className="primary-button" disabled={!!busy}>
               Tạo yêu cầu
@@ -369,6 +381,12 @@ function PaymentsLedger({
                     <dd>{formatVietnamDateTime(row.paidAt)}</dd>
                   </>
                 )}
+                {row.reconciliationStatus !== "none" && (
+                  <>
+                    <dt>Đối soát</dt>
+                    <dd>{row.reconciliationStatus === "manual_review" ? "Cần xử lý thủ công" : "Đã xử lý"}</dd>
+                  </>
+                )}
               </dl>
               <p>{row.description}</p>
               <div className="payment-actions">
@@ -392,6 +410,18 @@ function PaymentsLedger({
                     onClick={() => openReceipt(row)}
                   >
                     Mở biên nhận
+                  </button>
+                )}
+                {admin && row.reconciliationStatus === "manual_review" && (
+                  <button
+                    className="primary-button"
+                    onClick={() => {
+                      setSelected(row);
+                      setReconciliationReason("");
+                      setError("");
+                    }}
+                  >
+                    Xử lý đối soát
                   </button>
                 )}
               </div>
@@ -431,6 +461,12 @@ function PaymentsLedger({
                 : labels[selected.status]}
             </span>
             <p className="payment-ref">Mã giao dịch · {selected.txnRef}</p>
+            {selected.reconciliationStatus !== "none" && (
+              <div className="alert warning" role="status">
+                <strong>{selected.reconciliationStatus === "manual_review" ? "Cần đối soát thủ công" : "Đối soát đã được xử lý"}</strong>
+                <p>{selected.reconciliationReason || "Giao dịch cần quản trị viên kiểm tra."}</p>
+              </div>
+            )}
             <ol className="payment-timeline" aria-label="Tiến trình thanh toán">
               <li className="is-complete"><strong>Yêu cầu đã tạo</strong><time dateTime={selected.createdAt}>{formatVietnamDateTime(selected.createdAt)}</time></li>
               <li className={selected.provider !== "unselected" ? "is-complete" : ""}><strong>{selected.provider !== "unselected" ? "Đã chọn phương thức" : "Chọn phương thức"}</strong><span>{selected.provider === "vnpay" ? "VNPAY Sandbox" : selected.provider === "vietqr" ? "VietQR" : "Chưa khởi tạo"}</span></li>
@@ -549,6 +585,28 @@ function PaymentsLedger({
               >
                 Mở biên nhận
               </button>
+            )}
+            {admin && selected.reconciliationStatus === "manual_review" && (
+              <div className="booking-form">
+                <label>
+                  Kết quả xử lý thủ công
+                  <textarea
+                    value={reconciliationReason}
+                    minLength={3}
+                    maxLength={500}
+                    onChange={(event) => setReconciliationReason(event.target.value)}
+                    placeholder="Ghi bằng chứng xử lý hoặc quyết định hoàn tiền ngoài hệ thống"
+                  />
+                </label>
+                <button
+                  className="primary-button"
+                  disabled={!!busy || reconciliationReason.trim().length < 3}
+                  onClick={() => void resolveReconciliation()}
+                >
+                  Đánh dấu đã xử lý
+                </button>
+                <small>Thao tác này không gọi API hoàn tiền VNPAY và không thay đổi trạng thái booking.</small>
+              </div>
             )}
           </div>
         )}

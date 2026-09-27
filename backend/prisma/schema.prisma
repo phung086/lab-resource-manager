@@ -142,7 +142,14 @@ enum PaymentStatus {
   pending
   success
   failed
+  expired
   refunded
+}
+
+enum PaymentReconciliationStatus {
+  none
+  manual_review
+  resolved
 }
 
 enum ShipmentStatus {
@@ -289,6 +296,7 @@ model User {
   reportedIncidents            Incident[]            @relation("IncidentReporter")
   assignedIncidents            Incident[]            @relation("IncidentAssignee")
   payments                     PaymentTransaction[]
+  reconciledPayments           PaymentTransaction[]  @relation("PaymentReconciledBy")
   shipments                    ShipmentOrder[]
   requirements                 ResourceRequirement[]
   behaviorScore                UserBehaviorScore?
@@ -865,29 +873,37 @@ model AiMessage {
 }
 
 model PaymentTransaction {
-  id               String        @id
-  bookingId        String?
-  userId           String
-  txnRef           String        @unique
-  amount           Float
-  currency         String        @default("VND")
-  provider         String        @default("vnpay")
-  status           PaymentStatus @default(pending)
-  bankCode         String?
-  cardType         String?
-  vnpResponseCode  String?
-  vnpTransactionNo String?
-  paymentUrl       String?       @db.Text
-  paidAt           DateTime?
-  description      String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @default(now()) @updatedAt
-  booking          Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id                   String                      @id
+  bookingId            String?
+  userId               String
+  txnRef               String                      @unique
+  amount               Float
+  currency             String                      @default("VND")
+  provider             String                      @default("vnpay")
+  status               PaymentStatus               @default(pending)
+  bankCode             String?
+  cardType             String?
+  vnpResponseCode      String?
+  vnpTransactionNo     String?                     @unique
+  paymentUrl           String?                     @db.Text
+  paymentUrlCreatedAt  DateTime?
+  paymentUrlExpiresAt  DateTime?
+  paidAt               DateTime?
+  description          String?
+  reconciliationStatus PaymentReconciliationStatus @default(none)
+  reconciliationReason String?
+  reconciledAt         DateTime?
+  reconciledById       String?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @default(now()) @updatedAt
+  booking              Booking?                    @relation(fields: [bookingId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  user                 User                        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reconciledBy         User?                       @relation("PaymentReconciledBy", fields: [reconciledById], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([userId])
   @@index([bookingId])
   @@index([status])
+  @@index([reconciliationStatus])
   @@map("payment_transactions")
 }
 

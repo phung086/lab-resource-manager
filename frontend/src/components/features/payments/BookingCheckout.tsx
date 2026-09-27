@@ -5,7 +5,7 @@ import { formatVietnamDateTime } from "../../../utils/timezone";
 import "./payments.css";
 
 type Booking = { id: string; title: string; status: string; feeAmountVnd: number; startAt: string; endAt: string; resource: { code: string; name: string } };
-type Charge = { id: string; amount: number; currency: string; status: string; provider: string; txnRef: string; paidAt: string | null };
+type Charge = { id: string; amount: number; currency: string; status: string; provider: string; txnRef: string; paidAt: string | null; reconciliationStatus: string; reconciliationReason: string | null };
 const money = (amount: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
 export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: string; onClearBooking?: () => void }) {
@@ -25,7 +25,7 @@ export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: stri
         apiRequest("/payments/my")
       ]);
       setBooking(bookingRow);
-      setCharge(charges.find((row: Charge) => row.status === "success") || charges.find((row: Charge) => row.status === "pending") || charges[0] || null);
+      setCharge(charges.find((row: Charge) => row.status === "success") || charges.find((row: Charge) => row.status === "pending") || charges.find((row: Charge) => ["failed", "expired"].includes(row.status)) || charges[0] || null);
       setVnpayReady(Boolean(paymentList.providers?.vnpay));
     } catch (cause: any) { setError(cause.message || "Không thể tải lịch đặt LAB."); }
     finally { setLoading(false); }
@@ -38,8 +38,9 @@ export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: stri
     setRedirecting(true); setError("");
     try {
       const result = await apiRequest(`/payments/${charge.id}/vnpay`, { method: "POST", body: "{}" });
+      setCharge(result.transaction);
       const target = new URL(result.paymentUrl);
-      if (target.origin !== "https://sandbox.vnpayment.vn" || target.pathname !== "/paymentv2/vpcpay.html" || target.searchParams.get("vnp_BankCode") !== "VNPAYQR") {
+      if (target.protocol !== "https:" || !/(^|\.)vnpay(?:ment)?\.vn$/i.test(target.hostname) || target.searchParams.get("vnp_BankCode") !== "VNPAYQR") {
         throw new Error("Địa chỉ thanh toán VNPAY không hợp lệ. Vui lòng liên hệ cán bộ lab.");
       }
       window.location.assign(target.toString());
@@ -63,10 +64,12 @@ export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: stri
       </dl>
       {booking.feeAmountVnd === 0 ? <div className="alert" role="status">Lịch đặt này không có phí sử dụng, nên không có QR thanh toán. Nếu tài nguyên có bảng giá mới, mức giá đó chỉ áp dụng cho booking tạo sau khi bảng giá được lưu.</div>
         : booking.status === "PENDING_APPROVAL" ? <div className="alert" role="status">Yêu cầu đang chờ cán bộ lab duyệt. Sau khi được duyệt, hệ thống tạo khoản thu và bạn có thể thanh toán tại đây.</div>
+        : ["REJECTED", "CANCELLED"].includes(booking.status) && charge?.status === "success" && charge.reconciliationStatus === "manual_review" ? <div className="alert warning" role="status">Khoản thanh toán đã được VNPAY xác minh sau khi booking kết thúc. Booking vẫn {booking.status === "REJECTED" ? "bị từ chối" : "đã hủy"}; giao dịch đang chờ quản trị viên đối soát và xử lý hoàn tiền thủ công.</div>
         : ["REJECTED", "CANCELLED"].includes(booking.status) ? <div className="alert" role="status">Lịch đặt đã {booking.status === "REJECTED" ? "bị từ chối" : "hủy"}. Không thể thanh toán booking này.</div>
         : charge?.status === "success" ? <div className="alert success" role="status"><ShieldCheck size={18} /> Đã xác minh thanh toán {money(charge.amount)} lúc {charge.paidAt ? formatVietnamDateTime(charge.paidAt) : "—"}.</div>
-        : charge?.status === "pending" ? <div className="booking-checkout-payment">
+        : charge && ["pending", "failed", "expired"].includes(charge.status) ? <div className="booking-checkout-payment">
           <h3>Thanh toán bằng VNPAY-QR</h3>
+          {charge.status !== "pending" && <p className="alert warning" role="status">Phiên trước {charge.status === "expired" ? "đã hết hạn" : "không thành công"}. Hệ thống sẽ tạo một phiên mới có mã giao dịch riêng.</p>}
           <p>Chọn thanh toán để mở trang bảo mật của VNPAY. Mã QR sẽ được VNPAY hiển thị tại đó; bạn quét bằng ứng dụng ngân hàng hỗ trợ VNPAY-QR. Thông tin thẻ hoặc tài khoản ngân hàng được nhập trên trang VNPAY.</p>
           <button type="button" className="primary-button" disabled={!vnpayReady || redirecting || charge.provider === "vietqr"} onClick={pay}><ExternalLink size={17} /> {redirecting ? "Đang chuyển sang VNPAY…" : `Thanh toán ${money(charge.amount)} qua VNPAY-QR`}</button>
           {!vnpayReady && <p className="alert warning" role="status">Cổng VNPAY chưa được cấu hình trên máy chủ. Khoản thu đã lưu nhưng chưa thể tạo QR thanh toán; vui lòng liên hệ cán bộ lab.</p>}

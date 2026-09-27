@@ -17,11 +17,18 @@ const include = {
       title: true,
       status: true,
       feeAmountVnd: true,
-      resource: { select: { id: true, name: true, code: true } },
+      resource: { select: { id: true, name: true, code: true, laboratoryId: true } },
     },
   },
   user: { select: { id: true, fullName: true } },
 };
+const VNPAY_SESSION_TTL_MS = 15 * 60 * 1000;
+const RETRYABLE_PAYMENT_STATUSES = new Set(["failed", "expired"]);
+function publicPayment(row) {
+  if (!row) return row;
+  const { paymentUrl: _paymentUrl, ...safe } = row;
+  return safe;
+}
 const missing = () =>
   new HttpError(
     404,
@@ -47,13 +54,64 @@ function assertPending(row) {
         : "PAYMENT_INVALID_STATE",
     );
 }
+
+function replacementChargeData(row) {
+  return {
+    id: crypto.randomUUID(),
+    bookingId: row.bookingId,
+    userId: row.userId,
+    txnRef: crypto.randomBytes(10).toString("hex").toUpperCase(),
+    amount: row.amount,
+    currency: row.currency,
+    provider: "unselected",
+    status: "pending",
+    description: row.description,
+  };
+}
+
+async function notifyPayment(tx, row, event, { reconciliation = false, now = new Date() } = {}) {
+  const definitions = [{
+    userId: row.userId,
+    key: `payment:${row.id}:${event}:owner`,
+    title: event === "SUCCESS" ? "Thanh toán đã được xác minh" : event === "FAILED" ? "Thanh toán chưa thành công" : "Phiên thanh toán đã hết hạn",
+    message: `${row.txnRef} · ${Math.trunc(row.amount).toLocaleString("vi-VN")} VND`,
+    severity: event === "SUCCESS" ? "success" : "warning",
+  }];
+  if (reconciliation) {
+    const admins = await tx.user.findMany({ where: { role: "ADMIN", isActive: true }, select: { id: true } });
+    definitions.push(...admins.map((admin) => ({
+      userId: admin.id,
+      key: `payment:${row.id}:MANUAL_REVIEW:${admin.id}`,
+      title: "Thanh toán cần đối soát thủ công",
+      message: `${row.txnRef} · booking đã kết thúc trước khi VNPAY xác nhận thành công`,
+      severity: "warning",
+    })));
+  }
+  for (const definition of definitions) {
+    await tx.notification.upsert({
+      where: { dedupeKey: definition.key },
+      update: {},
+      create: {
+        id: crypto.randomUUID(),
+        userId: definition.userId,
+        title: definition.title,
+        message: definition.message,
+        messageParams: { paymentId: row.id, bookingId: row.bookingId, event },
+        severity: definition.severity,
+        channel: "in_app",
+        sentAt: now,
+        dedupeKey: definition.key,
+      },
+    });
+  }
+}
 export async function getPayment(id, actor) {
   const row = await prisma.paymentTransaction.findUnique({
     where: { id },
     include,
   });
   assertOwner(row, actor);
-  return row;
+  return publicPayment(row);
 }
 export async function listPayments(actor, filters = {}, admin = false) {
   if (admin && actor.role !== "ADMIN")
@@ -87,13 +145,14 @@ export async function listPayments(actor, filters = {}, admin = false) {
       ...(filters.from ? { gte: new Date(filters.from) } : {}),
       ...(filters.to ? { lte: new Date(filters.to) } : {}),
     };
-  return {
-    transactions: await prisma.paymentTransaction.findMany({
+  const transactions = await prisma.paymentTransaction.findMany({
       where,
       include,
       orderBy: { createdAt: "desc" },
       take: 100,
-    }),
+    });
+  return {
+    transactions: transactions.map(publicPayment),
     providers: providerAvailability(),
     limit: 100,
   };
@@ -108,11 +167,12 @@ export async function bookingPayments(bookingId, actor) {
     (actor.role !== "ADMIN" && booking.requestedById !== actor.id)
   )
     throw missing();
-  return prisma.paymentTransaction.findMany({
+  const rows = await prisma.paymentTransaction.findMany({
     where: { bookingId },
     include,
     orderBy: { createdAt: "desc" },
   });
+  return rows.map(publicPayment);
 }
 export async function createCharge(actor, data) {
   if (actor.role !== "ADMIN")
@@ -135,7 +195,11 @@ export async function createCharge(actor, data) {
         undefined,
         "BOOKING_NOT_FOUND",
       );
-    if (booking.feeAmountVnd > 0 && (booking.status !== "CONFIRMED" || data.amount !== booking.feeAmountVnd)) {
+    if (
+      booking.feeAmountVnd <= 0 ||
+      booking.status !== "CONFIRMED" ||
+      (data.amount != null && data.amount !== booking.feeAmountVnd)
+    ) {
       throw new HttpError(409, "Khoản thu phải khớp phí đã chốt và lịch đã duyệt.", undefined, "BOOKING_PAYMENT_INVALID");
     }
     if (
@@ -154,7 +218,9 @@ export async function createCharge(actor, data) {
       );
     const transaction = await tx.paymentTransaction.create({
       data: {
-        ...data,
+        bookingId: data.bookingId,
+        description: data.description,
+        amount: booking.feeAmountVnd,
         id: crypto.randomUUID(),
         userId: booking.requestedById,
         txnRef: crypto.randomBytes(10).toString("hex").toUpperCase(),
@@ -170,7 +236,7 @@ export async function createCharge(actor, data) {
       targetType: AUDIT_TARGET_TYPES.PAYMENT,
       targetId: transaction.id,
       afterState: {
-        amount: data.amount,
+        amount: booking.feeAmountVnd,
         bookingId: data.bookingId,
         status: "pending"
       },
@@ -186,15 +252,44 @@ export async function initiatePayment(id, actor, provider, ip) {
   if (provider === "vietqr") requireVietqr();
   const row = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment:${id}`}))::text`;
-    const current = await tx.paymentTransaction.findUnique({
+    let current = await tx.paymentTransaction.findUnique({
       where: { id },
       include,
     });
     assertOwner(current, actor, false);
-    assertPending(current);
     if (current.booking && ["PENDING_APPROVAL", "REJECTED", "CANCELLED"].includes(current.booking.status)) {
       throw new HttpError(409, "Lịch đặt chưa được duyệt hoặc đã kết thúc yêu cầu; không thể thanh toán.", undefined, "BOOKING_PAYMENT_INVALID");
     }
+    if (current.status === "success") assertPending(current);
+
+    const now = new Date();
+    const sessionExpired = current.status === "pending" && current.paymentUrl &&
+      (!current.paymentUrlExpiresAt || current.paymentUrlExpiresAt <= now);
+    if (sessionExpired) {
+      await tx.paymentTransaction.update({
+        where: { id: current.id },
+        data: { status: "expired" },
+      });
+      await notifyPayment(tx, current, "EXPIRED", { now });
+      current = { ...current, status: "expired" };
+    }
+
+    if (RETRYABLE_PAYMENT_STATUSES.has(current.status)) {
+      const active = current.bookingId
+        ? await tx.paymentTransaction.findFirst({
+            where: { bookingId: current.bookingId, status: { in: ["pending", "success"] } },
+            include,
+            orderBy: { createdAt: "desc" },
+          })
+        : null;
+      if (active?.status === "success") assertPending(active);
+      current = active || await tx.paymentTransaction.create({
+        data: replacementChargeData(current),
+        include,
+      });
+    }
+
+    assertPending(current);
     // A sent payment cannot switch providers: an older signed callback may still arrive.
     if (!["unselected", provider].includes(current.provider))
       throw new HttpError(
@@ -203,11 +298,24 @@ export async function initiatePayment(id, actor, provider, ip) {
         undefined,
         "PAYMENT_PROVIDER_LOCKED",
       );
-    if (current.provider === provider && current.paymentUrl) return current;
-    const url = provider === "vnpay" ? buildVnpayUrl(current, ip) : null;
+    if (
+      current.provider === provider &&
+      current.paymentUrl &&
+      current.paymentUrlExpiresAt &&
+      current.paymentUrlExpiresAt > now
+    ) return current;
+    const expiresAt = new Date(now.getTime() + VNPAY_SESSION_TTL_MS);
+    const url = provider === "vnpay" ? buildVnpayUrl(current, ip, now, expiresAt) : null;
     const updated = await tx.paymentTransaction.updateMany({
-      where: { id, status: "pending", provider: current.provider },
-      data: { provider, ...(url ? { paymentUrl: url } : {}) },
+      where: { id: current.id, status: "pending", provider: current.provider },
+      data: {
+        provider,
+        ...(url ? {
+          paymentUrl: url,
+          paymentUrlCreatedAt: now,
+          paymentUrlExpiresAt: expiresAt,
+        } : {}),
+      },
     });
     if (updated.count !== 1)
       throw new HttpError(
@@ -216,34 +324,14 @@ export async function initiatePayment(id, actor, provider, ip) {
         undefined,
         "PAYMENT_INVALID_STATE",
       );
-    return tx.paymentTransaction.findUnique({ where: { id }, include });
+    return tx.paymentTransaction.findUnique({ where: { id: current.id }, include });
   });
   return provider === "vietqr"
-    ? { transaction: row, vietqr: await buildVietqr(row) }
-    : { transaction: row, paymentUrl: row.paymentUrl, mode: "SANDBOX" };
+    ? { transaction: publicPayment(row), vietqr: await buildVietqr(row) }
+    : { transaction: publicPayment(row), paymentUrl: row.paymentUrl, mode: "SANDBOX" };
 }
 export async function processVnpayIpn(query) {
   verifyVnpay(query);
-  const row = await prisma.paymentTransaction.findUnique({
-    where: { txnRef: query.vnp_TxnRef },
-  });
-  if (!row) throw missing();
-  if (row.provider !== "vnpay" || !row.paymentUrl || row.currency !== "VND")
-    throw new HttpError(
-      400,
-      "Provider giao dịch không khớp.",
-      undefined,
-      "INVALID_PROVIDER_CALLBACK",
-    );
-  if (Number(query.vnp_Amount) !== row.amount * 100)
-    throw new HttpError(
-      400,
-      "Số tiền callback không khớp.",
-      undefined,
-      "AMOUNT_MISMATCH",
-    );
-  if (row.status !== "pending")
-    return { RspCode: "02", Message: "Order already confirmed" };
   const success =
     query.vnp_ResponseCode === "00" && query.vnp_TransactionStatus === "00";
   if (
@@ -273,20 +361,121 @@ export async function processVnpayIpn(query) {
       undefined,
       "INVALID_PROVIDER_CALLBACK",
     );
-  const update = await prisma.paymentTransaction.updateMany({
-    where: { id: row.id, provider: "vnpay", status: "pending" },
-    data: {
-      status: success ? "success" : "failed",
-      paidAt,
-      vnpResponseCode: query.vnp_ResponseCode,
-      vnpTransactionNo: query.vnp_TransactionNo || null,
-      bankCode: query.vnp_BankCode || null,
-      cardType: query.vnp_CardType || null,
-    },
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`vnpay:${query.vnp_TxnRef}`}))::text`;
+    const row = await tx.paymentTransaction.findUnique({
+      where: { txnRef: query.vnp_TxnRef },
+      include,
+    });
+    if (!row) throw missing();
+    if (row.provider !== "vnpay" || !row.paymentUrl || row.currency !== "VND")
+      throw new HttpError(
+        400,
+        "Provider giao dịch không khớp.",
+        undefined,
+        "INVALID_PROVIDER_CALLBACK",
+      );
+    if (!Number.isSafeInteger(row.amount) || Number(query.vnp_Amount) !== row.amount * 100)
+      throw new HttpError(
+        400,
+        "Số tiền callback không khớp.",
+        undefined,
+        "AMOUNT_MISMATCH",
+      );
+    if (row.status === "success" || row.status === "refunded")
+      return { RspCode: "02", Message: "Order already confirmed" };
+
+    if (success) {
+      const transactionNoOwner = await tx.paymentTransaction.findFirst({
+        where: { vnpTransactionNo: query.vnp_TransactionNo, id: { not: row.id } },
+        select: { id: true },
+      });
+      if (transactionNoOwner)
+        throw new HttpError(400, "Mã giao dịch provider đã được sử dụng.", undefined, "INVALID_PROVIDER_CALLBACK");
+      const otherSuccess = row.bookingId
+        ? await tx.paymentTransaction.findFirst({
+            where: { bookingId: row.bookingId, status: "success", id: { not: row.id } },
+            select: { id: true },
+          })
+        : null;
+      const terminalBooking = row.booking && ["CANCELLED", "REJECTED"].includes(row.booking.status);
+      const reconciliation = terminalBooking || Boolean(otherSuccess);
+      const reconciliationReason = terminalBooking
+        ? `Provider success received after booking entered ${row.booking.status}.`
+        : otherSuccess
+          ? "Provider success duplicates an existing settled payment for the booking."
+          : null;
+      const saved = await tx.paymentTransaction.update({
+        where: { id: row.id },
+        data: {
+          status: "success",
+          paidAt,
+          vnpResponseCode: query.vnp_ResponseCode,
+          vnpTransactionNo: query.vnp_TransactionNo,
+          bankCode: query.vnp_BankCode || null,
+          cardType: query.vnp_CardType || null,
+          ...(reconciliation ? {
+            reconciliationStatus: "manual_review",
+            reconciliationReason,
+          } : {}),
+        },
+      });
+      await notifyPayment(tx, saved, "SUCCESS", { reconciliation, now: new Date() });
+      return { RspCode: "00", Message: "Confirm Success" };
+    }
+
+    if (row.status !== "pending")
+      return { RspCode: "02", Message: "Order already confirmed" };
+    const saved = await tx.paymentTransaction.update({
+      where: { id: row.id },
+      data: {
+        status: "failed",
+        paidAt: null,
+        vnpResponseCode: query.vnp_ResponseCode,
+        vnpTransactionNo: query.vnp_TransactionNo || null,
+        bankCode: query.vnp_BankCode || null,
+        cardType: query.vnp_CardType || null,
+      },
+    });
+    await notifyPayment(tx, saved, "FAILED");
+    return { RspCode: "00", Message: "Confirm Success" };
   });
-  return update.count
-    ? { RspCode: "00", Message: "Confirm Success" }
-    : { RspCode: "02", Message: "Order already confirmed" };
+}
+
+export async function resolvePaymentReconciliation(id, actor, reason) {
+  if (actor.role !== "ADMIN")
+    throw new HttpError(403, "Chỉ quản trị viên được xử lý đối soát.", undefined, "PAYMENT_FORBIDDEN");
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM payment_transactions WHERE id = ${id} FOR UPDATE`;
+    const row = await tx.paymentTransaction.findUnique({ where: { id }, include });
+    if (!row) throw missing();
+    if (row.reconciliationStatus !== "manual_review")
+      throw new HttpError(409, "Giao dịch không có ngoại lệ đối soát đang mở.", undefined, "PAYMENT_RECONCILIATION_INVALID_STATE");
+    const now = new Date();
+    const saved = await tx.paymentTransaction.update({
+      where: { id },
+      data: {
+        reconciliationStatus: "resolved",
+        reconciliationReason: reason,
+        reconciledAt: now,
+        reconciledById: actor.id,
+      },
+      include,
+    });
+    await recordSystemAuditEvent(tx, {
+      actor,
+      action: AUDIT_ACTIONS.PAYMENT_RECONCILIATION_RESOLVED,
+      targetType: AUDIT_TARGET_TYPES.PAYMENT,
+      targetId: id,
+      labId: row.booking?.resource?.laboratoryId || null,
+      resourceId: row.booking?.resource?.id || null,
+      beforeState: { paymentStatus: row.status, reconciliationStatus: row.reconciliationStatus },
+      afterState: { paymentStatus: saved.status, reconciliationStatus: saved.reconciliationStatus },
+      reason,
+      metadata: { bookingId: row.bookingId, source: "admin_manual_reconciliation" },
+    });
+    return publicPayment(saved);
+  });
 }
 export async function paymentReceipt(id, actor) {
   const row = await getPayment(id, actor);
@@ -300,7 +489,7 @@ export async function paymentReceipt(id, actor) {
   return {
     title: "Biên nhận thanh toán nội bộ",
     disclaimer: "Không thay thế hóa đơn điện tử/tài chính theo quy định.",
-    transaction: row,
+    transaction: publicPayment(row),
     generatedAt: new Date().toISOString(),
   };
 }

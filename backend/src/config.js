@@ -65,6 +65,26 @@ function validateRuntimeConfig() {
     if (adminPassword.length < 12 || isPlaceholder(adminPassword)) {
       failures.push("ADMIN_PASSWORD must be at least 12 characters and not use an example value.");
     }
+    if (process.env.PAYMENTS_ENABLED === "true") {
+      const tmnCode = String(process.env.VNPAY_TMN_CODE || "");
+      const hashSecret = String(process.env.VNPAY_HASH_SECRET || "");
+      if (process.env.VNPAY_ENABLED !== "true") failures.push("VNPAY_ENABLED must be true when PAYMENTS_ENABLED is true.");
+      if (!/^[A-Za-z0-9]{8}$/.test(tmnCode)) failures.push("VNPAY_TMN_CODE must be an 8-character merchant code.");
+      if (hashSecret.length < 16 || isPlaceholder(hashSecret)) failures.push("VNPAY_HASH_SECRET must be configured securely.");
+      for (const [name, value] of [
+        ["VNPAY_PAYMENT_URL", process.env.VNPAY_PAYMENT_URL],
+        ["VNPAY_RETURN_URL", process.env.VNPAY_RETURN_URL],
+        ["VNPAY_IPN_URL", process.env.VNPAY_IPN_URL],
+      ]) {
+        try {
+          const url = new URL(String(value || ""));
+          if (url.protocol !== "https:" || url.username || url.password) throw new Error("invalid");
+          if (name === "VNPAY_PAYMENT_URL" && !/(^|\.)vnpay(?:ment)?\.vn$/i.test(url.hostname)) throw new Error("invalid");
+        } catch {
+          failures.push(`${name} must be a secure HTTPS URL.`);
+        }
+      }
+    }
 
     if (failures.length) {
       throw new Error(`Production configuration is invalid: ${failures.join(" ")}`);
