@@ -54,7 +54,7 @@ export async function requireAuth(req, res, next) {
     user = await prisma.user.findUnique({ where: { id: payload.sub } });
   } catch (dbErr) {
     // Database failure must NOT fall back to mock/memory — explicit error
-    console.error("Auth DB lookup failed:", dbErr.message);
+    console.error("Auth DB lookup failed", { code: dbErr?.code || "UNKNOWN" });
     return res.status(503).json({ error: { code: "DATABASE_UNAVAILABLE", message: "Authentication service unavailable" } });
   }
 
@@ -98,22 +98,29 @@ export async function optionalAuth(req, res, next) {
     return next();
   }
 
+  let payload;
   try {
-    const payload = jwt.verify(token, config.jwtSecret, { algorithms: ["HS256"] });
-    if (payload?.sub) {
-      const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-      if (user && user.isActive && isCanonicalRole(user.role)) {
-        req.user = user;
-      } else {
-        req.user = null;
-      }
-    } else {
-      req.user = null;
-    }
+    payload = jwt.verify(token, config.jwtSecret, { algorithms: ["HS256"] });
   } catch {
     req.user = null;
+    return next();
   }
-  next();
+
+  if (!payload?.sub) {
+    req.user = null;
+    return next();
+  }
+
+  let user;
+  try {
+    user = await prisma.user.findUnique({ where: { id: payload.sub } });
+  } catch (dbErr) {
+    console.error("Optional auth DB lookup failed", { code: dbErr?.code || "UNKNOWN" });
+    return res.status(503).json({ error: { code: "DATABASE_UNAVAILABLE", message: "Authentication service unavailable" } });
+  }
+
+  req.user = user && user.isActive && isCanonicalRole(user.role) ? user : null;
+  return next();
 }
 
 /**
