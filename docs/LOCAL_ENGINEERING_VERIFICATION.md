@@ -680,4 +680,128 @@ Restructured `WorkspaceHome.tsx` into 6 actionable priority buckets:
 | Frontend Build | `npm run build` | PASS (~3.28s) |
 | Browser E2E & Screenshots | `test_phase_g_e2e.mjs` (Playwright) | PASS (11 screens captured across desktop & mobile) |
 
+# Phase H baseline — payment lifecycle before hardening (2026-09-26)
+
+Baseline branch `feat/ux-product-workflow-refinement` was verified at
+`d850201d11d60797718fc9433e82b233837c8754` before runtime changes. The clean
+PostgreSQL 16 database was
+`lab_resources_payment_ai_test_phaseh_baseline_20260926` on the disposable
+`lrm-transform-tests-20260922` container. Canonical migration deployment and
+the existing payment/MCP integration suite passed 10/10. The following matrix
+records the behavior observed from that exact source and database-backed suite.
+
+| Scenario | Booking state | Payment state | DB effect | Current result | Expected Phase H result |
+| --- | --- | --- | --- | --- | --- |
+| A. Free booking | `CONFIRMED` or `PENDING_APPROVAL` by policy | none | no payment row | correct in automatic booking flow | preserve; no zero-value charge or blocker |
+| B. Paid booking without approval | `CONFIRMED` | `pending` | one booking-linked charge created with snapshotted fee | correct | preserve authoritative amount |
+| C. Paid booking requiring approval | `PENDING_APPROVAL` then `CONFIRMED` | none before approval; `pending` after approval | charge created in approval transaction | correct | preserve approval-before-payment |
+| D. Create VNPAY session | `CONFIRMED` | `pending` | provider and signed URL stored | correct signature/amount, but no persisted expiry | persist bounded session lifetime |
+| E. Repeat session creation | `CONFIRMED` | `pending` | no new row; stored URL returned | idempotent but URL is reused forever | reuse only while unexpired; one replacement under concurrency |
+| F. Signed browser return reporting success | unchanged | unchanged | read only | correctly presents a link and waits for IPN | preserve non-authoritative return |
+| G. Signed browser return reporting failure | unchanged | unchanged | read only | correctly does not write, with the same neutral presentation | preserve non-authoritative return and refresh server state |
+| H. Valid success IPN | unchanged | `pending -> success` | provider evidence and `paidAt` stored | correct for pending payment | preserve and add notification/reconciliation checks |
+| I. Invalid IPN signature | unchanged | unchanged | none | provider response `97` | preserve fail-closed behavior |
+| J. IPN amount mismatch | unchanged | unchanged | none | provider response `04` | preserve exact authoritative VND match |
+| K. Unknown `txnRef` | unchanged | none | none | provider response `01` | preserve non-leaking rejection |
+| L. Duplicate success IPN | unchanged | `success` | no second update | first response `00`, retry `02` | preserve idempotency and deduplicated side effects |
+| M. Booking cancelled before success IPN | `CANCELLED` | `pending -> success` | payment settles; booking stays cancelled | financial exception is not recorded | keep booking cancelled and persist manual-review/refund-required reconciliation |
+| N. Payment session expiry | `CONFIRMED` | `pending` | none | signed URL remains reusable indefinitely | expire and replace the provider session safely |
+| O. User queries another user's payment | unchanged | unchanged | none | direct lookup returns non-enumerating `404`; scoped list is empty | preserve |
+| P. Staff/admin visibility | unchanged | unchanged | none | ADMIN has global ledger; LAB_STAFF is denied even when assigned | preserve current approved scope unless policy changes |
+
+Additional baseline findings:
+
+- `PaymentTransaction.amount` is Prisma `Float`, while every booking fee and
+  accepted charge is an integer VND value. Current booking pricing caps the
+  amount at 2,000,000,000 VND, well inside exact IEEE-754 integer range. No
+  fractional amount is generated. A money-column rewrite is therefore not
+  justified in this phase; application and migration constraints will keep VND
+  integral.
+- `failed` is currently terminal at the application layer, so a later valid
+  success IPN cannot settle it. Conversely, `success` is already protected from
+  downgrade by later failure callbacks.
+- QueryDr and provider refund calls are absent. Existing tests use a signed,
+  isolated provider fixture and do not prove a live VNPAY Sandbox round trip.
+- Production configuration validates the core runtime but does not yet require
+  all VNPAY variables when `PAYMENTS_ENABLED=true`.
+
+# Phase H verification — payment hardening and reconciliation (2026-09-28)
+
+## Corrected lifecycle
+
+- The immutable booking fee snapshot is the only charge amount authority.
+- Positive-fee approval-required bookings cannot initiate payment before
+  `CONFIRMED`; free bookings create no payment transaction.
+- Hosted sessions expire after 15 minutes. A valid pending session can be
+  reused, an expired session becomes evidence with status `expired`, and a new
+  transaction/reference is created. A partial unique index plus transaction
+  lock protects the one-active-pending-session invariant.
+- Browser return is read/presentation only. Signed IPN processing validates the
+  merchant, amount, transaction reference, provider transaction number,
+  response code, and transaction status inside a database transaction.
+- Settlement is monotonic: duplicate success is idempotent, success cannot be
+  downgraded, and final signed success may upgrade a prior failure/expiry.
+- Late success after `CANCELLED` or `REJECTED` preserves the booking status and
+  stores `manual_review`. ADMIN resolution requires a reason and emits a
+  transaction-coupled `PAYMENT_RECONCILIATION_RESOLVED` audit event. It is an
+  internal review record, not a provider refund.
+- Owner/ADMIN payment projection removes stored signed checkout URLs. Foreign
+  users receive a non-enumerating response, staff remain denied under the
+  existing approved scope, and callback query strings are skipped by access
+  logging.
+
+## PostgreSQL 16 evidence
+
+The main Phase H integration database was
+`lab_resources_phase_h_payment_test_final_20260926`, an isolated disposable
+database on `lrm-transform-tests-20260922`. The 24 required cases passed. The
+browser fixture database was
+`lab_resources_phase_h_payment_test_browser_20260926`; signed test IPN refresh
+and the late-cancellation manual-review UI passed in headless Chromium. The
+fixture uses a test-only HMAC secret and does not claim a real provider result.
+
+Additional isolated databases and results:
+
+| Gate | Database | Result |
+| --- | --- | --- |
+| Migration safety | `lab_resources_phase_h_migration_test_20260926` on disposable PostgreSQL 16 container `lrm-local-engineering-pg16-test-20260925` | PASS 14/14 |
+| Existing payment/MCP regression | `lab_resources_payment_ai_test_phaseh_regression2_20260926` | PASS 10/10 |
+| Guest integrity | `lab_resources_guest_phase_h_test_20260926` | PASS 13/13 |
+| Phase E privacy | `lab_resources_phase_e_h_test_20260926` | PASS 5/5 |
+| Phase F audit | `lab_resources_phase_f_h_test_20260926` | PASS 9/9 |
+| Batch 2 auth/RBAC | `lab_resources_b2_auth_phaseh_20260928` | PASS 10/10 |
+| Batch 3 resources | `lab_resources_b3_resource_phaseh_20260928` | PASS 9/9 |
+| Batch 4 booking/training | `lab_resources_b4_booking_phaseh_20260928` | PASS 32/32 |
+| Batch 5 operations | `lab_resources_b5_operations_phaseh_20260928` | PASS 13/13 |
+| Batch 6 notifications/incidents | `lab_resources_b6_monitoring_phaseh_20260928` | PASS 11/11 |
+| Batch 7 production/demo hardening | `lab_resources_b7_demo_phaseh_20260928` | PASS 6/6 |
+| Batch 8 smart monitoring | `lab_resources_b8_monitoring_phaseh_20260928` | PASS 12/12 |
+| Required core/training | no database mutation | PASS 33/33 |
+| Backend lint and production config | source/config verification | PASS |
+| Frontend lint/typecheck/build | production frontend | PASS; lint has 13 inherited warnings and 0 errors |
+| Phase H browser E2E | `lab_resources_phase_h_payment_test_browser_rerun_20260928` | PASS: signed IPN UI refresh and late-cancellation manual-review/admin workflow |
+
+The migration safety fixture is the only authorized location that directly
+mutates `_prisma_migrations`, solely for cases 6, 6b, and 6c. It asserts an
+isolated database name containing `_test` or `_ci` before mutation. Runtime,
+deployment, seed, development, shared, and production code never writes that
+table directly. Case 6 rejected foreign history, 6b rejected a canonical name
+with forged checksum, and 6c accepted the reviewed legacy checksum. Canonical
+deployment continued to use Prisma-supported `migrate deploy` and
+`migrate resolve --applied`; no historical migration or frozen baseline was
+modified, and `prisma db push` was not used.
+
+## External-provider classification
+
+| Capability | Classification | Evidence boundary |
+| --- | --- | --- |
+| VNPAY payment URL | PARTIALLY VERIFIED | Local signed URL and session contract verified with a test merchant; no live merchant round trip. |
+| VNPAY signed IPN | PARTIALLY VERIFIED | Local signed fixtures cover validation, idempotency, ordering, and reconciliation; no provider-originated callback. |
+| QueryDr | PENDING EXTERNAL CREDENTIALS | Official contract reviewed; no runtime implementation or credentialed call. |
+| Refund | PENDING EXTERNAL CREDENTIALS | No provider refund call is implemented; ADMIN resolution records internal review only. |
+
+If a hosted provider session were created but the local transaction failed,
+the local row remains unsettled and no success is fabricated. The durable
+transaction reference and explicit reconciliation state are the recovery
+boundary; exact cross-system atomicity is not claimed.
 

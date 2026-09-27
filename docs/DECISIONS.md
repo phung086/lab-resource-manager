@@ -308,3 +308,32 @@ Key governance and security guarantees:
    capture only the minimal mutated attributes.
 6. Retention: automated destructive cleanup is not implemented and remains
    an open business policy decision.
+
+## ADR-023 - Signed IPN Authority And Explicit Payment Reconciliation
+
+Status: Accepted
+
+Payment is a separate, optional lifecycle below the canonical booking and
+safety rules. The authoritative amount is the immutable booking pricing
+snapshot, and payment initiation is allowed only for a positive-fee booking in
+`CONFIRMED`. Free bookings have no synthetic payment record.
+
+A VNPAY browser return is presentation-only. Only a correctly signed server
+IPN that also matches the configured merchant, amount, transaction reference,
+and unique provider transaction number may settle the local payment. Callback
+processing is transactional, idempotent, and monotonic: `success` is never
+downgraded by a later failure callback, while an earlier failure or expired
+session may be upgraded by final signed success evidence.
+
+Each hosted checkout session has persisted creation and expiry time. The system
+reuses only a still-valid pending session and enforces at most one active
+pending transaction per booking. Expired sessions are preserved as evidence
+and replaced with a new transaction and transaction reference.
+
+A successful settlement never resurrects a cancelled or rejected booking.
+Instead, the payment remains `success` and receives `manual_review`
+reconciliation state. ADMIN resolution requires a reason and an append-only,
+transaction-coupled audit event. Internal resolution records that the exception
+was reviewed; it neither changes the booking/payment settlement nor claims a
+provider refund. QueryDr and refund remain external integrations pending real
+merchant credentials and verified provider evidence.

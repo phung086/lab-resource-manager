@@ -1,5 +1,40 @@
 # Current Project State
 
+## Phase H payment hardening and transaction reconciliation — 2026-09-28
+
+Branch `fix/payment-lifecycle-reconciliation` starts from the exact verified
+Phase G SHA `d850201d11d60797718fc9433e82b233837c8754`. Payment remains an
+optional extension below eligibility, availability, approval, and booking
+policy; it does not grant access or change `BookingStatus`.
+
+The authoritative booking fee snapshot now supplies every charge amount. A
+paid charge can be initiated only after the booking reaches `CONFIRMED`, and a
+free booking creates no payment transaction. VNPAY sessions have persisted
+creation and expiry timestamps; a valid pending session is reused, an expired
+session is closed and replaced, and concurrent initiation converges on one
+active transaction per booking.
+
+The browser return route is presentation-only. A signed server-side IPN is the
+local settlement authority after merchant, amount, transaction reference, and
+provider transaction number validation. Duplicate and out-of-order callbacks
+are monotonic: success is idempotent and cannot be downgraded. A valid late
+success leaves a cancelled or rejected booking unchanged and creates a durable
+`manual_review` reconciliation exception. ADMIN may resolve that internal case
+with a required reason; the action is transaction-coupled and recorded as
+`PAYMENT_RECONCILIATION_RESOLVED`. Resolution does not claim or invoke a VNPAY
+refund.
+
+Payment access remains owner-or-ADMIN with non-enumerating foreign-user
+responses. Stored checkout URLs and signed hashes are not returned in ordinary
+payment reads, and VNPAY callback query strings are excluded from access logs.
+Production configuration fails closed when payments are enabled without the
+required VNPAY settings.
+
+Local PostgreSQL 16 evidence is green: Phase H 24/24, signed-callback browser
+E2E, migration safety 14/14, core 33/33, guest 13/13, privacy 5/5, system audit
+9/9, and the existing payment/MCP regression 10/10. Live VNPAY merchant,
+QueryDr, and refund verification remain blocked on external credentials.
+
 ## Phase G UX & Product Workflow Refinement — 2026-09-26
 
 Branch `feat/ux-product-workflow-refinement` builds on the verified Phase F base (`e52e558d75a54ee5e9b7b9029efe7697fb978f2c`) to align the user experience with the platform's core positioning: **Laboratory Resource Access & Operations Platform**.
