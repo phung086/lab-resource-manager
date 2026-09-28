@@ -16,8 +16,11 @@ phase sections below remain historical evidence and must not override this check
 - Historical audit-only PR #5 was preserved in `main`; PR #7 was retargeted after
   integration so its only remaining diff was its dated audit document, then preserved
   in `main`.
-- The resulting documentation-preserving `main` checkpoint is
-  `344d9141e59c0d049319800a6889b7068684d335`.
+- The pre-handoff-sync `main` checkpoint after preserving the historical audit
+  documents was `344d9141e59c0d049319800a6889b7068684d335`. Subsequent
+  documentation-only synchronization is tracked by PR #18; always inspect the
+  current `main` branch head for the latest SHA rather than treating this historical
+  checkpoint as the live branch tip.
 - Stacked PRs #6, #8, #9, #11, #12, #13, #14, #15, and #16 were closed after their
   commits were integrated through #17.
 - Alternate guest-booking PR #10 was closed as superseded by the stronger accepted
