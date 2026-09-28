@@ -9,8 +9,9 @@ historical context.
 - Default/current integrated branch: `main`
 - Consolidated implementation merge: PR #17 →
   `34c5e8c6da32e29bdf44542564d8edb76d6241c6`
-- Current documentation-preserving main checkpoint:
-  `344d9141e59c0d049319800a6889b7068684d335`
+- Pre-handoff-sync documentation checkpoint:
+  `344d9141e59c0d049319800a6889b7068684d335`; current `main` head must be read
+  from GitHub because this handoff document itself may be updated afterward
 - Open pull requests at this checkpoint: none.
 - Accepted stacked implementation PRs #6/#8/#9/#11/#12/#13/#14/#15/#16 are
   already included in main through PR #17 and were closed as historical.
