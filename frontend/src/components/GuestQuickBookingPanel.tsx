@@ -95,6 +95,20 @@ export function GuestQuickBookingPanel({
   const [error, setError] = useState("");
 
   const cooldownTimerRef = useRef<any>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(step);
+  const busy = busyOtp || busyBooking;
+  const currentError = step === 1 ? step1Error : step === 2 ? step2Error : error;
+
+  useEffect(() => {
+    if (previousStep.current !== step) stepHeadingRef.current?.focus();
+    previousStep.current = step;
+  }, [step]);
+
+  useEffect(() => {
+    if (currentError) panelRef.current?.querySelector<HTMLElement>('[role="alert"][tabindex]')?.focus();
+  }, [currentError]);
 
   useEffect(() => {
     setTitle(`Đặt nhanh ${resource.name}`);
@@ -162,36 +176,43 @@ export function GuestQuickBookingPanel({
   }, [resendCooldown]);
 
   // Validation handlers
-  function handleGoToStep2(e?: React.FormEvent) {
+  function handleGoToStep2(e?: React.FormEvent, advance = true) {
     if (e) e.preventDefault();
+    if (busy) return false;
     setStep1Error("");
 
+    function invalid(message: string) {
+      setStep(1);
+      setStep1Error(message);
+      return false;
+    }
+
     if (!title.trim()) {
-      setStep1Error("Vui lòng nhập tiêu đề lịch đặt.");
-      return;
+      return invalid("Vui lòng nhập tiêu đề lịch đặt.");
     }
     if (!purpose.trim()) {
-      setStep1Error("Vui lòng nhập mục đích sử dụng.");
-      return;
+      return invalid("Vui lòng nhập mục đích sử dụng.");
     }
     if (!selectedDate) {
-      setStep1Error("Vui lòng chọn ngày sử dụng.");
-      return;
+      return invalid("Vui lòng chọn ngày sử dụng.");
     }
     const today = getVietnamTodayDateString();
     if (selectedDate < today) {
-      setStep1Error("Ngày sử dụng không được trong quá khứ.");
-      return;
+      return invalid("Ngày sử dụng không được trong quá khứ.");
     }
+    if (!startTime || !endTime) return invalid("Vui lòng nhập giờ bắt đầu và giờ kết thúc.");
     if (startTime >= endTime) {
-      setStep1Error("Giờ bắt đầu phải trước giờ kết thúc.");
-      return;
+      return invalid("Giờ bắt đầu phải trước giờ kết thúc.");
     }
-    setStep(2);
+    if (!quote || quote.key !== quoteKey) return invalid(quoteError || "Vui lòng chờ phí sử dụng được cập nhật trước khi tiếp tục.");
+    if (advance) setStep(2);
+    return true;
   }
 
   function handleGoToStep3(e?: React.FormEvent) {
     if (e) e.preventDefault();
+    if (!handleGoToStep2(undefined, false)) return;
+    setStep(2);
     setStep2Error("");
 
     if (!fullName.trim() || fullName.trim().length < 2) {
@@ -283,7 +304,7 @@ export function GuestQuickBookingPanel({
   const hasTraining = Boolean(resource.trainingRequirements && resource.trainingRequirements.length > 0);
 
   return (
-    <div className="guest-booking-panel" role="region" aria-label="Đặt nhanh tài nguyên cho khách ngoài trường">
+    <div ref={panelRef} className="guest-booking-panel" role="region" aria-label="Đặt nhanh tài nguyên cho khách ngoài trường" aria-busy={busy}>
       <div className="guest-booking-head">
         <span>
           <WalletCards size={18} aria-hidden="true" />
@@ -298,35 +319,39 @@ export function GuestQuickBookingPanel({
           type="button"
           className={`guest-wizard-step ${step === 1 ? "is-active" : step > 1 ? "is-completed" : ""}`}
           onClick={() => setStep(1)}
+          disabled={busy}
           aria-current={step === 1 ? "step" : undefined}
         >
           <span className="step-number">1</span>
-          <span className="step-label">Tài nguyên & Lịch đặt</span>
+          <span className="step-label">Lịch đặt</span>
         </button>
         <span className="step-divider" aria-hidden="true">→</span>
         <button
           type="button"
           className={`guest-wizard-step ${step === 2 ? "is-active" : step > 2 ? "is-completed" : ""}`}
           onClick={() => handleGoToStep2()}
+          disabled={busy}
           aria-current={step === 2 ? "step" : undefined}
         >
           <span className="step-number">2</span>
-          <span className="step-label">Thông tin người đặt</span>
+          <span className="step-label">Liên hệ</span>
         </button>
         <span className="step-divider" aria-hidden="true">→</span>
         <button
           type="button"
           className={`guest-wizard-step ${step === 3 ? "is-active" : ""}`}
-          onClick={() => {
-            handleGoToStep2();
-            handleGoToStep3();
-          }}
+          onClick={() => handleGoToStep3()}
+          disabled={busy}
           aria-current={step === 3 ? "step" : undefined}
         >
           <span className="step-number">3</span>
-          <span className="step-label">Xác thực OTP & Chốt lịch</span>
+          <span className="step-label">Xác thực</span>
         </button>
       </nav>
+
+      <h4 className="guest-step-heading" ref={stepHeadingRef} tabIndex={-1}>
+        Bước {step} / 3: {step === 1 ? "Tài nguyên và lịch đặt" : step === 2 ? "Thông tin người đặt" : "Xác thực và kiểm tra lịch đặt"}
+      </h4>
 
       {/* STEP 1: Resource & Booking */}
       {step === 1 && (
@@ -350,14 +375,14 @@ export function GuestQuickBookingPanel({
               <ShieldCheck size={16} aria-hidden="true" />
               <span>
                 {hasTraining
-                  ? `Khóa an toàn bắt buộc: ${resource.trainingRequirements!.map((t) => t.name || t.code).join(", ")}. Khách ngoài trường sẽ được hướng dẫn khi nhận bàn giao.`
+                  ? `Khóa an toàn bắt buộc: ${resource.trainingRequirements!.map((t) => t.name || t.code).join(", ")}. Tài khoản phải có chứng chỉ còn hiệu lực trước khi đặt lịch. Nếu chưa có, hãy liên hệ cán bộ LAB để hoàn tất đào tạo; xác thực OTP không thay thế điều kiện này.`
                   : "Không yêu cầu chứng chỉ an toàn tiên quyết."}
               </span>
             </div>
           </div>
 
           {step1Error && (
-            <div className="guest-booking-alert danger" role="alert">
+            <div className="guest-booking-alert danger" role="alert" tabIndex={-1}>
               <AlertTriangle size={16} aria-hidden="true" />
               {step1Error}
             </div>
@@ -470,7 +495,7 @@ export function GuestQuickBookingPanel({
           </div>
 
           {step2Error && (
-            <div className="guest-booking-alert danger" role="alert">
+            <div className="guest-booking-alert danger" role="alert" tabIndex={-1}>
               <AlertTriangle size={16} aria-hidden="true" />
               {step2Error}
             </div>
@@ -495,7 +520,13 @@ export function GuestQuickBookingPanel({
               <input
                 id="guest-email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setOtpSent(false);
+                  setOtpCode("");
+                  setMessage("");
+                  setError("");
+                }}
                 required
                 type="email"
                 autoComplete="email"
@@ -506,6 +537,7 @@ export function GuestQuickBookingPanel({
               Số điện thoại liên hệ *
               <input
                 id="guest-phone"
+                type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
@@ -554,7 +586,7 @@ export function GuestQuickBookingPanel({
             </div>
           )}
           {error && (
-            <div className="guest-booking-alert danger" role="alert">
+            <div className="guest-booking-alert danger" role="alert" tabIndex={-1}>
               <AlertTriangle size={16} aria-hidden="true" />
               {error}
             </div>
@@ -589,7 +621,7 @@ export function GuestQuickBookingPanel({
               <div>
                 <dt>Phí sử dụng</dt>
                 <dd>
-                  <strong className="text-teal-700 font-semibold">{formatMoney(quote?.amountVnd)} đ</strong>
+                  <strong>{quote?.key === quoteKey ? `${formatMoney(quote.amountVnd)} đ` : "Chưa xác định — quay lại bước 1 để kiểm tra phí"}</strong>
                 </dd>
               </div>
               <div>
@@ -610,7 +642,7 @@ export function GuestQuickBookingPanel({
                 type="button"
                 className="public-secondary"
                 onClick={sendOtp}
-                disabled={busyOtp || resendCooldown > 0 || !email}
+                disabled={busy || resendCooldown > 0 || !email}
               >
                 {busyOtp ? (
                   <Loader2 className="spin" size={16} aria-hidden="true" />
@@ -634,7 +666,7 @@ export function GuestQuickBookingPanel({
                   maxLength={6}
                   inputMode="numeric"
                   placeholder="6 chữ số"
-                  disabled={!otpSent}
+                  disabled={!otpSent || busy}
                   autoComplete="one-time-code"
                 />
               </label>
@@ -647,13 +679,13 @@ export function GuestQuickBookingPanel({
           </div>
 
           <div className="guest-action-row between">
-            <button type="button" className="public-secondary guest-wizard-btn prev" onClick={() => setStep(2)}>
+            <button type="button" className="public-secondary guest-wizard-btn prev" disabled={busy} onClick={() => setStep(2)}>
               <ArrowLeft size={16} aria-hidden="true" /> Quay lại thông tin
             </button>
             <button
               type="submit"
               className="public-primary guest-wizard-btn submit"
-              disabled={busyBooking || !otpSent || !quote || quote.key !== quoteKey || otpCode.length !== 6}
+              disabled={busy || !otpSent || !quote || quote.key !== quoteKey || otpCode.length !== 6}
             >
               {busyBooking ? (
                 <Loader2 className="spin" size={17} aria-hidden="true" />

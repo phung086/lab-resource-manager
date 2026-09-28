@@ -109,3 +109,68 @@
 }
 .catalog-spec-dl dt { color: #526579; font-weight: 500; }
 .catalog-spec-dl dd { margin: 0; text-align: right; font-weight: 600; color: #0f172a; }
+
+.catalog-placeholder {
+  color: var(--text-secondary, #45698d);
+}
+
+.catalog-media-gallery img,
+.catalog-media-gallery video {
+  aspect-ratio: 16 / 10;
+  object-fit: contain;
+}
+
+.catalog-cover .catalog-media-failure {
+  min-height: 100%;
+}
+
+.catalog-media-failure {
+  display: flex;
+  min-height: 174px;
+  height: 100%;
+  padding: 20px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-secondary, #526579);
+  background: var(--bg-subtle, #edf4fb);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.catalog-detail-layout,
+.catalog-facts,
+.catalog-eligibility-verdict,
+.catalog-spec-dl div {
+  min-width: 0;
+}
+
+.catalog-facts,
+.catalog-detail-heading,
+.catalog-description,
+.catalog-spec-dl,
+.catalog-schedule,
+.catalog-schedule li {
+  overflow-wrap: anywhere;
+}
+
+.catalog-detail-heading h3:focus-visible {
+  outline: 2px solid var(--accent, #215db1);
+  outline-offset: 4px;
+}
+
+.catalog-message {
+  overflow-wrap: anywhere;
+}
+
+.catalog-message button,
+.catalog-schedule button {
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.public-primary:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}

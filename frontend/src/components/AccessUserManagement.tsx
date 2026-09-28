@@ -189,18 +189,19 @@ export function AccessUserManagement() {
       {!loading && (
         <div className="table-wrap user-management-table">
           <table>
+            <caption className="sr-only">Người dùng, vai trò và phân công phòng LAB</caption>
             <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th>Phân công phòng lab</th></tr></thead>
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
                   <td><strong>{user.fullName}</strong><br /><small>{user.email}</small></td>
                   <td>
-                    <select value={user.role} onChange={(event) => updateRole(user, event.target.value as Role)}>
+                    <select aria-label={`Vai trò của ${user.fullName} (${user.email})`} value={user.role} onChange={(event) => updateRole(user, event.target.value as Role)}>
                       {ROLES.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}
                     </select>
                   </td>
                   <td>
-                    <button className="btn btn-secondary" type="button" onClick={() => updateActive(user)}>
+                    <button className="btn btn-secondary" type="button" aria-label={`${user.isActive ? "Đang hoạt động — vô hiệu hóa" : "Đã vô hiệu — kích hoạt"} ${user.fullName} (${user.email})`} onClick={() => updateActive(user)}>
                       {user.isActive ? <UserCheck size={14} /> : <UserX size={14} />}
                       {user.isActive ? "Đang hoạt động" : "Đã vô hiệu"}
                     </button>
@@ -215,6 +216,7 @@ export function AccessUserManagement() {
                               type="button"
                               className="btn btn-secondary"
                               title="Gỡ phân công"
+                              aria-label={`Gỡ phân công ${assignment.laboratory.code} của ${user.fullName} (${user.email})`}
                               onClick={() => removeAssignment(user.id, assignment.laboratoryId)}
                             >
                               <ShieldCheck size={13} /> {assignment.laboratory.code}
@@ -223,13 +225,14 @@ export function AccessUserManagement() {
                         </div>
                         <div className="flex gap-2">
                           <select
+                            aria-label={`Phòng LAB để gán cho ${user.fullName} (${user.email})`}
                             value={selectedLabs[user.id] || ""}
                             onChange={(event) => setSelectedLabs((current) => ({ ...current, [user.id]: event.target.value }))}
                           >
                             <option value="">Chọn phòng lab</option>
                             {laboratories.map((lab) => <option key={lab.id} value={lab.id}>{lab.code} - {lab.name}</option>)}
                           </select>
-                          <button className="btn btn-primary" type="button" onClick={() => addAssignment(user)}>Gán</button>
+                          <button className="btn btn-primary" type="button" aria-label={`Gán phòng LAB cho ${user.fullName} (${user.email})`} onClick={() => addAssignment(user)}>Gán</button>
                         </div>
                       </div>
                     )}
