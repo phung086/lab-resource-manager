@@ -9,6 +9,7 @@ import {
   initiatePayment,
   processVnpayIpn,
   paymentReceipt,
+  resolvePaymentReconciliation,
 } from "../services/paymentService.js";
 import { verifyVnpay } from "../services/paymentProviders.js";
 import { prisma } from "../db.js";
@@ -24,14 +25,14 @@ const route = (handler) => async (req, res, next) => {
 const charge = z
   .object({
     bookingId: z.string().min(1).max(100),
-    amount: z.number().int().positive().max(9999999999),
+    amount: z.number().int().positive().max(9999999999).optional(),
     description: z.string().trim().min(3).max(500),
   })
   .strict();
 const filters = z
   .object({
     bookingId: z.string().min(1).max(100).optional(),
-    status: z.enum(["pending", "success", "failed", "refunded"]).optional(),
+    status: z.enum(["pending", "success", "failed", "expired", "refunded"]).optional(),
     provider: z.enum(["unselected", "vnpay", "vietqr"]).optional(),
     search: z.string().max(100).optional(),
     from: z.string().datetime({ offset: true }).optional(),
@@ -108,6 +109,14 @@ router.get(
   route(async (req, res) =>
     res.json(await paymentReceipt(req.params.id, req.user)),
   ),
+);
+router.post(
+  "/:id/reconciliation/resolve",
+  requireRole("ADMIN"),
+  route(async (req, res) => {
+    const body = z.object({ reason: z.string().trim().min(3).max(500) }).strict().parse(req.body || {});
+    res.json(await resolvePaymentReconciliation(req.params.id, req.user, body.reason));
+  }),
 );
 router.get(
   "/:id",

@@ -44,6 +44,22 @@ Recommended/defaulted:
   `LOG_FORMAT`; this avoids accidental host-environment collisions)
 - `VITE_ENABLE_RESEARCH_FEATURES=false`
 
+Optional backend integrations are disabled or unavailable until their complete
+configuration is supplied:
+
+- Email and guest OTP: set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`,
+  and `EMAIL_FROM`. Guest OTP fails closed when SMTP is unavailable; production
+  never reports a development/test email transport as successful.
+- Booking-linked VNPAY: keep `PAYMENTS_ENABLED=false` and
+  `VNPAY_ENABLED=false` unless the approved merchant configuration is ready.
+  When enabled, set `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`,
+  `VNPAY_PAYMENT_URL`, `VNPAY_RETURN_URL`, `VNPAY_IPN_URL`, and
+  `PAYMENT_APP_URL`. Startup validation rejects incomplete or insecure values.
+- Resource media upload: set `MEDIA_S3_ENDPOINT`, `MEDIA_S3_BUCKET`,
+  `MEDIA_S3_REGION`, `MEDIA_S3_ACCESS_KEY_ID`,
+  `MEDIA_S3_SECRET_ACCESS_KEY`, and `MEDIA_PUBLIC_BASE_URL`. Restrict
+  `MEDIA_EXTERNAL_HOSTS` to approved HTTPS image hosts.
+
 The production backend refuses to boot when critical production configuration is invalid.
 
 Telemetry devices do not share an environment secret. Provision a source as an
@@ -76,17 +92,42 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 The backend production container runs:
 
 ```text
-Prisma migrate deploy
+Canonical migration deployment (`npm run db:migrate`)
 -> Prisma migration status verification
 -> canonical first-admin seed
 -> start API
 ```
 
-Batch 7 finalization reconfirmed ordinary tracked `prisma migrate deploy` on a
-clean PostgreSQL 16 database in both the host environment and the Linux
-production image. The temporary checksum-compatibility bridge is retired.
-Tracked historical migration SQL is never edited, `_prisma_migrations` is never
-edited manually, and production does not run `prisma db push`.
+The canonical migration command verifies immutable baseline artifacts and then
+classifies the database before it changes migration state:
+
+- a completely empty PostgreSQL database receives the reviewed baseline in
+  `backend/prisma/baseline/20260924000100_clean_baseline`, then the included
+  historical migrations are recorded with Prisma's official `migrate resolve`;
+- a clean baseline whose SQL and marker completed may resume an interrupted
+  resolve only after its complete PostgreSQL catalog fingerprint matches;
+- an existing database is accepted only when its finished, non-rolled-back
+  Prisma migration rows form a canonical repository prefix beginning at the
+  accepted project origin. It keeps that lineage and receives only pending
+  forward migrations.
+
+Relevant public tables, partitioned tables, views, materialized views,
+sequences, enum/domain types, and public functions make a database non-empty.
+Foreign, empty, failed, rolled-back, duplicated, or out-of-order Prisma history
+fails closed. A marker alone never authorizes resolve.
+
+The baseline directory contains frozen SQL and Prisma schema snapshots plus a
+manifest that hashes those artifacts and every represented historical
+migration using normalized UTF-8/LF text. The live `schema.prisma` may evolve
+through later forward migrations without changing the old baseline. A new
+baseline requires a new ID and directory.
+
+The resume boundary is exact: automatic resume applies only after baseline SQL
+and its final marker completed. If baseline SQL itself is interrupted, recreate
+that initially empty database and rerun deployment. Do not attempt to repair or
+resolve it in place. Tracked historical migration SQL is never edited,
+`_prisma_migrations` is never edited manually, and production does not run
+`prisma db push`.
 
 ## 4. Verify runtime
 
@@ -155,7 +196,7 @@ After the laboratory exists, resources are created through the canonical resourc
 
 Do not run the legacy importer against production merely because the file exists.
 
-## 7. Research/optional features
+## 7. Optional integrations and research features
 
 Default production/demo:
 
@@ -163,9 +204,10 @@ Default production/demo:
 VITE_ENABLE_RESEARCH_FEATURES=false
 ```
 
-This keeps optional/research surfaces outside the default graduation workflow, including examples such as:
+This keeps research surfaces outside the default graduation workflow, including examples such as:
 
-- payment/VietQR demonstrations;
+- legacy payment/VietQR demonstrations that are not part of the approved
+  booking-linked VNPAY lifecycle;
 - fake QR/door/SSH flows;
 - static AI analytics/advisory;
 - Digital Twin;
@@ -175,6 +217,10 @@ This keeps optional/research surfaces outside the default graduation workflow, i
 - fake audit/policy screens.
 
 Research source can remain in the repository for later approved work, but it is not REQUIRED CORE production functionality.
+
+The approved VNPAY lifecycle is a separate optional product extension. It
+remains disabled by default and becomes available only when both payment flags
+and the validated merchant configuration described in section 1 are present.
 
 ## 8. Telemetry
 

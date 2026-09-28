@@ -8,6 +8,16 @@ import nodemailer from "nodemailer";
 
 let transporter = null;
 
+export function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>'"]/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;"
+  })[character]);
+}
+
 async function getTransporter() {
   if (transporter) return transporter;
 
@@ -46,6 +56,10 @@ async function getTransporter() {
  */
 export async function sendEmail({ to, subject, html, text }) {
   try {
+    if (process.env.NODE_ENV === "production" && (!process.env.SMTP_HOST || !process.env.SMTP_USER)) {
+      return { success: false, error: "SMTP is not configured" };
+    }
+
     const transport = await getTransporter();
     const from = process.env.EMAIL_FROM || '"Lab Management System" <no-reply@lab.local>';
 
@@ -86,7 +100,7 @@ export async function sendRequiredEmail({ to, subject, html, text }) {
 /**
  * Send Booking Status HTML Email
  */
-export async function sendBookingStatusEmail({ userEmail, userName, bookingTitle, resourceName, status, startAt, endAt, reason }) {
+export function renderBookingStatusEmail({ userName, bookingTitle, resourceName, status, startAt, endAt, reason }) {
   const isApproved = status === "approved";
   const subject = isApproved
     ? `[Lab Management] Yêu cầu đặt lịch "${bookingTitle}" đã được PHÊ DUYỆT`
@@ -102,16 +116,16 @@ export async function sendBookingStatusEmail({ userEmail, userName, bookingTitle
         <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.8;">Thông báo trạng thái đăng ký đặt lịch</p>
       </div>
       <div style="padding: 24px; color: #333333; line-height: 1.6;">
-        <p>Xin chào <strong>${userName}</strong>,</p>
+        <p>Xin chào <strong>${escapeHtml(userName)}</strong>,</p>
         <p>Yêu cầu sử dụng thiết bị của bạn đã được xử lý:</p>
 
         <div style="background: #f8f9fa; border-left: 4px solid ${statusColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
           <p style="margin: 0 0 8px 0;">Trạng thái: <strong style="color: ${statusColor};">${statusLabel}</strong></p>
-          <p style="margin: 0 0 4px 0;">Thiết bị: <strong>${resourceName}</strong></p>
-          <p style="margin: 0 0 4px 0;">Tiêu đề: <strong>${bookingTitle}</strong></p>
+          <p style="margin: 0 0 4px 0;">Thiết bị: <strong>${escapeHtml(resourceName)}</strong></p>
+          <p style="margin: 0 0 4px 0;">Tiêu đề: <strong>${escapeHtml(bookingTitle)}</strong></p>
           <p style="margin: 0 0 4px 0;">Thời gian bắt đầu: <strong>${new Date(startAt).toLocaleString("vi-VN")}</strong></p>
           <p style="margin: 0;">Thời gian kết thúc: <strong>${new Date(endAt).toLocaleString("vi-VN")}</strong></p>
-          ${reason ? `<p style="margin: 8px 0 0 0; color: #666;">Lý do: <em>${reason}</em></p>` : ""}
+          ${reason ? `<p style="margin: 8px 0 0 0; color: #666;">Lý do: <em>${escapeHtml(reason)}</em></p>` : ""}
         </div>
 
         ${isApproved ? `<p>Vui lòng đến đúng giờ và thực hiện <strong>Check-in</strong> trên hệ thống trước khi bắt đầu sử dụng.</p>` : `<p>Bạn có thể kiểm tra danh sách thiết bị/khung giờ khác trên hệ thống.</p>`}
@@ -122,13 +136,18 @@ export async function sendBookingStatusEmail({ userEmail, userName, bookingTitle
     </div>
   `;
 
+  return { subject, html };
+}
+
+export async function sendBookingStatusEmail({ userEmail, ...booking }) {
+  const { subject, html } = renderBookingStatusEmail(booking);
   return sendEmail({ to: userEmail, subject, html });
 }
 
 /**
  * Send Incident Alert Email to Staff
  */
-export async function sendIncidentAlertEmail({ staffEmails, incidentTitle, resourceName, severity, reporterName, description }) {
+export function renderIncidentAlertEmail({ incidentTitle, resourceName, severity, reporterName, description }) {
   const subject = `[CẢNH BÁO SỰ CỐ - ${severity.toUpperCase()}] ${resourceName}: ${incidentTitle}`;
 
   const html = `
@@ -140,15 +159,20 @@ export async function sendIncidentAlertEmail({ staffEmails, incidentTitle, resou
         <p>Có báo cáo sự cố mới yêu cầu kiểm tra và xử lý:</p>
 
         <div style="background: #fff5f5; border-left: 4px solid #d04943; padding: 15px; margin: 20px 0;">
-          <p style="margin: 0 0 4px 0;">Mức độ: <strong style="color: #d04943;">${severity.toUpperCase()}</strong></p>
-          <p style="margin: 0 0 4px 0;">Thiết bị: <strong>${resourceName}</strong></p>
-          <p style="margin: 0 0 4px 0;">Sự cố: <strong>${incidentTitle}</strong></p>
-          <p style="margin: 0 0 4px 0;">Người báo cáo: <strong>${reporterName}</strong></p>
-          <p style="margin: 8px 0 0 0;">Mô tả: ${description}</p>
+          <p style="margin: 0 0 4px 0;">Mức độ: <strong style="color: #d04943;">${escapeHtml(severity.toUpperCase())}</strong></p>
+          <p style="margin: 0 0 4px 0;">Thiết bị: <strong>${escapeHtml(resourceName)}</strong></p>
+          <p style="margin: 0 0 4px 0;">Sự cố: <strong>${escapeHtml(incidentTitle)}</strong></p>
+          <p style="margin: 0 0 4px 0;">Người báo cáo: <strong>${escapeHtml(reporterName)}</strong></p>
+          <p style="margin: 8px 0 0 0;">Mô tả: ${escapeHtml(description)}</p>
         </div>
       </div>
     </div>
   `;
 
+  return { subject, html };
+}
+
+export async function sendIncidentAlertEmail({ staffEmails, ...incident }) {
+  const { subject, html } = renderIncidentAlertEmail(incident);
   return Promise.all(staffEmails.map((email) => sendEmail({ to: email, subject, html })));
 }

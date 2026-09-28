@@ -1,4 +1,5 @@
 import React from "react";
+import { CANONICAL_BOOKING_STATUS_LABELS } from "../constants.js";
 
 export interface BookingStatusBadgeProps {
   status?: string;
@@ -11,7 +12,7 @@ const STATUS_CONFIG: Record<
   { label: string; bg: string; text: string; border: string }
 > = {
   PENDING_APPROVAL: {
-    label: "Chờ duyệt",
+    label: CANONICAL_BOOKING_STATUS_LABELS.PENDING_APPROVAL,
     bg: "#fffbeb",
     text: "#92400e",
     border: "#fde68a"

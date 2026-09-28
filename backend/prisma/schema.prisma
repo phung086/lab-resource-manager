@@ -7,6 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Internal deployment provenance for the reviewed clean-install baseline.
+// Existing databases keep this table empty; clean installs retain one marker.
+model DeploymentBaseline {
+  baselineId   String   @id @map("baseline_id")
+  schemaSha256 String   @map("schema_sha256")
+  installedAt  DateTime @default(now()) @map("installed_at") @db.Timestamptz(6)
+
+  @@map("_lrm_deployment_baselines")
+}
+
 enum Role {
   ADMIN
   LAB_STAFF
@@ -132,7 +142,14 @@ enum PaymentStatus {
   pending
   success
   failed
+  expired
   refunded
+}
+
+enum PaymentReconciliationStatus {
+  none
+  manual_review
+  resolved
 }
 
 enum ShipmentStatus {
@@ -220,6 +237,7 @@ model Laboratory {
   monitoringAlerts    MonitoringAlert[]
   cameras             Camera[]
   cameraAccessAudits  CameraAccessAudit[]
+  systemAuditEvents   SystemAuditEvent[]             @relation("SystemAuditLab")
 
   @@index([buildingId])
   @@map("laboratories")
@@ -278,6 +296,7 @@ model User {
   reportedIncidents            Incident[]            @relation("IncidentReporter")
   assignedIncidents            Incident[]            @relation("IncidentAssignee")
   payments                     PaymentTransaction[]
+  reconciledPayments           PaymentTransaction[]  @relation("PaymentReconciledBy")
   shipments                    ShipmentOrder[]
   requirements                 ResourceRequirement[]
   behaviorScore                UserBehaviorScore?
@@ -285,6 +304,7 @@ model User {
   acknowledgedMonitoringAlerts MonitoringAlert[]     @relation("MonitoringAlertAcknowledgement")
   cameraAccessAudits           CameraAccessAudit[]
   emailOtps                    EmailOtp[]
+  systemAuditEvents          SystemAuditEvent[]    @relation("SystemAuditActor")
 
   @@map("users")
 }
@@ -352,6 +372,7 @@ model Resource {
   monitoringAlerts     MonitoringAlert[]
   cameras              Camera[]
   cameraAccessAudits   CameraAccessAudit[]
+  systemAuditEvents  SystemAuditEvent[]              @relation("SystemAuditResource")
 
   @@index([laboratoryId])
   @@index([operationalStatus])
@@ -852,29 +873,37 @@ model AiMessage {
 }
 
 model PaymentTransaction {
-  id               String        @id
-  bookingId        String?
-  userId           String
-  txnRef           String        @unique
-  amount           Float
-  currency         String        @default("VND")
-  provider         String        @default("vnpay")
-  status           PaymentStatus @default(pending)
-  bankCode         String?
-  cardType         String?
-  vnpResponseCode  String?
-  vnpTransactionNo String?
-  paymentUrl       String?       @db.Text
-  paidAt           DateTime?
-  description      String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @default(now()) @updatedAt
-  booking          Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id                   String                      @id
+  bookingId            String?
+  userId               String
+  txnRef               String                      @unique
+  amount               Float
+  currency             String                      @default("VND")
+  provider             String                      @default("vnpay")
+  status               PaymentStatus               @default(pending)
+  bankCode             String?
+  cardType             String?
+  vnpResponseCode      String?
+  vnpTransactionNo     String?                     @unique
+  paymentUrl           String?                     @db.Text
+  paymentUrlCreatedAt  DateTime?
+  paymentUrlExpiresAt  DateTime?
+  paidAt               DateTime?
+  description          String?
+  reconciliationStatus PaymentReconciliationStatus @default(none)
+  reconciliationReason String?
+  reconciledAt         DateTime?
+  reconciledById       String?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @default(now()) @updatedAt
+  booking              Booking?                    @relation(fields: [bookingId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  user                 User                        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reconciledBy         User?                       @relation("PaymentReconciledBy", fields: [reconciledById], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([userId])
   @@index([bookingId])
   @@index([status])
+  @@index([reconciliationStatus])
   @@map("payment_transactions")
 }
 
@@ -1070,4 +1099,33 @@ model ResourcePricingRule {
 
   @@unique([resourceId, purposeCode])
   @@map("resource_pricing_rules")
+}
+
+// Append-only immutable audit trail for security-sensitive administrative actions.
+// Coupled transactionally to the mutation it records - if audit insertion fails,
+// the entire transaction rolls back.
+model SystemAuditEvent {
+  id                String    @id
+  actorId           String?   @map("actor_id")
+  actorRoleSnapshot Role?     @map("actor_role_snapshot")
+  action            String    @db.VarChar(64)
+  targetType        String    @map("target_type") @db.VarChar(64)
+  targetId          String    @map("target_id")
+  labId             String?   @map("lab_id")
+  resourceId        String?   @map("resource_id")
+  beforeState       Json?     @map("before_state")
+  afterState        Json?     @map("after_state")
+  reason            String?
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor      User?        @relation("SystemAuditActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  laboratory Laboratory?  @relation("SystemAuditLab", fields: [labId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  resource   Resource?    @relation("SystemAuditResource", fields: [resourceId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId, createdAt])
+  @@index([labId, createdAt])
+  @@map("system_audit_events")
 }

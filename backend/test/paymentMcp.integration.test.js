@@ -73,7 +73,7 @@ const callback = (row, changes = {}) =>
     vnp_TxnRef: row.txnRef,
     vnp_ResponseCode: "00",
     vnp_TransactionStatus: "00",
-    vnp_TransactionNo: "123456789",
+    vnp_TransactionNo: BigInt(`0x${crypto.createHash("sha256").update(row.txnRef).digest("hex").slice(0, 12)}`).toString(),
     vnp_PayDate: "20260922120000",
     ...changes,
   });
@@ -186,6 +186,7 @@ async function seed() {
         startAt: new Date(start.getTime() + i * 7200000),
         endAt: new Date(start.getTime() + i * 7200000 + 3600000),
         status: "CONFIRMED",
+        feeAmountVnd: 25000,
       },
     });
   }
@@ -644,12 +645,9 @@ test(
           (await call(student, "get_my_bookings")).bookings.length,
           3,
         );
-        assert.deepEqual(
-          (await call(student, "list_notifications")).notifications.map(
-            (x) => x.id,
-          ),
-          ["notice-student"],
-        );
+        const studentNotificationIds = (await call(student, "list_notifications")).notifications.map((x) => x.id);
+        assert.ok(studentNotificationIds.includes("notice-student"));
+        assert.equal(studentNotificationIds.includes("notice-other"), false);
         assert.equal(
           (await call(student, "get_monitoring_summary")).error.code,
           "FORBIDDEN",

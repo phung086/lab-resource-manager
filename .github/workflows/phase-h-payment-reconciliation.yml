@@ -1,0 +1,115 @@
+name: Phase H Payment Reconciliation
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/phase-h-payment-reconciliation.yml"
+  workflow_dispatch:
+
+jobs:
+  payment-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 15436:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install dependencies and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd backend && npm ci && npm run db:generate)
+          (cd frontend && npm ci && npx playwright-core install --with-deps chromium)
+
+      - name: Create and migrate isolated Phase H database
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:15436/lab_resources_phase_h_payment_test_ci?schema=public
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -p 15436 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c 'CREATE DATABASE "lab_resources_phase_h_payment_test_ci";'
+          (cd backend && npm run db:migrate)
+          git diff --exit-code -- backend/prisma/migrations
+
+      - name: Run 24-case payment lifecycle matrix
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:15436/lab_resources_phase_h_payment_test_ci?schema=public
+        run: npm run test:phase-h
+
+      - name: Run signed-callback browser E2E
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:15436/lab_resources_phase_h_payment_test_ci?schema=public
+          JWT_SECRET: phase-h-ci-runtime-secret-at-least-32-characters
+          CORS_ORIGINS: http://127.0.0.1:15188
+          PORT: 15013
+          REMINDER_SCHEDULER_ENABLED: "false"
+          NODE_ENV: test
+          RATE_LIMIT_MAX: 5000
+          PAYMENTS_ENABLED: "true"
+          VNPAY_ENABLED: "true"
+          VNPAY_TMN_CODE: TESTONLY
+          VNPAY_HASH_SECRET: phase-h-signed-fixture-secret
+          VNPAY_PAYMENT_URL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+          VNPAY_RETURN_URL: http://127.0.0.1:15013/api/payments/vnpay/return
+          VNPAY_IPN_URL: http://127.0.0.1:15013/api/payments/vnpay/ipn
+          PAYMENT_APP_URL: http://127.0.0.1:15188
+          VITE_API_BASE_URL: http://127.0.0.1:15013
+          VITE_ENABLE_PAYMENT_FEATURES: "true"
+          PHASE_H_E2E_BASE_URL: http://127.0.0.1:15188
+          PHASE_H_E2E_API_URL: http://127.0.0.1:15013/api
+          PHASE_H_E2E_VNPAY_SECRET: phase-h-signed-fixture-secret
+        run: |
+          set -euo pipefail
+          BACKEND_LOG="$RUNNER_TEMP/phase-h-backend.log"
+          FRONTEND_LOG="$RUNNER_TEMP/phase-h-frontend.log"
+          node backend/src/server.js >"$BACKEND_LOG" 2>&1 &
+          BACKEND_PID=$!
+          (cd frontend && npx vite --host 127.0.0.1 --port 15188) >"$FRONTEND_LOG" 2>&1 &
+          FRONTEND_PID=$!
+          cleanup() {
+            kill "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          ready=0
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:15013/health/ready >/dev/null && curl -fsS http://127.0.0.1:15188 >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat "$BACKEND_LOG" "$FRONTEND_LOG"
+            exit 1
+          fi
+
+          (cd frontend && npm run test:e2e:phase-h)

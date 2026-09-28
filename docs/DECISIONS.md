@@ -252,3 +252,88 @@ real SMTP and fail visibly when SMTP is missing.
 LAB loyalty is recorded as a booking/payment signal, not as authorization: points,
 tier, discount, and priority boost never bypass booking policy, approval, RBAC,
 or staff inspection responsibilities.
+
+## ADR-021 - Clean Installs Use A Reviewed Prisma Baseline
+
+Status: Accepted; supersedes ADR-015 for completely empty databases.
+
+Historical applied migration SQL and `_prisma_migrations` remain immutable.
+Because fresh checkout line-ending normalization changes the predecessor
+checksums expected by the historical reconciliation migration, a completely
+empty database uses the reviewed baseline at
+`backend/prisma/baseline/20260924000100_clean_baseline`. The deployment command
+verifies frozen SQL/schema artifacts and each represented historical migration,
+then records included migrations through Prisma's official `migrate resolve`
+only after a deterministic PostgreSQL catalog fingerprint passes. The baseline
+is tied to its own frozen `schema.prisma` snapshot, never to the current live
+schema. Forward migrations may evolve the live schema without changing the old
+baseline; a future baseline requires a new ID and directory.
+
+Existing databases retain their original Prisma lineage only when completed
+migration rows form an accepted canonical prefix. Foreign, empty, failed,
+rolled-back, duplicated, out-of-order, unknown non-empty, and structurally
+damaged baseline states fail closed. Automatic resume begins after baseline SQL
+and its final marker complete; interruption inside baseline SQL requires
+recreating that initially empty database. Required CI includes fresh and repeat
+deployment plus the PostgreSQL 16 migration-safety matrix.
+
+## ADR-022 - System Audit Trail And Administrative Accountability
+
+Status: Accepted
+
+A generic, append-only `SystemAuditEvent` table provides durable accountability
+for security-sensitive administrative and business events that lack complete
+transactional provenance in specialized domain models:
+- User role changes (`USER_ROLE_CHANGED`)
+- User activation/deactivation (`USER_ACTIVATION_CHANGED`)
+- Laboratory assignment additions and removals (`LAB_ASSIGNMENT_ADDED`, `LAB_ASSIGNMENT_REMOVED`)
+- Resource pricing changes (`RESOURCE_PRICING_CHANGED`)
+- Guest account creation and reuse (`GUEST_ACCOUNT_CREATED`, `GUEST_ACCOUNT_REUSED`)
+- Administrative financial actions (`PAYMENT_CHARGE_CREATED`)
+
+Key governance and security guarantees:
+1. Append-only and immutable: no update (`PUT`/`PATCH`) or deletion (`DELETE`)
+   endpoints exist for system audit events.
+2. Transactional coupling: the audit event must be persisted inside the same
+   atomic Prisma transaction as the underlying mutation. If the audit write
+   fails, the business mutation rolls back.
+3. Survivability: target IDs and snapshots survive row deletions (such as
+   revoked lab assignments or removed users via `ON DELETE SET NULL` on foreign
+   keys and string-based target references).
+4. Strict RBAC: ordinary users (`STUDENT`, `LECTURER`) and unauthenticated
+   clients fail closed (`403`). `LAB_STAFF` can only read audit records scoped
+   to their assigned laboratories. `ADMIN` has global read access.
+5. Data minimization and secret prevention: passwords, tokens, OTP codes, and
+   secrets are strictly sanitized before persistence. Before and after states
+   capture only the minimal mutated attributes.
+6. Retention: automated destructive cleanup is not implemented and remains
+   an open business policy decision.
+
+## ADR-023 - Signed IPN Authority And Explicit Payment Reconciliation
+
+Status: Accepted
+
+Payment is a separate, optional lifecycle below the canonical booking and
+safety rules. The authoritative amount is the immutable booking pricing
+snapshot, and payment initiation is allowed only for a positive-fee booking in
+`CONFIRMED`. Free bookings have no synthetic payment record.
+
+A VNPAY browser return is presentation-only. Only a correctly signed server
+IPN that also matches the configured merchant, amount, transaction reference,
+and unique provider transaction number may settle the local payment. Callback
+processing is transactional, idempotent, and monotonic: `success` is never
+downgraded by a later failure callback, while an earlier failure or expired
+session may be upgraded by final signed success evidence.
+
+Each hosted checkout session has persisted creation and expiry time. The system
+reuses only a still-valid pending session and enforces at most one active
+pending transaction per booking. Expired sessions are preserved as evidence
+and replaced with a new transaction and transaction reference.
+
+A successful settlement never resurrects a cancelled or rejected booking.
+Instead, the payment remains `success` and receives `manual_review`
+reconciliation state. ADMIN resolution requires a reason and an append-only,
+transaction-coupled audit event. Internal resolution records that the exception
+was reviewed; it neither changes the booking/payment settlement nor claims a
+provider refund. QueryDr and refund remain external integrations pending real
+merchant credentials and verified provider evidence.

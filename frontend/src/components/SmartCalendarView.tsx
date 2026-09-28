@@ -8,7 +8,7 @@ import { MonthSchedule } from "./calendar/MonthSchedule.js";
 import { BookingStatusBadge } from "./BookingStatusBadge.js";
 import { BaseModal2026 } from "./BaseModal2026.js";
 import { Clock, Calendar, User, AlertCircle } from "lucide-react";
-import { formatVietnamDateTime, getVietnamTodayDateString, vietnamTimeToIso } from "../utils/timezone.js";
+import { formatVietnamDateTime, getVietnamTodayDateString, toVietnamDateString, vietnamTimeToIso } from "../utils/timezone.js";
 
 export interface SmartCalendarViewProps {
   onOpenBooking?: (slot?: any) => void;
@@ -112,7 +112,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
     setError("");
     try {
       const anchor = getAnchorDate();
-      const dateStr = anchor.toISOString().split("T")[0];
+      const dateStr = toVietnamDateString(anchor);
 
       if (viewMode === "week") {
         const queryParams = new URLSearchParams();
@@ -124,7 +124,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
       } else if (viewMode === "month") {
         const startDate = `${anchor.getUTCFullYear()}-${String(anchor.getUTCMonth() + 1).padStart(2, "0")}-01`;
         const nextMonth = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1));
-        const endDate = nextMonth.toISOString().slice(0, 10);
+        const endDate = toVietnamDateString(nextMonth);
 
         const queryParams = new URLSearchParams();
         queryParams.set("resource_id", selectedResourceId);
@@ -140,7 +140,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
         const queryParams = new URLSearchParams();
         queryParams.set("resource_id", selectedResourceId);
         queryParams.set("start", vietnamTimeToIso(dateStr, "00:00"));
-        queryParams.set("end", vietnamTimeToIso(nextDay.toISOString().slice(0, 10), "00:00"));
+        queryParams.set("end", vietnamTimeToIso(toVietnamDateString(nextDay), "00:00"));
 
         const data = await apiRequest(`/calendar/events?${queryParams.toString()}`);
         if (version === calendarRequest.current) setEventsData(data.events || []);
@@ -223,7 +223,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
   };
 
   const anchor = getAnchorDate();
-  const currentDateStr = anchor.toISOString().slice(0, 10);
+  const currentDateStr = toVietnamDateString(anchor);
   const selectedResource = resources.find((r) => r.id === selectedResourceId) || null;
 
   const blocked = selectedResource && (!["AVAILABLE", "IN_USE"].includes(selectedResource.operationalStatus) || selectedResource.bookingState !== "bookable");

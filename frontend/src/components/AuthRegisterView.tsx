@@ -102,7 +102,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 Đăng Ký Tài Khoản
               </h3>
               <p className="text-xs text-slate-400 mt-1 font-sans">
-                Tạo tài khoản LAB để đặt phòng, theo dõi thanh toán và lưu địa chỉ mặc định cho các nghiệp vụ mượn thiết bị sau này.
+                Tạo tài khoản LAB để đặt lịch tài nguyên, theo dõi thanh toán và lưu địa chỉ mặc định cho các nghiệp vụ mượn thiết bị sau này.
               </p>
             </div>
 
@@ -178,11 +178,12 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                   <input id="register-phone" required value={phone} onChange={e => setPhone(e.target.value)} maxLength={20} autoComplete="tel" placeholder="Dùng cho liên hệ bàn giao" className="auth-form-input w-full text-xs" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-customer-type" className="font-mono text-[11px] text-slate-300">Nhóm sử dụng</label>
+                  <label htmlFor="register-customer-type" className="font-mono text-[11px] text-slate-300">Nhóm sử dụng tự khai</label>
                   <select id="register-customer-type" value={customerType} onChange={e => setCustomerType(e.target.value)} className="auth-form-input w-full text-xs">
-                    <option value="INTERNAL">Nội bộ trường</option>
+                    <option value="INTERNAL">Nội bộ trường (chưa xác minh)</option>
                     <option value="EXTERNAL">Khách / đơn vị ngoài trường</option>
                   </select>
+                  <span className="font-mono text-[10px] leading-4 text-slate-400">Không dùng để cấp quyền hoặc ưu đãi.</span>
                 </div>
               </div>
 

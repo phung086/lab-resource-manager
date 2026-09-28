@@ -1,5 +1,226 @@
 # Current Project State
 
+## Phase H payment hardening and transaction reconciliation — 2026-09-28
+
+Branch `fix/payment-lifecycle-reconciliation` starts from the exact verified
+Phase G SHA `d850201d11d60797718fc9433e82b233837c8754`. Payment remains an
+optional extension below eligibility, availability, approval, and booking
+policy; it does not grant access or change `BookingStatus`.
+
+The authoritative booking fee snapshot now supplies every charge amount. A
+paid charge can be initiated only after the booking reaches `CONFIRMED`, and a
+free booking creates no payment transaction. VNPAY sessions have persisted
+creation and expiry timestamps; a valid pending session is reused, an expired
+session is closed and replaced, and concurrent initiation converges on one
+active transaction per booking.
+
+The browser return route is presentation-only. A signed server-side IPN is the
+local settlement authority after merchant, amount, transaction reference, and
+provider transaction number validation. Duplicate and out-of-order callbacks
+are monotonic: success is idempotent and cannot be downgraded. A valid late
+success leaves a cancelled or rejected booking unchanged and creates a durable
+`manual_review` reconciliation exception. ADMIN may resolve that internal case
+with a required reason; the action is transaction-coupled and recorded as
+`PAYMENT_RECONCILIATION_RESOLVED`. Resolution does not claim or invoke a VNPAY
+refund.
+
+Payment access remains owner-or-ADMIN with non-enumerating foreign-user
+responses. Stored checkout URLs and signed hashes are not returned in ordinary
+payment reads, and VNPAY callback query strings are excluded from access logs.
+Production configuration fails closed when payments are enabled without the
+required VNPAY settings.
+
+Local PostgreSQL 16 evidence is green: Phase H 24/24, signed-callback browser
+E2E, migration safety 14/14, core 33/33, guest 13/13, privacy 5/5, system audit
+9/9, and the existing payment/MCP regression 10/10. Live VNPAY merchant,
+QueryDr, and refund verification remain blocked on external credentials.
+
+## Phase G UX & Product Workflow Refinement — 2026-09-26
+
+Branch `feat/ux-product-workflow-refinement` builds on the verified Phase F base (`e52e558d75a54ee5e9b7b9029efe7697fb978f2c`) to align the user experience with the platform's core positioning: **Laboratory Resource Access & Operations Platform**.
+
+Key improvements implemented and verified:
+1. **Guest Quick Booking 3-Stage Wizard:**
+   - Transformed dense single form into 3 guided steps:
+     - Step 1: Resource & Booking (details, schedule, quote, prerequisite checks)
+     - Step 2: Customer Information (strictly required fields: name, email, phone, address)
+     - Step 3: OTP Verification & Final Review (challenge triggering, 60s cooldown, summary, confirm)
+   - Input state is fully preserved when navigating back and forth.
+   - Domain error code mapping (`OTP_INVALID`, `OTP_EXPIRED`, `OTP_ATTEMPTS_EXCEEDED`, `OTP_ALREADY_USED`, `OTP_RESEND_TOO_SOON`, `EMAIL_DELIVERY_FAILED`) without database or account leakage.
+   - Phase D security invariants preserved (one challenge, 5 attempts, cooldown, atomic transaction, restricted temporary account).
+2. **Vietnam Timezone Standardization (`Asia/Ho_Chi_Minh` UTC+07:00):**
+   - Centralized shared timezone logic in `frontend/src/utils/timezone.ts`.
+   - Replaced all local date skew calculations (`new Date().toISOString().slice(0, 10)`).
+   - Validated against UTC midnight boundaries.
+3. **Resource Detail — Eligibility First:**
+   - Directly answers: *"Tôi có thể sử dụng tài nguyên này không?"* before displaying calendar availability.
+   - Authoritative verification for: Available, In Maintenance, Training Required, Expired Certification, or Eligible.
+4. **Public Resource Catalog:**
+   - Replaced commercial e-commerce metaphors with lab-oriented status badges (Available, Maintenance, Approval required, Training required, Fee/free) and primary CTA *"Xem lịch & đặt"*.
+5. **Actionable Workspace Overview (`WorkspaceHome`):**
+   - Replaced decorative metrics with 6 actionable priority queues:
+     1. Upcoming bookings
+     2. Pending approval & payment
+     3. Training & access prerequisites
+     4. Due returns
+     5. Open incidents
+     6. System notices
+6. **Profile Hierarchy (7 Sections):**
+   - Reordered to: 1. Identity, 2. Security (inline password change), 3. Access Classification (`customerTypeSemantics = SELF_DECLARED_UNVERIFIED` with explicit non-authority warning), 4. Training/certifications, 5. Contact/address, 6. Bookings, 7. Loyalty/commercial last.
+7. **Temporary Account Enforcement:**
+   - Server-side and client-side gated access when `passwordResetRequired === true`.
+   - Forces focused password setup modal; unblocks navigation upon successful change.
+8. **Mobile Telemetry Simplification:**
+   - Prioritizes critical alerts at viewport top.
+   - Resource status cards feature compact health metrics with expandable `<details>` disclosures for sensor history.
+9. **Responsive Validation:**
+   - Audited across 1440x960, 1280x900, 768x1024, 390x844, 360x800: zero whole-page horizontal scroll.
+10. **Verification Status:**
+    - Migration safety: 14/14 PASS. Core: 33/33 PASS. Guest: 13/13 PASS. Privacy: 5/5 PASS. Audit: 9/9 PASS. Batches 2,3,4,5,6,8: PASS. Phase G unit tests: PASS. Frontend lint, typecheck, build: PASS. Playwright browser E2E: PASS.
+
+## Phase F system audit trail and administrative accountability — 2026-09-26
+
+Branch `feat/system-audit-accountability` starts from the exact accepted Phase E
+SHA `c40b2d541b818bda0724e49d8c91e132d936da02`. An append-only
+`SystemAuditEvent` model has been introduced to provide transactional
+accountability for administrative and security mutations that previously lacked
+durable audit records.
+
+Key architectural highlights:
+1. Target mutations covered:
+   - User role changes (`USER_ROLE_CHANGED`) with before/after role snapshots.
+   - User active/inactive transitions (`USER_ACTIVATION_CHANGED`).
+   - Lab assignment additions and removals (`LAB_ASSIGNMENT_ADDED`, `LAB_ASSIGNMENT_REMOVED`),
+     ensuring complete survivability after assignment deletion.
+   - Resource pricing rule modifications (`RESOURCE_PRICING_CHANGED`) with
+     before/after rate snapshots.
+   - Guest account creation (`GUEST_ACCOUNT_CREATED`) and reuse
+     (`GUEST_ACCOUNT_REUSED`).
+   - Admin payment charge creation (`PAYMENT_CHARGE_CREATED`).
+2. Transaction coupling: Every audited mutation and its audit event commit
+   inside the same Prisma transaction; a failed audit write rolls back the
+   business mutation.
+3. Strict authorization and RBAC:
+   - `ADMIN`: Global read access across all audit records.
+   - `LAB_STAFF`: Read access strictly scoped to their assigned laboratories.
+   - `STUDENT`, `LECTURER`, and unauthenticated callers: Denied (`403 FORBIDDEN`).
+4. Data minimization: Sanitization strips passwords, hashes, JWTs, and secrets
+   before persistence. Before and after states record only changed attributes.
+5. Migration safety: Forward migration `20260925000200_add_system_audit_events`
+   is purely additive. Historical migrations and the frozen baseline are untouched;
+   the 14-case migration safety matrix passed.
+6. Verification status: Local PostgreSQL 16 testing passed 9/9 Phase F tests,
+   14/14 migration safety scenarios, 33/33 core tests, 13/13 guest integrity tests,
+   5/5 Phase E tests, backend lint, frontend lint/typecheck/build.
+
+## Phase E privacy, audit and customer classification governance — 2026-09-25
+
+Branch `fix/privacy-audit-governance` starts from the exact accepted Phase D
+SHA `c4a4aa921a9352fbb775bfb184ebb44844f41d82`. The authenticated resource
+history endpoint no longer returns one full provenance DTO to every role.
+`STUDENT` and `LECTURER` now receive an anonymous operational timeline plus
+their own booking events; actor/reporter identity, internal reasons, record
+identifiers, unrelated booking events and private metadata are removed.
+Assigned `LAB_STAFF` and `ADMIN` retain the full operational view. Unassigned
+or foreign-lab staff fail closed with `403`.
+
+`customerType` remains compatibility metadata and is now explicitly returned
+and displayed as `SELF_DECLARED_UNVERIFIED`. It does not grant RBAC, training
+bypass, quota, priority, discount or institution-only pricing. Profile writes
+remain strict and allowlisted; role, active state, lab assignment, training and
+loyalty configuration cannot be mass-assigned through `/api/users/me`.
+
+The audit inventory confirms durable resource, booking, maintenance,
+calibration, incident and pricing evidence in existing domain records. The
+schema still has no general system-audit model for role/activation changes,
+lab-assignment deletion, guest account create/reuse or payment-admin action.
+Phase E does not fabricate those events in resource-scoped `UsageLog`; these
+gaps remain explicit forward-schema work. The sample-only `AuditLogsView`
+under Advanced/Research is not treated as runtime evidence.
+
+Local PostgreSQL 16 verification is green: Phase E 5/5, migration safety
+14/14, required core 33/33, guest integrity 13/13, backend Batch 1E–8,
+frontend lint/typecheck/build, and browser Batch 2/3/4/5/6/8. No schema or
+migration changed, and `prisma db push` was not used.
+
+## Phase 3 release gate reliability — 2026-09-25
+
+Branch `fix/release-gate-reliability` starts from the exact accepted Phase B
+SHA `91f9d0892a2bcd160cf20917660b92ee58a11ab4`. The previous GitHub result was
+10/13: two full-stack E2E jobs and smart-monitoring E2E were red.
+
+Local reproduction verified three test-infrastructure mismatches. Batch 4
+exhausted the 180-request global limiter across sequential browser contexts;
+Batch 6 expected telemetry states on the intentionally separate Operations
+page; Batch 8 opened Telemetry but waited for the old Operations heading. The
+E2E selectors now follow the approved Telemetry page, and full-stack workflow
+backend processes use an explicit `RATE_LIMIT_MAX=1000` only beside
+`NODE_ENV=test`. Production runtime code and the default limit of 180 are
+unchanged.
+
+Local PostgreSQL 16 verification is green: required core 33/33, Batch 4
+policy/integration 32/32, migration safety 14/14, frontend lint/typecheck/build,
+Batch 2/3/4/5/6/8 browser suites, two consecutive Batch 4 runs, and responsive
+smoke at 1440, 1280, 768, 390 and 360 pixels. GitHub candidate
+`ba302e13eec39bf7d5c4670a7fdec2286fa8f371` passed the requested 13/13 job
+matrix. The final documentation-only evidence commit must independently retain
+13/13 before Phase C is closed.
+
+## Phase 2 mandatory training eligibility — 2026-09-25
+
+Branch `feat/booking-training-eligibility` now enforces every configured
+mandatory `TrainingRequirement` in authoritative booking creation. A requester
+must have an `active`, non-expired `UserCertification` for the same course;
+missing, expired, revoked, other-user and incomplete multi-course cases fail
+with `403 BOOKING_TRAINING_REQUIRED`. No override policy was invented.
+
+Local verification on disposable PostgreSQL 16 passed the required core suite
+33/33 and Batch 4 policy/integration suite 32/32. The latter preserves booking
+conflict, half-open interval, approval, availability and state-machine behavior
+while exercising the training gate at the API boundary. This phase changes no
+schema or migration. See `docs/LOCAL_ENGINEERING_VERIFICATION.md` and
+`docs/LOCAL_VERIFIED_GAP_MATRIX_20260925.md` for current local evidence and the
+remaining release/guest/security gaps.
+
+## Phase 0 verified gap audit — 2026-09-24
+
+The current `main` HEAD is `dbab294`. The external business/UX review is in
+open PR #5 and has not been merged into `main`. The read-only baseline and
+current evidence matrix are in
+[CURRENT_VERIFIED_GAP_MATRIX_20260924.md](CURRENT_VERIFIED_GAP_MATRIX_20260924.md).
+At this HEAD, general CI passes but three GitHub workflows that exercise fresh
+PostgreSQL migration/startup fail. Local checks found a deterministic mismatch
+between the historical mixed-line-ending checksum expectations and the bytes
+produced by a fresh CRLF checkout. An isolated PostgreSQL 16 validation and a
+safe canonical deployment strategy are required before claiming clean deploy.
+Mandatory training is also not enforced in `createBooking`; guest OTP/account
+and booking use separate transactions. These are current gaps, despite the
+historical verified milestones below.
+
+## Phase 1 migration reproducibility — 2026-09-24
+
+P0 fresh deployment is repaired on branch
+`feature/fresh-migration-reproducibility`. The root cause was confirmed on a
+fresh Windows checkout and PostgreSQL 16: `.gitattributes` produced CRLF bytes
+whose Prisma checksums differed from the historical mixed-line-ending values
+embedded in the reconciliation migration. No historical migration was edited.
+
+`npm run db:migrate` now applies a reviewed clean-install baseline only to a
+truly empty database. Hardening on `fix/migration-baseline-hardening` freezes the
+baseline SQL and Prisma schema snapshot, verifies normalized hashes for every
+represented migration, and fingerprints the complete critical PostgreSQL
+catalog before any official `migrate resolve`. Current `schema.prisma` may now
+evolve through forward migrations without regenerating the old baseline.
+
+Existing databases preserve their lineage only when migration rows form a
+completed canonical prefix. Unknown objects, foreign/empty/failed/rolled-back
+history, and damaged baseline structures fail closed. Resume is supported after
+baseline SQL and its marker complete; interruption inside baseline SQL requires
+recreating the initially empty database. The 12-case PostgreSQL 16 local safety
+matrix passes, including historical-row preservation and future forward
+migration compatibility. See
+[PHASE1_MIGRATION_REPRODUCIBILITY_REPORT.md](PHASE1_MIGRATION_REPRODUCIBILITY_REPORT.md).
+
 ## Active local work — 2026-09-23
 
 User has approved an iterative Open LAB upgrade for internal/external users,
@@ -206,3 +427,22 @@ Before future work, read `AGENTS.md`, the `.agent/` rules, this file,
 Code checkpoint implemented for external quick booking: public catalog detail can collect external customer identity, Vietnamese administrative address, email OTP, quote, booking creation, and handoff to bookings/payment; normal registration/profile now persist default address and profile exposes spending/loyalty signals from real payment/booking data. External customers keep canonical role `STUDENT` with `customerType=EXTERNAL`; no new role or booking status was introduced.
 
 Verification completed without live DB: Prisma validate/generate, backend lint, frontend lint/typecheck/build, and address source smoke. Local `DATABASE_URL` points to PostgreSQL on `localhost:5432`, but that server and Docker Desktop are not running in the current environment, so `prisma migrate deploy`, OTP live flow, booking creation, and browser smoke remain pending. SMTP variables are also absent; OTP must fail with `EMAIL_NOT_CONFIGURED` until real SMTP is configured.
+
+## 2026-09-25 — Phase D guest integrity closure
+
+Guest quick booking is now verified on isolated PostgreSQL 16. OTP challenges
+are HMAC-only, single-use, limited to five persistent failures, serialized by
+normalized email/purpose, protected by a 60-second resend cooldown, and retain
+invalidated history. Required email remains fail-closed.
+
+Successful completion uses one database transaction for valid OTP, new account
+and address persistence, the canonical booking rules, and OTP consumption.
+Booking failure rolls back the entire business outcome. Existing accounts are
+reused without public profile or `customerType` overwrite; `INTERNAL` remains
+`INTERNAL`. Existing accounts receive no OTP-derived JWT. New accounts retain
+the approved temporary phone credential, while backend middleware limits the
+session to password setup/me/logout until a real password is established.
+
+Verification: guest PostgreSQL suite 13/13, migration safety 14/14, core 33/33,
+Batch 4 32/32, all backend batches green, frontend lint/typecheck/build green,
+and browser Batch 2/3/4/5/6/8 green. No schema or migration changed.

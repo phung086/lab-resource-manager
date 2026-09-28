@@ -24,6 +24,17 @@ Use this checklist before handing the system to lab operations.
 - Overlapping approved/checked-out bookings return a conflict.
 - Handover and return conditions are recorded for accountable resources.
 
+## Optional Integrations
+
+- If guest booking is enabled operationally, a real SMTP account is configured
+  and an OTP delivery test succeeds; production has no mock-success email path.
+- If payments are enabled, both payment flags are true, all VNPAY merchant and
+  HTTPS callback values pass `npm run verify:prod-config`, and callback routing
+  is reachable from VNPAY.
+- If resource upload is enabled, S3-compatible storage credentials and the
+  public HTTPS base URL are configured, and external media hosts are explicitly
+  allowlisted.
+
 ## Data And Database
 
 - `docker compose --env-file .env.production -f docker-compose.prod.yml ps` shows healthy containers.

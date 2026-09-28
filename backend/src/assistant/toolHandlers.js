@@ -7,6 +7,7 @@ import {
 } from "../services/availabilityService.js";
 import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
 import { serializeTelemetry } from "../services/telemetryService.js";
+import { getTrainingEligibility } from "../services/trainingEligibilityService.js";
 
 const str = { type: "string", minLength: 1, maxLength: 120 };
 const id = { type: "string", minLength: 1, maxLength: 100 };
@@ -443,26 +444,19 @@ async function conflicts(input, actor) {
 }
 async function eligibility({ resourceId }, actor) {
   const r = await scopedResource(actor, resourceId);
-  const required = r.trainingRequirements.filter((t) => t.isMandatory);
-  const certificates = await prisma.userCertification.findMany({
-    where: {
-      userId: actor.id,
-      courseId: { in: required.map((t) => t.courseId) },
-      status: "active",
-      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-    },
-    select: { courseId: true },
+  const training = await getTrainingEligibility(prisma, {
+    userId: actor.id,
+    resourceId,
+    now: new Date(),
   });
-  const missing = required
-    .filter((t) => !certificates.some((c) => c.courseId === t.courseId))
-    .map((t) => ({ code: t.course.code, name: t.course.name }));
   return {
     resourceId,
     bookable:
+      training.eligible &&
       r.bookingState === "bookable" &&
       ["AVAILABLE", "IN_USE"].includes(r.operationalStatus) &&
       r.laboratory?.isActive !== false,
-    missingTraining: missing,
+    missingTraining: training.missingTraining.map(({ code, name }) => ({ code, name })),
     requiresApproval: Boolean(
       r.requiresApproval || r.laboratory?.labPolicy?.requiresApproval,
     ),

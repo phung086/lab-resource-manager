@@ -2,6 +2,7 @@
 # Prisma migration deployment is the verified production path; historical SQL
 # and _prisma_migrations remain immutable.
 backend/prisma/migrations/**/migration.sql text eol=crlf
+backend/prisma/baseline/**/migration.sql text eol=lf
 
 # Keep application source and documentation portable and deterministic.
 *.js text eol=lf
