@@ -7,12 +7,11 @@ import { PURPOSE_CODES, quoteBooking } from "../services/bookingPricingService.j
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "../services/systemAuditService.js";
 
 const router = express.Router();
-router.use(requireAuth);
 router.get("/:resourceId", async (req, res, next) => {
   try { res.json(await prisma.resourcePricingRule.findMany({ where: { resourceId: req.params.resourceId }, orderBy: { purposeCode: "asc" } })); }
   catch (error) { next(error); }
 });
-router.put("/:resourceId", requireRole("ADMIN"), async (req, res, next) => {
+router.put("/:resourceId", requireAuth, requireRole("ADMIN"), async (req, res, next) => {
   try {
     const data = z.object({ purposeCode: z.enum(PURPOSE_CODES), label: z.string().trim().min(2).max(100), hourlyRateVnd: z.number().int().min(0).max(100000000) }).strict().parse(req.body);
     res.json(await prisma.$transaction(async tx => {

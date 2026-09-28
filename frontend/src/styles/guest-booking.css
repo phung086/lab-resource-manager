@@ -1,10 +1,10 @@
 .guest-booking-panel {
+  min-width: 0;
   margin-top: 1.2rem;
   padding: 1.2rem;
-  border: 1px solid rgba(34, 93, 186, 0.2);
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(244, 248, 255, 0.97));
-  box-shadow: 0 18px 40px rgba(18, 38, 63, 0.08);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md, 12px);
+  background: var(--surface, #fff);
   display: grid;
   gap: 1.1rem;
 }
@@ -27,17 +27,20 @@
 
 /* Wizard Navigation Progress */
 .guest-wizard-nav {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   padding: 0.6rem 0.8rem;
   background: #eef4fc;
   border-radius: 14px;
   border: 1px solid #d5e3f5;
-  overflow-x: auto;
+  min-width: 0;
 }
 
 .guest-wizard-step {
+  min-width: 0;
+  min-height: 44px;
+  flex-direction: column;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -49,8 +52,9 @@
   font-weight: 600;
   color: #64748b;
   cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
 }
 
 .guest-wizard-step:hover {
@@ -83,17 +87,31 @@
 }
 
 .guest-wizard-step.is-completed {
-  color: #059669;
+  color: var(--status-available-text);
 }
 
 .guest-wizard-step.is-completed .step-number {
-  background: #10b981;
+  background: var(--status-available-text);
   color: #fff;
 }
 
 .step-divider {
-  color: #94a3b8;
-  font-size: 0.85rem;
+  display: none;
+}
+
+.guest-step-heading {
+  margin: 0;
+  color: var(--text-primary);
+  font: var(--text-h2);
+  scroll-margin-top: 110px;
+}
+
+.guest-booking-panel :is(input, select) { min-width: 0; width: 100%; }
+.guest-booking-panel :is(p, dd, strong) { overflow-wrap: anywhere; }
+.guest-booking-panel button:disabled { cursor: not-allowed; opacity: .6; }
+.guest-booking-panel :is(h4, [role="alert"]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
 }
 
 /* Step 1 Resource Summary Box */
@@ -177,7 +195,7 @@
   margin-top: 0.35rem;
   padding: 0.55rem 0.75rem;
   background: #eff6ff;
-  border-left: 3px solid #3b82f6;
+  border: 1px solid var(--status-active-border);
   border-radius: 6px;
   font-size: 0.82rem;
   color: #1e40af;
@@ -338,10 +356,15 @@
 /* Action Rows & Buttons */
 .guest-action-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guest-booking-panel .spin { animation: none; }
 }
 
 .guest-action-row.between {

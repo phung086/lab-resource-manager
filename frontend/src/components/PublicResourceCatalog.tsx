@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -16,6 +16,8 @@ import {
 import { apiRequest } from "../api.js";
 import { CANONICAL_BOOKING_STATUS_LABELS } from "../constants.js";
 import { GuestQuickBookingPanel } from "./GuestQuickBookingPanel";
+import { ResourceMediaPreview } from "./ResourceMediaPreview";
+import { formatVietnamDateTime } from "../utils/timezone";
 import "../styles/public-catalog.css";
 
 type Media = {
@@ -89,13 +91,7 @@ const operationalBadgeLabels: Record<string, { label: string; class: string }> =
 const bookingBlockStatuses = new Set(["PENDING_APPROVAL", "CONFIRMED", "CHECKED_OUT", "RETURNED"]);
 
 function formatRange(startAt: string, endAt: string) {
-  const dateFormat = new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-  return `${dateFormat.format(new Date(startAt))} - ${dateFormat.format(new Date(endAt))}`;
+  return `${formatVietnamDateTime(startAt)} – ${formatVietnamDateTime(endAt)}`;
 }
 
 export function PublicResourceCatalog({
@@ -114,6 +110,13 @@ export function PublicResourceCatalog({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+  const detailRequest = useRef(0);
+  const detailOpener = useRef<HTMLElement | null>(null);
+  const detailHeading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => () => { detailRequest.current += 1; }, []);
 
   // Authenticated user state if present
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -156,11 +159,23 @@ export function PublicResourceCatalog({
 
   const visible = filter === "ALL" ? resources : resources.filter((row) => row.category === filter);
 
-  async function openDetails(row: Resource) {
+  async function openDetails(row: Resource, rememberOpener = true) {
+    const request = ++detailRequest.current;
+    if (rememberOpener) detailOpener.current = document.activeElement as HTMLElement;
     setSelected(row);
+    setDetailLoading(true);
+    setDetailError("");
     setSchedule(null);
     setScheduleError("");
     setScheduleLoading(true);
+    requestAnimationFrame(() => {
+      if (request !== detailRequest.current) return;
+      detailHeading.current?.focus({ preventScroll: true });
+      document.getElementById("chi-tiet-tai-nguyen")?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "start"
+      });
+    });
     const now = new Date();
     const end = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
     const [detailResult, scheduleResult] = await Promise.allSettled([
@@ -171,19 +186,25 @@ export function PublicResourceCatalog({
         )}&to=${encodeURIComponent(end.toISOString())}`
       )
     ]);
+    if (request !== detailRequest.current) return;
     if (detailResult.status === "fulfilled") setSelected(detailResult.value);
+    else setDetailError("Chưa tải được điều kiện sử dụng. Vui lòng thử lại trước khi đặt lịch.");
     if (scheduleResult.status === "fulfilled") setSchedule(scheduleResult.value);
     if (scheduleResult.status === "rejected") setScheduleError("Chưa tải được lịch bận của tài nguyên này.");
     setScheduleLoading(false);
-    requestAnimationFrame(() =>
-      document.getElementById("chi-tiet-tai-nguyen")?.scrollIntoView({ behavior: "smooth", block: "start" })
-    );
+    setDetailLoading(false);
+  }
+
+  function closeDetails() {
+    detailRequest.current += 1;
+    setSelected(null);
+    detailOpener.current?.focus();
   }
 
   const busyBookings = (schedule?.bookings || [])
-    .filter((row) => row.status && bookingBlockStatuses.has(row.status))
-    .slice(0, 6);
-  const busyMaintenance = (schedule?.maintenanceWindows || []).slice(0, 4);
+    .filter((row) => row.status && bookingBlockStatuses.has(row.status));
+  const busyMaintenance = (schedule?.maintenanceWindows || [])
+    .filter((row) => row.status === "scheduled" || row.status === "in_progress");
 
   // Compute eligibility verdict for selected resource
   function computeEligibility(resource: Resource) {
@@ -211,7 +232,7 @@ export function PublicResourceCatalog({
       return {
         status: "AUTH_REQUIRED",
         label: "Cần chứng nhận an toàn",
-        message: `Yêu cầu hoàn thành: ${trainingList.map((t) => t.name || t.code).join(", ")}. Khách ngoài trường sẽ được cán bộ hướng dẫn an toàn khi bàn giao.`,
+        message: `Yêu cầu hoàn thành: ${trainingList.map((t) => t.name || t.code).join(", ")}. Tài khoản phải có chứng chỉ còn hiệu lực trước khi đặt lịch; OTP không thay thế điều kiện này.`,
         type: "info"
       };
     }
@@ -319,7 +340,7 @@ export function PublicResourceCatalog({
                 aria-label={`Xem chi tiết ${row.name}`}
               >
                 {image ? (
-                  <img src={image.url} alt={image.altText || row.name} loading="lazy" />
+                  <ResourceMediaPreview key={image.url} kind="IMAGE" url={image.url} alt={image.altText || row.name} />
                 ) : (
                   <span className="catalog-placeholder">
                     {row.category === "ROOM" ? <DoorOpen size={48} /> : <Microscope size={48} />}
@@ -368,24 +389,34 @@ export function PublicResourceCatalog({
               <span>
                 {categoryLabels[selected.category || ""]} · {selected.code}
               </span>
-              <h3 id="catalog-detail-title">{selected.name}</h3>
+              <h3 id="catalog-detail-title" ref={detailHeading} tabIndex={-1}>{selected.name}</h3>
               <p>{selected.laboratory?.name || selected.location}</p>
             </div>
-            <button type="button" onClick={() => setSelected(null)} aria-label="Đóng chi tiết">
+            <button type="button" onClick={closeDetails} aria-label="Đóng chi tiết">
               Đóng
             </button>
           </div>
+
+          {detailLoading ? (
+            <p role="status">Đang kiểm tra thông tin và điều kiện sử dụng…</p>
+          ) : detailError ? (
+            <div className="catalog-message" role="alert">
+              {detailError}{" "}
+              <button type="button" onClick={() => void openDetails(selected, false)}>Thử lại</button>
+            </div>
+          ) : null}
 
           <div className="catalog-detail-layout">
             <div className="catalog-media-gallery">
               {selected.media?.length ? (
                 selected.media.map((item) => (
                   <figure key={item.id}>
-                    {item.kind === "VIDEO" ? (
-                      <video controls preload="metadata" src={item.url} aria-label={item.altText} />
-                    ) : (
-                      <img src={item.url} alt={item.altText} loading="lazy" />
-                    )}
+                    <ResourceMediaPreview
+                      key={item.url}
+                      kind={item.kind}
+                      url={item.url}
+                      alt={item.altText || item.title || selected.name}
+                    />
                     <figcaption>
                       <strong>{item.title}</strong>
                       <span>
@@ -482,27 +513,35 @@ export function PublicResourceCatalog({
               <div className="catalog-schedule">
                 <div>
                   <strong>Lịch bận 14 ngày tới</strong>
-                  <span>Hệ thống tự động kiểm tra xung đột thời gian khi bạn gửi yêu cầu đặt lịch.</span>
+                  <span>Giờ Việt Nam · UTC+07:00. Hệ thống tự động kiểm tra xung đột thời gian khi bạn gửi yêu cầu đặt lịch.</span>
                 </div>
                 {scheduleLoading && <p role="status">Đang tải khung bận…</p>}
-                {scheduleError && <p role="alert">{scheduleError}</p>}
+                {scheduleError && (
+                  <p role="alert">
+                    {scheduleError}{" "}
+                    <button type="button" onClick={() => void openDetails(selected, false)}>Thử lại</button>
+                  </p>
+                )}
                 {!scheduleLoading && !scheduleError && busyBookings.length === 0 && busyMaintenance.length === 0 && (
-                  <p>Chưa có khung bận hoặc bảo trì trong khoảng này. Bạn có thể đặt lịch.</p>
+                  <p>Chưa có khung bận hoặc bảo trì trong khoảng này. Hệ thống vẫn kiểm tra điều kiện và thời gian khi bạn gửi yêu cầu.</p>
                 )}
                 <ul>
-                  {busyBookings.map((row) => (
+                  {busyBookings.slice(0, 6).map((row) => (
                     <li key={`booking-${row.id}`}>
                       <span>{CANONICAL_BOOKING_STATUS_LABELS[row.status || ""] || row.status}</span>
                       <strong>{formatRange(row.startAt, row.endAt)}</strong>
                     </li>
                   ))}
-                  {busyMaintenance.map((row) => (
+                  {busyMaintenance.slice(0, 4).map((row) => (
                     <li key={`maintenance-${row.id}`}>
-                      <span>{row.kind || "Bảo trì"}</span>
+                      <span>{row.kind === "calibration" ? "Hiệu chuẩn" : "Bảo trì"}</span>
                       <strong>{formatRange(row.startAt, row.endAt)}</strong>
                     </li>
                   ))}
                 </ul>
+                {(busyBookings.length > 6 || busyMaintenance.length > 4) && (
+                  <p>Đang hiển thị {Math.min(busyBookings.length, 6) + Math.min(busyMaintenance.length, 4)} / {busyBookings.length + busyMaintenance.length} khung bận. Đăng nhập để xem lịch đầy đủ.</p>
+                )}
               </div>
 
               {/* Internal Booking CTA */}
@@ -510,14 +549,15 @@ export function PublicResourceCatalog({
                 type="button"
                 className="public-primary"
                 onClick={() => onViewSchedule(selected.id)}
+                disabled={detailLoading || Boolean(detailError) || computeEligibility(selected).type === "danger"}
               >
                 <CalendarDays size={18} aria-hidden="true" /> Đăng nhập tài khoản trường để đặt lịch nội bộ{" "}
                 <ArrowRight size={17} aria-hidden="true" />
               </button>
 
               {/* Guest Quick Booking Section */}
-              {onGuestBookingComplete && (
-                <GuestQuickBookingPanel resource={selected} onComplete={onGuestBookingComplete} />
+              {onGuestBookingComplete && !detailLoading && !detailError && computeEligibility(selected).type !== "danger" && (
+                <GuestQuickBookingPanel key={selected.id} resource={selected} onComplete={onGuestBookingComplete} />
               )}
             </div>
           </div>
