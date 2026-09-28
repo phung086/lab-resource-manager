@@ -1,5 +1,46 @@
 # ChatGPT Project Handoff — Lab Resource Manager
 
+## Authoritative repository update — 2026-09-28
+
+This section overrides the older repository-state snapshot retained below for
+historical context.
+
+- Repository: `https://github.com/phung086/lab-resource-manager`
+- Default/current integrated branch: `main`
+- Consolidated implementation merge: PR #17 →
+  `34c5e8c6da32e29bdf44542564d8edb76d6241c6`
+- Current documentation-preserving main checkpoint:
+  `344d9141e59c0d049319800a6889b7068684d335`
+- Open pull requests at this checkpoint: none.
+- Accepted stacked implementation PRs #6/#8/#9/#11/#12/#13/#14/#15/#16 are
+  already included in main through PR #17 and were closed as historical.
+- PR #10 was closed as a superseded alternate guest-booking implementation and was
+  not merged.
+- Historical audit documents from PR #5 and PR #7 were preserved in main.
+
+Fresh GitHub Actions verification on exact consolidated head
+`9616de496f800d9405628ab0b89d11f1a8def96c` passed CI, B5 backend/full-stack,
+B6 backend/full-stack, B7 backend, B7 graduation demo, B8 release gate, and Phase H
+payment reconciliation.
+
+On the merge commit, the first B8 browser E2E attempt timed out while waiting for a
+response; the failed job was rerun unchanged and passed on attempt 2. CI, B7 backend,
+and B7 graduation demo also passed on the merge commit. CI then passed on the final
+documentation-only checkpoint `344d9141...`.
+
+The 2026-09-28 Product Experience work described by the user remains a **local,
+unpushed boundary** unless/until its source files are visible on GitHub. Do not claim
+that local UX checkpoint is contained in main.
+
+Frozen contracts remain unchanged:
+React/Vite; Express/Prisma; PostgreSQL 16; roles ADMIN/LAB_STAFF/LECTURER/STUDENT;
+canonical BookingStatus values; `NO_SHOW` as outcome/event; half-open
+`[startAt,endAt)`; `Resource.operationalStatus` authoritative; backend RBAC
+authoritative; `UserLabAssignment` defines LAB_STAFF scope.
+
+Physical sensor/camera verification remains **PENDING REAL HARDWARE**.
+There is no canonical Batch 9 or Batch 10.
+
 Last synchronized: 2026-09-21
 
 ## Purpose
