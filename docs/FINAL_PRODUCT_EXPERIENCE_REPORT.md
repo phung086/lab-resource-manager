@@ -5,6 +5,10 @@ and was synchronized to live `origin/main` (`235e45e83d6e3a77ceb93b7f138d98e1535
 on branch `sync/product-experience-20260928`. This report covers the authorized
 Product Experience refinement and synchronization work, not project closure.
 
+GitHub synchronization result: PR #20 merged into `main` at
+`77386e0514cd962ad219f1a2c9b7c138d87d6ec4`. All 14 PR checks passed before
+merge, and all 9 post-merge checks on `main` passed after merge.
+
 Reviewed local design skills first, then canonical project context and release
 evidence, frontend composition and all requested journey families. Wrote
 [SKILL_REVIEW_SUMMARY.md](SKILL_REVIEW_SUMMARY.md) and
@@ -156,6 +160,5 @@ Before showing an actual booking submission, use the existing isolated release
 walkthrough and configured local SMTP; this UX pass did not send email or change demo
 bookings. The original production demo on port 18157 still serves its previous build.
 
-This report is local synchronization evidence until the GitHub PR, checks and
-post-merge verification complete. Do not treat it as project closure or as a new
-backend batch.
+This report is synchronized to GitHub through PR #20 and the post-merge `main`
+checks. Do not treat it as project closure or as a new backend batch.
