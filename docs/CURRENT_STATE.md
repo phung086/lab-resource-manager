@@ -62,23 +62,22 @@ until those local changes are explicitly pushed and reviewed.
 No canonical Batch 9 or Batch 10 exists. Physical sensor/camera verification remains
 pending real hardware.
 
-## Product experience synchronization in progress — 2026-09-28
+## Product experience synchronization completed — 2026-09-28
 
-Integration branch `sync/product-experience-20260928` is being prepared from live
-`origin/main` after the Product Experience work that was previously local-only.
-The scope is product-experience refinement, supporting documentation, targeted
-browser test source, and a small public pricing read/quote route correction needed
-for the unauthenticated guest booking flow. It preserves database contracts,
-canonical roles/statuses/taxonomy, Prisma schema, migrations, RBAC-protected write
-paths, and research feature boundaries.
+PR #20 synchronized the Product Experience work from live `origin/main` and merged
+into `main` at `77386e0514cd962ad219f1a2c9b7c138d87d6ec4`. The scope was
+product-experience refinement, supporting documentation, targeted browser test
+source, and a small public pricing read/quote route correction needed for the
+unauthenticated guest booking flow. It preserves database contracts, canonical
+roles/statuses/taxonomy, Prisma schema, migrations, RBAC-protected write paths,
+and research feature boundaries.
 
-The historical local UX pass reported public detail stale-response/loading/error
-and focus fixes, guest wizard sequential validation and pending controls,
-resource-reset behavior, accurate training guidance, Vietnam-time schedule
-presentation, media failure fallback, responsive progress controls, and admin
-control accessible names. Current-branch verification must be rerun before this
-section is treated as synced GitHub evidence. Do not claim GitHub completion
-until the PR, GitHub Actions, and post-merge checks pass.
+The synchronized UX pass covers public detail stale-response/loading/error and
+focus fixes, guest wizard sequential validation and pending controls, resource-reset
+behavior, accurate training guidance, Vietnam-time schedule presentation, media
+failure fallback, responsive progress controls, and admin control accessible names.
+Local verification passed, all 14 PR checks passed before merge, and all 9
+post-merge checks on `main` passed after merge.
 
 ## Phase H payment hardening and transaction reconciliation — 2026-09-28
 
