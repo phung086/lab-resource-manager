@@ -1,5 +1,64 @@
 # Current Project State
 
+## Repository integration checkpoint — 2026-09-28
+
+This section is the current GitHub authority for repository integration state. Older
+phase sections below remain historical evidence and must not override this checkpoint.
+
+- Default branch: `main`.
+- Consolidated implementation PR #17 was retargeted to `main`, re-described as the
+  full cumulative integration, and merged at
+  `34c5e8c6da32e29bdf44542564d8edb76d6241c6`.
+- PR #17 contained the accepted implementation chain for migration hardening,
+  training eligibility, release-gate reliability, guest OTP/booking integrity,
+  privacy governance, transactional system audit, Open LAB workflow UX,
+  VNPAY/payment reconciliation, and backend release readiness.
+- Historical audit-only PR #5 was preserved in `main`; PR #7 was retargeted after
+  integration so its only remaining diff was its dated audit document, then preserved
+  in `main`.
+- The resulting documentation-preserving `main` checkpoint is
+  `344d9141e59c0d049319800a6889b7068684d335`.
+- Stacked PRs #6, #8, #9, #11, #12, #13, #14, #15, and #16 were closed after their
+  commits were integrated through #17.
+- Alternate guest-booking PR #10 was closed as superseded by the stronger accepted
+  #12 path; its branch remains historical and was not merged.
+- There are no open pull requests at this checkpoint.
+
+### Fresh GitHub verification on the integrated code
+
+Exact consolidated PR head
+`9616de496f800d9405628ab0b89d11f1a8def96c` passed:
+
+- CI;
+- Batch 5 Backend Regression;
+- Batch 5 Full-stack E2E;
+- Batch 6 Backend Regression;
+- Batch 6 Full-stack E2E;
+- Batch 7 Backend Regression;
+- Batch 7 Graduation Demo;
+- Batch 8 Smart Monitoring Release Gate;
+- Phase H Payment Reconciliation.
+
+The first Batch 8 smart-monitoring E2E attempt on the post-merge `main` commit
+timed out while waiting for a browser response. Its required-regression job passed.
+The failed job was rerun without changing source; attempt 2 passed, so the Batch 8
+workflow completed successfully. CI, Batch 7 Backend Regression, and the official
+Batch 7 Graduation Demo also passed on the merge commit.
+
+After the two documentation-only audit merges, CI passed on
+`344d9141e59c0d049319800a6889b7068684d335`.
+
+### Important local/GitHub boundary
+
+The separate Product Experience work reported locally on 2026-09-28
+(`FINAL_PRODUCT_EXPERIENCE_REPORT.md`, UX plan, skill review, local preview) was not
+present on GitHub when this checkpoint was created. It is therefore **not** part of
+the verified GitHub state above. Do not claim GitHub matches that local working tree
+until those local changes are explicitly pushed and reviewed.
+
+No canonical Batch 9 or Batch 10 exists. Physical sensor/camera verification remains
+pending real hardware.
+
 ## Phase H payment hardening and transaction reconciliation — 2026-09-28
 
 Branch `fix/payment-lifecycle-reconciliation` starts from the exact verified
