@@ -35,7 +35,8 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onOpenAssistant
 }) => {
-  // Real-time 2026 Clock State
+  const t = (vi: string, en: string) => locale === "en" ? en : vi;
+  // Canonical laboratory clock
   const [currentDateTime, setCurrentDateTime] = useState<string>("");
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -90,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right side: Language Segmented Control, Actions & User Profile */}
       <div className="header-right-2026">
-        {onOpenAssistant && <button className="secondary-button" onClick={onOpenAssistant}>Trợ lý AI</button>}
+        {onOpenAssistant && <button className="secondary-button" onClick={onOpenAssistant}>{t("Trợ lý AI", "LAB assistant")}</button>}
         {/* Ultra-thin Segmented Control for VI / EN */}
         <div className="segmented-control-2026" role="group" aria-label="Language Selector">
           <button
@@ -118,9 +119,9 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             className="header-icon-btn-2026"
-            title="Làm mới dữ liệu"
+            title={t("Làm mới dữ liệu", "Refresh data")}
             disabled={loading}
-            aria-label="Làm mới dữ liệu"
+            aria-label={t("Làm mới dữ liệu", "Refresh data")}
             onClick={onRefresh}
           >
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
@@ -131,11 +132,11 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           className={`header-notification-btn-2026 ${notificationsCount > 0 ? "has-unread" : ""}`}
-          title="Thông báo"
+          title={t("Thông báo", "Notifications")}
           aria-label={
             notificationsCount > 0
-              ? `Mở thông báo, ${notificationsCount} chưa đọc`
-              : "Mở thông báo"
+              ? t(`Mở thông báo, ${notificationsCount} chưa đọc`, `Open notifications, ${notificationsCount} unread`)
+              : t("Mở thông báo", "Open notifications")
           }
           onClick={onOpenNotifications}
         >
@@ -157,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="user-avatar-btn-2026"
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               aria-expanded={userMenuOpen}
-              aria-label="Mở menu tài khoản"
+              aria-label={t("Mở menu tài khoản", "Open account menu")}
             >
               <div className="avatar-letter-circle">
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
@@ -216,7 +217,7 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                   >
                     <KeyRound size={15} className="text-slate-400" />
-                    <span>Đổi Mật Khẩu</span>
+                    <span>{t("Đổi mật khẩu", "Change password")}</span>
                   </button>
 
                   <button
@@ -228,7 +229,7 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                   >
                     <LogOut size={15} className="text-rose-400" />
-                    <span>Đăng Xuất Khỏi Lab</span>
+                    <span>{t("Đăng xuất", "Sign out")}</span>
                   </button>
                 </div>
               </div>

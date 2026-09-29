@@ -1,3 +1,4 @@
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useState, useRef, useEffect } from "react";
 import { Server, ShieldCheck, Lock, Mail, User, BookOpen, ArrowRight, Sparkles, Terminal, CheckCircle2 } from "lucide-react";
 import { AuthIdentity } from "./AuthIdentity";
@@ -18,6 +19,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
   locale = "vi",
   onLocaleChange
 }) => {
+  const { tr } = useLocale();
   const [fullName, setFullName] = useState("");
   const [studentId, setStudentId] = useState("");
   const [email, setEmail] = useState("");
@@ -34,9 +36,9 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
 
   const perks = [
-    { title: "Tài khoản sinh viên mặc định", desc: "Vai trò đặc quyền chỉ do quản trị viên phân công", color: "text-emerald-400" },
-    { title: "Bảo vệ lịch đặt ở cơ sở dữ liệu", desc: "Ngăn hai yêu cầu đồng thời chiếm cùng một tài nguyên", color: "text-cyan-400" },
-    { title: "Quy trình duyệt và bàn giao", desc: "Theo dõi trạng thái đặt lịch và lịch sử sử dụng", color: "text-amber-400" }
+    { title: tr("Tài khoản sinh viên mặc định"), desc: tr("Vai trò đặc quyền chỉ do quản trị viên phân công"), color: "text-emerald-400" },
+    { title: tr("Bảo vệ lịch đặt ở cơ sở dữ liệu"), desc: tr("Ngăn hai yêu cầu đồng thời chiếm cùng một tài nguyên"), color: "text-cyan-400" },
+    { title: tr("Quy trình duyệt và bàn giao"), desc: tr("Theo dõi trạng thái đặt lịch và lịch sử sử dụng"), color: "text-amber-400" }
   ];
 
   async function handleSubmit(e: React.FormEvent) {
@@ -49,7 +51,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
       const result = await register({ email, password, fullName, studentId, department, phone, organization, customerType, address });
       onRegisterSuccess(result.user);
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể đăng ký tài khoản.");
+      setError(requestError?.message || tr("Không thể đăng ký tài khoản."));
     } finally {
       setIsLoading(false);
     }
@@ -99,11 +101,9 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
           <div className="auth-form-content my-auto w-full mx-auto">
             <div className="mb-4">
               <h3 className="text-2xl font-bold font-heading text-white tracking-tight">
-                Đăng Ký Tài Khoản
-              </h3>
+                {tr("Đăng Ký Tài Khoản")}</h3>
               <p className="text-xs text-slate-400 mt-1 font-sans">
-                Tạo tài khoản LAB để đặt lịch tài nguyên, theo dõi thanh toán và lưu địa chỉ mặc định cho các nghiệp vụ mượn thiết bị sau này.
-              </p>
+                {tr("Tạo tài khoản LAB để đặt lịch tài nguyên, theo dõi thanh toán và lưu địa chỉ mặc định cho các nghiệp vụ mượn thiết bị sau này.")}</p>
             </div>
 
             {error && (
@@ -114,7 +114,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
-                <label htmlFor="register-full-name" className="font-mono text-[11px] text-slate-300">Họ và tên đầy đủ *</label>
+                <label htmlFor="register-full-name" className="font-mono text-[11px] text-slate-300">{tr("Họ và tên đầy đủ *")}</label>
                 <div className="relative">
                   <User size={14} className="auth-input-icon text-slate-400" />
                   <input
@@ -126,7 +126,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="VD: Nguyễn Mai Phương"
+                    placeholder={tr("VD: Nguyễn Mai Phương")}
                     className="auth-form-input has-icon w-full text-xs"
                   />
                 </div>
@@ -134,7 +134,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-student-id" className="font-mono text-[11px] text-slate-300">Mã số sinh viên (không bắt buộc)</label>
+                  <label htmlFor="register-student-id" className="font-mono text-[11px] text-slate-300">{tr("Mã số sinh viên (không bắt buộc)")}</label>
                   <input
                     id="register-student-id"
                     type="text"
@@ -147,7 +147,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-email" className="font-mono text-[11px] text-slate-300">Email tài khoản *</label>
+                  <label htmlFor="register-email" className="font-mono text-[11px] text-slate-300">{tr("Email tài khoản *")}</label>
                   <input
                     id="register-email"
                     autoComplete="email"
@@ -163,34 +163,34 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-department" className="font-mono text-[11px] text-slate-300">Khoa / Bộ môn</label>
-                  <input id="register-department" value={department} onChange={e => setDepartment(e.target.value)} maxLength={100} autoComplete="organization" placeholder="Nội bộ trường" className="auth-form-input w-full text-xs" />
+                  <label htmlFor="register-department" className="font-mono text-[11px] text-slate-300">{tr("Khoa / Bộ môn")}</label>
+                  <input id="register-department" value={department} onChange={e => setDepartment(e.target.value)} maxLength={100} autoComplete="organization" placeholder={tr("Nội bộ trường")} className="auth-form-input w-full text-xs" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-organization" className="font-mono text-[11px] text-slate-300">Đơn vị / tổ chức</label>
-                  <input id="register-organization" value={organization} onChange={e => setOrganization(e.target.value)} maxLength={160} autoComplete="organization" placeholder="Khách ngoài trường nếu có" className="auth-form-input w-full text-xs" />
+                  <label htmlFor="register-organization" className="font-mono text-[11px] text-slate-300">{tr("Đơn vị / tổ chức")}</label>
+                  <input id="register-organization" value={organization} onChange={e => setOrganization(e.target.value)} maxLength={160} autoComplete="organization" placeholder={tr("Khách ngoài trường nếu có")} className="auth-form-input w-full text-xs" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-phone" className="font-mono text-[11px] text-slate-300">Số điện thoại *</label>
-                  <input id="register-phone" required value={phone} onChange={e => setPhone(e.target.value)} maxLength={20} autoComplete="tel" placeholder="Dùng cho liên hệ bàn giao" className="auth-form-input w-full text-xs" />
+                  <label htmlFor="register-phone" className="font-mono text-[11px] text-slate-300">{tr("Số điện thoại *")}</label>
+                  <input id="register-phone" required value={phone} onChange={e => setPhone(e.target.value)} maxLength={20} autoComplete="tel" placeholder={tr("Dùng cho liên hệ bàn giao")} className="auth-form-input w-full text-xs" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-customer-type" className="font-mono text-[11px] text-slate-300">Nhóm sử dụng tự khai</label>
+                  <label htmlFor="register-customer-type" className="font-mono text-[11px] text-slate-300">{tr("Nhóm sử dụng tự khai")}</label>
                   <select id="register-customer-type" value={customerType} onChange={e => setCustomerType(e.target.value)} className="auth-form-input w-full text-xs">
-                    <option value="INTERNAL">Nội bộ trường (chưa xác minh)</option>
-                    <option value="EXTERNAL">Khách / đơn vị ngoài trường</option>
+                    <option value="INTERNAL">{tr("Nội bộ trường (chưa xác minh)")}</option>
+                    <option value="EXTERNAL">{tr("Khách / đơn vị ngoài trường")}</option>
                   </select>
-                  <span className="font-mono text-[10px] leading-4 text-slate-400">Không dùng để cấp quyền hoặc ưu đãi.</span>
+                  <span className="font-mono text-[10px] leading-4 text-slate-400">{tr("Không dùng để cấp quyền hoặc ưu đãi.")}</span>
                 </div>
               </div>
 
               <VietnamAddressSelector value={address} onChange={setAddress} required compact />
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="register-password" className="font-mono text-[11px] text-slate-300">Mật khẩu khởi tạo *</label>
+                <label htmlFor="register-password" className="font-mono text-[11px] text-slate-300">{tr("Mật khẩu khởi tạo *")}</label>
                 <div className="relative">
                   <Lock size={14} className="auth-input-icon text-slate-400" />
                   <input
@@ -202,10 +202,10 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     onChange={(e) => setPassword(e.target.value)}
                     minLength={8}
                     maxLength={128}
-                    placeholder="Tối thiểu 8 ký tự..."
+                    placeholder={tr("Tối thiểu 8 ký tự...")}
                     className="auth-form-input has-icon password-input w-full text-xs"
                   />
-                  <button className="password-toggle" type="button" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <button className="password-toggle" type="button" aria-label={showPassword ? tr("Ẩn mật khẩu") : tr("Hiện mật khẩu")} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
               </div>
 
@@ -214,7 +214,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 disabled={isLoading}
                 className="auth-submit-button mt-2 text-xs btn-cyan-gradient flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>{isLoading ? "ĐANG TẠO HỒ SƠ..." : "HOÀN TẤT ĐĂNG KÝ"}</span>
+                <span>{isLoading ? tr("ĐANG TẠO HỒ SƠ...") : tr("HOÀN TẤT ĐĂNG KÝ")}</span>
                 <ArrowRight size={14} />
               </button>
             </form>
@@ -222,14 +222,13 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
 
           {/* Switch to Login */}
           <div className="text-center pt-3 border-t border-white/10 text-xs text-slate-400">
-            <span>Đã có tài khoản phòng lab? </span>
+            <span>{tr("Đã có tài khoản phòng lab?")}</span>
             <button
               type="button"
               onClick={onSwitchToLogin}
               className="auth-switch-link text-blue-400 font-semibold cursor-pointer ml-1"
             >
-              Đăng nhập ngay ➔
-            </button>
+              {tr("Đăng nhập ngay ➔")}</button>
           </div>
         </div>
       </div>

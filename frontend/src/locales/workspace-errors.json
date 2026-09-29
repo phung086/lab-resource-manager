@@ -1,0 +1,17 @@
+{
+  "FORBIDDEN": { "vi": "Bạn không có quyền thao tác trên dữ liệu này. Kiểm tra vai trò và phạm vi được phân công.", "en": "You cannot act on this record. Check your role and assigned scope." },
+  "STOCK_CATEGORY": { "vi": "Sổ kho chỉ áp dụng cho vật tư tiêu hao. Thiết bị được quản lý qua bàn giao và hoàn trả.", "en": "The stock ledger supports consumable materials. Equipment is tracked through handover and return." },
+  "IDEMPOTENCY_CONFLICT": { "vi": "Mã yêu cầu đã được dùng cho một giao dịch khác. Tải lại dữ liệu trước khi thử lại.", "en": "This request ID belongs to another movement. Refresh before trying again." },
+  "MAINTENANCE_SCOPE": { "vi": "Công việc bảo trì và vật tư phải thuộc cùng phòng lab.", "en": "Maintenance and materials must belong to the same laboratory." },
+  "MAINTENANCE_CLOSED": { "vi": "Chỉ được xuất vật tư cho công việc bảo trì còn mở.", "en": "Materials can only be issued to an open maintenance job." },
+  "STOCK_NOT_INITIALIZED": { "vi": "Hãy ghi nhận phiếu nhập tồn đầu đã kiểm đếm và đơn vị tính trước.", "en": "Record the verified opening receipt and stock unit first." },
+  "STOCK_UNIT": { "vi": "Không được đổi đơn vị tính sau khi đã ghi sổ kho.", "en": "The stock unit cannot change after the ledger is initialized." },
+  "INSUFFICIENT_STOCK": { "vi": "Giao dịch làm số tồn âm hoặc vượt giới hạn cho phép. Kiểm tra số lượng và tồn kho hiện tại.", "en": "This movement would exceed the valid stock balance. Check the quantity and current balance." },
+  "LECTURER_NOT_FOUND": { "vi": "Cần email của tài khoản giảng viên đang hoạt động.", "en": "Enter the email of an active lecturer account." },
+  "STUDENT_NOT_FOUND": { "vi": "Cần email của tài khoản sinh viên đang hoạt động.", "en": "Enter the email of an active student account." },
+  "GROUP_CODE_EXISTS": { "vi": "Mã lớp đã tồn tại. Hãy dùng mã khác.", "en": "This course group code already exists. Choose another code." },
+  "GROUP_ARCHIVED": { "vi": "Lớp này đã được lưu trữ và không nhận thay đổi.", "en": "This course group is archived and cannot be changed." },
+  "ACTIVITY_BOOKING_CLOSED": { "vi": "Không thể gửi hoạt động từ lịch đặt đã bị từ chối hoặc hủy.", "en": "A rejected or cancelled booking cannot start a teaching activity." },
+  "ACTIVITY_EXISTS": { "vi": "Lịch đặt này đã được gửi vào một lớp học phần.", "en": "This booking has already been submitted to a course group." },
+  "ACTIVITY_REVISION_NOT_REQUESTED": { "vi": "Hoạt động này không ở trạng thái yêu cầu chỉnh sửa.", "en": "This activity is not awaiting revision." }
+}

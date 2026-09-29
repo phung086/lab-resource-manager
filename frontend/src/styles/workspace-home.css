@@ -1,181 +1,22 @@
-.workspace-home {
-  display: grid;
-  gap: 1.5rem;
-}
-
-.workspace-action-queue {
-  display: grid;
-  gap: 1.25rem;
-}
-
-.action-priority-card {
-  border-radius: 16px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
-  padding: 1.25rem;
-  display: grid;
-  gap: 1rem;
-  transition: border-color 0.2s;
-}
-
-.action-priority-card.priority-urgent {
-  border-left: 4px solid #ef4444;
-  background: #fffafa;
-}
-
-.action-priority-card.priority-warning {
-  border-left: 4px solid #f59e0b;
-}
-
-.action-priority-card.priority-info {
-  border-left: 4px solid #3b82f6;
-}
-
-.action-priority-card.priority-success {
-  border-left: 4px solid #10b981;
-}
-
-.action-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.action-card-title {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.action-card-title h2 {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.action-card-title svg {
-  color: #2563eb;
-  flex-shrink: 0;
-}
-
-.priority-badge {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.2rem 0.55rem;
-  border-radius: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.priority-badge.p1 {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.priority-badge.p2 {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.priority-badge.p3 {
-  background: #e0e7ff;
-  color: #4338ca;
-}
-
-.priority-badge.p-neutral {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.action-card-body {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.action-booking-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.action-booking-info {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.action-booking-info strong {
-  color: #0f172a;
-  font-size: 0.98rem;
-}
-
-.action-booking-info time {
-  color: #2563eb;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.action-booking-info small {
-  color: #64748b;
-  font-size: 0.82rem;
-}
-
-.action-booking-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.action-empty-state {
-  color: #64748b;
-  font-size: 0.9rem;
-  padding: 0.5rem 0;
-}
-
-.action-alert-box {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
-  font-size: 0.9rem;
-}
-
-.action-alert-box.alert-warning {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
-}
-
-.action-alert-box.alert-success {
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
-}
-
-.action-alert-box.alert-danger {
-  background: #fff1f2;
-  border: 1px solid #fecdd3;
-  color: #9f1239;
-}
-
-.workspace-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.25rem;
-}
-
-@media (max-width: 900px) {
-  .workspace-actions-grid {
-    grid-template-columns: 1fr;
-  }
-}
+.lab-home .workspace-search { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--surface-base); border:1px solid var(--line-strong); border-radius:6px; }
+.lab-home .workspace-search input { flex:1; min-width:0; border:0; box-shadow:none; background:transparent; padding:8px 0; }
+.lab-home .workspace-search button { flex-shrink:0; }
+.lab-worklist { padding-bottom:24px; border-bottom:1px solid var(--line); }
+.lab-attention-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border:1px solid var(--line); background:var(--surface-base); }
+.lab-attention-grid button { display:flex; align-items:center; gap:12px; border:0; border-right:1px solid var(--line); border-radius:0; padding:18px 14px; text-align:left; background:transparent; color:var(--text-primary); min-height:68px; }
+.lab-attention-grid button:last-child { border-right:0; }
+.lab-attention-grid button:hover { background:var(--accent-subtle); }
+.lab-attention-grid button span { flex:1; font-size:.85rem; }
+.lab-attention-grid strong { font-variant-numeric:tabular-nums; font-size:1.2rem; }
+.lab-home-columns { display:grid; grid-template-columns:minmax(0,2fr) minmax(240px,1fr); gap:32px; }
+.lab-section-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.lab-session-row { display:flex; width:100%; gap:16px; align-items:center; text-align:left; padding:20px 0; border:0; border-bottom:1px solid var(--line); border-radius:0; background:transparent; color:var(--text-primary); }
+.lab-session-row > span:first-child { display:grid; gap:7px; flex:1; }
+.lab-session-row time, .lab-session-row small { color:var(--text-secondary); font-size:.8rem; }
+.lab-status { font-size:.75rem; font-weight:600; background:var(--surface-raised); padding:5px 8px; white-space:nowrap; }
+.lab-home-tools { border-left:1px solid var(--line); padding-left:24px; }
+.lab-home-tools > button { display:flex; align-items:center; gap:12px; width:100%; padding:15px 0; text-align:left; border:0; border-bottom:1px solid var(--line); border-radius:0; color:var(--text-primary); background:transparent; }
+.lab-home-tools > button span { flex:1; }
+.lab-home-tools > p { font-size:.8rem; color:var(--text-secondary); line-height:1.7; margin-top:24px; }
+@media(max-width:1000px) { .lab-attention-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .lab-attention-grid button { border-bottom:1px solid var(--line); } .lab-home-columns { grid-template-columns:1fr; } .lab-home-tools { border-left:0; padding-left:0; } }
+@media(max-width:540px) { .lab-session-row { flex-wrap:wrap; } .lab-attention-grid button { padding:14px 10px; } .lab-home .workspace-search { flex-wrap:wrap; } .lab-home .workspace-search input { width:65%; } }

@@ -22,6 +22,7 @@ import calendarRouter from "./routes/calendar.js";
 import bookingRouter from "./routes/bookings.js";
 import bookingPricingRouter from "./routes/bookingPricing.js";
 import maintenanceRouter from "./routes/maintenance.js";
+import labWorkspaceRouter from "./routes/labWorkspace.js";
 import dashboardRouter from "./routes/dashboard.js";
 import notificationRouter from "./routes/notifications.js";
 import incidentRouter from "./routes/incidents.js";
@@ -117,6 +118,7 @@ export function createApp() {
 
   // 6. Maintenance Windows & Calibration
   app.use("/api/maintenance", maintenanceRouter);
+  app.use("/api/lab-workspace", labWorkspaceRouter);
 
   // Optional integrations are independent of the retired research routes.
   if (config.paymentsEnabled) app.use("/api/payments", paymentRouter);

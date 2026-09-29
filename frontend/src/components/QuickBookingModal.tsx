@@ -1,3 +1,4 @@
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useState, useEffect } from "react";
 import { Calendar, AlertCircle, CheckCircle2, ArrowRight, ShieldAlert, Shield, RefreshCw } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.js";
@@ -52,6 +53,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   onViewBookings,
   onProceedPayment
 }) => {
+  const { tr } = useLocale();
   const [resources, setResources] = useState<any[]>(passedResources || []);
   const [loadingResources, setLoadingResources] = useState(passedResources === undefined);
   const [resourceError, setResourceError] = useState("");
@@ -90,10 +92,10 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       try {
         const result = await apiRequest("/booking-pricing/quote", { method: "POST", body: JSON.stringify({ resourceId, ...(purposeCode ? { purposeCode } : {}), startAt: vietnamTimeToIso(selectedDate, startTime), endAt: vietnamTimeToIso(selectedDate, endTime) }) });
         if (active) setQuote({ ...result, key: quoteKey });
-      } catch (e: any) { if (active) setQuoteError(e.message || "Không thể tính phí."); }
+      } catch (e: any) { if (active) setQuoteError(e.message || tr("Không thể tính phí.")); }
     }, 200);
     return () => { active = false; clearTimeout(timer); };
-  }, [isOpen, resourceId, purposeCode, selectedDate, startTime, endTime, pricingLoaded, pricingRules.length, quoteKey]);
+  }, [isOpen, resourceId, purposeCode, selectedDate, startTime, endTime, pricingLoaded, pricingRules.length, quoteKey, tr]);
 
   // Load resources if not passed or empty
   useEffect(() => {
@@ -192,15 +194,15 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (isSubmitting) return;
-    if (!quote || quote.key !== quoteKey) { setErrorMessage("Vui lòng chờ mức phí được cập nhật trước khi xác nhận."); return; }
+    if (!quote || quote.key !== quoteKey) { setErrorMessage(tr("Vui lòng chờ mức phí được cập nhật trước khi xác nhận.")); return; }
     setErrorMessage("");
 
     if (!resourceId || !resources.some((r) => r.id === resourceId)) {
-      setErrorMessage("Vui lòng chọn tài nguyên phòng thí nghiệm.");
+      setErrorMessage(tr("Vui lòng chọn tài nguyên phòng thí nghiệm."));
       return;
     }
     if (!selectedDate || !startTime || !endTime) {
-      setErrorMessage("Vui lòng nhập đầy đủ ngày và khung giờ.");
+      setErrorMessage(tr("Vui lòng nhập đầy đủ ngày và khung giờ."));
       return;
     }
 
@@ -210,7 +212,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       startAtIso = vietnamTimeToIso(selectedDate, startTime);
       endAtIso = vietnamTimeToIso(selectedDate, endTime);
     } catch {
-      setErrorMessage("Định dạng ngày hoặc giờ không hợp lệ.");
+      setErrorMessage(tr("Định dạng ngày hoặc giờ không hợp lệ."));
       return;
     }
 
@@ -218,7 +220,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     const endAt = new Date(endAtIso);
 
     if (startAt >= endAt) {
-      setErrorMessage("Thời gian bắt đầu phải trước thời gian kết thúc.");
+      setErrorMessage(tr("Thời gian bắt đầu phải trước thời gian kết thúc."));
       return;
     }
 
@@ -227,8 +229,8 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     try {
       const payload = {
         resourceId,
-        title: title.trim() || `Đặt chỗ: ${currentResource?.name || "Tài nguyên"}`,
-        purpose: purpose.trim() || "Nghiên cứu & Thực hành phòng thí nghiệm",
+        title: title.trim() || `Đặt chỗ: ${currentResource?.name || tr("Tài nguyên")}`,
+        purpose: purpose.trim() || tr("Nghiên cứu & Thực hành phòng thí nghiệm"),
         ...(purposeCode ? { purposeCode } : {}),
         acceptedQuote: { amountVnd: quote.amountVnd, version: quote.version },
         startAt: startAtIso,
@@ -250,15 +252,15 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
         onProceedPayment(booking);
       }
     } catch (err: any) {
-      const msg = err instanceof ApiError ? err.message : err?.message || "Không thể tạo lịch đặt.";
+      const msg = err instanceof ApiError ? err.message : err?.message || tr("Không thể tạo lịch đặt.");
       if (err?.code === "BOOKING_CONFLICT") {
-        setErrorMessage("Xung đột lịch đặt: Khung giờ này đã có người đăng ký.");
+        setErrorMessage(tr("Xung đột lịch đặt: Khung giờ này đã có người đăng ký."));
       } else if (err?.code === "MAINTENANCE_CONFLICT" || err?.code === "CALIBRATION_CONFLICT") {
-        setErrorMessage("Tài nguyên đang trong lịch bảo trì hoặc hiệu chuẩn.");
+        setErrorMessage(tr("Tài nguyên đang trong lịch bảo trì hoặc hiệu chuẩn."));
       } else if (err?.code === "POLICY_VIOLATION") {
         setErrorMessage(`Vi phạm chính sách: ${msg}`);
       } else if (err?.code === "RESOURCE_UNAVAILABLE") {
-        setErrorMessage("Tài nguyên hiện đang ngoại tuyến hoặc không khả dụng.");
+        setErrorMessage(tr("Tài nguyên hiện đang ngoại tuyến hoặc không khả dụng."));
       } else {
         setErrorMessage(msg);
       }
@@ -272,8 +274,8 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       dismissible={!isSubmitting}
-      title="Đặt lịch sử dụng phòng thí nghiệm"
-      subtitle="Hệ thống ghi nhận yêu cầu và xác thực tính khả dụng theo thời gian thực"
+      title={tr("Đặt lịch sử dụng phòng thí nghiệm")}
+      subtitle={tr("Hệ thống ghi nhận yêu cầu và xác thực tính khả dụng theo thời gian thực")}
       icon={Calendar}
       iconColor="text-blue-600"
       maxWidth="max-w-xl"
@@ -281,17 +283,15 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
         showSuccess ? (
           <div className="w-full flex items-center justify-between">
             <span className="text-xs text-secondary font-medium">
-              Vui lòng xem thông tin chi tiết ca đặt phía trên.
-            </span>
-            {onViewBookings && <button className="secondary-button" type="button" onClick={onViewBookings}>Xem lịch đặt của tôi</button>}
+              {tr("Vui lòng xem thông tin chi tiết ca đặt phía trên.")}</span>
+            {onViewBookings && <button className="secondary-button" type="button" onClick={onViewBookings}>{tr("Xem lịch đặt của tôi")}</button>}
             <button
               id="booking-success-close-btn"
               type="button"
               onClick={onClose}
               className="booking-modal-complete-button"
             >
-              Hoàn tất
-            </button>
+              {tr("Hoàn tất")}</button>
           </div>
         ) : (
           <>
@@ -301,15 +301,14 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               disabled={isSubmitting}
               className="btn btn-secondary booking-modal-secondary-button"
             >
-              Đóng
-            </button>
+              {tr("Đóng")}</button>
             <button
               type="submit"
               form="quick-booking-form"
               disabled={isSubmitting || loadingResources || resources.length === 0 || !resourceId || !quote || quote.key !== quoteKey}
               className="btn btn-primary text-xs px-5 py-2.5 flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>{isSubmitting ? "Đang gửi..." : "Xác nhận đặt lịch"}</span>
+              <span>{isSubmitting ? tr("Đang gửi...") : tr("Xác nhận đặt lịch")}</span>
               <ArrowRight size={14} aria-hidden="true" />
             </button>
           </>
@@ -322,43 +321,43 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           <div className="booking-success-header">
             <CheckCircle2 size={28} className="booking-success-icon" aria-hidden="true" />
             <div>
-              <h4 className="booking-success-title">Đặt lịch thành công</h4>
+              <h4 className="booking-success-title">{tr("Đặt lịch thành công")}</h4>
               <p className="booking-success-desc">
                 {createdBooking?.status === "CONFIRMED"
-                  ? "Lịch đặt đã được tự động xác nhận."
-                  : "Lịch đặt đã ghi nhận và đang chờ cán bộ phòng lab phê duyệt."}
+                  ? tr("Lịch đặt đã được tự động xác nhận.")
+                  : tr("Lịch đặt đã ghi nhận và đang chờ cán bộ phòng lab phê duyệt.")}
               </p>
             </div>
           </div>
 
           <div className="booking-success-details">
             <div className="booking-detail-row">
-              <span className="booking-detail-label">Trạng thái</span>
+              <span className="booking-detail-label">{tr("Trạng thái")}</span>
               <span
                 id="created-booking-status"
                 className={`booking-status-chip ${
                   createdBooking?.status === "CONFIRMED" ? "is-confirmed" : "is-pending"
                 }`}
               >
-                {createdBooking?.status === "CONFIRMED" ? "Xác nhận ngay" : "Chờ phê duyệt"}
+                {createdBooking?.status === "CONFIRMED" ? tr("Xác nhận ngay") : tr("Chờ phê duyệt")}
               </span>
             </div>
             <div className="booking-detail-row">
-              <span className="booking-detail-label">Tài nguyên</span>
+              <span className="booking-detail-label">{tr("Tài nguyên")}</span>
               <span className="booking-detail-value">{currentResource?.name} ({currentResource?.code})</span>
             </div>
             <div className="booking-detail-row">
-              <span className="booking-detail-label">Thời gian</span>
+              <span className="booking-detail-label">{tr("Thời gian")}</span>
               <span className="booking-detail-value font-mono">{selectedDate} · {startTime} – {endTime}</span>
             </div>
             {createdBooking?.id && (
               <div className="booking-detail-row border-top">
-                <span className="booking-detail-label">Mã booking</span>
+                <span className="booking-detail-label">{tr("Mã booking")}</span>
                 <span className="booking-detail-value font-mono text-muted">{createdBooking.id}</span>
               </div>
             )}
           </div>
-          {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>Phí đã chốt: {createdBooking.feeAmountVnd.toLocaleString("vi-VN")} đ. {createdBooking.status === "PENDING_APPROVAL" ? "Khoản thanh toán được tạo sau khi cán bộ duyệt lịch." : "Vui lòng thanh toán trước khi nhận bàn giao."}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>Xem khoản thanh toán của lịch đặt</button>}</div>}
+          {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>{tr("Phí đã chốt:")}{createdBooking.feeAmountVnd.toLocaleString("vi-VN")} {tr("đ.")}{createdBooking.status === "PENDING_APPROVAL" ? tr("Khoản thanh toán được tạo sau khi cán bộ duyệt lịch.") : tr("Vui lòng thanh toán trước khi nhận bàn giao.")}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>{tr("Xem khoản thanh toán của lịch đặt")}</button>}</div>}
         </div>
       ) : (
         <form id="quick-booking-form" onSubmit={handleSubmit} className="booking-form">
@@ -372,41 +371,38 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           {/* Resource Selector */}
           <div className="booking-field">
             <label htmlFor="booking-resource-select" className="booking-label">
-              <span>Thiết bị / Phòng thí nghiệm <span aria-hidden="true">*</span></span>
+              <span>{tr("Thiết bị / Phòng thí nghiệm")}<span aria-hidden="true">*</span></span>
               {currentResource && (
                 effectiveRequiresApproval ? (
                   <span className="booking-approval-badge is-required">
-                    <ShieldAlert size={11} aria-hidden="true" /> Cần duyệt
-                  </span>
+                    <ShieldAlert size={11} aria-hidden="true" /> {tr("Cần duyệt")}</span>
                 ) : (
                   <span className="booking-approval-badge is-instant">
-                    <Shield size={11} aria-hidden="true" /> Xác nhận tức thì
-                  </span>
+                    <Shield size={11} aria-hidden="true" /> {tr("Xác nhận tức thì")}</span>
                 )
               )}
             </label>
             {loadingResources ? (
               <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500 flex items-center gap-2">
                 <RefreshCw size={13} className="animate-spin text-blue-600" />
-                <span>Đang tải danh sách tài nguyên...</span>
+                <span>{tr("Đang tải danh sách tài nguyên...")}</span>
               </div>
-            ) : resourceError ? (<div className="alert danger" role="alert"><span>{resourceError}</span><button className="secondary-button" type="button" onClick={() => setResourceRetry(value => value + 1)}>Thử lại</button></div>) : resources.length === 0 ? (
+            ) : resourceError ? (<div className="alert danger" role="alert"><span>{resourceError}</span><button className="secondary-button" type="button" onClick={() => setResourceRetry(value => value + 1)}>{tr("Thử lại")}</button></div>) : resources.length === 0 ? (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex flex-col gap-1">
                 <span className="font-semibold flex items-center gap-1">
-                  <AlertCircle size={13} /> Không có tài nguyên khả dụng
-                </span>
-                <span>Cần có ít nhất một phòng hoặc thiết bị hoạt động trước khi tạo lịch đặt. Vui lòng liên hệ quản trị viên.</span>
+                  <AlertCircle size={13} /> {tr("Không có tài nguyên khả dụng")}</span>
+                <span>{tr("Cần có ít nhất một phòng hoặc thiết bị hoạt động trước khi tạo lịch đặt. Vui lòng liên hệ quản trị viên.")}</span>
               </div>
             ) : (
               <select
                 id="booking-resource-select"
-                aria-label="Chọn tài nguyên lịch"
+                aria-label={tr("Chọn tài nguyên lịch")}
                 value={resourceId}
                 onChange={(e) => setResourceId(e.target.value)}
                 required
               >
                 {!resourceId && (
-                  <option value="">-- Chọn tài nguyên phòng thí nghiệm --</option>
+                  <option value="">{tr("-- Chọn tài nguyên phòng thí nghiệm --")}</option>
                 )}
                 {resources.map((r) => {
                   const rApproval = Boolean(
@@ -415,7 +411,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                   );
                   return (
                     <option key={r.id} value={r.id}>
-                      {r.code} — {r.name}{rApproval ? " (Cần duyệt)" : " (Tức thì)"}
+                      {r.code} — {r.name}{rApproval ? tr(" (Cần duyệt)") : tr(" (Tức thì)")}
                     </option>
                   );
                 })}
@@ -426,7 +422,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           {/* Booking Title */}
           <div className="booking-field">
             <label htmlFor="booking-title" className="booking-label">
-              Tiêu đề buổi làm việc <span aria-hidden="true">*</span>
+              {tr("Tiêu đề buổi làm việc")}<span aria-hidden="true">*</span>
             </label>
             <input
               id="booking-title"
@@ -434,23 +430,22 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Vd: Thử nghiệm mô hình học sâu, Thực hành robot..."
+              placeholder={tr("Vd: Thử nghiệm mô hình học sâu, Thực hành robot...")}
             />
           </div>
 
           {/* Purpose */}
-          {pricingRules.length > 0 && <label className="booking-field">Mục đích tính phí<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{pricingRules.map(rule => <option key={rule.id} value={rule.purposeCode}>{rule.label} — {rule.hourlyRateVnd.toLocaleString("vi-VN")} đ/giờ</option>)}</select></label>}
-          <div className="alert" aria-live="polite">{quoteError ? <span role="alert">{quoteError}</span> : quote?.key === quoteKey ? <span>Phí sử dụng: <strong>{quote.amountVnd.toLocaleString("vi-VN")} đ</strong>{quote.amountVnd > 0 ? " · Thanh toán sau khi lịch được xác nhận, trước khi nhận bàn giao." : " · Không cần thanh toán."}</span> : "Đang cập nhật phí sử dụng…"}</div>
+          {pricingRules.length > 0 && <label className="booking-field">{tr("Mục đích tính phí")}<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{pricingRules.map(rule => <option key={rule.id} value={rule.purposeCode}>{rule.label} — {rule.hourlyRateVnd.toLocaleString("vi-VN")} {tr("đ/giờ")}</option>)}</select></label>}
+          <div className="alert" aria-live="polite">{quoteError ? <span role="alert">{quoteError}</span> : quote?.key === quoteKey ? <span>{tr("Phí sử dụng:")}<strong>{quote.amountVnd.toLocaleString("vi-VN")} {tr("đ")}</strong>{quote.amountVnd > 0 ? tr(" · Thanh toán sau khi lịch được xác nhận, trước khi nhận bàn giao.") : tr(" · Không cần thanh toán.")}</span> : tr("Đang cập nhật phí sử dụng…")}</div>
           <div className="booking-field">
             <label htmlFor="booking-purpose" className="booking-label">
-              Mục đích sử dụng
-            </label>
+              {tr("Mục đích sử dụng")}</label>
             <textarea
               id="booking-purpose"
               rows={2}
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
-              placeholder="Mô tả mục đích sử dụng tài nguyên (đề tài, môn học, thí nghiệm)..."
+              placeholder={tr("Mô tả mục đích sử dụng tài nguyên (đề tài, môn học, thí nghiệm)...")}
             />
           </div>
 
@@ -458,7 +453,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           <div className="booking-time-grid">
             <div className="booking-field">
               <label htmlFor="booking-date" className="booking-label">
-                Ngày đặt <span aria-hidden="true">*</span>
+                {tr("Ngày đặt")}<span aria-hidden="true">*</span>
               </label>
               <input
                 id="booking-date"
@@ -471,7 +466,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
             <div className="booking-field">
               <label htmlFor="booking-start-time" className="booking-label">
-                Giờ bắt đầu <span aria-hidden="true">*</span>
+                {tr("Giờ bắt đầu")}<span aria-hidden="true">*</span>
               </label>
               <input
                 id="booking-start-time"
@@ -484,7 +479,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
             <div className="booking-field">
               <label htmlFor="booking-end-time" className="booking-label">
-                Giờ kết thúc <span aria-hidden="true">*</span>
+                {tr("Giờ kết thúc")}<span aria-hidden="true">*</span>
               </label>
               <input
                 id="booking-end-time"
@@ -496,7 +491,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             </div>
           </div>
 
-          <p className="booking-review-note">Thời gian theo giờ Việt Nam (UTC+07:00). {effectiveRequiresApproval ? "Sau khi gửi, yêu cầu sẽ chờ cán bộ lab duyệt." : "Lịch sẽ được xác nhận nếu khung giờ và chính sách hợp lệ."}</p>
+          <p className="booking-review-note">{tr("Thời gian theo giờ Việt Nam (UTC+07:00).")}{effectiveRequiresApproval ? tr("Sau khi gửi, yêu cầu sẽ chờ cán bộ lab duyệt.") : tr("Lịch sẽ được xác nhận nếu khung giờ và chính sách hợp lệ.")}</p>
           <LabPolicySummary policy={currentPolicy} requiresApproval={currentResource ? effectiveRequiresApproval : undefined} />
         </form>
       )}

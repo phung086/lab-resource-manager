@@ -1,0 +1,27 @@
+.lab-workspace { display: grid; gap: 24px; max-width: 1280px; margin: 0 auto; color: var(--text-primary); }
+.lab-page-heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
+.lab-page-heading h1 { font-size: 1.65rem; line-height: 1.3; margin: 0 0 8px; letter-spacing: -.025em; }
+.lab-page-heading p { max-width: 72ch; color: var(--text-secondary); margin: 0; line-height: 1.65; }
+.lab-split { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1.7fr); gap: 32px; align-items: start; }
+.lab-register { border-top: 2px solid var(--text-primary); }
+.lab-workspace h2 { font-size: 1.1rem; margin: 18px 0 14px; }
+.lab-register-row { display: flex; justify-content: space-between; gap: 16px; text-align: left; width: 100%; padding: 16px 12px; border: 0; border-bottom: 1px solid var(--line); background: var(--surface-base); color: var(--text-primary); border-radius: 0; cursor: pointer; }
+.lab-register-row > span:first-child { display: grid; gap: 5px; }
+.lab-register-row small, .lab-help, .lab-ledger-row small { color: var(--text-secondary); font-size: .82rem; line-height: 1.6; }
+.lab-register-row[aria-pressed="true"] { background: var(--accent-subtle); box-shadow: inset 0 0 0 1px var(--accent); }
+.lab-register-row:hover { background: var(--surface-raised); }
+.lab-form { background: var(--surface-base); border: 1px solid var(--line); border-radius: 6px; padding: 20px; margin: 16px 0; }
+.lab-form fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 16px; min-width: 0; }
+.lab-form label { display: grid; gap: 7px; font-size: .875rem; font-weight: 600; }
+.lab-form input, .lab-form select, .lab-form textarea { width: 100%; min-width: 0; min-height: 42px; padding: 10px 12px; font: inherit; font-weight: 400; }
+.lab-form button { justify-self: start; min-height: 44px; }
+.lab-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.lab-ledger-row { padding: 18px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.lab-ledger-row > div { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lab-ledger-row p { margin: 9px 0; line-height: 1.6; }
+.lab-ledger-row blockquote { margin: 12px 0; padding: 12px; background: var(--surface-raised); }
+.lab-disclosure { border: 1px solid var(--line); border-radius: 6px; padding: 16px; background: var(--surface-base); }
+.lab-disclosure summary { cursor: pointer; font-weight: 600; }
+.lab-empty { padding: 24px 0; color: var(--text-secondary); line-height: 1.7; }
+.lab-inline-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 800px) { .lab-split { grid-template-columns: 1fr; gap: 20px; } .lab-page-heading { flex-wrap: wrap; } .lab-fields { grid-template-columns: 1fr; } }

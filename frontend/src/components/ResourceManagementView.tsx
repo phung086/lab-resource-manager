@@ -1,3 +1,4 @@
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
@@ -93,6 +94,7 @@ const emptyForm = {
 };
 
 export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ user, managementMode = false, initialSearch = "", onViewCalendar }) => {
+  const { tr } = useLocale();
   const [resources, setResources] = useState<any[]>([]);
   const [laboratories, setLaboratories] = useState<any[]>([]);
   const [filters, setFilters] = useState<Filters>({ ...initialFilters, search: initialSearch });
@@ -132,7 +134,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       const result = await apiRequest(`/resources${query ? `?${query}` : ""}`);
       if (version === requestVersion.current) setResources(result);
     } catch (requestError: any) {
-      if (version === requestVersion.current) setError(requestError?.message || "Không thể tải danh mục tài nguyên.");
+      if (version === requestVersion.current) setError(requestError?.message || tr("Không thể tải danh mục tài nguyên."));
     } finally {
       if (version === requestVersion.current) setLoading(false);
     }
@@ -141,8 +143,8 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
   useEffect(() => {
     apiRequest("/laboratories")
       .then(setLaboratories)
-      .catch((requestError) => setError(requestError?.message || "Không thể tải danh sách phòng thí nghiệm."));
-  }, [user.id]);
+      .catch((requestError) => setError(requestError?.message || tr("Không thể tải danh sách phòng thí nghiệm.")));
+  }, [user.id, tr]);
 
   useEffect(() => {
     const timer = window.setTimeout(loadResources, filters.search ? 250 : 0);
@@ -212,7 +214,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
     };
     try {
       if (editing) {
-        payload.changeReason = "Cập nhật hồ sơ tài nguyên từ giao diện quản trị";
+        payload.changeReason = tr("Cập nhật hồ sơ tài nguyên từ giao diện quản trị");
         await apiRequest(`/resources/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });
         setNotice(`Đã lưu thay đổi cho ${form.code}.`);
       } else {
@@ -222,7 +224,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       resetForm();
       await loadResources();
     } catch (requestError: any) {
-      setFormError(requestError?.message || "Không thể lưu tài nguyên.");
+      setFormError(requestError?.message || tr("Không thể lưu tài nguyên."));
       window.setTimeout(() => errorRef.current?.focus(), 0);
     } finally {
       setSaving(false);
@@ -240,7 +242,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       ]);
       setDetail({ ...record, schedule, history: history.timeline || [] });
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể tải chi tiết tài nguyên.");
+      setError(requestError?.message || tr("Không thể tải chi tiết tài nguyên."));
     } finally {
       setDetailLoadingId("");
     }
@@ -269,36 +271,36 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
     <div className="content-stack resource-management-view">
       <section className="panel resource-catalog-header">
         <div className="panel-heading">
-          <div className="panel-title"><Server aria-hidden="true" /><h2>{managementMode ? "Quản lý tài nguyên" : "Danh mục tài nguyên phòng thí nghiệm"}</h2></div>
+          <div className="panel-title"><Server aria-hidden="true" /><h2>{managementMode ? tr("Quản lý tài nguyên") : tr("Danh mục tài nguyên phòng thí nghiệm")}</h2></div>
           <div className="resource-header-actions">
             <button type="button" className="secondary-button" onClick={loadResources} disabled={loading}>
-              <RefreshCw size={16} aria-hidden="true" /><span>Làm mới</span>
+              <RefreshCw size={16} aria-hidden="true" /><span>{tr("Làm mới")}</span>
             </button>
             {managementMode && canManage && (
               <button type="button" className="primary-button" onClick={startCreate}>
-                <Plus size={16} aria-hidden="true" /><span>Thêm tài nguyên</span>
+                <Plus size={16} aria-hidden="true" /><span>{tr("Thêm tài nguyên")}</span>
               </button>
             )}
           </div>
         </div>
 
-        <div className="resource-filter-grid" aria-label="Bộ lọc tài nguyên">
+        <div className="resource-filter-grid" aria-label={tr("Bộ lọc tài nguyên")}>
           <label className="resource-search-field">
-            <span>Tìm kiếm</span>
-            <span className="search-box"><Search size={17} aria-hidden="true" /><input value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Mã, tên, vị trí hoặc phòng lab" /></span>
+            <span>{tr("Tìm kiếm")}</span>
+            <span className="search-box"><Search size={17} aria-hidden="true" /><input value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder={tr("Mã, tên, vị trí hoặc phòng lab")} /></span>
           </label>
-          <label><span>Phòng thí nghiệm</span><select value={filters.laboratoryId} onChange={(event) => setFilters({ ...filters, laboratoryId: event.target.value })}><option value="">Tất cả</option>{laboratories.map((lab) => <option key={lab.id} value={lab.id}>{lab.code} - {lab.name}</option>)}</select></label>
-          <label><span>Nhóm tài nguyên</span><select value={filters.category} onChange={(event) => setFilters({ ...filters, category: event.target.value, classification: "ALL" })}><option value="">Tất cả</option>{categories.map((value) => <option key={value} value={value}>{categoryLabels[value]}</option>)}</select></label>
-          <label><span>Phân loại</span><select value={filters.classification} onChange={(event) => setFilters({ ...filters, classification: event.target.value, category: "" })}><option value="ALL">Tất cả</option><option value="UNRESOLVED">Chưa phân loại</option></select></label>
-          <label><span>Subtype kỹ thuật</span><select value={filters.subtype} onChange={(event) => setFilters({ ...filters, subtype: event.target.value })}><option value="">Tất cả</option>{subtypes.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-          <label><span>Trạng thái vận hành</span><select value={filters.operationalStatus} onChange={(event) => setFilters({ ...filters, operationalStatus: event.target.value })}><option value="">Tất cả</option>{operationalStatuses.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}</select></label>
+          <label><span>{tr("Phòng thí nghiệm")}</span><select value={filters.laboratoryId} onChange={(event) => setFilters({ ...filters, laboratoryId: event.target.value })}><option value="">{tr("Tất cả")}</option>{laboratories.map((lab) => <option key={lab.id} value={lab.id}>{lab.code} - {lab.name}</option>)}</select></label>
+          <label><span>{tr("Nhóm tài nguyên")}</span><select value={filters.category} onChange={(event) => setFilters({ ...filters, category: event.target.value, classification: "ALL" })}><option value="">{tr("Tất cả")}</option>{categories.map((value) => <option key={value} value={value}>{tr(categoryLabels[value])}</option>)}</select></label>
+          <label><span>{tr("Phân loại")}</span><select value={filters.classification} onChange={(event) => setFilters({ ...filters, classification: event.target.value, category: "" })}><option value="ALL">{tr("Tất cả")}</option><option value="UNRESOLVED">{tr("Chưa phân loại")}</option></select></label>
+          <label><span>{tr("Subtype kỹ thuật")}</span><select value={filters.subtype} onChange={(event) => setFilters({ ...filters, subtype: event.target.value })}><option value="">{tr("Tất cả")}</option>{subtypes.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+          <label><span>{tr("Trạng thái vận hành")}</span><select value={filters.operationalStatus} onChange={(event) => setFilters({ ...filters, operationalStatus: event.target.value })}><option value="">{tr("Tất cả")}</option>{operationalStatuses.map((value) => <option key={value} value={value}>{tr(statusLabels[value])}</option>)}</select></label>
           <button type="button" className="secondary-button resource-clear-filters" disabled={JSON.stringify(filters) === JSON.stringify(initialFilters)} onClick={() => setFilters(initialFilters)}>
-            <FilterX size={16} aria-hidden="true" /><span>Xóa bộ lọc</span>
+            <FilterX size={16} aria-hidden="true" /><span>{tr("Xóa bộ lọc")}</span>
           </button>
-          <label><span>Khả dụng hiện tại</span><select value={filters.availability} onChange={event => setFilters({ ...filters, availability: event.target.value })}><option value="">Tất cả</option><option value="AVAILABLE">Đang khả dụng</option><option value="RESERVED">Đang có lịch đặt</option><option value="UNAVAILABLE">Không khả dụng</option></select></label>
+          <label><span>{tr("Khả dụng hiện tại")}</span><select value={filters.availability} onChange={event => setFilters({ ...filters, availability: event.target.value })}><option value="">{tr("Tất cả")}</option><option value="AVAILABLE">{tr("Đang khả dụng")}</option><option value="RESERVED">{tr("Đang có lịch đặt")}</option><option value="UNAVAILABLE">{tr("Không khả dụng")}</option></select></label>
         </div>
-        <div className="catalog-results-bar"><span role="status">{loading ? "Đang tìm tài nguyên…" : error ? "Chưa tải được kết quả" : `${resources.length} tài nguyên phù hợp`}</span><label>Sắp xếp <select value={sort} onChange={event => setSort(event.target.value)}><option value="name">Tên tài nguyên</option><option value="code">Mã tài nguyên</option></select></label></div>
-        <p className="catalog-availability-note">Khả dụng hiện tại không đảm bảo khung giờ trong tương lai. Mở lịch để chọn thời gian sử dụng.</p>
+        <div className="catalog-results-bar"><span role="status">{loading ? tr("Đang tìm tài nguyên…") : error ? tr("Chưa tải được kết quả") : `${resources.length} tài nguyên phù hợp`}</span><label>{tr("Sắp xếp")}<select value={sort} onChange={event => setSort(event.target.value)}><option value="name">{tr("Tên tài nguyên")}</option><option value="code">{tr("Mã tài nguyên")}</option></select></label></div>
+        <p className="catalog-availability-note">{tr("Khả dụng hiện tại không đảm bảo khung giờ trong tương lai. Mở lịch để chọn thời gian sử dụng.")}</p>
       </section>
 
       {error && <div className="alert danger" role="alert">{error}</div>}
@@ -307,54 +309,54 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       {managementMode && canManage && <ResourceMediaEditor resources={resources} />}
       {managementMode && showForm && (
         <section className="panel resource-editor" aria-labelledby="resource-editor-title">
-          <div className="panel-title"><Edit3 aria-hidden="true" /><h2 id="resource-editor-title">{editing ? `Chỉnh sửa ${editing.code}` : "Tạo tài nguyên mới"}</h2></div>
+          <div className="panel-title"><Edit3 aria-hidden="true" /><h2 id="resource-editor-title">{editing ? `Chỉnh sửa ${editing.code}` : tr("Tạo tài nguyên mới")}</h2></div>
           {formError && <div ref={errorRef} tabIndex={-1} className="alert danger" role="alert">{formError}</div>}
           <form className="booking-form" onSubmit={submitForm}>
             <div className="form-grid">
-              <label htmlFor="resource-code"><span>Mã tài nguyên *</span><input id="resource-code" required maxLength={64} value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} /></label>
-              <label htmlFor="resource-name"><span>Tên tài nguyên *</span><input id="resource-name" required maxLength={255} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-              <label htmlFor="resource-lab"><span>Phòng thí nghiệm *</span><select id="resource-lab" required value={form.laboratoryId} onChange={(event) => setForm({ ...form, laboratoryId: event.target.value })}><option value="">Chọn phòng lab</option>{laboratories.filter((lab) => lab.isActive).map((lab) => <option key={lab.id} value={lab.id}>{lab.code} - {lab.name}</option>)}</select></label>
-              <label htmlFor="resource-category"><span>Nhóm tài nguyên</span><select id="resource-category" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}><option value="">Chưa phân loại</option>{categories.map((value) => <option key={value} value={value}>{categoryLabels[value]}</option>)}</select></label>
-              <label htmlFor="resource-subtype"><span>Subtype kỹ thuật *</span><select id="resource-subtype" required value={form.subtype} onChange={(event) => setForm({ ...form, subtype: event.target.value })}>{subtypes.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-              <label htmlFor="resource-location"><span>Vị trí *</span><input id="resource-location" required maxLength={255} value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} /></label>
-              <label htmlFor="resource-capacity"><span>Sức chứa / số lượng *</span><input id="resource-capacity" type="number" min="1" max="100000" required value={form.capacity} onChange={(event) => setForm({ ...form, capacity: event.target.value })} /></label>
-              <label htmlFor="resource-booking-state"><span>Chính sách đặt lịch</span><select id="resource-booking-state" value={form.bookingState} onChange={(event) => setForm({ ...form, bookingState: event.target.value })}><option value="bookable">Cho phép đặt</option><option value="restricted">Hạn chế</option><option value="non_bookable">Không cho đặt</option></select></label>
-              <label htmlFor="resource-manufacturer"><span>Nhà sản xuất</span><input id="resource-manufacturer" maxLength={255} value={form.manufacturer} onChange={(event) => setForm({ ...form, manufacturer: event.target.value })} /></label>
+              <label htmlFor="resource-code"><span>{tr("Mã tài nguyên *")}</span><input id="resource-code" required maxLength={64} value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} /></label>
+              <label htmlFor="resource-name"><span>{tr("Tên tài nguyên *")}</span><input id="resource-name" required maxLength={255} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+              <label htmlFor="resource-lab"><span>{tr("Phòng thí nghiệm *")}</span><select id="resource-lab" required value={form.laboratoryId} onChange={(event) => setForm({ ...form, laboratoryId: event.target.value })}><option value="">{tr("Chọn phòng lab")}</option>{laboratories.filter((lab) => lab.isActive).map((lab) => <option key={lab.id} value={lab.id}>{lab.code} - {lab.name}</option>)}</select></label>
+              <label htmlFor="resource-category"><span>{tr("Nhóm tài nguyên")}</span><select id="resource-category" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}><option value="">{tr("Chưa phân loại")}</option>{categories.map((value) => <option key={value} value={value}>{tr(categoryLabels[value])}</option>)}</select></label>
+              <label htmlFor="resource-subtype"><span>{tr("Subtype kỹ thuật *")}</span><select id="resource-subtype" required value={form.subtype} onChange={(event) => setForm({ ...form, subtype: event.target.value })}>{subtypes.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+              <label htmlFor="resource-location"><span>{tr("Vị trí *")}</span><input id="resource-location" required maxLength={255} value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} /></label>
+              <label htmlFor="resource-capacity"><span>{tr("Sức chứa / số lượng *")}</span><input id="resource-capacity" type="number" min="1" max="100000" required value={form.capacity} onChange={(event) => setForm({ ...form, capacity: event.target.value })} /></label>
+              <label htmlFor="resource-booking-state"><span>{tr("Chính sách đặt lịch")}</span><select id="resource-booking-state" value={form.bookingState} onChange={(event) => setForm({ ...form, bookingState: event.target.value })}><option value="bookable">{tr("Cho phép đặt")}</option><option value="restricted">{tr("Hạn chế")}</option><option value="non_bookable">{tr("Không cho đặt")}</option></select></label>
+              <label htmlFor="resource-manufacturer"><span>{tr("Nhà sản xuất")}</span><input id="resource-manufacturer" maxLength={255} value={form.manufacturer} onChange={(event) => setForm({ ...form, manufacturer: event.target.value })} /></label>
               <label htmlFor="resource-model"><span>Model</span><input id="resource-model" maxLength={255} value={form.model} onChange={(event) => setForm({ ...form, model: event.target.value })} /></label>
             </div>
-            <label htmlFor="resource-description"><span>Mô tả</span><textarea id="resource-description" rows={3} maxLength={2000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
-            <label className="check-line"><input type="checkbox" checked={form.requiresApproval} onChange={(event) => setForm({ ...form, requiresApproval: event.target.checked })} /><span>Yêu cầu phê duyệt trước khi đặt</span></label>
+            <label htmlFor="resource-description"><span>{tr("Mô tả")}</span><textarea id="resource-description" rows={3} maxLength={2000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+            <label className="check-line"><input type="checkbox" checked={form.requiresApproval} onChange={(event) => setForm({ ...form, requiresApproval: event.target.checked })} /><span>{tr("Yêu cầu phê duyệt trước khi đặt")}</span></label>
             <div className="resource-form-actions">
-              <button type="button" className="secondary-button" onClick={resetForm} disabled={saving}>Hủy</button>
-              <button type="submit" className="primary-button" disabled={saving}>{saving ? "Đang lưu..." : editing ? "Lưu thay đổi" : "Tạo tài nguyên"}</button>
+              <button type="button" className="secondary-button" onClick={resetForm} disabled={saving}>{tr("Hủy")}</button>
+              <button type="submit" className="primary-button" disabled={saving}>{saving ? tr("Đang lưu...") : editing ? tr("Lưu thay đổi") : tr("Tạo tài nguyên")}</button>
             </div>
           </form>
         </section>
       )}
 
       {loading ? (
-        <p className="empty-state" role="status">Đang tải dữ liệu tài nguyên...</p>
-      ) : error ? (<div className="empty-state"><p>Không thể hiển thị danh mục lúc này.</p><button className="secondary-button" onClick={loadResources}>Thử lại</button></div>) : resources.length === 0 ? (
-        <p className="empty-state">Không có tài nguyên phù hợp với bộ lọc.</p>
+        <p className="empty-state" role="status">{tr("Đang tải dữ liệu tài nguyên...")}</p>
+      ) : error ? (<div className="empty-state"><p>{tr("Không thể hiển thị danh mục lúc này.")}</p><button className="secondary-button" onClick={loadResources}>{tr("Thử lại")}</button></div>) : resources.length === 0 ? (
+        <p className="empty-state">{tr("Không có tài nguyên phù hợp với bộ lọc.")}</p>
       ) : managementMode ? (
         <section className="panel resource-table-panel">
           <div className="resource-table-wrap">
             <table className="resource-management-table">
-              <caption>{resources.length} tài nguyên trong danh mục</caption>
-              <thead><tr><th>Tài nguyên</th><th>Phân loại</th><th>Phòng lab</th><th>Vận hành</th><th>Availability</th><th><span className="sr-only">Thao tác</span></th></tr></thead>
+              <caption>{resources.length} {tr("tài nguyên trong danh mục")}</caption>
+              <thead><tr><th>{tr("Tài nguyên")}</th><th>{tr("Phân loại")}</th><th>{tr("Phòng lab")}</th><th>{tr("Vận hành")}</th><th>Availability</th><th><span className="sr-only">{tr("Thao tác")}</span></th></tr></thead>
               <tbody>{visibleResources.map((resource) => {
                 const manageable = canManageResource(resource);
                 return <tr key={resource.id}>
                   <td><strong>{resource.code}</strong><span>{resource.name}</span></td>
-                  <td><span className={resource.category ? "" : "text-warning"}>{resource.category ? categoryLabels[resource.category] : "Chưa phân loại"}</span><small>{resource.subtype}</small></td>
-                  <td>{resource.laboratory ? <><span>{resource.laboratory.code}</span><small>{resource.laboratory.name}</small></> : <span className="text-warning">Chưa gán phòng</span>}</td>
+                  <td><span className={resource.category ? "" : "text-warning"}>{resource.category ? tr(categoryLabels[resource.category]) : tr("Chưa phân loại")}</span><small>{resource.subtype}</small></td>
+                  <td>{resource.laboratory ? <><span>{resource.laboratory.code}</span><small>{resource.laboratory.name}</small></> : <span className="text-warning">{tr("Chưa gán phòng")}</span>}</td>
                   <td><StatusPill value={resource.operationalStatus} /></td>
                   <td><StatusPill value={resource.availability?.state || "UNAVAILABLE"} /></td>
                   <td><div className="resource-row-actions">
-                    <button type="button" className="icon-action" aria-label={`Xem ${resource.code}`} title="Xem chi tiết" onClick={() => openDetail(resource)} disabled={detailLoadingId === resource.id}><Eye size={16} /></button>
-                    <button type="button" className="icon-action" aria-label={`Sửa ${resource.code}`} title={manageable ? "Chỉnh sửa" : "Không thuộc phòng lab được phân công"} onClick={() => startEdit(resource)} disabled={!manageable}><Edit3 size={16} /></button>
-                    <button type="button" className="icon-action" aria-label={`Đổi trạng thái ${resource.code}`} title="Đổi trạng thái" onClick={() => setStatusResource(resource)} disabled={!manageable || resource.operationalStatus === "RETIRED"}><Wrench size={16} /></button>
-                    <button type="button" className="icon-action danger" aria-label={`Ngừng khai thác ${resource.code}`} title="Ngừng khai thác" onClick={() => setRetireResource(resource)} disabled={!manageable || resource.operationalStatus === "RETIRED"}><Archive size={16} /></button>
+                    <button type="button" className="icon-action" aria-label={`Xem ${resource.code}`} title={tr("Xem chi tiết")} onClick={() => openDetail(resource)} disabled={detailLoadingId === resource.id}><Eye size={16} /></button>
+                    <button type="button" className="icon-action" aria-label={`Sửa ${resource.code}`} title={manageable ? tr("Chỉnh sửa") : tr("Không thuộc phòng lab được phân công")} onClick={() => startEdit(resource)} disabled={!manageable}><Edit3 size={16} /></button>
+                    <button type="button" className="icon-action" aria-label={`Đổi trạng thái ${resource.code}`} title={tr("Đổi trạng thái")} onClick={() => setStatusResource(resource)} disabled={!manageable || resource.operationalStatus === "RETIRED"}><Wrench size={16} /></button>
+                    <button type="button" className="icon-action danger" aria-label={`Ngừng khai thác ${resource.code}`} title={tr("Ngừng khai thác")} onClick={() => setRetireResource(resource)} disabled={!manageable || resource.operationalStatus === "RETIRED"}><Archive size={16} /></button>
                   </div></td>
                 </tr>;
               })}</tbody>
@@ -362,21 +364,21 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
           </div>
         </section>
       ) : (
-        <section className="resource-grid" aria-label="Danh sách tài nguyên">
+        <section className="resource-grid" aria-label={tr("Danh sách tài nguyên")}>
           {visibleResources.map((resource) => <article className="resource-card canonical-resource-card" key={resource.id}>
-            <div className="catalog-category-art" aria-hidden="true">{React.createElement(({ ROOM: DoorOpen, EQUIPMENT: Microscope, MACHINE: Wrench, EXPERIMENT_KIT: FlaskConical, MATERIAL: Package } as Record<string, typeof Server>)[resource.category] || Server, { size: 48, strokeWidth: 1.3 })}<span>{categoryLabels[resource.category] || "Chưa phân loại"}</span></div>
+            <div className="catalog-category-art" aria-hidden="true">{React.createElement(({ ROOM: DoorOpen, EQUIPMENT: Microscope, MACHINE: Wrench, EXPERIMENT_KIT: FlaskConical, MATERIAL: Package } as Record<string, typeof Server>)[resource.category] || Server, { size: 48, strokeWidth: 1.3 })}<span>{tr(categoryLabels[resource.category]) || tr("Chưa phân loại")}</span></div>
             <div className="resource-body">
               <div className="row between"><div><span className="eyebrow">{resource.code}</span><h2>{resource.name}</h2></div><StatusPill value={resource.availability?.state || resource.operationalStatus} /></div>
-              <p>{resource.description || "Chưa có mô tả."}</p>
+              <p>{resource.description || tr("Chưa có mô tả.")}</p>
               <dl className="resource-facts">
-                <div><dt>Nhóm</dt><dd className={resource.category ? "" : "text-warning"}>{resource.category ? categoryLabels[resource.category] : "Chưa phân loại"}</dd></div>
-                <div><dt>Vị trí</dt><dd>{resource.location || "Chưa cập nhật"}</dd></div>
-                <div><dt>Phòng lab</dt><dd>{resource.laboratory?.name || "Chưa gán"}</dd></div>
-                <div><dt>Vận hành</dt><dd>{statusLabels[resource.operationalStatus] || resource.operationalStatus}</dd></div>
+                <div><dt>{tr("Nhóm")}</dt><dd className={resource.category ? "" : "text-warning"}>{resource.category ? tr(categoryLabels[resource.category]) : tr("Chưa phân loại")}</dd></div>
+                <div><dt>{tr("Vị trí")}</dt><dd>{resource.location || tr("Chưa cập nhật")}</dd></div>
+                <div><dt>{tr("Phòng lab")}</dt><dd>{resource.laboratory?.name || tr("Chưa gán")}</dd></div>
+                <div><dt>{tr("Vận hành")}</dt><dd>{tr(statusLabels[resource.operationalStatus]) || resource.operationalStatus}</dd></div>
               </dl>
-              <p className="resource-approval-note">{resource.effectiveRequiresApproval ? "Cần cán bộ lab phê duyệt" : "Xác nhận ngay khi hợp lệ"}</p>
-              <div className="resource-discovery-actions">{onViewCalendar && <button className="primary-button" onClick={() => onViewCalendar(resource.id)}>{["AVAILABLE", "IN_USE"].includes(resource.operationalStatus) ? "Xem lịch và đặt chỗ" : "Xem lịch"}</button>}
-              <button className="table-action" type="button" onClick={() => openDetail(resource)} disabled={detailLoadingId === resource.id}><Eye size={15} aria-hidden="true" /><span>{detailLoadingId === resource.id ? "Đang tải..." : "Xem chi tiết"}</span></button></div>
+              <p className="resource-approval-note">{resource.effectiveRequiresApproval ? tr("Cần cán bộ lab phê duyệt") : tr("Xác nhận ngay khi hợp lệ")}</p>
+              <div className="resource-discovery-actions">{onViewCalendar && <button className="primary-button" onClick={() => onViewCalendar(resource.id)}>{["AVAILABLE", "IN_USE"].includes(resource.operationalStatus) ? tr("Xem lịch và đặt chỗ") : tr("Xem lịch")}</button>}
+              <button className="table-action" type="button" onClick={() => openDetail(resource)} disabled={detailLoadingId === resource.id}><Eye size={15} aria-hidden="true" /><span>{detailLoadingId === resource.id ? tr("Đang tải...") : tr("Xem chi tiết")}</span></button></div>
             </div>
           </article>)}
         </section>
@@ -404,5 +406,6 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
 };
 
 function StatusPill({ value }: { value: string }) {
-  return <span className={`resource-status-pill status-${String(value).toLowerCase()}`}>{statusLabels[value] || value}</span>;
+  const { tr } = useLocale();
+  return <span className={`resource-status-pill status-${String(value).toLowerCase()}`}>{tr(statusLabels[value]) || value}</span>;
 }

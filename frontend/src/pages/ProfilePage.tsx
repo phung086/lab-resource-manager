@@ -1,3 +1,4 @@
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import {
   Award,
@@ -39,6 +40,7 @@ const CANONICAL_ROLE_LABELS: Record<string, string> = {
 };
 
 export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated: (user: any) => void }) {
+  const { tr } = useLocale();
   const [profile, setProfile] = useState<any>(null);
   const [fullName, setFullName] = useState(user?.fullName || "");
   const [phone, setPhone] = useState(user?.phone || "");
@@ -95,9 +97,9 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
       setProfile(payload);
       localStorage.setItem("lrm_user", JSON.stringify(payload));
       onUserUpdated(payload);
-      setSuccess("Thông tin liên hệ và địa chỉ đã được cập nhật thành công.");
+      setSuccess(tr("Thông tin liên hệ và địa chỉ đã được cập nhật thành công."));
     } catch (cause: any) {
-      setError(cause?.message || "Không cập nhật được hồ sơ.");
+      setError(cause?.message || tr("Không cập nhật được hồ sơ."));
     } finally {
       setSaving(false);
     }
@@ -110,15 +112,15 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
     setPasswordSuccess("");
 
     if (!currentPassword) {
-      setPasswordError("Vui lòng nhập mật khẩu hiện tại.");
+      setPasswordError(tr("Vui lòng nhập mật khẩu hiện tại."));
       return;
     }
     if (!newPassword || newPassword.length < 8) {
-      setPasswordError("Mật khẩu mới phải có ít nhất 8 ký tự.");
+      setPasswordError(tr("Mật khẩu mới phải có ít nhất 8 ký tự."));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("Xác nhận mật khẩu mới không khớp.");
+      setPasswordError(tr("Xác nhận mật khẩu mới không khớp."));
       return;
     }
 
@@ -128,7 +130,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         method: "POST",
         body: JSON.stringify({ currentPassword, newPassword })
       });
-      setPasswordSuccess("Đã cập nhật mật khẩu mới thành công.");
+      setPasswordSuccess(tr("Đã cập nhật mật khẩu mới thành công."));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -138,7 +140,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
       localStorage.setItem("lrm_user", JSON.stringify(updated));
       onUserUpdated(updated);
     } catch (cause: any) {
-      setPasswordError(cause?.message || "Không thể cập nhật mật khẩu.");
+      setPasswordError(cause?.message || tr("Không thể cập nhật mật khẩu."));
     } finally {
       setPasswordBusy(false);
     }
@@ -147,27 +149,26 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
   if (loading) {
     return (
       <div className="profile-page">
-        <p role="status"><Loader2 className="spin" size={18} /> Đang tải hồ sơ…</p>
+        <p role="status"><Loader2 className="spin" size={18} /> {tr("Đang tải hồ sơ…")}</p>
       </div>
     );
   }
 
-  const roleName = CANONICAL_ROLE_LABELS[profile?.role] || profile?.role || "STUDENT";
+  const roleName = tr(CANONICAL_ROLE_LABELS[profile?.role]) || profile?.role || "STUDENT";
   const isTemporaryPassword = Boolean(profile?.passwordResetRequired);
 
   return (
     <section className="profile-page" aria-labelledby="profile-title">
       <div className="profile-hero">
         <div>
-          <span className="profile-kicker">HỒ SƠ TRUY CẬP VÀ VẬN HÀNH</span>
-          <h1 id="profile-title">Hồ sơ người dùng & Quyền hạn LAB</h1>
+          <span className="profile-kicker">{tr("HỒ SƠ TRUY CẬP VÀ VẬN HÀNH")}</span>
+          <h1 id="profile-title">{tr("Hồ sơ người dùng & Quyền hạn LAB")}</h1>
           <p>
-            Quản lý thông tin định danh, bảo mật tài khoản, phân loại đối tượng sử dụng, chứng chỉ an toàn phòng lab và thông tin liên hệ.
-          </p>
+            {tr("Quản lý thông tin định danh, bảo mật tài khoản, phân loại đối tượng sử dụng, chứng chỉ an toàn phòng lab và thông tin liên hệ.")}</p>
         </div>
       </div>
 
-      {error && <div className="profile-alert danger" role="alert">{error}</div>}
+      {error && <div className="profile-alert danger" role="alert">{tr(error)}</div>}
       {success && <div className="profile-alert success" role="status"><CheckCircle2 size={16} />{success}</div>}
 
       {/* 1. IDENTITY */}
@@ -175,30 +176,30 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <User size={20} />
           <div>
-            <h2 id="section-identity-title">1. Thông tin danh tính</h2>
-            <p>Thông tin định danh người dùng trong hệ thống Open LAB.</p>
+            <h2 id="section-identity-title">{tr("1. Thông tin danh tính")}</h2>
+            <p>{tr("Thông tin định danh người dùng trong hệ thống Open LAB.")}</p>
           </div>
         </div>
         <div className="profile-identity-grid">
           <div className="identity-item">
-            <span className="profile-label">Họ và tên</span>
+            <span className="profile-label">{tr("Họ và tên")}</span>
             <strong>{profile?.fullName || "—"}</strong>
           </div>
           <div className="identity-item">
-            <span className="profile-label">Email tài khoản</span>
+            <span className="profile-label">{tr("Email tài khoản")}</span>
             <strong>{profile?.email || "—"}</strong>
           </div>
           <div className="identity-item">
-            <span className="profile-label">Vai trò hệ thống (RBAC)</span>
+            <span className="profile-label">{tr("Vai trò hệ thống (RBAC)")}</span>
             <span className="role-badge">{roleName}</span>
           </div>
           <div className="identity-item">
-            <span className="profile-label">Mã định danh hệ thống</span>
+            <span className="profile-label">{tr("Mã định danh hệ thống")}</span>
             <code>{profile?.id}</code>
           </div>
           {profile?.createdAt && (
             <div className="identity-item">
-              <span className="profile-label">Thời gian khởi tạo</span>
+              <span className="profile-label">{tr("Thời gian khởi tạo")}</span>
               <span>{formatVietnamDateTime(profile.createdAt)}</span>
             </div>
           )}
@@ -210,22 +211,22 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <Shield size={20} />
           <div>
-            <h2 id="section-security-title">2. Tài khoản & Bảo mật</h2>
-            <p>Trạng thái tài khoản và đổi mật khẩu truy cập.</p>
+            <h2 id="section-security-title">{tr("2. Tài khoản & Bảo mật")}</h2>
+            <p>{tr("Trạng thái tài khoản và đổi mật khẩu truy cập.")}</p>
           </div>
         </div>
 
         <div className="security-status-row">
           <div>
-            <span className="profile-label">Trạng thái tài khoản</span>
+            <span className="profile-label">{tr("Trạng thái tài khoản")}</span>
             <span className={`status-badge ${profile?.isActive !== false ? "active" : "inactive"}`}>
-              {profile?.isActive !== false ? "Hoạt động bình thường" : "Tài khoản bị tạm khóa"}
+              {profile?.isActive !== false ? tr("Hoạt động bình thường") : tr("Tài khoản bị tạm khóa")}
             </span>
           </div>
           <div>
-            <span className="profile-label">Yêu cầu đổi mật khẩu</span>
+            <span className="profile-label">{tr("Yêu cầu đổi mật khẩu")}</span>
             <span className={`status-badge ${isTemporaryPassword ? "warning" : "ok"}`}>
-              {isTemporaryPassword ? "Bắt buộc đổi mật khẩu" : "Mật khẩu an toàn"}
+              {isTemporaryPassword ? tr("Bắt buộc đổi mật khẩu") : tr("Mật khẩu an toàn")}
             </span>
           </div>
         </div>
@@ -234,8 +235,8 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
           <div className="profile-alert warning" role="alert">
             <ShieldAlert size={18} />
             <div>
-              <strong>Tài khoản đang dùng mật khẩu tạm thời</strong>
-              <p>Mật khẩu hiện tại là số điện thoại đăng ký đặt lịch nhanh. Bạn cần thiết lập mật khẩu mới ngay để bảo vệ tài khoản.</p>
+              <strong>{tr("Tài khoản đang dùng mật khẩu tạm thời")}</strong>
+              <p>{tr("Mật khẩu hiện tại là số điện thoại đăng ký đặt lịch nhanh. Bạn cần thiết lập mật khẩu mới ngay để bảo vệ tài khoản.")}</p>
             </div>
           </div>
         )}
@@ -244,41 +245,41 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         {passwordSuccess && <div className="profile-alert success" role="status"><CheckCircle2 size={16} />{passwordSuccess}</div>}
 
         <form onSubmit={handlePasswordChange} className="password-change-form">
-          <h3 className="sub-heading"><KeyRound size={16} /> Đổi mật khẩu</h3>
+          <h3 className="sub-heading"><KeyRound size={16} /> {tr("Đổi mật khẩu")}</h3>
           <div className="password-inputs-grid">
             <label>
-              <span className="profile-label">Mật khẩu hiện tại</span>
+              <span className="profile-label">{tr("Mật khẩu hiện tại")}</span>
               <input
                 type="password"
                 className="profile-input"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder={isTemporaryPassword ? "Số điện thoại đã đặt lịch" : "Nhập mật khẩu hiện tại"}
+                placeholder={isTemporaryPassword ? tr("Số điện thoại đã đặt lịch") : tr("Nhập mật khẩu hiện tại")}
                 required
                 autoComplete="current-password"
               />
             </label>
             <label>
-              <span className="profile-label">Mật khẩu mới (tối thiểu 8 ký tự)</span>
+              <span className="profile-label">{tr("Mật khẩu mới (tối thiểu 8 ký tự)")}</span>
               <input
                 type="password"
                 className="profile-input"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Nhập mật khẩu mới"
+                placeholder={tr("Nhập mật khẩu mới")}
                 required
                 minLength={8}
                 autoComplete="new-password"
               />
             </label>
             <label>
-              <span className="profile-label">Xác nhận mật khẩu mới</span>
+              <span className="profile-label">{tr("Xác nhận mật khẩu mới")}</span>
               <input
                 type="password"
                 className="profile-input"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Nhập lại mật khẩu mới"
+                placeholder={tr("Nhập lại mật khẩu mới")}
                 required
                 minLength={8}
                 autoComplete="new-password"
@@ -287,8 +288,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
           </div>
           <button type="submit" className="profile-button-secondary" disabled={passwordBusy}>
             {passwordBusy ? <Loader2 className="spin" size={16} /> : <KeyRound size={16} />}
-            Cập nhật mật khẩu
-          </button>
+            {tr("Cập nhật mật khẩu")}</button>
         </form>
       </article>
 
@@ -297,16 +297,16 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <ShieldCheck size={20} />
           <div>
-            <h2 id="section-access-title">3. Phân loại đối tượng & Nguyên tắc truy cập</h2>
-            <p>Khai báo đối tượng sử dụng và phạm vi hiệu lực phân quyền.</p>
+            <h2 id="section-access-title">{tr("3. Phân loại đối tượng & Nguyên tắc truy cập")}</h2>
+            <p>{tr("Khai báo đối tượng sử dụng và phạm vi hiệu lực phân quyền.")}</p>
           </div>
         </div>
 
         <div className="customer-classification-card">
           <div className="classification-header">
             <div>
-              <span className="profile-label">Phân loại khách hàng tự khai</span>
-              <strong>{customerType === "INTERNAL" ? "Nội bộ trường (INTERNAL)" : "Khách ngoài / Đối tác (EXTERNAL)"}</strong>
+              <span className="profile-label">{tr("Phân loại khách hàng tự khai")}</span>
+              <strong>{customerType === "INTERNAL" ? tr("Nội bộ trường (INTERNAL)") : tr("Khách ngoài / Đối tác (EXTERNAL)")}</strong>
             </div>
             <div className="semantics-tag">
               <code>customerTypeSemantics = SELF_DECLARED_UNVERIFIED</code>
@@ -314,12 +314,9 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
           </div>
 
           <div className="disclaimer-box">
-            <strong>Nguyên tắc thẩm quyền Open LAB:</strong>
+            <strong>{tr("Nguyên tắc thẩm quyền Open LAB:")}</strong>
             <p>
-              Phân loại nhóm sử dụng là thông tin <strong>tự khai báo (SELF_DECLARED_UNVERIFIED)</strong> nhằm hỗ trợ thu thập hồ sơ liên hệ.
-              Thông tin này <strong>KHÔNG</strong> cấp thẩm quyền tổ chức được xác minh, <strong>KHÔNG</strong> thay thế vai trò RBAC của hệ thống,
-              <strong>KHÔNG</strong> tự động thay đổi giá dịch vụ, và <strong>KHÔNG</strong> miễn trừ bất kỳ điều kiện đào tạo an toàn bắt buộc nào.
-            </p>
+              {tr("Phân loại nhóm sử dụng là thông tin")}<strong>{tr("tự khai báo (SELF_DECLARED_UNVERIFIED)")}</strong> {tr("nhằm hỗ trợ thu thập hồ sơ liên hệ. Thông tin này")}<strong>{tr("KHÔNG")}</strong> {tr("cấp thẩm quyền tổ chức được xác minh,")}<strong>{tr("KHÔNG")}</strong> {tr("thay thế vai trò RBAC của hệ thống,")}<strong>{tr("KHÔNG")}</strong> {tr("tự động thay đổi giá dịch vụ, và")}<strong>{tr("KHÔNG")}</strong> {tr("miễn trừ bất kỳ điều kiện đào tạo an toàn bắt buộc nào.")}</p>
           </div>
         </div>
       </article>
@@ -329,8 +326,8 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <Award size={20} />
           <div>
-            <h2 id="section-training-title">4. Đào tạo & Chứng nhận an toàn phòng LAB</h2>
-            <p>Chứng chỉ hoàn thành khóa đào tạo bắt buộc để sử dụng máy móc và phòng lab chuyên dụng.</p>
+            <h2 id="section-training-title">{tr("4. Đào tạo & Chứng nhận an toàn phòng LAB")}</h2>
+            <p>{tr("Chứng chỉ hoàn thành khóa đào tạo bắt buộc để sử dụng máy móc và phòng lab chuyên dụng.")}</p>
           </div>
         </div>
 
@@ -339,11 +336,11 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
             <table className="certifications-table">
               <thead>
                 <tr>
-                  <th scope="col">Mã khóa</th>
-                  <th scope="col">Tên khóa đào tạo</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">Ngày cấp</th>
-                  <th scope="col">Hạn chứng nhận</th>
+                  <th scope="col">{tr("Mã khóa")}</th>
+                  <th scope="col">{tr("Tên khóa đào tạo")}</th>
+                  <th scope="col">{tr("Trạng thái")}</th>
+                  <th scope="col">{tr("Ngày cấp")}</th>
+                  <th scope="col">{tr("Hạn chứng nhận")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -353,11 +350,11 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
                     <td><strong>{cert.name}</strong></td>
                     <td>
                       <span className={`cert-badge cert-${cert.status.toLowerCase()}`}>
-                        {cert.status === "VALID" ? "Đủ điều kiện (VALID)" : cert.status === "EXPIRED" ? "Hết hạn (EXPIRED)" : cert.status}
+                        {cert.status === "VALID" ? tr("Đủ điều kiện (VALID)") : cert.status === "EXPIRED" ? tr("Hết hạn (EXPIRED)") : cert.status}
                       </span>
                     </td>
                     <td>{formatVietnamDateTime(cert.issuedAt)}</td>
-                    <td>{cert.expiresAt ? formatVietnamDateTime(cert.expiresAt) : "Vô thời hạn"}</td>
+                    <td>{cert.expiresAt ? formatVietnamDateTime(cert.expiresAt) : tr("Vô thời hạn")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -365,8 +362,8 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
           </div>
         ) : (
           <div className="empty-cert-notice">
-            <p>Chưa có chứng nhận an toàn phòng lab nào được ghi nhận cho tài khoản này.</p>
-            <small>Khi đặt các thiết bị yêu cầu chứng chỉ (ví dụ: máy phay CNC, máy laser, hóa chất), hệ thống sẽ kiểm tra và yêu cầu hoàn thành khóa đào tạo tương ứng.</small>
+            <p>{tr("Chưa có chứng nhận an toàn phòng lab nào được ghi nhận cho tài khoản này.")}</p>
+            <small>{tr("Khi đặt các thiết bị yêu cầu chứng chỉ (ví dụ: máy phay CNC, máy laser, hóa chất), hệ thống sẽ kiểm tra và yêu cầu hoàn thành khóa đào tạo tương ứng.")}</small>
           </div>
         )}
       </article>
@@ -376,14 +373,14 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <MapPinned size={20} />
           <div>
-            <h2 id="section-contact-title">5. Thông tin liên hệ & Địa chỉ mặc định</h2>
-            <p>Thông tin phục vụ liên lạc bàn giao thiết bị, gửi thông báo và xác nhận đặt lịch.</p>
+            <h2 id="section-contact-title">{tr("5. Thông tin liên hệ & Địa chỉ mặc định")}</h2>
+            <p>{tr("Thông tin phục vụ liên lạc bàn giao thiết bị, gửi thông báo và xác nhận đặt lịch.")}</p>
           </div>
         </div>
 
         <div className="profile-form-grid">
           <label>
-            <span className="profile-label">Họ và tên</span>
+            <span className="profile-label">{tr("Họ và tên")}</span>
             <input
               className="profile-input"
               value={fullName}
@@ -394,7 +391,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
             />
           </label>
           <label>
-            <span className="profile-label">Số điện thoại liên hệ</span>
+            <span className="profile-label">{tr("Số điện thoại liên hệ")}</span>
             <input
               className="profile-input"
               value={phone}
@@ -404,7 +401,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
             />
           </label>
           <label>
-            <span className="profile-label">Đơn vị / Khoa / Tổ chức</span>
+            <span className="profile-label">{tr("Đơn vị / Khoa / Tổ chức")}</span>
             <input
               className="profile-input"
               value={organization}
@@ -414,27 +411,26 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
             />
           </label>
           <label>
-            <span className="profile-label">Nhóm sử dụng tự khai</span>
+            <span className="profile-label">{tr("Nhóm sử dụng tự khai")}</span>
             <select
               className="profile-input"
               value={customerType}
               onChange={(e) => setCustomerType(e.target.value)}
             >
-              <option value="INTERNAL">Nội bộ trường (tự khai, chưa xác minh)</option>
-              <option value="EXTERNAL">Đơn vị / Khách ngoài trường</option>
+              <option value="INTERNAL">{tr("Nội bộ trường (tự khai, chưa xác minh)")}</option>
+              <option value="EXTERNAL">{tr("Đơn vị / Khách ngoài trường")}</option>
             </select>
           </label>
         </div>
 
         <div className="address-section-block">
-          <span className="profile-label">Địa chỉ mặc định</span>
+          <span className="profile-label">{tr("Địa chỉ mặc định")}</span>
           <VietnamAddressSelector value={address} onChange={setAddress} required />
         </div>
 
         <button className="profile-save" type="submit" disabled={saving}>
           {saving ? <Loader2 className="spin" size={17} /> : <Save size={17} />}
-          Lưu thông tin liên hệ
-        </button>
+          {tr("Lưu thông tin liên hệ")}</button>
       </form>
 
       {/* 6. BOOKING SUMMARY */}
@@ -442,26 +438,26 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <CalendarCheck size={20} />
           <div>
-            <h2 id="section-booking-title">6. Tổng hợp lịch đặt LAB</h2>
-            <p>Tổng quan tiến trình các lịch đặt tài nguyên đã thực hiện.</p>
+            <h2 id="section-booking-title">{tr("6. Tổng hợp lịch đặt LAB")}</h2>
+            <p>{tr("Tổng quan tiến trình các lịch đặt tài nguyên đã thực hiện.")}</p>
           </div>
         </div>
 
         <div className="profile-stats-grid">
           <div className="stat-card">
-            <span>Hoàn tất sử dụng</span>
+            <span>{tr("Hoàn tất sử dụng")}</span>
             <strong>{profile?.bookingSummary?.completed || 0}</strong>
-            <small>Đã hoàn trả và nghiệm thu</small>
+            <small>{tr("Đã hoàn trả và nghiệm thu")}</small>
           </div>
           <div className="stat-card">
-            <span>Lịch đang hoạt động</span>
+            <span>{tr("Lịch đang hoạt động")}</span>
             <strong>{profile?.bookingSummary?.active || 0}</strong>
-            <small>Chờ duyệt, đã duyệt hoặc đang sử dụng</small>
+            <small>{tr("Chờ duyệt, đã duyệt hoặc đang sử dụng")}</small>
           </div>
           <div className="stat-card">
-            <span>Tổng số lịch</span>
+            <span>{tr("Tổng số lịch")}</span>
             <strong>{profile?.bookingSummary?.total || 0}</strong>
-            <small>Bao gồm mọi trạng thái</small>
+            <small>{tr("Bao gồm mọi trạng thái")}</small>
           </div>
         </div>
 
@@ -469,7 +465,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
           <div className="booking-status-breakdown">
             {Object.entries(profile.bookingSummary.byStatus).map(([statusKey, count]: [string, any]) => (
               <span key={statusKey} className="status-count-chip">
-                {CANONICAL_BOOKING_STATUS_LABELS[statusKey] || statusKey}: <strong>{count}</strong>
+                {tr(CANONICAL_BOOKING_STATUS_LABELS[statusKey]) || statusKey}: <strong>{count}</strong>
               </span>
             ))}
           </div>
@@ -481,41 +477,40 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <WalletCards size={20} />
           <div>
-            <h2 id="section-loyalty-title">7. Thông tin ưu tiên & Tích lũy LAB (Thông tin tham khảo)</h2>
-            <p>Hạng và điểm tích lũy phục vụ hỗ trợ vận hành. Không thay thế thẩm quyền phê duyệt an toàn.</p>
+            <h2 id="section-loyalty-title">{tr("7. Thông tin ưu tiên & Tích lũy LAB (Thông tin tham khảo)")}</h2>
+            <p>{tr("Hạng và điểm tích lũy phục vụ hỗ trợ vận hành. Không thay thế thẩm quyền phê duyệt an toàn.")}</p>
           </div>
         </div>
 
         <div className="loyalty-grid">
           <div className="profile-tier-card">
-            <span className="tier-kicker">Hạng tài khoản</span>
+            <span className="tier-kicker">{tr("Hạng tài khoản")}</span>
             <strong>{tierLabel(profile?.loyalty?.tier)}</strong>
-            <span>{profile?.loyalty?.points || 0} điểm LAB</span>
+            <span>{profile?.loyalty?.points || 0} {tr("điểm LAB")}</span>
             <small>{profile?.loyalty?.basis}</small>
           </div>
 
           <div className="profile-stats-grid">
             <div className="stat-card">
-              <span><WalletCards size={16} /> Tổng chi phí</span>
+              <span><WalletCards size={16} /> {tr("Tổng chi phí")}</span>
               <strong>{money(profile?.spending?.totalSpendVnd || 0)}</strong>
-              <small>{profile?.spending?.successfulPayments || 0} giao dịch thành công</small>
+              <small>{profile?.spending?.successfulPayments || 0} {tr("giao dịch thành công")}</small>
             </div>
             <div className="stat-card">
-              <span><BadgePercent size={16} /> Discount hỗ trợ</span>
+              <span><BadgePercent size={16} /> {tr("Discount hỗ trợ")}</span>
               <strong>{((profile?.loyalty?.discountBps || 0) / 100).toFixed(1)}%</strong>
-              <small>Áp dụng theo chính sách quản trị</small>
+              <small>{tr("Áp dụng theo chính sách quản trị")}</small>
             </div>
             <div className="stat-card">
-              <span><TrendingUp size={16} /> Điểm ưu tiên điều phối</span>
+              <span><TrendingUp size={16} /> {tr("Điểm ưu tiên điều phối")}</span>
               <strong>+{profile?.loyalty?.priorityBoost || 0}</strong>
-              <small>Tín hiệu tham khảo, không vượt quyền duyệt</small>
+              <small>{tr("Tín hiệu tham khảo, không vượt quyền duyệt")}</small>
             </div>
           </div>
         </div>
 
         <p className="commercial-disclaimer">
-          * Điểm tích lũy và xếp hạng chỉ mang tính tham khảo hỗ trợ quản trị, không được dùng để thay thế quy trình kiểm tra an toàn hoặc bỏ qua phê duyệt của cán bộ phòng lab.
-        </p>
+          {tr("* Điểm tích lũy và xếp hạng chỉ mang tính tham khảo hỗ trợ quản trị, không được dùng để thay thế quy trình kiểm tra an toàn hoặc bỏ qua phê duyệt của cán bộ phòng lab.")}</p>
       </article>
     </section>
   );

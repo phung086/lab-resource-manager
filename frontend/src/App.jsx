@@ -44,7 +44,10 @@ import { QuickBookingModal } from "./components/QuickBookingModal.tsx";
 import { AuthLoginView } from "./components/AuthLoginView.tsx";
 import { AuthRegisterView } from "./components/AuthRegisterView.tsx";
 import { PublicLanding } from "./components/PublicLanding.tsx";
+import { LocaleProvider } from "./providers/LocaleProvider.tsx";
 import { WorkspaceHome } from "./pages/WorkspaceHome";
+import { StockPage, TeachingPage } from "./pages/LabWorkspace";
+import { MaintenancePage } from "./pages/MaintenancePage";
 import { ProfilePage } from "./pages/ProfilePage.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import { AccessUserManagement } from "./components/AccessUserManagement.tsx";
@@ -54,7 +57,6 @@ import { MonitoringDashboardPage } from "./pages/monitoring/MonitoringDashboardP
 import { hashForTab, tabFromHash } from "./workspaceRoutes.js";
 import {
   emptyBookingForm,
-  emptyMaintenanceForm,
   emptyUserForm,
   resourceGlyphLabels
 } from "./constants.js";
@@ -97,6 +99,8 @@ const ADMIN_ONLY_TABS = new Set(["users", "quota_fairness", "chargeback", "polic
 const STAFF_ONLY_TABS = new Set(["admin_management", "conflict_queue", "allocations", "dashboard", "maintenance", "monitoring"]);
 
 function canAccessTab(role, tabId) {
+  if (tabId === 'stock') return ['ADMIN', 'LAB_STAFF'].includes(role);
+  if (tabId === 'teaching') return ['ADMIN', 'LECTURER', 'STUDENT'].includes(role);
   if (!isTabEnabled(tabId)) return false;
   if (ADMIN_ONLY_TABS.has(tabId)) return role === "ADMIN";
   if (STAFF_ONLY_TABS.has(tabId)) return role === "ADMIN" || role === "LAB_STAFF";
@@ -105,6 +109,10 @@ function canAccessTab(role, tabId) {
 
 function App() {
   const [locale, setLocale] = useState(getInitialLocale);
+  return <LocaleProvider locale={locale}><Application locale={locale} setLocale={setLocale} /></LocaleProvider>;
+}
+
+function Application({ locale, setLocale }) {
   const [user, setUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [activeTab, updateActiveTab] = useState(() => tabFromHash(window.location.hash));
@@ -171,6 +179,7 @@ function App() {
   }, [locale]);
 
   const routeUserId = user?.id;
+  const showingSchedule = activeTab === "home";
   const isPasswordResetRequired = Boolean(user?.passwordResetRequired);
   useEffect(() => {
     if (!routeUserId) return;
@@ -189,7 +198,7 @@ function App() {
     };
     window.addEventListener("hashchange", readRoute);
     // Replace the public login anchor without adding a redundant history entry.
-    if (!window.location.hash.startsWith("#/workspace/")) {
+    if (!window.location.hash.startsWith("#/workspace/") && activeTab !== "home") {
       window.history.replaceState(null, "", hashForTab(activeTab));
     }
     return () => window.removeEventListener("hashchange", readRoute);
@@ -275,7 +284,7 @@ function App() {
 
   useEffect(() => {
     if (user) loadData();
-  }, [routeUserId, activeTab]);
+  }, [routeUserId, showingSchedule]);
 
   useEffect(() => {
     if (user && !canAccessTab(user.role, activeTab)) {
@@ -307,13 +316,22 @@ function App() {
       );
     }
     return (
-      <PublicLanding onRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }} onViewSchedule={(id) => { sessionStorage.setItem("lrm_pending_resource", id); document.getElementById("dang-nhap")?.scrollIntoView({ behavior: "smooth" }); }} onGuestBookingComplete={handleGuestBookingComplete}><AuthLoginView
+      <PublicLanding onLocaleChange={changeLocale} onRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }} onViewSchedule={(id) => { sessionStorage.setItem("lrm_pending_resource", id); document.getElementById("dang-nhap")?.scrollIntoView({ behavior: "smooth" }); }} onGuestBookingComplete={handleGuestBookingComplete}><AuthLoginView
         onLogin={setUser}
         onSwitchToRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }}
         locale={locale}
         onLocaleChange={changeLocale}
       /></PublicLanding>
     );
+  }
+
+  if (activeTab === "home" && !user.passwordResetRequired) {
+    return <PublicLanding onLocaleChange={changeLocale} userName={user.fullName}
+      onRegister={() => {}} onWorkspace={() => setActiveTab("smart_calendar")}
+      onLogout={async () => { await logout(); setUser(null); window.location.hash = "dau-trang"; }}
+      onViewSchedule={id => { setCalendarResourceId(id); setActiveTab("smart_calendar"); }}
+      scheduleContent={<WorkspaceHome user={user} locale={locale} bookings={bookings} notifications={notifications} incidents={incidents} loading={loading} error={error} onRetry={loadData} onNavigate={setActiveTab} onSearch={query => { setResourceSearch(query); setActiveTab("resources"); }} />}
+    />;
   }
 
   return (
@@ -384,6 +402,7 @@ function App() {
         <WorkspaceHome
           user={user}
           bookings={bookings}
+          locale={locale}
           notifications={notifications}
           incidents={incidents}
           trainings={trainings}
@@ -395,6 +414,8 @@ function App() {
         />
       )}
       {activeTab === "profile" && <ProfilePage user={user} onUserUpdated={setUser} />}
+      {!user.passwordResetRequired && activeTab === 'stock' && canAccessTab(user.role, 'stock') && <StockPage locale={locale} user={user} maintenance={maintenance} />}
+      {!user.passwordResetRequired && activeTab === 'teaching' && canAccessTab(user.role, 'teaching') && <TeachingPage locale={locale} user={user} bookings={bookings} />}
       {!user.passwordResetRequired && PAYMENT_FEATURES_ENABLED && activeTab === "payments" && (
         <React.Suspense fallback={<p role="status">Đang tải thanh toán…</p>}>
           <PaymentsPage user={user} bookingId={paymentBookingId} onClearBooking={() => { setPaymentBookingId(""); setActiveTab("payments"); }} />
@@ -413,7 +434,7 @@ function App() {
       {!user.passwordResetRequired && activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={loadData} />}
       {!user.passwordResetRequired && activeTab === "resources" && <ResourceManagementView user={user} initialSearch={resourceSearch} onViewCalendar={(id) => { setCalendarResourceId(id); setActiveTab("smart_calendar"); }} />}
       {!user.passwordResetRequired && activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={loadData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
-      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenanceView resources={resources} maintenance={maintenance} isStaff={isStaff} onChanged={loadData} />}
+      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage locale={locale} resources={resources} maintenance={maintenance} onChanged={loadData} onBookings={() => setActiveTab('bookings')} />}
       {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
       {activeTab === "users" && <AccessUserManagement />}
@@ -815,197 +836,6 @@ function MonitoringView({ telemetry }) {
         <PanelTitle icon={Activity} title={copy.sections.monitoring} />
         <MonitoringList telemetry={telemetry} />
       </section>
-    </div>
-  );
-}
-
-// ─── MaintenanceView ──────────────────────────────────────────────────────────
-
-function MaintenanceView({ resources, maintenance, isStaff, onChanged }) {
-  const [form, setForm] = useState({ ...emptyMaintenanceForm });
-  const [showForm, setShowForm] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const statusLabels = {
-    scheduled: "Đã lên lịch",
-    in_progress: "Đang thực hiện",
-    completed: "Hoàn thành",
-    cancelled: "Đã huỷ"
-  };
-
-  const kindLabels = {
-    maintenance: "Bảo trì định kỳ",
-    repair: "Sửa chữa",
-    calibration: "Hiệu chuẩn",
-    inspection: "Kiểm tra"
-  };
-
-  const statusColors = {
-    scheduled: "info",
-    in_progress: "warning",
-    completed: "success",
-    cancelled: "danger"
-  };
-
-  async function createMaintenance(e) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await apiRequest("/maintenance", {
-        method: "POST",
-        body: JSON.stringify({
-          resourceId: form.resourceId,
-          title: form.title.trim(),
-          kind: form.kind || "maintenance",
-          status: "scheduled",
-          startAt: vietnamTimeToIso(...form.scheduledStart.split("T")),
-          endAt: vietnamTimeToIso(...form.scheduledEnd.split("T")),
-          notes: form.notes.trim() || undefined
-        })
-      });
-      setForm({ ...emptyMaintenanceForm });
-      setShowForm(false);
-      onChanged();
-    } catch (err) {
-      handleError(err, setError);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function updateMaintenanceStatus(id, newStatus) {
-    setError("");
-    setLoading(true);
-    try {
-      await apiRequest(`/maintenance/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: newStatus, changeReason: `Chuyển trạng thái sang ${statusLabels[newStatus]}` })
-      });
-      onChanged();
-    } catch (err) {
-      handleError(err, setError);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="view-root">
-      <div className="view-header">
-        <div>
-          <h2>{copy.nav.maintenance}</h2>
-          <p className="view-subtitle">Quản lý lịch bảo trì và sửa chữa thiết bị</p>
-        </div>
-        {isStaff && (
-          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-            <Plus size={16} /> Tạo lịch bảo trì
-          </button>
-        )}
-      </div>
-
-      {error && <div className="alert danger" role="alert">{error}</div>}
-
-      {showForm && isStaff && (
-        <form className="card form-card" onSubmit={createMaintenance}>
-          <h3>Tạo lịch bảo trì mới</h3>
-          <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="maintenance-resource">Tài nguyên *</label>
-              <select id="maintenance-resource" required value={form.resourceId} onChange={e => setForm({ ...form, resourceId: e.target.value })}>
-                <option value="">-- Chọn thiết bị --</option>
-                {resources.map(r => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="maintenance-kind">Loại công việc</label>
-              <select id="maintenance-kind" value={form.kind || "maintenance"} onChange={e => setForm({ ...form, kind: e.target.value })}>
-                {Object.entries(kindLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </div>
-            <div className="form-group full-width">
-              <label htmlFor="maintenance-title">Tiêu đề *</label>
-              <input id="maintenance-title" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Ví dụ: Kiểm tra quạt làm mát thiết bị" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="maintenance-start">Bắt đầu (giờ Việt Nam) *</label>
-              <input id="maintenance-start" type="datetime-local" required value={form.scheduledStart} onChange={e => setForm({ ...form, scheduledStart: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="maintenance-end">Kết thúc (giờ Việt Nam) *</label>
-              <input id="maintenance-end" type="datetime-local" required value={form.scheduledEnd} onChange={e => setForm({ ...form, scheduledEnd: e.target.value })} />
-            </div>
-            <div className="form-group full-width">
-              <label htmlFor="maintenance-notes">Ghi chú</label>
-              <textarea id="maintenance-notes" rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Mô tả công việc hoặc điều kiện thực tế" />
-            </div>
-          </div>
-          <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? "Đang lưu..." : "Tạo lịch bảo trì"}</button>
-            <button type="button" className="btn" onClick={() => setShowForm(false)}>Huỷ</button>
-          </div>
-        </form>
-      )}
-
-      <div className="card-list">
-        {maintenance.length === 0 && (
-          <div className="empty-state">
-            <Wrench size={40} />
-            <p>Chưa có lịch bảo trì nào</p>
-          </div>
-        )}
-        {maintenance.map(item => (
-          <div key={item.id} className="card">
-            <div className="card-header">
-              <div>
-                <span className={`badge ${statusColors[item.status] || "info"}`}>{statusLabels[item.status] || item.status}</span>
-                <span className="badge info" style={{ marginLeft: 8 }}>{kindLabels[item.kind] || item.kind}</span>
-                <strong style={{ marginLeft: 8 }}>{item.title}</strong>
-              </div>
-              <span className="badge info">{item.resource?.code}</span>
-            </div>
-            <p className="card-text">{item.resource?.name} — {item.resource?.location}</p>
-            <div className="card-meta">
-              <span>Bắt đầu: {formatVietnamDateTime(item.startAt)}</span>
-              <span>Kết thúc: {formatVietnamDateTime(item.endAt)}</span>
-              {item.notes && <span>Ghi chú: {item.notes}</span>}
-            </div>
-            {isStaff && !["completed", "cancelled"].includes(item.status) && (
-              <div className="card-actions" style={{ marginTop: 10 }}>
-                {item.status === "scheduled" && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    disabled={loading}
-                    onClick={() => updateMaintenanceStatus(item.id, "in_progress")}
-                  >
-                    <Activity size={13} /> Bắt đầu thực hiện
-                  </button>
-                )}
-                {item.status === "in_progress" && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    disabled={loading}
-                    onClick={() => updateMaintenanceStatus(item.id, "completed")}
-                  >
-                    <Check size={13} /> Đánh dấu hoàn thành
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  disabled={loading}
-                  onClick={() => updateMaintenanceStatus(item.id, "cancelled")}
-                >
-                  <X size={13} /> Hủy lịch bảo trì
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

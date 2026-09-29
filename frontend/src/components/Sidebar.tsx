@@ -58,6 +58,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   incidents = [],
   locale = "vi"
 }) => {
+  const t = (vi: string, en: string) => locale === 'en' ? en : vi;
+  const labels: Record<string, string> = { home: 'Home & schedule', profile: 'My profile', payments: 'Payments', smart_calendar: 'Resource calendar', bookings: ['ADMIN','LAB_STAFF'].includes(user?.role || '') ? 'Bookings and handover' : 'My bookings', resources: 'Rooms and equipment', dashboard: 'LAB operations', monitoring: 'Equipment monitoring', incidents: 'Incidents', escalations: 'Notifications', maintenance: 'Maintenance', stock: 'Materials inventory', teaching: 'Course groups', admin_management: 'Resource administration', logs: 'Audit log', users: 'Users and assignments', ai_analytics: 'Experimental analytics', ai_advisor: 'Experimental advisor' };
   const [expanded, setExpanded] = useState(false);
   const unreadNotifications = notifications.filter((notification) => !notification.readAt).length;
   const openIncidents = incidents.filter((incident) =>
@@ -67,31 +69,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navSections: NavSectionConfig[] = [
     {
       id: "booking_zone",
-      title: "KHÔNG GIAN LÀM VIỆC",
+      title: t("KHÔNG GIAN LÀM VIỆC", "WORKSPACE"),
       items: [
-        { id: "home", label: "Tổng quan của bạn", icon: LayoutDashboard },
-        { id: "profile", label: "Hồ Sơ & Ưu Tiên LAB", icon: UserRound },
+        { id: "teaching", label: "Lớp học phần", icon: Users },
+        { id: "home", label: "Trang chủ & kiểm tra lịch", icon: LayoutDashboard },
+        { id: "profile", label: "Hồ sơ cá nhân", icon: UserRound },
         { id: "payments", label: "Thanh toán", icon: ClipboardCheck },
         {
           id: "smart_calendar",
-          label: "Lịch Đặt Khung Giờ",
+          label: "Lịch phòng và thiết bị",
           icon: CalendarCheck
         },
         {
           id: "bookings",
-          label: ["ADMIN", "LAB_STAFF"].includes(user?.role || "") ? "Vận Hành Booking" : "Lịch Đặt Của Tôi",
+          label: ["ADMIN", "LAB_STAFF"].includes(user?.role || "") ? "Lịch đặt và bàn giao" : "Lịch đặt của tôi",
           icon: Clock
         },
         {
           id: "resources",
-          label: "Danh Mục Tài Nguyên",
+          label: "Phòng và thiết bị",
           icon: Server
         }
       ]
     },
     {
       id: "ai_zone",
-      title: "NGHIÊN CỨU / DEMO (TÙY CHỌN)",
+      title: t("NGHIÊN CỨU / DEMO (TÙY CHỌN)", "OPTIONAL RESEARCH"),
       items: [
         {
           id: "ai_analytics",
@@ -107,8 +110,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: "admin_zone",
-      title: ["ADMIN", "LAB_STAFF"].includes(user?.role || "") ? "VẬN HÀNH & QUẢN TRỊ" : "THÔNG BÁO & HỖ TRỢ",
+      title: ["ADMIN", "LAB_STAFF"].includes(user?.role || "") ? t("VẬN HÀNH & QUẢN TRỊ", "LAB OPERATIONS") : t("THÔNG BÁO & HỖ TRỢ", "SUPPORT"),
       items: [
+        { id: "stock", label: "Kho vật tư", icon: Layers },
         {
           id: "dashboard",
           label: "Bảng Điều Khiển Vận Hành",
@@ -166,19 +170,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         <div className="brand-info-2026">
           <strong className="brand-name-2026">LAB RESOURCE MANAGER</strong>
-          <span className="brand-tag-2026">QUẢN LÝ · ĐẶT LỊCH · GIÁM SÁT</span>
+          <span className="brand-tag-2026">{t("QUẢN LÝ · ĐẶT LỊCH · GIÁM SÁT", "RESOURCES · BOOKINGS · OPERATIONS")}</span>
         </div>
       </div>
 
-      <button className="mobile-nav-toggle secondary-button" aria-expanded={expanded} aria-controls="primary-navigation" onClick={() => setExpanded(value => !value)}>{expanded ? <X size={18} /> : <Menu size={18} />}<span>{expanded ? "Đóng menu" : "Menu"}</span></button>
+      <button className="mobile-nav-toggle secondary-button" aria-expanded={expanded} aria-controls="primary-navigation" onClick={() => setExpanded(value => !value)}>{expanded ? <X size={18} /> : <Menu size={18} />}<span>{expanded ? t("Đóng menu", "Close menu") : "Menu"}</span></button>
       {/* Navigation Sections */}
-      <nav id="primary-navigation" className="sidebar-nav-container-2026" aria-label="Điều hướng chính">
+      <nav id="primary-navigation" className="sidebar-nav-container-2026" aria-label={t("Điều hướng chính", "Main navigation")}>
         {navSections
           .filter((section) => section.id !== "ai_zone" || RESEARCH_FEATURES_ENABLED)
           .map((section) => ({
             ...section,
             items: section.items.filter((item) => {
               if (!isTabEnabled(item.id)) return false;
+              if (item.id === "teaching") return ["ADMIN", "LECTURER", "STUDENT"].includes(user?.role || "");
+              if (item.id === "stock") return ["ADMIN", "LAB_STAFF"].includes(user?.role || "");
               if (["logs", "users"].includes(item.id)) return user?.role === "ADMIN";
               if (["admin_management", "dashboard", "monitoring", "maintenance"].includes(item.id)) {
                 return ["ADMIN", "LAB_STAFF"].includes(user?.role || "");
@@ -202,7 +208,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     key={item.id}
                     type="button"
-                    title={item.label}
+                    title={locale === "en" ? labels[item.id] || item.label : item.label}
                     onClick={() => { onSelectTab(item.id); setExpanded(false); }}
                     className={`sidebar-nav-item-2026 ${isActive ? "is-active" : ""}`}
                     aria-current={isActive ? "page" : undefined}
@@ -212,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         size={16}
                         className="nav-item-icon-2026"
                       />
-                      <span className="nav-item-label-2026">{item.label}</span>
+                      <span className="nav-item-label-2026">{locale === "en" ? labels[item.id] || item.label : item.label}</span>
                     </div>
 
                     <div className="nav-item-right-2026">

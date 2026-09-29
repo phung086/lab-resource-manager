@@ -1,3 +1,4 @@
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ClipboardCheck, ShieldCheck } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026";
@@ -30,6 +31,7 @@ const CONDITION_SUGGESTIONS = [
 export const BookingActionModal: React.FC<BookingActionModalProps> = ({
   isOpen, onClose, action, booking, onConfirm, busy = false
 }) => {
+  const { tr } = useLocale();
   const [reason, setReason] = useState("");
   const [condition, setCondition] = useState("");
   const [error, setError] = useState("");
@@ -42,10 +44,10 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
     }
   }, [isOpen, action, booking?.id]);
 
-  const copy = ACTION_COPY[action];
+  const copy = Object.fromEntries(Object.entries(ACTION_COPY[action]).map(([key, value]) => [key, tr(value)]));
   const conditionField = action === "CHECK_OUT" ? "conditionBefore" : ["RETURN", "SELF_RETURN"].includes(action) ? "conditionAfter" : null;
   const reasonRequired = action === "REJECT";
-  const subtitle = useMemo(() => `${booking?.resource?.code || "Tài nguyên"} • ${booking?.title || "Booking"}`, [booking]);
+  const subtitle = useMemo(() => `${booking?.resource?.code || tr("Tài nguyên")} • ${booking?.title || "Booking"}`, [booking, tr]);
 
   if (!isOpen || !booking) return null;
 
@@ -59,13 +61,13 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
     const normalizedCondition = condition.trim();
 
     if (reasonRequired && !normalizedReason) {
-      setError("Vui lòng nhập lý do từ chối.");
+      setError(tr("Vui lòng nhập lý do từ chối."));
       return;
     }
     if (conditionField && !normalizedCondition) {
       setError(action === "CHECK_OUT"
-        ? "Vui lòng ghi nhận tình trạng tài nguyên trước khi bàn giao."
-        : "Vui lòng ghi nhận tình trạng tài nguyên sau khi hoàn trả.");
+        ? tr("Vui lòng ghi nhận tình trạng tài nguyên trước khi bàn giao.")
+        : tr("Vui lòng ghi nhận tình trạng tài nguyên sau khi hoàn trả."));
       return;
     }
 
@@ -78,7 +80,7 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
     try {
       await onConfirm(payload);
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể thực hiện thao tác. Vui lòng kiểm tra và thử lại.");
+      setError(requestError?.message || tr("Không thể thực hiện thao tác. Vui lòng kiểm tra và thử lại."));
     }
   }
 
@@ -93,10 +95,10 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
       maxWidth="max-w-xl"
       footer={
         <>
-          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>Hủy</button>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>{tr("Hủy")}</button>
           <button type="submit" form="booking-operation-form" className={`btn ${action === "REJECT" ? "btn-danger" : "btn-primary"}`} disabled={busy}>
             <CheckCircle2 size={15} />
-            <span>{busy ? "Đang lưu..." : copy.submit}</span>
+            <span>{busy ? tr("Đang lưu...") : copy.submit}</span>
           </button>
         </>
       }
@@ -111,16 +113,16 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
         </div>
 
         <p className="operation-modal-hint">{copy.hint}</p>
-        {action === "RETURN" && booking.handoverCondition && <p className="operation-modal-hint">Tình trạng khi bàn giao: {booking.handoverCondition}</p>}
+        {action === "RETURN" && booking.handoverCondition && <p className="operation-modal-hint">{tr("Tình trạng khi bàn giao:")}{booking.handoverCondition}</p>}
         {error && <div className="alert danger" role="alert">{error}</div>}
 
         {(action === "APPROVE" || action === "REJECT" || action === "COMPLETE") && (
           <label className="operation-field">
-            <span>{action === "REJECT" ? "Lý do từ chối *" : "Ghi chú / lý do"}</span>
+            <span>{action === "REJECT" ? tr("Lý do từ chối *") : tr("Ghi chú / lý do")}</span>
             <textarea
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder={action === "REJECT" ? "Nêu rõ lý do để người đặt có thể hiểu và xử lý tiếp." : "Ghi chú vận hành (không bắt buộc)"}
+              placeholder={action === "REJECT" ? tr("Nêu rõ lý do để người đặt có thể hiểu và xử lý tiếp.") : tr("Ghi chú vận hành (không bắt buộc)")}
               maxLength={1000}
               required={reasonRequired}
               autoFocus
@@ -131,24 +133,24 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
         {conditionField && (
           <div className="operation-field">
             <label htmlFor="booking-condition-evidence">
-              {action === "CHECK_OUT" ? "Tình trạng trước khi sử dụng *" : "Tình trạng sau khi sử dụng *"}
+              {action === "CHECK_OUT" ? tr("Tình trạng trước khi sử dụng *") : tr("Tình trạng sau khi sử dụng *")}
             </label>
             <textarea
               id="booking-condition-evidence"
               value={condition}
               onChange={(event) => setCondition(event.target.value)}
-              placeholder="Mô tả tình trạng thực tế bạn quan sát sau khi sử dụng."
+              placeholder={tr("Mô tả tình trạng thực tế bạn quan sát sau khi sử dụng.")}
               maxLength={2000}
               required
             />
-            <div className="operation-suggestion-row" aria-label="Gợi ý nhập nhanh, chưa được xác nhận">
+            <div className="operation-suggestion-row" aria-label={tr("Gợi ý nhập nhanh, chưa được xác nhận")}>
               {CONDITION_SUGGESTIONS.map((suggestion) => (
                 <button key={suggestion} type="button" className="operation-suggestion" onClick={() => addSuggestion(suggestion)}>
                   + {suggestion}
                 </button>
               ))}
             </div>
-            <small>Các gợi ý chỉ hỗ trợ nhập liệu và không được xem là kết quả kiểm tra cho đến khi người thực hiện xác nhận.</small>
+            <small>{tr("Các gợi ý chỉ hỗ trợ nhập liệu và không được xem là kết quả kiểm tra cho đến khi người thực hiện xác nhận.")}</small>
           </div>
         )}
       </form>

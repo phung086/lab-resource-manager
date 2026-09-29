@@ -14,6 +14,7 @@ import {
   maintenanceStatuses
 } from "../services/availabilityService.js";
 import { bookingOverlapWhere } from "../utils/bookingOverlap.js";
+import { recordSystemAuditEvent } from "../services/systemAuditService.js";
 import {
   maintenanceKinds as dataContractMaintenanceKinds,
   maintenanceStatuses as dataContractMaintenanceStatuses,
@@ -39,13 +40,13 @@ const maintenanceWindowSchema = z.object({
   startAt: z.coerce.date(),
   endAt: z.coerce.date(),
   notes: optionalNote(2000)
-});
+}).strict();
 
 const maintenanceWindowUpdateSchema = maintenanceWindowSchema
   .partial()
   .extend({
     changeReason: optionalNote(500)
-  });
+  }).strict();
 
 const maintenanceListQuerySchema = z.object({
   resourceId: emptyToUndefined(z.string().uuid()),
@@ -56,6 +57,15 @@ const maintenanceListQuerySchema = z.object({
 });
 
 router.use(requireAuth);
+
+router.get("/impact", requireRole(ADMIN, LAB_STAFF), requireLabAccess("query.resourceId"), async (req, res, next) => {
+  try {
+    const data = z.object({ resourceId: z.string().uuid(), startAt: z.coerce.date(), endAt: z.coerce.date() }).strict().parse(req.query);
+    validateMaintenanceWindow(data.startAt, data.endAt);
+    const rows = await prisma.booking.findMany({ where: bookingOverlapWhere(data), select: { id: true, title: true, startAt: true, endAt: true, status: true }, orderBy: { startAt: "asc" } });
+    res.json({ conflicts: rows });
+  } catch (error) { next(error); }
+});
 
 router.get("/", async (req, res, next) => {
   try {
@@ -98,6 +108,7 @@ router.get("/", async (req, res, next) => {
 router.post("/", requireRole(ADMIN, LAB_STAFF), requireLabAccess("body.resourceId"), async (req, res, next) => {
   try {
     const data = maintenanceWindowSchema.parse(req.body);
+    if (data.status !== "scheduled") throw new HttpError(400, "New maintenance must start as scheduled.", undefined, "MAINTENANCE_INVALID_TRANSITION");
     validateMaintenanceWindow(data.startAt, data.endAt);
 
     const window = await prisma.$transaction(async (tx) => {
@@ -186,6 +197,14 @@ router.patch("/:id", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
     }
 
     const updated = await prisma.$transaction(async (tx) => {
+      // Serialize edits to this job, then reject a stale edit rather than overwriting it.
+      await tx.$queryRaw`SELECT id FROM maintenance_windows WHERE id = ${current.id} FOR UPDATE`;
+      const fresh = await tx.maintenanceWindow.findUnique({ where: { id: current.id } });
+      if (!fresh || fresh.updatedAt.getTime() !== current.updatedAt.getTime()) throw new HttpError(409, "Maintenance changed. Reload before editing.", undefined, "MAINTENANCE_CHANGED");
+      if (["completed", "cancelled"].includes(fresh.status)) throw new HttpError(409, "Completed or cancelled maintenance is read-only.", undefined, "MAINTENANCE_CLOSED");
+      if ((windowData.startAt || windowData.endAt || windowData.resourceId || (windowData.status && windowData.status !== fresh.status)) && (!_changeReason || _changeReason.length < 5)) throw new HttpError(400, "Explain the schedule or status change (at least 5 characters).", undefined, "MAINTENANCE_REASON_REQUIRED");
+      if (fresh.status === "in_progress" && nextResourceId !== fresh.resourceId) throw new HttpError(409, "Work in progress cannot move to another resource.", undefined, "MAINTENANCE_RESOURCE_LOCKED");
+      if (windowData.status && windowData.status !== fresh.status && !({ scheduled: ["in_progress", "cancelled"], in_progress: ["completed", "cancelled"] }[fresh.status] || []).includes(windowData.status)) throw new HttpError(409, "Invalid maintenance transition", undefined, "MAINTENANCE_INVALID_TRANSITION");
       // Lock resource row to serialize concurrent operations
       await tx.$queryRaw`SELECT 1 FROM resources WHERE id = ${nextResourceId} FOR UPDATE`;
 
@@ -206,6 +225,7 @@ router.patch("/:id", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
         data: windowData,
         include: maintenanceInclude
       });
+      await recordSystemAuditEvent(tx, { actor: req.user, action: "MAINTENANCE_UPDATED", targetType: "MAINTENANCE", targetId: saved.id, labId: saved.resource.laboratoryId, resourceId: saved.resourceId, beforeState: { startAt: fresh.startAt.toISOString(), endAt: fresh.endAt.toISOString(), status: fresh.status }, afterState: { startAt: saved.startAt.toISOString(), endAt: saved.endAt.toISOString(), status: saved.status }, reason: _changeReason });
       await tx.usageLog.create({
         data: {
           id: crypto.randomUUID(),

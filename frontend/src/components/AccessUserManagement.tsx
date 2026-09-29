@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useLocale } from '../providers/LocaleProvider';
+import React, { useCallback, useEffect, useState } from "react";
 import { Plus, RefreshCw, ShieldCheck, UserCheck, UserX } from "lucide-react";
 
 import { apiRequest } from "../api.js";
@@ -26,6 +27,7 @@ type Laboratory = { id: string; code: string; name: string; isActive: boolean };
 type Assignment = { laboratoryId: string; laboratory: Laboratory };
 
 export function AccessUserManagement() {
+  const { tr } = useLocale();
   const [users, setUsers] = useState<User[]>([]);
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
   const [assignments, setAssignments] = useState<Record<string, Assignment[]>>({});
@@ -41,7 +43,7 @@ export function AccessUserManagement() {
     role: "STUDENT" as Role
   });
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -57,13 +59,13 @@ export function AccessUserManagement() {
       );
       setAssignments(Object.fromEntries(staffAssignments));
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể tải dữ liệu người dùng.");
+      setError(requestError?.message || tr("Không thể tải dữ liệu người dùng."));
     } finally {
       setLoading(false);
     }
-  }
+  }, [tr]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, [load]);
 
   async function updateRole(user: User, role: Role) {
     setError("");
@@ -71,7 +73,7 @@ export function AccessUserManagement() {
       await apiRequest(`/users/${user.id}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
       await load();
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể cập nhật vai trò.");
+      setError(requestError?.message || tr("Không thể cập nhật vai trò."));
     }
   }
 
@@ -84,7 +86,7 @@ export function AccessUserManagement() {
       });
       await load();
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể cập nhật trạng thái tài khoản.");
+      setError(requestError?.message || tr("Không thể cập nhật trạng thái tài khoản."));
     }
   }
 
@@ -99,7 +101,7 @@ export function AccessUserManagement() {
       });
       await load();
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể gán phòng thí nghiệm.");
+      setError(requestError?.message || tr("Không thể gán phòng thí nghiệm."));
     }
   }
 
@@ -109,7 +111,7 @@ export function AccessUserManagement() {
       await apiRequest(`/users/${userId}/lab-assignments/${laboratoryId}`, { method: "DELETE" });
       await load();
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể gỡ phân công.");
+      setError(requestError?.message || tr("Không thể gỡ phân công."));
     }
   }
 
@@ -117,7 +119,7 @@ export function AccessUserManagement() {
     event.preventDefault();
     setError("");
     if (!createForm.fullName.trim() || !createForm.email.trim() || createForm.password.length < 12) {
-      setError("Họ tên, email và mật khẩu tối thiểu 12 ký tự là bắt buộc.");
+      setError(tr("Họ tên, email và mật khẩu tối thiểu 12 ký tự là bắt buộc."));
       return;
     }
     setCreating(true);
@@ -135,7 +137,7 @@ export function AccessUserManagement() {
       setShowCreate(false);
       await load();
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể tạo người dùng.");
+      setError(requestError?.message || tr("Không thể tạo người dùng."));
     } finally {
       setCreating(false);
     }
@@ -145,43 +147,39 @@ export function AccessUserManagement() {
     <section className="view-section">
       <div className="section-heading">
         <div>
-          <h2>Quản trị người dùng</h2>
+          <h2>{tr("Quản trị người dùng")}</h2>
         </div>
         <div className="flex gap-2">
           <button className="btn btn-primary" type="button" onClick={() => setShowCreate(true)}>
-            <Plus size={15} /> Tạo người dùng
-          </button>
-          <button className="icon-button" type="button" onClick={load} title="Tải lại" aria-label="Tải lại danh sách người dùng" disabled={loading}>
+            <Plus size={15} /> {tr("Tạo người dùng")}</button>
+          <button className="icon-button" type="button" onClick={load} title={tr("Tải lại")} aria-label={tr("Tải lại danh sách người dùng")} disabled={loading}>
             <RefreshCw size={16} />
           </button>
         </div>
       </div>
 
       {error && <div className="alert danger" role="alert">{error}</div>}
-      {loading && <p className="empty-state">Đang tải dữ liệu thật...</p>}
-      <BaseModal2026 isOpen={showCreate} onClose={() => setShowCreate(false)} title="Tạo người dùng" dismissible={!creating}>
+      {loading && <p className="empty-state">{tr("Đang tải dữ liệu thật...")}</p>}
+      <BaseModal2026 isOpen={showCreate} onClose={() => setShowCreate(false)} title={tr("Tạo người dùng")} dismissible={!creating}>
             <form className="booking-operation-form" onSubmit={createUser} noValidate>
               <label>
-                Họ và tên
-                <input value={createForm.fullName} onChange={(event) => setCreateForm({ ...createForm, fullName: event.target.value })} maxLength={255} />
+                {tr("Họ và tên")}<input value={createForm.fullName} onChange={(event) => setCreateForm({ ...createForm, fullName: event.target.value })} maxLength={255} />
               </label>
               <label>
                 Email
                 <input type="email" value={createForm.email} onChange={(event) => setCreateForm({ ...createForm, email: event.target.value })} />
               </label>
               <label>
-                Mật khẩu ban đầu
-                <input type="password" value={createForm.password} onChange={(event) => setCreateForm({ ...createForm, password: event.target.value })} minLength={12} maxLength={128} autoComplete="new-password" />
+                {tr("Mật khẩu ban đầu")}<input type="password" value={createForm.password} onChange={(event) => setCreateForm({ ...createForm, password: event.target.value })} minLength={12} maxLength={128} autoComplete="new-password" />
               </label>
               <label>
-                Vai trò
-                <select value={createForm.role} onChange={(event) => setCreateForm({ ...createForm, role: event.target.value as Role })}>
-                  {ROLES.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}
+                {tr("Vai trò")}<select value={createForm.role} onChange={(event) => setCreateForm({ ...createForm, role: event.target.value as Role })}>
+                  {ROLES.map((role) => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}
                 </select>
               </label>
               <div className="modal-actions">
-                <button className="btn btn-secondary" type="button" onClick={() => setShowCreate(false)}>Hủy</button>
-                <button className="btn btn-primary" type="submit" disabled={creating}>{creating ? "Đang tạo..." : "Tạo người dùng"}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => setShowCreate(false)}>{tr("Hủy")}</button>
+                <button className="btn btn-primary" type="submit" disabled={creating}>{creating ? tr("Đang tạo...") : tr("Tạo người dùng")}</button>
               </div>
             </form>
       </BaseModal2026>
@@ -189,25 +187,25 @@ export function AccessUserManagement() {
       {!loading && (
         <div className="table-wrap user-management-table">
           <table>
-            <caption className="sr-only">Người dùng, vai trò và phân công phòng LAB</caption>
-            <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th>Phân công phòng lab</th></tr></thead>
+            <caption className="sr-only">{tr("Người dùng, vai trò và phân công phòng LAB")}</caption>
+            <thead><tr><th>{tr("Người dùng")}</th><th>{tr("Vai trò")}</th><th>{tr("Trạng thái")}</th><th>{tr("Phân công phòng lab")}</th></tr></thead>
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
                   <td><strong>{user.fullName}</strong><br /><small>{user.email}</small></td>
                   <td>
                     <select aria-label={`Vai trò của ${user.fullName} (${user.email})`} value={user.role} onChange={(event) => updateRole(user, event.target.value as Role)}>
-                      {ROLES.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}
+                      {ROLES.map((role) => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}
                     </select>
                   </td>
                   <td>
-                    <button className="btn btn-secondary" type="button" aria-label={`${user.isActive ? "Đang hoạt động — vô hiệu hóa" : "Đã vô hiệu — kích hoạt"} ${user.fullName} (${user.email})`} onClick={() => updateActive(user)}>
+                    <button className="btn btn-secondary" type="button" aria-label={`${user.isActive ? tr("Đang hoạt động — vô hiệu hóa") : tr("Đã vô hiệu — kích hoạt")} ${user.fullName} (${user.email})`} onClick={() => updateActive(user)}>
                       {user.isActive ? <UserCheck size={14} /> : <UserX size={14} />}
-                      {user.isActive ? "Đang hoạt động" : "Đã vô hiệu"}
+                      {user.isActive ? tr("Đang hoạt động") : tr("Đã vô hiệu")}
                     </button>
                   </td>
                   <td>
-                    {user.role !== "LAB_STAFF" ? <span>Không áp dụng</span> : (
+                    {user.role !== "LAB_STAFF" ? <span>{tr("Không áp dụng")}</span> : (
                       <div className="flex flex-col gap-2">
                         <div className="flex flex-wrap gap-2">
                           {(assignments[user.id] || []).map((assignment) => (
@@ -215,7 +213,7 @@ export function AccessUserManagement() {
                               key={assignment.laboratoryId}
                               type="button"
                               className="btn btn-secondary"
-                              title="Gỡ phân công"
+                              title={tr("Gỡ phân công")}
                               aria-label={`Gỡ phân công ${assignment.laboratory.code} của ${user.fullName} (${user.email})`}
                               onClick={() => removeAssignment(user.id, assignment.laboratoryId)}
                             >
@@ -229,10 +227,10 @@ export function AccessUserManagement() {
                             value={selectedLabs[user.id] || ""}
                             onChange={(event) => setSelectedLabs((current) => ({ ...current, [user.id]: event.target.value }))}
                           >
-                            <option value="">Chọn phòng lab</option>
+                            <option value="">{tr("Chọn phòng lab")}</option>
                             {laboratories.map((lab) => <option key={lab.id} value={lab.id}>{lab.code} - {lab.name}</option>)}
                           </select>
-                          <button className="btn btn-primary" type="button" aria-label={`Gán phòng LAB cho ${user.fullName} (${user.email})`} onClick={() => addAssignment(user)}>Gán</button>
+                          <button className="btn btn-primary" type="button" aria-label={`Gán phòng LAB cho ${user.fullName} (${user.email})`} onClick={() => addAssignment(user)}>{tr("Gán")}</button>
                         </div>
                       </div>
                     )}

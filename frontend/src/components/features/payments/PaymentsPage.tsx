@@ -1,3 +1,4 @@
+import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
 import { apiRequest } from "../../../api.js";
 import { BaseModal2026 } from "../../BaseModal2026";
@@ -63,6 +64,7 @@ function PaymentsLedger({
   bookingId?: string;
   onClearBooking?: () => void;
 }) {
+  const { tr } = useLocale();
   const admin = user.role === "ADMIN";
   const [rows, setRows] = useState<Payment[]>([]),
     [providers, setProviders] = useState({ vnpay: false, vietqr: false });
@@ -232,8 +234,7 @@ function PaymentsLedger({
           disabled={loading || !!busy}
           onClick={load}
         >
-          Làm mới
-        </button>
+          {tr("Làm mới")}</button>
       </header>
       {bookingId && (
         <div className="alert">
@@ -260,8 +261,7 @@ function PaymentsLedger({
           <summary>Tạo yêu cầu thanh toán</summary>
           <form onSubmit={create} className="booking-form">
             <label>
-              Lịch đặt
-              <select
+              {tr("Lịch đặt")}<select
                 name="bookingId"
                 required
                 defaultValue={bookingId || ""}
@@ -288,8 +288,7 @@ function PaymentsLedger({
               Số tiền luôn lấy từ phí VND đã chốt trên booking. Lịch miễn phí hoặc chưa được duyệt không thể tạo khoản thu.
             </p>
             <button className="primary-button" disabled={!!busy}>
-              Tạo yêu cầu
-            </button>
+              {tr("Tạo yêu cầu")}</button>
           </form>
         </details>
       )}
@@ -310,9 +309,8 @@ function PaymentsLedger({
           />
         </label>
         <label>
-          Trạng thái
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="">Tất cả</option>
+          {tr("Trạng thái")}<select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">{tr("Tất cả")}</option>
             {Object.entries(labels).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
@@ -326,7 +324,7 @@ function PaymentsLedger({
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
           >
-            <option value="">Tất cả</option>
+            <option value="">{tr("Tất cả")}</option>
             <option value="unselected">Chưa chọn</option>
             <option value="vnpay">VNPAY Sandbox</option>
             <option value="vietqr">VietQR</option>
@@ -384,7 +382,7 @@ function PaymentsLedger({
                 {row.reconciliationStatus !== "none" && (
                   <>
                     <dt>Đối soát</dt>
-                    <dd>{row.reconciliationStatus === "manual_review" ? "Cần xử lý thủ công" : "Đã xử lý"}</dd>
+                    <dd>{row.reconciliationStatus === "manual_review" ? "Cần xử lý thủ công" : tr("Đã xử lý")}</dd>
                   </>
                 )}
               </dl>
@@ -470,7 +468,7 @@ function PaymentsLedger({
             <ol className="payment-timeline" aria-label="Tiến trình thanh toán">
               <li className="is-complete"><strong>Yêu cầu đã tạo</strong><time dateTime={selected.createdAt}>{formatVietnamDateTime(selected.createdAt)}</time></li>
               <li className={selected.provider !== "unselected" ? "is-complete" : ""}><strong>{selected.provider !== "unselected" ? "Đã chọn phương thức" : "Chọn phương thức"}</strong><span>{selected.provider === "vnpay" ? "VNPAY Sandbox" : selected.provider === "vietqr" ? "VietQR" : "Chưa khởi tạo"}</span></li>
-              <li className={selected.status === "success" ? "is-complete" : ""}><strong>{selected.status === "success" ? "Đã xác minh" : selected.status === "failed" ? "Giao dịch thất bại" : "Chờ xác minh"}</strong><span>{selected.paidAt ? formatVietnamDateTime(selected.paidAt) : "Chưa ghi nhận thanh toán thành công"}</span></li>
+              <li className={selected.status === "success" ? "is-complete" : ""}><strong>{selected.status === "success" ? tr("Đã xác minh") : selected.status === "failed" ? "Giao dịch thất bại" : "Chờ xác minh"}</strong><span>{selected.paidAt ? formatVietnamDateTime(selected.paidAt) : "Chưa ghi nhận thanh toán thành công"}</span></li>
             </ol>
             {error && (
               <p className="alert danger" role="alert">

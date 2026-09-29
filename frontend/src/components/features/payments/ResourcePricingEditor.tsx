@@ -1,8 +1,10 @@
+import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import { apiRequest } from "../../../api.js";
 
 const purposes = { STUDY: "Học tập / thực hành", TEACHING: "Giảng dạy", RESEARCH: "Nghiên cứu", SERVICE: "Dịch vụ / đơn vị bên ngoài" };
 export function ResourcePricingEditor() {
+  const { tr } = useLocale();
   const [resources, setResources] = useState<any[]>([]);
   const [resourceId, setResourceId] = useState("");
   const [rules, setRules] = useState<any[]>([]);
@@ -30,10 +32,10 @@ export function ResourcePricingEditor() {
     <p>Áp dụng cho cả người dùng nội bộ và bên ngoài. Tính theo số phút sử dụng đã đặt, làm tròn lên 1 đồng. Giá 0 đồng là miễn phí. Khi có bảng giá, người đặt phải chọn một mục đích đã cấu hình.</p>
     {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
     <form onSubmit={save} className="booking-form">
-      <label>Tài nguyên<select aria-label="Tài nguyên tính phí" required value={resourceId} onChange={e => setResourceId(e.target.value)}><option value="">Chọn tài nguyên</option>{resources.map(r => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
-      <label>Mục đích tính phí<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{Object.entries(purposes).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></label>
+      <label>{tr("Tài nguyên")}<select aria-label="Tài nguyên tính phí" required value={resourceId} onChange={e => setResourceId(e.target.value)}><option value="">{tr("Chọn tài nguyên")}</option>{resources.map(r => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
+      <label>{tr("Mục đích tính phí")}<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{Object.entries(purposes).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></label>
       <label>Đơn giá VND / giờ<input required type="number" min="0" max="100000000" step="1" value={rate} onChange={e => setRate(e.target.value)} /></label>
-      <button className="btn btn-primary" disabled={busy || !resourceId}>{busy ? "Đang lưu…" : "Lưu mức phí"}</button>
+      <button className="btn btn-primary" disabled={busy || !resourceId}>{busy ? tr("Đang lưu…") : "Lưu mức phí"}</button>
     </form>
     <ul>{rules.map(rule => <li key={rule.id}>{rule.label}: {rule.hourlyRateVnd.toLocaleString("vi-VN")} đ/giờ · phiên bản {rule.version}</li>)}</ul>
   </details>;

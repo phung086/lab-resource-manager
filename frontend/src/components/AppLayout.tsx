@@ -1,3 +1,4 @@
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
 import { Header } from "./Header.tsx";
@@ -48,6 +49,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onAssistantPrefill,
   children
 }) => {
+  const { tr } = useLocale();
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -86,7 +88,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   // Map activeTab to readable header title
   const tabTitles: Record<string, string> = {
-    home: "Không gian làm việc",
+    stock: "Kho vật tư", teaching: "Lớp học phần",
+    home: tr("Không gian làm việc"),
     profile: "Hồ sơ & ưu tiên LAB",
     payments: "Thanh toán",
     smart_calendar: "Lịch Đặt Khung Giờ",
@@ -97,12 +100,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     quota_fairness: "Hạn Ngạch & Phân Bổ",
     chargeback: "Quyết Toán Chi Phí",
     policy_config: "Chính Sách & Quy Định Lab",
-    escalations: "Trung tâm thông báo",
+    escalations: tr("Trung tâm thông báo"),
     allocations: "Điều Phối Yêu Cầu",
-    dashboard: "Bảng điều khiển vận hành",
+    dashboard: tr("Bảng điều khiển vận hành"),
     digital_twin: "Bản Sao Số & Mặt Bằng Lab",
     what_if: "Mô Phỏng Kịch Bản",
-    resources: "Danh mục tài nguyên phòng thí nghiệm",
+    resources: tr("Danh mục tài nguyên phòng thí nghiệm"),
     bookings: "Lịch Đặt & Bàn Giao Tài Nguyên",
     maintenance: "Lịch Bảo Trì & Kiểm Định",
     monitoring: "Giám sát vận hành & Telemetry",
@@ -112,13 +115,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     ga_solver: "Thuật Toán Điều Lịch",
     ai_rca: "Phân Tích Nguyên Nhân Sự Cố",
     assistant: "Trợ Lý Vận Hành Lab",
-    incidents: "Sự cố tài nguyên",
+    incidents: tr("Sự cố tài nguyên"),
     training: "Đào Tạo & An Toàn Lab",
     logs: "Nhật Ký Kiểm Toán",
     users: "Quản Trị Người Dùng"
   };
 
-  const currentTitle = tabTitles[activeTab] || "Hệ thống đặt lịch và tài nguyên phòng thí nghiệm";
+  const englishTitles: Record<string, string> = { home: "Workspace", stock: "Materials inventory", teaching: "Course groups", resources: "Rooms and equipment", bookings: "Bookings and handover", smart_calendar: "Resource calendar", maintenance: "Maintenance and calibration", profile: "My profile", users: "Users and assignments", admin_management: "Resource administration", monitoring: "Equipment monitoring", dashboard: "LAB operations", escalations: "Notifications", incidents: "Incidents", payments: "Payments" };
+  const currentTitle = (locale === "en" ? englishTitles[activeTab] || activeTab.replaceAll("_", " ") : tabTitles[activeTab]) || "Hệ thống đặt lịch và tài nguyên phòng thí nghiệm";
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   async function handlePasswordSubmit(e: React.FormEvent) {
@@ -126,15 +130,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     if (passwordBusy) return;
     setPasswordError("");
     if (!currentPassword) {
-      setPasswordError("Vui lòng nhập mật khẩu hiện tại.");
+      setPasswordError(tr("Vui lòng nhập mật khẩu hiện tại."));
       return;
     }
     if (!newPassword || newPassword.length < 8) {
-      setPasswordError("Mật khẩu mới phải có ít nhất 8 ký tự.");
+      setPasswordError(tr("Mật khẩu mới phải có ít nhất 8 ký tự."));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("Xác nhận mật khẩu không trùng khớp.");
+      setPasswordError(tr("Xác nhận mật khẩu không trùng khớp."));
       return;
     }
 
@@ -150,7 +154,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: any) {
-      setPasswordError(error?.message || "Không thể đổi mật khẩu.");
+      setPasswordError(error?.message || tr("Không thể đổi mật khẩu."));
     } finally {
       setPasswordBusy(false);
     }
@@ -158,7 +162,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   return (
     <div className="app-shell-2026">
-      <a className="skip-link" href="#workspace-main">Đến nội dung chính</a>
+      <a className="skip-link" href="#workspace-main">{locale === "en" ? "Skip to main content" : "Đến nội dung chính"}</a>
       {/* Primary navigation */}
       <Sidebar
         activeTab={activeTab}
@@ -189,7 +193,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         <main id="workspace-main" tabIndex={-1} className="main-body-container-2026">
           {children}
         </main>
-        <footer className="workspace-footer"><span>Lab Resource Manager</span><span>Đặt lịch · Bàn giao · Theo dõi</span><span>Giờ Việt Nam · UTC+07:00</span></footer>
+        <footer className="workspace-footer"><span>Lab Resource Manager</span><span>{tr("Đặt lịch · Bàn giao · Theo dõi")}</span><span>{tr("Giờ Việt Nam · UTC+07:00")}</span></footer>
       </div>
 
       {AI_ASSISTANT_ENABLED && assistantOpen && <React.Suspense fallback={<p role="status">Đang mở trợ lý…</p>}><LaboratoryAssistant onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} /></React.Suspense>}
@@ -215,13 +219,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         isOpen={changePasswordOpen}
         onClose={closePasswordModal}
         dismissible={!passwordBusy && (!user?.passwordResetRequired || passwordSuccess)}
-        title={user?.passwordResetRequired ? "Thiết lập mật khẩu mới" : "Đổi mật khẩu"}
-        subtitle={user?.passwordResetRequired ? "Mật khẩu hiện tại là số điện thoại đã dùng khi đặt nhanh. Bạn phải đổi mật khẩu trước khi dùng các chức năng khác." : "Cập nhật mật khẩu truy cập tài khoản phòng lab"}
+        title={user?.passwordResetRequired ? tr("Thiết lập mật khẩu mới") : tr("Đổi mật khẩu")}
+        subtitle={user?.passwordResetRequired ? tr("Mật khẩu hiện tại là số điện thoại đã dùng khi đặt nhanh. Bạn phải đổi mật khẩu trước khi dùng các chức năng khác.") : tr("Cập nhật mật khẩu truy cập tài khoản phòng lab")}
         icon={KeyRound}
         maxWidth="max-w-md"
         footer={<>
-          {(!user?.passwordResetRequired || passwordSuccess) && <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>Đóng</button>}
-          {!passwordSuccess && <button type="submit" form="change-password-form" className="btn btn-primary" disabled={passwordBusy}>{passwordBusy ? "Đang cập nhật..." : "Cập nhật mật khẩu"}</button>}
+          {(!user?.passwordResetRequired || passwordSuccess) && <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>{tr("Đóng")}</button>}
+          {!passwordSuccess && <button type="submit" form="change-password-form" className="btn btn-primary" disabled={passwordBusy}>{passwordBusy ? tr("Đang cập nhật...") : tr("Cập nhật mật khẩu")}</button>}
         </>}
       >
             <form id="change-password-form" onSubmit={handlePasswordSubmit} className="booking-form">
@@ -234,44 +238,44 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               {passwordSuccess && (
                 <div className="alert success text-xs flex items-center gap-2" role="status">
                   <Check size={14} aria-hidden="true" />
-                  <span>Mật khẩu đã được cập nhật thành công.</span>
+                  <span>{tr("Mật khẩu đã được cập nhật thành công.")}</span>
                 </div>
               )}
 
               <div>
-                <label htmlFor="current-password" className="text-xs text-slate-400 mb-1 block">Mật khẩu hiện tại</label>
+                <label htmlFor="current-password" className="text-xs text-slate-400 mb-1 block">{tr("Mật khẩu hiện tại")}</label>
                 <input
                   id="current-password"
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu hiện tại"
+                  placeholder={tr("Nhập mật khẩu hiện tại")}
                   autoComplete="current-password"
                   required
                 />
               </div>
 
               <div>
-                <label htmlFor="new-password" className="text-xs text-slate-400 mb-1 block">Mật khẩu mới</label>
+                <label htmlFor="new-password" className="text-xs text-slate-400 mb-1 block">{tr("Mật khẩu mới")}</label>
                 <input
                   id="new-password"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Tối thiểu 8 ký tự"
+                  placeholder={tr("Tối thiểu 8 ký tự")}
                   autoComplete="new-password"
                   required
                 />
               </div>
 
               <div>
-                <label htmlFor="confirm-password" className="text-xs text-slate-400 mb-1 block">Xác nhận mật khẩu mới</label>
+                <label htmlFor="confirm-password" className="text-xs text-slate-400 mb-1 block">{tr("Xác nhận mật khẩu mới")}</label>
                 <input
                   id="confirm-password"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Nhập lại mật khẩu"
+                  placeholder={tr("Nhập lại mật khẩu")}
                   autoComplete="new-password"
                   required
                 />

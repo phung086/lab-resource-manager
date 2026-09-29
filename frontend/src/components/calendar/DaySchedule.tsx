@@ -1,3 +1,4 @@
+import { useLocale } from '../../providers/LocaleProvider';
 import React from "react";
 import { Plus, Clock } from "lucide-react";
 import { CalendarEventCard } from "./CalendarEventCard.js";
@@ -22,6 +23,7 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
   onSelectSlot,
   onSelectBooking
 }) => {
+  const { tr } = useLocale();
   return (
     <div className="calendar-day-frame">
       <div className="flex flex-col gap-2.5">
@@ -57,7 +59,7 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
                       onClick={onSelectBooking}
                     />
                   ))
-                ) : blocked ? <span className="section-description">Tài nguyên đang tạm ngừng nhận lịch</span> : (
+                ) : blocked ? <span className="section-description">{tr("Tài nguyên đang tạm ngừng nhận lịch")}</span> : (
                   <button
                     type="button"
                     onClick={() => onSelectSlot(currentDateStr, hourStr)}
@@ -77,7 +79,7 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
                       <span className="calendar-day-idle-dot" />
                     </span>
                     <span className="calendar-day-slot-hover font-medium">
-                      + Đặt {hourStr}
+                      {tr("+ Đặt")}{hourStr}
                     </span>
                     <Plus size={13} className="calendar-day-slot-icon" aria-hidden="true" />
                   </button>

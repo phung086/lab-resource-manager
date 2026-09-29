@@ -41,7 +41,8 @@
     "test:phase-e": "cross-env LOG_FORMAT=dev node --test test/phaseE.privacy-governance.integration.test.js",
     "test:phase-f": "cross-env LOG_FORMAT=dev PAYMENTS_ENABLED=true node --test test/phaseF.system-audit.integration.test.js",
     "test:phase-h": "cross-env LOG_FORMAT=dev PAYMENTS_ENABLED=true node --test test/phaseH.payment-lifecycle.integration.test.js",
-    "test:migration-safety": "node test/migrationSafetyMatrix.mjs"
+    "test:migration-safety": "node test/migrationSafetyMatrix.mjs",
+    "test:lab-workspace": "node --test test/labWorkspace.integration.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1138.0",

@@ -1,3 +1,4 @@
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useState, useRef, useEffect } from "react";
 import { Server, ShieldCheck, Lock, Mail, ArrowRight, Layers } from "lucide-react";
 import { AuthIdentity } from "./AuthIdentity";
@@ -17,6 +18,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   locale = "vi",
   onLocaleChange
 }) => {
+  const { tr } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,11 +28,11 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
 
   const resourceCategories = [
-    { name: "Phòng thực hành", code: "ROOM" },
-    { name: "Thiết bị đo kiểm", code: "EQUIPMENT" },
-    { name: "Máy móc chuyên dụng", code: "MACHINE" },
-    { name: "Bộ kit thí nghiệm", code: "EXPERIMENT_KIT" },
-    { name: "Vật tư tiêu hao", code: "MATERIAL" }
+    { name: tr("Phòng thực hành"), code: "ROOM" },
+    { name: tr("Thiết bị đo kiểm"), code: "EQUIPMENT" },
+    { name: tr("Máy móc chuyên dụng"), code: "MACHINE" },
+    { name: tr("Bộ kit thí nghiệm"), code: "EXPERIMENT_KIT" },
+    { name: tr("Vật tư tiêu hao"), code: "MATERIAL" }
   ];
 
   async function handleSubmit(e: React.FormEvent) {
@@ -43,7 +45,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
       const result = await login(email, password);
       onLogin(result.user);
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể đăng nhập. Vui lòng kiểm tra thông tin tài khoản.");
+      setError(requestError?.message || tr("Không thể đăng nhập. Vui lòng kiểm tra thông tin tài khoản."));
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +59,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
         <div className="auth-panel auth-panel-form flex flex-col justify-between">
           {/* Header & Language Switch */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-medium">Cổng xác thực người dùng</span>
+            <span className="text-xs text-slate-400 font-medium">{tr("Cổng xác thực người dùng")}</span>
 
             <div className="auth-language flex items-center gap-2">
               <button
@@ -91,11 +93,9 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
           <div className="auth-form-content my-auto w-full mx-auto">
             <div className="mb-6">
               <h3 className="text-2xl font-bold font-heading text-white tracking-tight">
-                Đăng nhập hệ thống
-              </h3>
+                {tr("Đăng nhập hệ thống")}</h3>
               <p className="text-xs text-slate-400 mt-1.5">
-                Nhập tài khoản đơn vị nghiên cứu hoặc trường đại học để tiếp tục
-              </p>
+                {tr("Nhập tài khoản đơn vị nghiên cứu hoặc trường đại học để tiếp tục")}</p>
             </div>
 
             {error && (
@@ -107,7 +107,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="login-email" className="text-xs font-medium text-slate-300 flex items-center justify-between">
-                  <span>Email tài khoản *</span>
+                  <span>{tr("Email tài khoản *")}</span>
                 </label>
                 <div className="relative">
                   <Mail size={16} className="auth-input-icon text-slate-400" aria-hidden="true" />
@@ -126,7 +126,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="login-password" className="text-xs font-medium text-slate-300 flex items-center justify-between">
-                  <span>Mật khẩu *</span>
+                  <span>{tr("Mật khẩu *")}</span>
                 </label>
                 <div className="relative">
                   <Lock size={16} className="auth-input-icon text-slate-400" aria-hidden="true" />
@@ -142,7 +142,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
                     placeholder="••••••••••••"
                     className="auth-form-input has-icon password-input w-full text-xs"
                   />
-                  <button className="password-toggle" type="button" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <button className="password-toggle" type="button" aria-label={showPassword ? tr("Ẩn mật khẩu") : tr("Hiện mật khẩu")} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
               </div>
 
@@ -151,7 +151,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
                 disabled={isLoading}
                 className="auth-submit-button mt-2 text-xs btn-cyan-gradient flex items-center justify-center gap-2 cursor-pointer font-semibold"
               >
-                <span>{isLoading ? "Đang xác thực tài khoản..." : "ĐĂNG NHẬP VÀO HỆ THỐNG"}</span>
+                <span>{isLoading ? tr("Đang xác thực tài khoản...") : tr("ĐĂNG NHẬP VÀO HỆ THỐNG")}</span>
                 <ArrowRight size={15} aria-hidden="true" />
               </button>
             </form>
@@ -159,14 +159,13 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
 
           {/* Switch to Register */}
           <div className="text-center pt-4 border-t border-white/10 text-xs text-slate-400">
-            <span>Chưa có tài khoản sinh viên? </span>
+            <span>{tr("Chưa có tài khoản sinh viên?")}</span>
             <button
               type="button"
               onClick={onSwitchToRegister}
               className="auth-switch-link text-blue-400 font-semibold cursor-pointer ml-1"
             >
-              Đăng ký tài khoản mới ➔
-            </button>
+              {tr("Đăng ký tài khoản mới ➔")}</button>
           </div>
         </div>
       </div>

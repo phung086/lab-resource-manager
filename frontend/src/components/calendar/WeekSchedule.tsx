@@ -1,3 +1,4 @@
+import { useLocale } from '../../providers/LocaleProvider';
 import React from "react";
 import { CheckCircle2, Lock, Wrench, Plus, Clock } from "lucide-react";
 
@@ -14,14 +15,14 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
   onSelectSlot,
   onSelectBooking
 }) => {
+  const { tr } = useLocale();
   if (!slotsData || !slotsData.daysHeader || !slotsData.grid) {
     return (
       <div
         aria-live="polite"
         className="calendar-week-loading"
       >
-        Đang tải lịch tuần...
-      </div>
+        {tr("Đang tải lịch tuần...")}</div>
     );
   }
 
@@ -37,7 +38,7 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
           {/* Top Left corner: Time Header */}
           <div className="calendar-week-axis p-2.5 flex items-center justify-center font-medium text-xs">
             <Clock size={13} className="mr-1" />
-            <span>Giờ</span>
+            <span>{tr("Giờ")}</span>
           </div>
 
           {/* Days Header */}
@@ -74,7 +75,7 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                       key={`${row.hour}-${idx}`}
                       onClick={() => onSelectBooking && onSelectBooking(slot)}
                       className={`calendar-week-cell ${slot.isMine ? "is-mine" : "is-booked"} w-full text-left p-2 flex flex-col justify-between transition-colors select-none`}
-                      title={slot.title || "Đã đặt"}
+                      title={slot.title || tr("Đã đặt")}
                     >
                       <div className="flex items-center justify-between">
                         <span
@@ -87,7 +88,7 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                         </span>
                       </div>
                       <div className="calendar-booking-title text-xs font-medium truncate my-0.5">
-                        {slot.title || "Đã đặt"}
+                        {slot.title || tr("Đã đặt")}
                       </div>
                     </button>
                   );
@@ -98,7 +99,7 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                     <div
                       key={`${row.hour}-${idx}`}
                       className="calendar-week-cell is-maintenance p-2 select-none"
-                      title={slot.details || "Bảo trì định kỳ"}
+                      title={slot.details || tr("Bảo trì định kỳ")}
                     >
                       <span className="text-[10px] font-semibold flex items-center gap-1">
                         <Wrench size={10} /> {slot.label}
@@ -115,7 +116,7 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                     <div
                       key={`${row.hour}-${idx}`}
                       className="calendar-week-cell is-offline p-2 select-none"
-                      title={slot.details || "Thiết bị tạm ngừng"}
+                      title={slot.details || tr("Thiết bị tạm ngừng")}
                     >
                       <span className="text-[10px] font-semibold block">{slot.label}</span>
                       <span className="text-[10px] truncate block">
@@ -147,7 +148,7 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                       <Plus size={11} className="calendar-slot-hover-icon opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-blue-600 transition-opacity" aria-hidden="true" />
                     </div>
                     <div className="calendar-slot-action text-[10px] font-medium opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-blue-600 transition-opacity">
-                      + Đặt {row.time}
+                      {tr("+ Đặt")}{row.time}
                     </div>
                   </button>
                 );

@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-29T14:33:44.056Z",
+  "title": "Design System: Lab Resource Manager",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Laboratory navy"
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "White"
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Cool canvas"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Operational ink",
+        "tonalRamp": [
+          "#0f172a",
+          "#1e293b",
+          "#475569",
+          "#64748b",
+          "#cbd5e1",
+          "#e2e8f0",
+          "#f1f5f9",
+          "#f8fafc"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Public display",
+        "purpose": "Landing hero only."
+      },
+      "headline": {
+        "displayName": "Public headline",
+        "purpose": "Landing section headings."
+      },
+      "operational-title": {
+        "displayName": "Operational title",
+        "purpose": "LAB workspace page headings."
+      },
+      "technical": {
+        "displayName": "Technical values",
+        "purpose": "Identifiers, time, measurements and numbered steps."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-soft",
+        "value": "0 1px 2px rgb(15 23 42 / 4%), 0 4px 12px rgb(15 23 42 / 5%)",
+        "purpose": "Existing shared application surfaces."
+      },
+      {
+        "name": "shadow-modal",
+        "value": "0 16px 40px rgb(15 23 42 / 14%), 0 36px 80px rgb(15 23 42 / 13%)",
+        "purpose": "Existing modal elevation."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px rgb(37 99 235 / 18%)",
+        "purpose": "Shared input focus ring."
+      }
+    ],
+    "motion": [
+      {
+        "name": "motion-fast",
+        "value": "140ms",
+        "purpose": "Shared control color feedback."
+      },
+      {
+        "name": "motion-base",
+        "value": "210ms",
+        "purpose": "Existing shared transitions."
+      },
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(.2, .8, .2, 1)",
+        "purpose": "Shared control easing."
+      },
+      {
+        "name": "public-color",
+        "value": ".16s ease-out",
+        "purpose": "Public link and button color transitions, reduced-motion aware."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "public-compact",
+        "value": "1100px"
+      },
+      {
+        "name": "shell-navigation",
+        "value": "900px"
+      },
+      {
+        "name": "public-stack",
+        "value": "850px"
+      },
+      {
+        "name": "lab-stack",
+        "value": "800px"
+      },
+      {
+        "name": "public-mobile",
+        "value": "540px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Public primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Navy action for discovery and booking entry.",
+      "html": "<button class=\"ds-primary\">Explore resources</button>",
+      "css": ".ds-primary{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 18px;border-radius:3px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:none;background:var(--blue-600,#174d70);border:1px solid var(--blue-600,#174d70);color:#fff}.ds-primary:hover{background:var(--blue-700,#113b57)}.ds-primary:focus-visible{outline:3px solid #167992;outline-offset:4px}@media(prefers-reduced-motion:no-preference){.ds-primary{transition:background-color .16s ease-out,color .16s ease-out}}"
+    },
+    {
+      "name": "Public secondary action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Bordered action for checking schedules.",
+      "html": "<button class=\"ds-secondary\">Check schedule</button>",
+      "css": ".ds-secondary{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 18px;border-radius:3px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:none;background:#fff;border:1px solid #99adb9;color:#162f43}.ds-secondary:hover{background:#eef4f5}.ds-secondary:focus-visible{outline:3px solid #167992;outline-offset:4px}"
+    },
+    {
+      "name": "Resource search",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Visible label and search by name, resource code or location.",
+      "html": "<label class=\"ds-search\">Find a room or equipment<input type=\"search\" placeholder=\"Name, resource code or location\"></label>",
+      "css": ".ds-search{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);display:grid;gap:8px;max-width:520px;font-size:13px;font-weight:600;color:#162f43}.ds-search input{width:100%;min-height:46px;border:1px solid #9bafbc;border-radius:3px;padding:10px 14px;background:#fff;color:#162f43;font:inherit;font-weight:400}.ds-search input::placeholder{color:#526a7b}.ds-search input:focus{border-color:var(--blue-600,#174d70);box-shadow:var(--focus-ring,0 0 0 3px rgb(37 99 235 / 18%))}.ds-search input:focus-visible{outline:3px solid #167992;outline-offset:4px}"
+    },
+    {
+      "name": "Public navigation",
+      "kind": "nav",
+      "description": "Readable links with a clearly stated destination.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main navigation\"><a href=\"#resources\">Rooms &amp; equipment</a><a href=\"#schedule\">Check schedule</a><a href=\"#process\">How it works</a></nav>",
+      "css": ".ds-nav{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);display:flex;flex-wrap:wrap;align-items:center;gap:28px;font-size:13px;font-weight:600;color:#162f43}.ds-nav a{display:flex;align-items:center;min-height:44px;color:inherit;text-decoration:none;text-underline-offset:5px}.ds-nav a:hover{text-decoration:underline}.ds-nav a:focus-visible{outline:3px solid #167992;outline-offset:4px}"
+    },
+    {
+      "name": "Available badge",
+      "kind": "chip",
+      "refersTo": "available-badge",
+      "description": "Physical status label; color supplements its text.",
+      "html": "<span class=\"ds-badge\">Available</span>",
+      "css": ".ds-badge{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.04em;background:#dcfce7;color:#15803d}"
+    },
+    {
+      "name": "Resource card",
+      "kind": "card",
+      "refersTo": "resource-card",
+      "description": "Flat resource summary with a truthful missing-media state; preview content is illustrative.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-cover\">No reference image</div><div class=\"ds-body\"><span>Equipment · RESOURCE-CODE</span><h4>Resource name</h4><p>Laboratory location</p><button>View schedule &amp; book</button></div></article>",
+      "css": ".ds-card{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);overflow:hidden;background:#fff;border:1px solid #cfdded;border-radius:4px;box-shadow:none;max-width:360px}.ds-cover{height:200px;display:flex;align-items:center;justify-content:center;background:#dbe8f4;color:#45698d;font-size:12px}.ds-body{padding:19px}.ds-body>span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:#436584}.ds-body h4{font-size:18px;line-height:1.35;margin:8px 0;color:var(--text-primary,#0f172a)}.ds-body p{font-size:13px;color:#64748b;margin:0 0 14px}.ds-body button{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);border:0;border-radius:3px;background:none;padding:6px 0;color:#215db1;font-weight:700;font-size:13px;cursor:pointer}.ds-body button:hover{color:#173c64}.ds-body button:focus-visible{outline:3px solid #167992;outline-offset:4px}"
+    },
+    {
+      "name": "Register row",
+      "kind": "custom",
+      "description": "Square register selection for materials and course groups.",
+      "html": "<button class=\"ds-register\" aria-pressed=\"true\"><span><small>RESOURCE-CODE</small><strong>Resource name</strong></span><span>Recorded balance</span></button>",
+      "css": ".ds-register{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);display:flex;justify-content:space-between;gap:16px;text-align:left;width:100%;padding:16px 12px;border:0;border-bottom:1px solid var(--line,#e2e8f0);background:var(--surface-base,#fff);color:var(--text-primary,#0f172a);border-radius:0;cursor:pointer}.ds-register>span:first-child{display:grid;gap:5px}.ds-register small{color:var(--text-secondary,#475569);font-size:.82rem;line-height:1.6}.ds-register[aria-pressed=true]{background:var(--accent-subtle,#edf4f6);box-shadow:inset 0 0 0 1px var(--accent,#174d70)}.ds-register:hover{background:var(--surface-raised,#f1f5f9)}.ds-register:focus-visible{outline:2px solid var(--blue-600,#174d70);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The LAB working record",
+    "overview": "A precise, professional laboratory interface built from white surfaces, navy actions and clear working records. IBM Plex Sans carries interface text; IBM Plex Mono distinguishes resource identifiers and technical values. Borders, alignment and whitespace establish hierarchy.\n\nPublic discovery uses a Persuade mode to explain access and lead visitors to resources. Authenticated work uses an Operate mode with registers, forms, ledgers and explicit outcomes. Both share the same visual identity; the landing composition is specific to that surface.",
+    "keyCharacteristics": [
+      "White and navy with restrained semantic color.",
+      "Readable Vietnamese and English across the application.",
+      "Compact corners, clear boundaries and practical information density.",
+      "Truthful resource media, state labels and operational feedback."
+    ],
+    "rules": [],
+    "dos": [
+      "Do keep resource search easy to find and keep signed-in tasks within the landing Check schedule section.",
+      "Do use IBM Plex Sans for interface text and IBM Plex Mono for identifiers, times, measurements and sequence numbers where it aids scanning.",
+      "Do translate interface labels and status descriptions in VI/EN while preserving stored user content and historical evidence.",
+      "Do label reference media and retain source, credit and license information when provided.",
+      "Do show distinct loading, filtered-empty, unavailable, validation and failure states with keyboard-visible focus."
+    ],
+    "donts": [
+      "Don't copy the landing hero, workflow plate or section order into every operational screen.",
+      "Don't introduce decorative gradients, excessive rounding or floating panels into the new LAB surfaces.",
+      "Don't communicate resource condition, booking status or warnings through color alone.",
+      "Don't present reference photographs, missing telemetry or unconfirmed operations as verified institutional evidence."
+    ]
+  }
+}

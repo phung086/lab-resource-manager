@@ -337,3 +337,21 @@ transaction-coupled audit event. Internal resolution records that the exception
 was reviewed; it neither changes the booking/payment settlement nor claims a
 provider refund. QueryDr and refund remain external integrations pending real
 merchant credentials and verified provider evidence.
+
+## ADR-024 - LAB workspace and course-group responsibilities
+
+Status: Accepted in user-authorized local continuation, 2026-09-29.
+
+- VI/EN is an application-wide presentation preference, not a course attribute.
+- The landing retains the signed-in worklist and confirmed schedule in Check
+  schedule. Public projections preserve booking privacy.
+- MATERIAL inventory uses transactional receipts, issues and adjustments with
+  immutable movement history, fixed units, nonnegative balance and retry IDs.
+  LAB_STAFF is limited by UserLabAssignment; ADMIN alone records adjustments.
+- A material issue linked to maintenance requires an open job in the same lab.
+- Maintenance changes require reasons and conflict revalidation. They do not
+  silently relocate bookings or certify the resource's physical safety.
+- Course groups represent academic supervision. ADMIN assigns the lecturer;
+  lecturers manage assigned groups, students submit their own learning goals.
+  Academic review is separate from resource approval and operational handover.
+- Original user content and historical evidence are not rewritten by translation.

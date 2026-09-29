@@ -1,3 +1,6 @@
+import { getDictionary, localeStorageKey } from "./i18n.js";
+import workspaceErrors from "./locales/workspace-errors.json";
+
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL || `http://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:8000`;
 const API_BASE_URL = `${configuredApiBase.replace(/\/$/, "")}${/\/api$/.test(configuredApiBase) ? "" : "/api"}`;
 
@@ -32,7 +35,10 @@ export async function apiRequest(path, options = {}) {
       clearSession();
       window.dispatchEvent(new CustomEvent("lrm:session-invalid"));
     }
-    throw new ApiError(error.message || "API request failed", response.status, error.details, error.code);
+    const locale = localStorage.getItem(localeStorageKey) === "en" ? "en" : "vi";
+    const messages = getDictionary(locale).apiMessages;
+    const message = workspaceErrors[error.code]?.[locale] || messages[error.code] || error.message || messages.API_REQUEST_FAILED;
+    throw new ApiError(message, response.status, error.details, error.code);
   }
 
   return body;

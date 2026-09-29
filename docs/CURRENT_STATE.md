@@ -1,5 +1,15 @@
 # Current Project State
 
+## Local LAB experience continuation — 2026-09-29
+
+User-authorized working-tree continuation, not a new numbered Batch or release.
+Landing, VI/EN presentation, maintenance rescheduling, scoped material stock,
+and course-group supervision have been extended. See
+`docs/LAB_WORKSPACE_EXPERIENCE_REPORT_20260929.md` for scope, verification, and
+integration limits. The user requested publication as a draft PR for further
+revision; visual acceptance and merge remain pending. This is not a production
+deployment. The GitHub checkpoint below remains historical evidence.
+
 ## Repository integration checkpoint — 2026-09-28
 
 This section is the current GitHub authority for repository integration state. Older

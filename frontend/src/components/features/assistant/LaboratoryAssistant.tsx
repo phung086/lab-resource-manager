@@ -1,3 +1,4 @@
+import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Send, Bot } from "lucide-react";
@@ -21,6 +22,7 @@ export default function LaboratoryAssistant({
   onClose: () => void;
   onPrefill: (slot: Slot) => void;
 }) {
+  const { tr } = useLocale();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const panel = useRef<HTMLElement>(null),
@@ -33,7 +35,7 @@ export default function LaboratoryAssistant({
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]),
-    [mode, setMode] = useState("Đang kiểm tra kết nối…");
+    [mode, setMode] = useState(tr("Đang kiểm tra kết nối…"));
   const [resources, setResources] = useState<
       { id: string; name: string; code: string }[]
     >([]),
@@ -55,8 +57,8 @@ export default function LaboratoryAssistant({
           setSuggestions(data.suggestions);
           setMode(
             data.mode === "LOCAL_GROUNDED"
-              ? "Tra cứu dữ liệu · Không dùng mô hình ngoài"
-              : "Mô hình AI · Có tra cứu dữ liệu",
+              ? tr("Tra cứu dữ liệu · Không dùng mô hình ngoài")
+              : tr("Mô hình AI · Có tra cứu dữ liệu"),
           );
           setResources(Array.isArray(rows) ? rows : rows.resources || []);
         }
@@ -64,15 +66,15 @@ export default function LaboratoryAssistant({
       .catch(() => {
         if (alive) {
           setError(
-            "Trợ lý chưa sẵn sàng. Hãy kiểm tra tính năng phía máy chủ.",
+            tr("Trợ lý chưa sẵn sàng. Hãy kiểm tra tính năng phía máy chủ."),
           );
-          setMode("Không thể kết nối");
+          setMode(tr("Không thể kết nối"));
         }
       });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [tr]);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement;
     close.current?.focus();
@@ -156,34 +158,30 @@ export default function LaboratoryAssistant({
         <header>
           <div>
             <h2 id="lab-assistant-title">
-              <Bot size={20} /> Trợ lý Lab
-            </h2>
-            <p>Trợ lý tra cứu và tư vấn dữ liệu phòng thí nghiệm</p>
+              <Bot size={20} /> {tr("Trợ lý Lab")}</h2>
+            <p>{tr("Trợ lý tra cứu và tư vấn dữ liệu phòng thí nghiệm")}</p>
           </div>
           <button
             ref={close}
             className="secondary-button"
             onClick={onClose}
-            aria-label="Đóng trợ lý"
+            aria-label={tr("Đóng trợ lý")}
           >
             <X size={20} />
           </button>
         </header>
         <div className="lab-assistant-content">
           <p className="assistant-boundary">
-            Tra cứu theo quyền đăng nhập. Trợ lý không duyệt lịch, tạo booking
-            hay xác nhận thanh toán. Hội thoại chỉ giữ trong phiên mở bảng này.
-          </p>
+            {tr("Tra cứu theo quyền đăng nhập. Trợ lý không duyệt lịch, tạo booking hay xác nhận thanh toán. Hội thoại chỉ giữ trong phiên mở bảng này.")}</p>
           <details>
-            <summary>Chọn tài nguyên và thời gian (tùy chọn)</summary>
+            <summary>{tr("Chọn tài nguyên và thời gian (tùy chọn)")}</summary>
             <div className="assistant-context">
               <label>
-                Tài nguyên
-                <select
+                {tr("Tài nguyên")}<select
                   value={resourceId}
                   onChange={(e) => setResourceId(e.target.value)}
                 >
-                  <option value="">Tìm theo câu hỏi</option>
+                  <option value="">{tr("Tìm theo câu hỏi")}</option>
                   {resources.map((r) => (
                     <option value={r.id} key={r.id}>
                       {r.code} · {r.name}
@@ -192,8 +190,7 @@ export default function LaboratoryAssistant({
                 </select>
               </label>
               <label>
-                Thời lượng (phút)
-                <input
+                {tr("Thời lượng (phút)")}<input
                   type="number"
                   min={15}
                   max={480}
@@ -203,16 +200,14 @@ export default function LaboratoryAssistant({
                 />
               </label>
               <label>
-                Từ (giờ Việt Nam)
-                <input
+                {tr("Từ (giờ Việt Nam)")}<input
                   type="datetime-local"
                   value={startAt}
                   onChange={(e) => setStartAt(e.target.value)}
                 />
               </label>
               <label>
-                Đến (giờ Việt Nam)
-                <input
+                {tr("Đến (giờ Việt Nam)")}<input
                   type="datetime-local"
                   value={endAt}
                   onChange={(e) => setEndAt(e.target.value)}
@@ -222,7 +217,7 @@ export default function LaboratoryAssistant({
           </details>
           {!messages.length && (
             <div className="assistant-suggestions">
-              <h3>Bắt đầu từ công việc của bạn</h3>
+              <h3>{tr("Bắt đầu từ công việc của bạn")}</h3>
               {suggestions.map((s) => (
                 <button
                   className="secondary-button"
@@ -244,24 +239,24 @@ export default function LaboratoryAssistant({
               >
                 <p className="assistant-question">{m.question}</p>
                 <div className="assistant-answer">
-                  <p>{hasStructuredLocalAnswer(m.response) ? m.response.actions?.length ? "Các khung giờ gợi ý bên dưới đã được kiểm tra từ lịch và chính sách LAB. Chưa giữ chỗ; hệ thống kiểm tra lại khi bạn gửi yêu cầu." : "Đã tìm thấy tài nguyên phù hợp bên dưới. Trạng thái vận hành không bảo đảm tài nguyên còn trống tại thời điểm bạn muốn sử dụng." : m.response.answer}</p>
+                  <p>{hasStructuredLocalAnswer(m.response) ? m.response.actions?.length ? tr("Các khung giờ gợi ý bên dưới đã được kiểm tra từ lịch và chính sách LAB. Chưa giữ chỗ; hệ thống kiểm tra lại khi bạn gửi yêu cầu.") : tr("Đã tìm thấy tài nguyên phù hợp bên dưới. Trạng thái vận hành không bảo đảm tài nguyên còn trống tại thời điểm bạn muốn sử dụng.") : m.response.answer}</p>
                   <small>
                     {m.response.provider === "local"
-                      ? "Trả lời từ công cụ dữ liệu"
-                      : "Tổng hợp bằng mô hình AI"}
+                      ? tr("Trả lời từ công cụ dữ liệu")
+                      : tr("Tổng hợp bằng mô hình AI")}
                     {m.response.modelStatus === "MODEL_UNAVAILABLE"
-                      ? " · Mô hình không khả dụng; đã dùng kết quả công cụ."
+                      ? tr(" · Mô hình không khả dụng; đã dùng kết quả công cụ.")
                       : ""}
                   </small>
-                  <p className="assistant-verified">Đã kiểm tra dữ liệu hệ thống · {mode}</p>
+                  <p className="assistant-verified">{tr("Đã kiểm tra dữ liệu hệ thống ·")}{mode}</p>
                   {m.response.toolResults?.filter(t => t.tool === "search_resources" || t.tool === "recommend_resources_for_experiment").flatMap(t => Array.isArray(t.result.resources) ? t.result.resources : []).map((resource: any) => (
                     <article className="assistant-resource-result" key={resource.id}>
-                      <strong>{resource.name}</strong><small>{resource.code} · {({ ROOM: "Phòng LAB", EQUIPMENT: "Thiết bị", MACHINE: "Máy móc", EXPERIMENT_KIT: "Bộ thí nghiệm", MATERIAL: "Vật tư" } as Record<string, string>)[resource.category] || "Chưa phân loại"}</small>
-                      <dl><div><dt>Vị trí</dt><dd>{resource.location || "Chưa có thông tin"}</dd></div><div><dt>Vận hành</dt><dd>{({ AVAILABLE: "Sẵn sàng", MAINTENANCE: "Bảo trì", CALIBRATION: "Hiệu chuẩn", OFFLINE: "Ngoại tuyến", IN_USE: "Đang sử dụng", BROKEN: "Hỏng", RETIRED: "Ngừng sử dụng" } as Record<string, string>)[resource.operationalStatus] || "Chưa xác định"}</dd></div></dl>
-                      <p>Cần kiểm tra khung giờ và điều kiện trước khi đặt lịch.</p>
+                      <strong>{resource.name}</strong><small>{resource.code} · {({ ROOM: tr("Phòng LAB"), EQUIPMENT: tr("Thiết bị"), MACHINE: tr("Máy móc"), EXPERIMENT_KIT: tr("Bộ thí nghiệm"), MATERIAL: tr("Vật tư") } as Record<string, string>)[resource.category] || tr("Chưa phân loại")}</small>
+                      <dl><div><dt>{tr("Vị trí")}</dt><dd>{resource.location || tr("Chưa có thông tin")}</dd></div><div><dt>{tr("Vận hành")}</dt><dd>{({ AVAILABLE: tr("Sẵn sàng"), MAINTENANCE: tr("Bảo trì"), CALIBRATION: tr("Hiệu chuẩn"), OFFLINE: tr("Ngoại tuyến"), IN_USE: tr("Đang sử dụng"), BROKEN: tr("Hỏng"), RETIRED: tr("Ngừng sử dụng") } as Record<string, string>)[resource.operationalStatus] || tr("Chưa xác định")}</dd></div></dl>
+                      <p>{tr("Cần kiểm tra khung giờ và điều kiện trước khi đặt lịch.")}</p>
                     </article>
                   ))}
-                  <details><summary>Chi tiết nguồn tra cứu</summary>{hasStructuredLocalAnswer(m.response) && <p>{m.response.answer}</p>}<div className="assistant-tools">
+                  <details><summary>{tr("Chi tiết nguồn tra cứu")}</summary>{hasStructuredLocalAnswer(m.response) && <p>{m.response.answer}</p>}<div className="assistant-tools">
                     {m.response.toolsUsed.map((t, j) => (
                       <span key={`${t}-${j}`}>{t}</span>
                     ))}
@@ -270,7 +265,7 @@ export default function LaboratoryAssistant({
                     Array.isArray(t.result.sources),
                   ) && (
                     <details>
-                      <summary>Nguồn tài liệu đã truy xuất</summary>
+                      <summary>{tr("Nguồn tài liệu đã truy xuất")}</summary>
                       <pre>
                         {JSON.stringify(
                           m.response.toolResults
@@ -283,7 +278,7 @@ export default function LaboratoryAssistant({
                     </details>
                   )}
                   {m.response.actions?.map((a) => (
-                    <div className="assistant-slot-result" key={`${a.payload.resourceId}-${a.payload.startAt}`}><strong>{resources.find(r => r.id === a.payload.resourceId)?.name || "Tài nguyên được gợi ý"}</strong><p>{formatVietnamDateTime(a.payload.startAt)} → {formatVietnamDateTime(a.payload.endAt)}</p><small>Giờ Việt Nam · Kiểm tra lại khi gửi yêu cầu</small><button
+                    <div className="assistant-slot-result" key={`${a.payload.resourceId}-${a.payload.startAt}`}><strong>{resources.find(r => r.id === a.payload.resourceId)?.name || tr("Tài nguyên được gợi ý")}</strong><p>{formatVietnamDateTime(a.payload.startAt)} → {formatVietnamDateTime(a.payload.endAt)}</p><small>{tr("Giờ Việt Nam · Kiểm tra lại khi gửi yêu cầu")}</small><button
                       className="secondary-button"
                       key={a.label}
                       onClick={() => {
@@ -291,14 +286,13 @@ export default function LaboratoryAssistant({
                         onPrefill(a.payload);
                       }}
                     >
-                      Mở form đặt lịch
-                    </button></div>
+                      {tr("Mở form đặt lịch")}</button></div>
                   ))}
                 </div>
               </article>
             ))}
           </div>
-          {busy && <p role="status">Đang tra cứu dữ liệu được phép…</p>}
+          {busy && <p role="status">{tr("Đang tra cứu dữ liệu được phép…")}</p>}
           {error && (
             <p className="alert danger" role="alert">
               {error}
@@ -313,8 +307,7 @@ export default function LaboratoryAssistant({
           }}
         >
           <label className="sr-only" htmlFor="assistant-question">
-            Câu hỏi cho trợ lý
-          </label>
+            {tr("Câu hỏi cho trợ lý")}</label>
           <textarea
             id="assistant-question"
             maxLength={2000}
@@ -323,12 +316,12 @@ export default function LaboratoryAssistant({
             rows={2}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Nhập câu hỏi về tài nguyên hoặc lịch đặt…"
+            placeholder={tr("Nhập câu hỏi về tài nguyên hoặc lịch đặt…")}
           />
           <button
             className="primary-button"
             disabled={busy || question.trim().length < 2}
-            aria-label="Gửi câu hỏi"
+            aria-label={tr("Gửi câu hỏi")}
           >
             <Send size={18} />
           </button>

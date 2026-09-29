@@ -1,3 +1,4 @@
+import { useLocale } from '../providers/LocaleProvider';
 import React from "react";
 import { CANONICAL_BOOKING_STATUS_LABELS } from "../constants.js";
 
@@ -121,6 +122,7 @@ export const BookingStatusBadge: React.FC<BookingStatusBadgeProps> = ({
   occupancy,
   className = ""
 }) => {
+  const { tr } = useLocale();
   // If canonical status is provided, use it
   if (status && STATUS_CONFIG[status]) {
     const config = STATUS_CONFIG[status];
@@ -141,7 +143,7 @@ export const BookingStatusBadge: React.FC<BookingStatusBadgeProps> = ({
           border: `1px solid ${config.border}`
         }}
       >
-        {config.label}
+        {tr(config.label)}
       </span>
     );
   }
@@ -166,7 +168,7 @@ export const BookingStatusBadge: React.FC<BookingStatusBadgeProps> = ({
           border: `1px solid ${config.border}`
         }}
       >
-        {config.label}
+        {tr(config.label)}
       </span>
     );
   }

@@ -1,3 +1,4 @@
+import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, RefreshCw, ShieldCheck } from "lucide-react";
 import { apiRequest } from "../../../api.js";
@@ -9,6 +10,7 @@ type Charge = { id: string; amount: number; currency: string; status: string; pr
 const money = (amount: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
 export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: string; onClearBooking?: () => void }) {
+  const { tr } = useLocale();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [charge, setCharge] = useState<Charge | null>(null);
   const [vnpayReady, setVnpayReady] = useState(false);
@@ -50,22 +52,22 @@ export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: stri
   return <section className="content-stack payment-page booking-checkout" aria-labelledby="booking-checkout-heading">
     <header className="page-section-header">
       <div><h1 id="booking-checkout-heading">Thanh toán lịch đặt LAB</h1><p className="section-description">Xem lại lịch đặt LAB và thanh toán bằng QR tại cổng VNPAY.</p></div>
-      <button type="button" className="secondary-button" onClick={load} disabled={loading || redirecting}><RefreshCw size={16} /> Làm mới</button>
+      <button type="button" className="secondary-button" onClick={load} disabled={loading || redirecting}><RefreshCw size={16} /> {tr("Làm mới")}</button>
     </header>
     {error && <p className="alert danger" role="alert">{error}</p>}
     {loading ? <p role="status">Đang tải thông tin thanh toán…</p> : booking && <div className="panel booking-checkout-order">
       <h2>{booking.title}</h2>
       <p>{booking.resource.code} · {booking.resource.name}</p>
       <dl>
-        <dt>Thời gian</dt><dd>{formatVietnamDateTime(booking.startAt)} – {formatVietnamDateTime(booking.endAt)}</dd>
-        <dt>Mã booking</dt><dd className="payment-ref">{booking.id}</dd>
-        <dt>Phí sử dụng</dt><dd><strong className="payment-amount">{money(booking.feeAmountVnd)}</strong></dd>
+        <dt>{tr("Thời gian")}</dt><dd>{formatVietnamDateTime(booking.startAt)} – {formatVietnamDateTime(booking.endAt)}</dd>
+        <dt>{tr("Mã booking")}</dt><dd className="payment-ref">{booking.id}</dd>
+        <dt>{tr("Phí sử dụng")}</dt><dd><strong className="payment-amount">{money(booking.feeAmountVnd)}</strong></dd>
         {charge && <><dt>Mã thanh toán</dt><dd className="payment-ref">{charge.txnRef}</dd></>}
       </dl>
       {booking.feeAmountVnd === 0 ? <div className="alert" role="status">Lịch đặt này không có phí sử dụng, nên không có QR thanh toán. Nếu tài nguyên có bảng giá mới, mức giá đó chỉ áp dụng cho booking tạo sau khi bảng giá được lưu.</div>
         : booking.status === "PENDING_APPROVAL" ? <div className="alert" role="status">Yêu cầu đang chờ cán bộ lab duyệt. Sau khi được duyệt, hệ thống tạo khoản thu và bạn có thể thanh toán tại đây.</div>
-        : ["REJECTED", "CANCELLED"].includes(booking.status) && charge?.status === "success" && charge.reconciliationStatus === "manual_review" ? <div className="alert warning" role="status">Khoản thanh toán đã được VNPAY xác minh sau khi booking kết thúc. Booking vẫn {booking.status === "REJECTED" ? "bị từ chối" : "đã hủy"}; giao dịch đang chờ quản trị viên đối soát và xử lý hoàn tiền thủ công.</div>
-        : ["REJECTED", "CANCELLED"].includes(booking.status) ? <div className="alert" role="status">Lịch đặt đã {booking.status === "REJECTED" ? "bị từ chối" : "hủy"}. Không thể thanh toán booking này.</div>
+        : ["REJECTED", "CANCELLED"].includes(booking.status) && charge?.status === "success" && charge.reconciliationStatus === "manual_review" ? <div className="alert warning" role="status">Khoản thanh toán đã được VNPAY xác minh sau khi booking kết thúc. Booking vẫn {booking.status === "REJECTED" ? tr("bị từ chối") : tr("đã hủy")}; giao dịch đang chờ quản trị viên đối soát và xử lý hoàn tiền thủ công.</div>
+        : ["REJECTED", "CANCELLED"].includes(booking.status) ? <div className="alert" role="status">Lịch đặt đã {booking.status === "REJECTED" ? tr("bị từ chối") : "hủy"}. Không thể thanh toán booking này.</div>
         : charge?.status === "success" ? <div className="alert success" role="status"><ShieldCheck size={18} /> Đã xác minh thanh toán {money(charge.amount)} lúc {charge.paidAt ? formatVietnamDateTime(charge.paidAt) : "—"}.</div>
         : charge && ["pending", "failed", "expired"].includes(charge.status) ? <div className="booking-checkout-payment">
           <h3>Thanh toán bằng VNPAY-QR</h3>

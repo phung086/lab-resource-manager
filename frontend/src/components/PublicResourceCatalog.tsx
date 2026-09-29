@@ -1,3 +1,4 @@
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -101,12 +102,15 @@ export function PublicResourceCatalog({
   onViewSchedule: (id: string) => void;
   onGuestBookingComplete?: (result: any) => void;
 }) {
+  const { tr, t } = useLocale();
   const [resources, setResources] = useState<Resource[]>([]);
   const [selected, setSelected] = useState<Resource | null>(null);
   const [schedule, setSchedule] = useState<SchedulePayload | null>(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleError, setScheduleError] = useState("");
   const [filter, setFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
+  const [limit, setLimit] = useState(6);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
@@ -147,7 +151,7 @@ export function PublicResourceCatalog({
         }
       })
       .catch((cause: Error) => {
-        if (active) setError(cause.message || "Không tải được danh mục tài nguyên.");
+        if (active) setError(cause.message || tr("Không tải được danh mục tài nguyên."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -155,9 +159,12 @@ export function PublicResourceCatalog({
     return () => {
       active = false;
     };
-  }, [revision]);
+  }, [revision, tr]);
 
-  const visible = filter === "ALL" ? resources : resources.filter((row) => row.category === filter);
+  const categoryOrder = ["ROOM", "EQUIPMENT", "MACHINE", "EXPERIMENT_KIT", "MATERIAL"];
+  const matches = resources.filter(row => (filter === "ALL" || row.category === filter) && `${row.name} ${row.code} ${row.location}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
+    .sort((a, b) => categoryOrder.indexOf(a.category || "") - categoryOrder.indexOf(b.category || "") || a.code.localeCompare(b.code));
+  const visible = matches.slice(0, limit);
 
   async function openDetails(row: Resource, rememberOpener = true) {
     const request = ++detailRequest.current;
@@ -188,9 +195,9 @@ export function PublicResourceCatalog({
     ]);
     if (request !== detailRequest.current) return;
     if (detailResult.status === "fulfilled") setSelected(detailResult.value);
-    else setDetailError("Chưa tải được điều kiện sử dụng. Vui lòng thử lại trước khi đặt lịch.");
+    else setDetailError(tr("Chưa tải được điều kiện sử dụng. Vui lòng thử lại trước khi đặt lịch."));
     if (scheduleResult.status === "fulfilled") setSchedule(scheduleResult.value);
-    if (scheduleResult.status === "rejected") setScheduleError("Chưa tải được lịch bận của tài nguyên này.");
+    if (scheduleResult.status === "rejected") setScheduleError(tr("Chưa tải được lịch bận của tài nguyên này."));
     setScheduleLoading(false);
     setDetailLoading(false);
   }
@@ -212,8 +219,8 @@ export function PublicResourceCatalog({
     if (!isPhysicalOk) {
       return {
         status: "UNAVAILABLE",
-        label: "Tạm ngưng phục vụ",
-        message: `Tài nguyên đang ở trạng thái ${operationalBadgeLabels[resource.operationalStatus]?.label || resource.operationalStatus}, hiện không nhận đặt lịch mới.`,
+        label: tr("Tạm ngưng phục vụ"),
+        message: t('Tài nguyên tạm thời không nhận lịch mới. Kiểm tra trạng thái thiết bị hoặc liên hệ cán bộ LAB.', 'This resource is not accepting new bookings. Check its physical status or contact LAB staff.'),
         type: "danger"
       };
     }
@@ -222,8 +229,8 @@ export function PublicResourceCatalog({
     if (trainingList.length === 0) {
       return {
         status: "ELIGIBLE",
-        label: "Đủ điều kiện",
-        message: "Tài nguyên không yêu cầu chứng chỉ an toàn tiên quyết.",
+        label: tr("Đủ điều kiện"),
+        message: tr("Tài nguyên không yêu cầu chứng chỉ an toàn tiên quyết."),
         type: "success"
       };
     }
@@ -231,48 +238,17 @@ export function PublicResourceCatalog({
     if (!currentUser) {
       return {
         status: "AUTH_REQUIRED",
-        label: "Cần chứng nhận an toàn",
-        message: `Yêu cầu hoàn thành: ${trainingList.map((t) => t.name || t.code).join(", ")}. Tài khoản phải có chứng chỉ còn hiệu lực trước khi đặt lịch; OTP không thay thế điều kiện này.`,
+        label: tr("Cần chứng nhận an toàn"),
+        message: t('Yêu cầu hoàn thành: ', 'Required training: ') + trainingList.map(item => item.name || item.code).join(', ') + t('. Tài khoản phải có chứng chỉ còn hiệu lực trước khi đặt lịch; OTP không thay thế điều kiện này.', '. Your account must hold valid certifications before booking; OTP does not replace this requirement.'),
         type: "info"
       };
     }
 
-    const userCerts = currentUser.certifications || [];
-    const missing = trainingList.filter(
-      (req) => !userCerts.some((c: any) => c.courseId === req.courseId && c.status === "active")
-    );
-    const expired = trainingList.filter((req) =>
-      userCerts.some(
-        (c: any) =>
-          c.courseId === req.courseId &&
-          c.expiresAt &&
-          new Date(c.expiresAt).getTime() <= Date.now()
-      )
-    );
-
-    if (expired.length > 0) {
-      return {
-        status: "EXPIRED",
-        label: "Chứng nhận hết hạn",
-        message: `Chứng nhận an toàn đã hết hạn: ${expired.map((t) => t.name || t.code).join(", ")}. Vui lòng gia hạn trước khi đặt lịch.`,
-        type: "danger"
-      };
-    }
-
-    if (missing.length > 0) {
-      return {
-        status: "TRAINING_REQUIRED",
-        label: "Chưa hoàn thành đào tạo",
-        message: `Bạn chưa hoàn thành khóa an toàn: ${missing.map((t) => t.name || t.code).join(", ")}.`,
-        type: "warning"
-      };
-    }
-
     return {
-      status: "ELIGIBLE",
-      label: "Đủ điều kiện sử dụng",
-      message: "Bạn đã hoàn thành đầy đủ chứng nhận an toàn bắt buộc cho tài nguyên này.",
-      type: "success"
+      status: "TRAINING_REQUIRED",
+      label: t('Cần kiểm tra chứng nhận', 'Certification check required'),
+      message: t('Yêu cầu: ', 'Required: ') + trainingList.map(item => item.name || item.code).join(', ') + t('. Hệ thống kiểm tra chứng chỉ còn hiệu lực khi gửi lịch đặt.', '. Valid certifications are verified when you submit a booking.'),
+      type: "info"
     };
   }
 
@@ -280,47 +256,46 @@ export function PublicResourceCatalog({
     <div className="public-live-catalog">
       <div className="catalog-head">
         <div>
-          <h3>Khám phá phòng và thiết bị LAB</h3>
+          <h3>{tr("Khám phá phòng và thiết bị LAB")}</h3>
           <p>
-            Danh mục tài nguyên từ hệ thống. Tra cứu trạng thái vận hành, điều kiện sử dụng và lịch khả dụng trước khi đặt.
-          </p>
+            {tr("Danh mục tài nguyên từ hệ thống. Tra cứu trạng thái vận hành, điều kiện sử dụng và lịch khả dụng trước khi đặt.")}</p>
         </div>
-        <button type="button" onClick={() => setRevision((value) => value + 1)} aria-label="Tải lại danh mục">
+        <button type="button" onClick={() => setRevision((value) => value + 1)} aria-label={tr("Tải lại danh mục")}>
           <RefreshCw size={17} aria-hidden="true" />
         </button>
       </div>
 
-      <div className="catalog-filters" role="group" aria-label="Lọc tài nguyên">
+      <label className="catalog-search-label">{t('Tìm phòng hoặc thiết bị', 'Find a room or equipment')}<input type="search" value={search} maxLength={120} onChange={event => { setSearch(event.target.value); setLimit(6); }} placeholder={t('Tên, mã tài nguyên hoặc vị trí', 'Name, resource code or location')} /></label>
+      <div className="catalog-filters" role="group" aria-label={tr("Lọc tài nguyên")}>
         {[
-          ["ALL", "Tất cả"],
-          ["ROOM", "Phòng LAB"],
-          ["EQUIPMENT", "Thiết bị"],
-          ["MACHINE", "Máy móc"],
-          ["EXPERIMENT_KIT", "Bộ thí nghiệm"],
-          ["MATERIAL", "Vật tư"]
+          ["ALL", tr("Tất cả")],
+          ["ROOM", tr("Phòng LAB")],
+          ["EQUIPMENT", tr("Thiết bị")],
+          ["MACHINE", tr("Máy móc")],
+          ["EXPERIMENT_KIT", tr("Bộ thí nghiệm")],
+          ["MATERIAL", tr("Vật tư")]
         ].map(([code, label]) => (
           <button
             key={code}
             type="button"
             aria-pressed={filter === code}
-            onClick={() => setFilter(code)}
+            onClick={() => { setFilter(code); setLimit(6); }}
           >
-            {label}
+            {tr(label)}
           </button>
         ))}
       </div>
 
-      {loading && <p role="status">Đang tải danh mục phòng và thiết bị…</p>}
+      {loading && <p role="status">{tr("Đang tải danh mục phòng và thiết bị…")}</p>}
       {error && (
         <div className="catalog-message" role="alert">
           {error}{" "}
           <button type="button" onClick={() => setRevision((value) => value + 1)}>
-            Thử lại
-          </button>
+            {tr("Thử lại")}</button>
         </div>
       )}
       {!loading && !error && visible.length === 0 && (
-        <p className="catalog-message">Chưa có tài nguyên trong nhóm này.</p>
+        <p className="catalog-message">{tr("Chưa có tài nguyên trong nhóm này.")}</p>
       )}
 
       {/* Catalog Cards Grid */}
@@ -337,14 +312,14 @@ export function PublicResourceCatalog({
                 type="button"
                 className="catalog-cover"
                 onClick={() => void openDetails(row)}
-                aria-label={`Xem chi tiết ${row.name}`}
+                aria-label={`${t('Xem chi tiết', 'View details')}: ${row.name}`}
               >
                 {image ? (
                   <ResourceMediaPreview key={image.url} kind="IMAGE" url={image.url} alt={image.altText || row.name} />
                 ) : (
                   <span className="catalog-placeholder">
                     {row.category === "ROOM" ? <DoorOpen size={48} /> : <Microscope size={48} />}
-                    <small>Chưa có ảnh minh họa</small>
+                    <small>{tr("Chưa có ảnh minh họa")}</small>
                   </span>
                 )}
               </button>
@@ -352,17 +327,17 @@ export function PublicResourceCatalog({
               <div className="catalog-card-body">
                 {/* LAB-oriented Status Badges */}
                 <div className="catalog-card-badges">
-                  <span className={`card-badge ${opBadge.class}`}>{opBadge.label}</span>
+                  <span className={`card-badge ${opBadge.class}`}>{tr(opBadge.label)}</span>
                   <span className="card-badge badge-approval">
-                    {row.effectiveRequiresApproval ? "Cần duyệt" : "Tự động"}
+                    {row.effectiveRequiresApproval ? tr("Cần duyệt") : tr("Tự động")}
                   </span>
                   {row.trainingRequirements && row.trainingRequirements.length > 0 && (
-                    <span className="card-badge badge-training">Cần chứng chỉ</span>
+                    <span className="card-badge badge-training">{tr("Cần chứng chỉ")}</span>
                   )}
                 </div>
 
                 <span className="catalog-card-meta">
-                  {categoryLabels[row.category || ""] || row.category} · {row.code}
+                  {tr(categoryLabels[row.category || ""] || row.category || "")} · {row.code}
                 </span>
                 <h4>{row.name}</h4>
                 <p className="catalog-card-loc">{row.location}</p>
@@ -373,7 +348,7 @@ export function PublicResourceCatalog({
                   className="catalog-card-cta"
                   onClick={() => void openDetails(row)}
                 >
-                  Xem lịch & đặt <ArrowRight size={16} aria-hidden="true" />
+                  {tr("Xem lịch & đặt")}<ArrowRight size={16} aria-hidden="true" />
                 </button>
               </div>
             </article>
@@ -381,28 +356,28 @@ export function PublicResourceCatalog({
         })}
       </div>
 
+      {!loading && !error && matches.length > limit && <button type="button" className="public-secondary catalog-show-more" onClick={() => setLimit(value => value + 6)}>{t('Xem thêm tài nguyên', 'Show more resources')} ({matches.length - limit})</button>}
       {/* Resource Detail Section */}
       {selected && (
         <section className="catalog-detail" id="chi-tiet-tai-nguyen" aria-labelledby="catalog-detail-title">
           <div className="catalog-detail-heading">
             <div>
               <span>
-                {categoryLabels[selected.category || ""]} · {selected.code}
+                {tr(categoryLabels[selected.category || ""])} · {selected.code}
               </span>
               <h3 id="catalog-detail-title" ref={detailHeading} tabIndex={-1}>{selected.name}</h3>
               <p>{selected.laboratory?.name || selected.location}</p>
             </div>
-            <button type="button" onClick={closeDetails} aria-label="Đóng chi tiết">
-              Đóng
-            </button>
+            <button type="button" onClick={closeDetails} aria-label={tr("Đóng chi tiết")}>
+              {tr("Đóng")}</button>
           </div>
 
           {detailLoading ? (
-            <p role="status">Đang kiểm tra thông tin và điều kiện sử dụng…</p>
+            <p role="status">{tr("Đang kiểm tra thông tin và điều kiện sử dụng…")}</p>
           ) : detailError ? (
             <div className="catalog-message" role="alert">
               {detailError}{" "}
-              <button type="button" onClick={() => void openDetails(selected, false)}>Thử lại</button>
+              <button type="button" onClick={() => void openDetails(selected, false)}>{tr("Thử lại")}</button>
             </div>
           ) : null}
 
@@ -420,13 +395,12 @@ export function PublicResourceCatalog({
                     <figcaption>
                       <strong>{item.title}</strong>
                       <span>
-                        Tư liệu minh họa · {item.credit || "Nguồn do quản trị viên cung cấp"}{" "}
+                        {tr("Tư liệu minh họa ·")}{item.credit || tr("Nguồn do quản trị viên cung cấp")}{" "}
                         {item.license && `· ${item.license}`}
                       </span>
                       {item.sourceUrl && (
                         <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">
-                          Xem nguồn
-                        </a>
+                          {tr("Xem nguồn")}</a>
                       )}
                     </figcaption>
                   </figure>
@@ -434,7 +408,7 @@ export function PublicResourceCatalog({
               ) : (
                 <div className="catalog-no-media">
                   <Play size={34} aria-hidden="true" />
-                  <p>Chưa có ảnh hoặc video được xác minh nguồn cho tài nguyên này.</p>
+                  <p>{tr("Chưa có ảnh hoặc video được xác minh nguồn cho tài nguyên này.")}</p>
                 </div>
               )}
             </div>
@@ -455,7 +429,7 @@ export function PublicResourceCatalog({
                       ) : (
                         <Info size={18} aria-hidden="true" />
                       )}
-                      <strong>Khả năng sử dụng: {verdict.label}</strong>
+                      <strong>{tr("Khả năng sử dụng:")}{verdict.label}</strong>
                     </div>
                     <p>{verdict.message}</p>
                   </div>
@@ -463,47 +437,47 @@ export function PublicResourceCatalog({
               })()}
 
               <p className="catalog-description">
-                {selected.description || "Thông tin mô tả chi tiết được cán bộ quản lý LAB cập nhật."}
+                {selected.description || tr("Thông tin mô tả chi tiết được cán bộ quản lý LAB cập nhật.")}
               </p>
 
               <dl className="catalog-spec-dl">
                 <div>
-                  <dt>Địa điểm</dt>
+                  <dt>{tr("Địa điểm")}</dt>
                   <dd>{selected.location}</dd>
                 </div>
                 <div>
-                  <dt>Sức chứa / Số lượng</dt>
+                  <dt>{tr("Sức chứa / Số lượng")}</dt>
                   <dd>{selected.capacity}</dd>
                 </div>
                 <div>
-                  <dt>Phê duyệt</dt>
+                  <dt>{tr("Phê duyệt")}</dt>
                   <dd>
                     {selected.effectiveRequiresApproval
-                      ? "Cần cán bộ LAB duyệt trước khi bàn giao"
-                      : "Xác nhận tự động theo chính sách"}
+                      ? tr("Cần cán bộ LAB duyệt trước khi bàn giao")
+                      : tr("Xác nhận tự động theo chính sách")}
                   </dd>
                 </div>
                 <div>
-                  <dt>Đào tạo an toàn</dt>
+                  <dt>{tr("Đào tạo an toàn")}</dt>
                   <dd>
                     {selected.trainingRequirements && selected.trainingRequirements.length > 0
                       ? selected.trainingRequirements.map((t) => t.name || t.code).join(", ")
-                      : "Không yêu cầu"}
+                      : tr("Không yêu cầu")}
                   </dd>
                 </div>
                 {selected.laboratory?.labPolicy && (
                   <div>
-                    <dt>Khung giờ quy định</dt>
+                    <dt>{tr("Khung giờ quy định")}</dt>
                     <dd>
                       {selected.laboratory.labPolicy.workDayStartHour || 8}:00 –{" "}
                       {selected.laboratory.labPolicy.workDayEndHour || 18}:00{" "}
-                      {selected.laboratory.labPolicy.allowWeekend ? "(Mở cả cuối tuần)" : "(Ngày làm việc)"}
+                      {selected.laboratory.labPolicy.allowWeekend ? tr("(Mở cả cuối tuần)") : tr("(Ngày làm việc)")}
                     </dd>
                   </div>
                 )}
                 {selected.model && (
                   <div>
-                    <dt>Model / Ký hiệu</dt>
+                    <dt>{tr("Model / Ký hiệu")}</dt>
                     <dd>{selected.model}</dd>
                   </div>
                 )}
@@ -512,35 +486,35 @@ export function PublicResourceCatalog({
               {/* Busy Schedule in Next 14 Days */}
               <div className="catalog-schedule">
                 <div>
-                  <strong>Lịch bận 14 ngày tới</strong>
-                  <span>Giờ Việt Nam · UTC+07:00. Hệ thống tự động kiểm tra xung đột thời gian khi bạn gửi yêu cầu đặt lịch.</span>
+                  <strong>{tr("Lịch bận 14 ngày tới")}</strong>
+                  <span>{tr("Giờ Việt Nam · UTC+07:00. Hệ thống tự động kiểm tra xung đột thời gian khi bạn gửi yêu cầu đặt lịch.")}</span>
                 </div>
-                {scheduleLoading && <p role="status">Đang tải khung bận…</p>}
+                {scheduleLoading && <p role="status">{tr("Đang tải khung bận…")}</p>}
                 {scheduleError && (
                   <p role="alert">
                     {scheduleError}{" "}
-                    <button type="button" onClick={() => void openDetails(selected, false)}>Thử lại</button>
+                    <button type="button" onClick={() => void openDetails(selected, false)}>{tr("Thử lại")}</button>
                   </p>
                 )}
                 {!scheduleLoading && !scheduleError && busyBookings.length === 0 && busyMaintenance.length === 0 && (
-                  <p>Chưa có khung bận hoặc bảo trì trong khoảng này. Hệ thống vẫn kiểm tra điều kiện và thời gian khi bạn gửi yêu cầu.</p>
+                  <p>{tr("Chưa có khung bận hoặc bảo trì trong khoảng này. Hệ thống vẫn kiểm tra điều kiện và thời gian khi bạn gửi yêu cầu.")}</p>
                 )}
                 <ul>
                   {busyBookings.slice(0, 6).map((row) => (
                     <li key={`booking-${row.id}`}>
-                      <span>{CANONICAL_BOOKING_STATUS_LABELS[row.status || ""] || row.status}</span>
+                      <span>{tr(CANONICAL_BOOKING_STATUS_LABELS[row.status || ""] || row.status || "")}</span>
                       <strong>{formatRange(row.startAt, row.endAt)}</strong>
                     </li>
                   ))}
                   {busyMaintenance.slice(0, 4).map((row) => (
                     <li key={`maintenance-${row.id}`}>
-                      <span>{row.kind === "calibration" ? "Hiệu chuẩn" : "Bảo trì"}</span>
+                      <span>{row.kind === "calibration" ? tr("Hiệu chuẩn") : tr("Bảo trì")}</span>
                       <strong>{formatRange(row.startAt, row.endAt)}</strong>
                     </li>
                   ))}
                 </ul>
                 {(busyBookings.length > 6 || busyMaintenance.length > 4) && (
-                  <p>Đang hiển thị {Math.min(busyBookings.length, 6) + Math.min(busyMaintenance.length, 4)} / {busyBookings.length + busyMaintenance.length} khung bận. Đăng nhập để xem lịch đầy đủ.</p>
+                  <p>{tr("Đang hiển thị")}{Math.min(busyBookings.length, 6) + Math.min(busyMaintenance.length, 4)} / {busyBookings.length + busyMaintenance.length} {tr("khung bận. Đăng nhập để xem lịch đầy đủ.")}</p>
                 )}
               </div>
 
@@ -551,7 +525,7 @@ export function PublicResourceCatalog({
                 onClick={() => onViewSchedule(selected.id)}
                 disabled={detailLoading || Boolean(detailError) || computeEligibility(selected).type === "danger"}
               >
-                <CalendarDays size={18} aria-hidden="true" /> Đăng nhập tài khoản trường để đặt lịch nội bộ{" "}
+                <CalendarDays size={18} aria-hidden="true" /> {currentUser ? t('Mở lịch để đặt', 'Open calendar to book') : tr('Đăng nhập tài khoản trường để đặt lịch nội bộ')}{" "}
                 <ArrowRight size={17} aria-hidden="true" />
               </button>
 

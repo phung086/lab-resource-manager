@@ -1,3 +1,4 @@
+import { useLocale } from '../../providers/LocaleProvider';
 import React from "react";
 import { Plus } from "lucide-react";
 import { CalendarEventCard } from "./CalendarEventCard.js";
@@ -22,6 +23,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
   onSelectSlot,
   onSelectBooking
 }) => {
+  const { tr } = useLocale();
   const year = anchorDate.getUTCFullYear();
   const month = anchorDate.getUTCMonth();
 
@@ -91,8 +93,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
           ))}
           {dayEvents.length > 3 && (
             <span className="calendar-month-more text-[10px] font-medium">
-              +{dayEvents.length - 3} lịch khác
-            </span>
+              +{dayEvents.length - 3} {tr("lịch khác")}</span>
           )}
         </div>
 
@@ -109,10 +110,10 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
         <div className="calendar-month-grid">
           {DAY_NAMES.map((dayName) => (
             <div
-              key={dayName}
+              key={tr(dayName)}
               className="calendar-month-weekday text-center text-xs font-semibold py-1.5"
             >
-              {dayName}
+              {tr(dayName)}
             </div>
           ))}
           {cells}

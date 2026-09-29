@@ -1,68 +1,62 @@
-import React, { useState } from "react";
-import { ArrowRight, CalendarDays, Check, FlaskConical, Menu, MonitorCheck, ShieldCheck, Users, Wrench, X } from "lucide-react";
-import "../styles/public-landing.css";
-import { PAYMENT_FEATURES_ENABLED } from "../config/featureFlags";
-import { PublicResourceCatalog } from "./PublicResourceCatalog";
+import React, { useState } from 'react';
+import { ArrowRight, CalendarDays, FlaskConical, Menu, ShieldCheck, X, Wrench, GraduationCap } from 'lucide-react';
+import { PublicResourceCatalog } from './PublicResourceCatalog';
+import { useLocale } from '../providers/LocaleProvider';
+import '../styles/public-landing.css';
 
-const navigation = [["gioi-thieu", "Giới thiệu"], ["tinh-nang", "Tính năng"], ["quy-trinh", "Quy trình"], ["tai-nguyen", "Tài nguyên"], ["giam-sat", "Giám sát"], ["tro-ly", "AI hỗ trợ"]];
-
-function LabPlan() {
-  return <figure className="public-plan">
-    <div className="public-plan-title"><FlaskConical size={22} /><strong>Một không gian. Kết nối mọi hoạt động.</strong></div>
-    <svg viewBox="0 0 560 350" role="img" aria-label="Sơ đồ minh họa phòng LAB với bàn thực hành, thiết bị và khu vực đặt lịch">
-      <rect x="24" y="24" width="512" height="292" rx="16" fill="#fff" stroke="#b7c9e0" strokeWidth="2" />
-      <path d="M200 24v90m0 86v116M24 184h90m190 132v-92h232" fill="none" stroke="#b7c9e0" strokeWidth="6" />
-      <path d="M114 184v-65a65 65 0 0 1 65 65M304 224v-55a55 55 0 0 1 55 55" fill="none" stroke="#94accb" strokeWidth="2" />
-      {[258, 398].map(x => <g key={x}><rect x={x} y="67" width="90" height="106" rx="8" fill="#e8effb" stroke="#8ba9d3" /><rect x={x + 19} y="82" width="51" height="29" rx="4" fill="#fff" stroke="#3666ad" /><path d={`M${x+25} 144h40m-20-12v24`} stroke="#3666ad" strokeWidth="3" /><rect x={x+27} y="182" width="36" height="13" rx="5" fill="#9bb6dc" /></g>)}
-      <rect x="57" y="55" width="107" height="59" rx="6" fill="#dceee9" stroke="#6ca68f" />
-      <circle cx="88" cy="84" r="13" fill="#fff" stroke="#548974" /><path d="M114 76h29m-29 14h20" stroke="#548974" strokeWidth="3" />
-      <rect x="61" y="226" width="106" height="54" rx="6" fill="#edf2fa" stroke="#94accb" /><path d="M80 244h68m-68 12h45" stroke="#94accb" strokeWidth="3" />
-      <path d="M222 314v-104h155" fill="none" stroke="#225dba" strokeWidth="3" strokeDasharray="6 6" />
-      <circle cx="378" cy="211" r="7" fill="#225dba" />
-      <text x="336" y="270" fill="#345475" fontSize="16" fontFamily="sans-serif">KHU THỰC HÀNH</text>
-    </svg>
-    <figcaption>Sơ đồ minh họa · Không phải dữ liệu giám sát trực tiếp</figcaption>
-  </figure>;
-}
-
-export function PublicLanding({ children, onRegister, onViewSchedule, onGuestBookingComplete }: { children: React.ReactNode; onRegister: () => void; onViewSchedule: (id: string) => void; onGuestBookingComplete?: (result: any) => void }) {
+type Props = {
+  children?: React.ReactNode; scheduleContent?: React.ReactNode; userName?: string;
+  onLocaleChange: (locale: string) => void; onRegister: () => void;
+  onViewSchedule: (id: string) => void; onGuestBookingComplete?: (result: any) => void;
+  onWorkspace?: () => void; onLogout?: () => void;
+};
+export function PublicLanding({ children, scheduleContent, userName, onLocaleChange, onRegister, onViewSchedule, onGuestBookingComplete, onWorkspace, onLogout }: Props) {
+  const { locale, t } = useLocale();
   const [menuOpen, setMenuOpen] = useState(false);
-  return <div className="public-site" id="dau-trang">
-    <a className="public-skip" href="#noi-dung">Đến nội dung chính</a>
+  const navigation = [['tai-nguyen', t('Phòng & thiết bị', 'Rooms & equipment')], ['kiem-tra-lich', t('Kiểm tra lịch', 'Check schedule')], ['quy-trinh', t('Quy trình sử dụng', 'How it works')]];
+  const steps = [
+    [t('Chọn tài nguyên', 'Find your resource'), t('Xem thông số, tư liệu và điều kiện sử dụng của phòng hoặc thiết bị.', 'Review the room or equipment, its media, specifications and access requirements.')],
+    [t('Kiểm tra & đặt lịch', 'Check availability & book'), t('Chọn thời gian, nêu mục đích. Lịch được kiểm tra theo chính sách và xét duyệt khi cần.', 'Choose a time and purpose. Requests are checked against policy and reviewed when required.')],
+    [t('Bàn giao & thực hành', 'Handover & practice'), t('Kiểm tra điều kiện sử dụng và ghi nhận tình trạng khi nhận tài nguyên.', 'Verify access requirements and record the condition when receiving the resource.')],
+    [t('Hoàn trả & hoàn tất', 'Return & complete'), t('Ghi nhận tình trạng sau sử dụng, xử lý sự cố và lưu lịch sử của buổi thực hành.', 'Record the condition after use, follow up on incidents and retain the session history.')]
+  ];
+  return <div className="public-site lab-public" id="dau-trang">
+    <a className="public-skip" href="#noi-dung">{t('Đến nội dung chính', 'Skip to main content')}</a>
     <header className="public-header">
-      <a className="public-brand" href="#dau-trang" aria-label="Lab Resource Manager — trang đầu"><FlaskConical /><span>LAB<span>Resource Manager</span></span></a>
-      <button className="public-menu" aria-expanded={menuOpen} aria-controls="public-nav" aria-label={menuOpen ? "Đóng menu" : "Mở menu"} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button>
-      <nav id="public-nav" className={menuOpen ? "is-open" : ""} aria-label="Điều hướng trang giới thiệu">
+      <a className="public-brand" href="#dau-trang" aria-label="LAB Resource Manager"><FlaskConical aria-hidden="true" /><span>LAB<span>Resource Manager</span></span></a>
+      <button className="public-menu" aria-expanded={menuOpen} aria-controls="public-nav" aria-label={t('Bật/tắt điều hướng', 'Toggle navigation')} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button>
+      <nav id="public-nav" className={menuOpen ? 'is-open' : ''} aria-label={t('Điều hướng chính', 'Main navigation')}>
         {navigation.map(([id, label]) => <a key={id} href={`#${id}`} onClick={() => setMenuOpen(false)}>{label}</a>)}
-        <button className="public-register" onClick={onRegister}>Đăng ký tài khoản LAB</button>
       </nav>
-      <a className="public-login" href="#dang-nhap" onClick={() => setMenuOpen(false)}>Đăng nhập <ArrowRight size={16} /></a>
+      <div className="public-account-actions"><div className="public-language" role="group" aria-label={t('Ngôn ngữ', 'Language')}>{(['vi', 'en'] as const).map(value => <button key={value} aria-pressed={value === locale} lang={value} onClick={() => onLocaleChange(value)}>{value.toUpperCase()}</button>)}</div>
+        {userName ? <button className="public-login" onClick={onWorkspace}>{t('Không gian làm việc', 'Workspace')} <ArrowRight size={16} aria-hidden="true" /></button> : <a className="public-login" href="#dang-nhap">{t('Đăng nhập', 'Sign in')} <ArrowRight size={16} aria-hidden="true" /></a>}
+      </div>
     </header>
     <main id="noi-dung">
       <section className="public-hero public-container" id="gioi-thieu">
-        <div><h1>Đặt lịch và giám sát tài nguyên phòng thí nghiệm<br /><span>trên một nền tảng thống nhất.</span></h1>
-          <p>Hệ thống web giúp sinh viên, giảng viên và đơn vị bên ngoài tra cứu, đặt lịch sử dụng tài nguyên LAB; cán bộ quản lý bàn giao, hoàn trả; nhà trường theo dõi trạng thái vận hành.</p>
-          <div className="public-actions"><a className="public-primary" href="#tai-nguyen">Tra cứu tài nguyên <ArrowRight size={18} /></a><a className="public-secondary" href="#dang-nhap">Đăng nhập hệ thống</a></div>
-          <p className="public-small"><ShieldCheck size={16} /> Phân quyền rõ ràng. Quy trình có thể theo dõi.</p>
-        </div><LabPlan />
-      </section>
-      <div className="public-capabilities" aria-label="Các năng lực của hệ thống"><span><CalendarDays /> Lịch đặt tập trung</span><span><ShieldCheck /> Phê duyệt theo quyền</span><span><MonitorCheck /> Giám sát theo nguồn dữ liệu</span><span><Users /> Bốn vai trò phối hợp</span></div>
-      <section className="public-section public-container public-editorial" id="tinh-nang">
-        <div><h2>Từ thông tin rời rạc<br />đến công việc liền mạch.</h2><p>Lịch trùng, trạng thái thiết bị chưa rõ và yêu cầu chờ duyệt khiến việc chuẩn bị cho một buổi thực hành mất thêm thời gian.</p><p>Lab Resource Manager đưa thông tin tài nguyên và từng bước xử lý về cùng một nơi.</p></div>
-        <div className="public-feature-list">
-          <article><CalendarDays /><div><h3>Lập lịch với đầy đủ ngữ cảnh</h3><p>Xem lịch theo tài nguyên, kiểm tra thời gian và chính sách trước khi gửi yêu cầu. Hệ thống kiểm tra xung đột khi đặt lịch.</p></div></article>
-          <article><ShieldCheck /><div><h3>Biết ai xử lý, biết bước tiếp theo</h3><p>Theo dõi phê duyệt, bàn giao, hoàn trả và hoàn tất. Thông báo hỗ trợ người dùng nắm các thay đổi của lịch đặt.</p></div></article>
-          <article><Wrench /><div><h3>Vận hành có trách nhiệm</h3><p>Ghi nhận sự cố, theo dõi bảo trì và trạng thái vận hành. Nhân viên xử lý trong phạm vi LAB được phân công.</p></div></article>
+        <div className="lab-hero-copy"><h1>{t('Không gian cho', 'Make room for')}<br /><span>{t('thực nghiệm.', 'discovery.')}</span></h1>
+          <p>{t('Phòng thực hành, thiết bị và lịch sử dụng — kết nối trong một quy trình rõ ràng, từ lúc chuẩn bị đến khi hoàn trả.', 'Laboratory rooms, equipment and schedules — connected in one clear workflow, from preparation to return.')}</p>
+          <div className="public-actions"><a className="public-primary" href="#tai-nguyen">{t('Khám phá tài nguyên', 'Explore resources')} <ArrowRight size={18} aria-hidden="true" /></a><a className="public-secondary" href="#kiem-tra-lich"><CalendarDays size={18} aria-hidden="true" />{t('Kiểm tra lịch', 'Check schedule')}</a></div>
+          <p className="public-small"><ShieldCheck size={17} aria-hidden="true" />{t('Đúng tài nguyên. Đúng thời điểm. Đúng điều kiện.', 'The right resource, time and access requirements.')}</p>
         </div>
+        <figure className="lab-process-plate" aria-label={t('Quy trình sử dụng LAB', 'LAB access workflow')}>
+          <div className="lab-plate-heading"><FlaskConical size={26} aria-hidden="true" /><strong>{t('Từ ý tưởng đến buổi thực hành.', 'From an idea to a practical session.')}</strong></div>
+          <ol>{steps.map(([title], i) => <li key={title}><span className="lab-step-number">0{i + 1}</span><span>{title}</span><ArrowRight size={18} aria-hidden="true" /></li>)}</ol>
+          <figcaption>{t('Lịch đặt · Điều kiện sử dụng · Bàn giao · Lịch sử', 'Scheduling · Access requirements · Handover · History')}</figcaption>
+        </figure>
       </section>
-      <section className="public-resources public-section" id="tai-nguyen"><div className="public-container"><div className="public-section-heading"><h2>Tài nguyên dùng chung<br />cho học tập, nghiên cứu và hợp tác.</h2><p>Phòng thực hành, thiết bị, máy móc và bộ thí nghiệm trong danh mục đang được quản lý. Tư liệu có ghi nguồn chỉ minh họa đúng loại tài nguyên.</p></div><PublicResourceCatalog onViewSchedule={onViewSchedule} onGuestBookingComplete={onGuestBookingComplete} /></div></section>
-      <section className="public-section public-container" id="quy-trinh"><div className="public-section-heading"><h2>Mỗi buổi thực hành<br />đều có một quy trình rõ ràng.</h2><p>Yêu cầu cần phê duyệt ở trạng thái Chờ duyệt cho đến khi người có quyền quyết định. Nếu chính sách không yêu cầu duyệt, lịch hợp lệ được xác nhận trực tiếp.</p></div><ol className="public-workflow">{[["Tra cứu", "Xem chi tiết tài nguyên, lịch khả dụng và chính sách LAB."], ["Gửi yêu cầu", "Chọn thời gian, nêu mục đích học tập, giảng dạy hoặc nghiên cứu."], ["Duyệt khi cần", "Cán bộ có quyền xét duyệt; người đặt theo dõi kết quả qua thông báo."], ["Bàn giao & sử dụng", "Ghi nhận tình trạng trước khi bàn giao; lịch chuyển sang Đang sử dụng."], ["Hoàn trả", "Ghi nhận tình trạng sau sử dụng; lịch chuyển sang Đã hoàn trả."], ["Hoàn tất & theo dõi", "Cán bộ xác nhận hoàn tất; lịch sử và bảng tổng quan phản ánh kết quả."]].map(([title, description], i) => <li key={title}><span>{i + 1}</span><h3>{title}</h3><p>{description}</p></li>)}</ol></section>
-      <section className="public-roles public-section" id="vai-tro"><div className="public-container"><h2>Đúng công việc.<br />Đúng vai trò.</h2><div>{[["Sinh viên", "Chủ động chuẩn bị buổi học", "Tìm tài nguyên, gửi lịch đặt và theo dõi yêu cầu của mình."], ["Giảng viên", "Tổ chức hoạt động học thuật", "Chuẩn bị tài nguyên cho giảng dạy và theo dõi lịch sử dụng của mình."], ["Nhân viên LAB", "Giữ hoạt động thông suốt", "Duyệt yêu cầu, bàn giao, xử lý sự cố và theo dõi LAB được phân công."], ["Quản trị viên", "Quản lý hệ thống tập trung", "Quản lý tài khoản, tài nguyên và cấu hình vận hành theo quyền."]].map(([role, title, description]) => <article key={role}><h3>{role}</h3><p>{title}</p><p>{description}</p></article>)}</div></div></section>
-      <section className="public-section public-container public-editorial" id="giam-sat"><div className="public-monitor-visual"><MonitorCheck size={64} strokeWidth={1} /><h3>Dữ liệu cần có nguồn.</h3><p>Chưa kết nối phần cứng thực tế</p><span>PENDING REAL HARDWARE</span></div><div><h2>Giám sát tài nguyên.<br />Hỗ trợ vận hành LAB.</h2><p>Theo dõi trạng thái vận hành, bảo trì, hiệu chuẩn, sự cố và cảnh báo trong phạm vi được phân công. Sức khỏe nguồn telemetry được phân biệt với trạng thái vật lý của tài nguyên.</p><p>Nhiệt độ, độ ẩm chỉ hiển thị khi có mẫu được chấp nhận. Chưa có dữ liệu là NO_DATA; camera chưa cấu hình là NOT_CONFIGURED.</p><p>NON-CERTIFIED · NOT A FIRE ALARM — cảnh báo hỗ trợ không thay thế hệ thống an toàn và quy trình phòng thí nghiệm.</p></div></section>
-      <section className="public-section public-container public-extras" id="tro-ly"><article><h2>Trợ lý tra cứu và tư vấn<br />dữ liệu phòng thí nghiệm.</h2><p>Tìm tài nguyên, khung giờ khả dụng, lịch đặt của mình; giải thích xung đột, chính sách và trạng thái tài nguyên từ dữ liệu được phép truy cập.</p><ul><li><Check /> Công cụ MCP chỉ đọc dữ liệu</li><li><Check /> Gợi ý khung giờ để bạn kiểm tra trong form đặt lịch</li><li><Check /> Không tự đặt, phê duyệt hoặc đổi trạng thái</li></ul></article><article id="do-an"><h2>Phục vụ hoạt động<br />phòng thí nghiệm mở.</h2><p id="muc-tieu">Đồ án tập trung vào đặt lịch sử dụng, quản lý quy trình bàn giao, thu phí theo chính sách và giám sát tài nguyên dùng chung của phòng thí nghiệm.</p><p id="kien-truc">Giao diện web kết nối API; máy chủ kiểm tra quyền, chính sách và lưu dữ liệu trong PostgreSQL.</p><p id="cong-nghe">Công nghệ: React/Vite · Node.js/Express · Prisma · PostgreSQL.</p>{PAYMENT_FEATURES_ENABLED && <details id="thanh-toan"><summary>Thanh toán Sandbox</summary><p className="public-notice">VNPAY Sandbox được gắn với khoản thu của booking khi tài nguyên có bảng giá và lịch đã được xác nhận. QR và nhập thông tin thanh toán nằm trên cổng VNPAY; hệ thống chỉ cập nhật paid qua callback IPN có chữ ký hợp lệ.</p></details>}</article></section>
-      <section className="public-final public-container"><div><h2>Sẵn sàng cho buổi thực hành tiếp theo?</h2><p>Đăng nhập để xem tài nguyên và bắt đầu với lịch đặt của bạn.</p></div><div className="public-actions"><a className="public-primary" href="#dang-nhap">Đăng nhập hệ thống <ArrowRight size={18} /></a><button className="public-secondary" onClick={onRegister}>Đăng ký tài khoản LAB</button></div></section>
-      <section id="dang-nhap" className="public-auth" aria-label="Đăng nhập vào không gian làm việc">{children}</section>
+      <section className="public-resources public-section" id="tai-nguyen"><div className="public-container"><div className="public-section-heading"><h2>{t('Chọn nơi bắt đầu.', 'Choose where to begin.')}</h2><p>{t('Tra cứu phòng và thiết bị, xem tư liệu và điều kiện sử dụng trước khi chọn lịch. Trạng thái thiết bị và lịch trống là hai thông tin riêng.', 'Browse rooms and equipment, review media and access requirements, then choose a time. Physical condition and calendar availability are separate.')}</p></div><PublicResourceCatalog onViewSchedule={onViewSchedule} onGuestBookingComplete={onGuestBookingComplete} /></div></section>
+      <section className="public-section public-container lab-schedule-section" id="kiem-tra-lich" aria-labelledby="schedule-heading"><div className="public-section-heading"><h2 id="schedule-heading">{t('Kiểm tra lịch', 'Check schedule')}</h2><p>{t('Theo dõi việc cần xử lý và lịch đã xác nhận. Giờ hiển thị theo Việt Nam (UTC+07:00).', 'Review pending tasks and confirmed sessions. Times are shown in Vietnam time (UTC+07:00).')}</p></div>
+        {scheduleContent || <div className="lab-schedule-signin"><CalendarDays size={32} aria-hidden="true" /><div><h3>{t('Lịch và công việc của bạn', 'Your schedule and tasks')}</h3><p>{t('Đăng nhập để xem lịch riêng và công việc theo vai trò. Bạn vẫn có thể xem khung giờ bận trong chi tiết tài nguyên phía trên.', 'Sign in for your personal schedule and role-specific tasks. Public busy times remain available in resource details above.')}</p></div><a className="public-primary" href="#dang-nhap">{t('Đăng nhập để xem lịch', 'Sign in to view schedule')} <ArrowRight size={17} aria-hidden="true" /></a></div>}
+      </section>
+      <section className="public-section lab-workflow-section" id="quy-trinh"><div className="public-container"><div className="public-section-heading"><h2>{t('Chuẩn bị rõ ràng.', 'Prepare with clarity.')}<br />{t('Thực hành chủ động.', 'Work with confidence.')}</h2><p>{t('Mỗi bước có người chịu trách nhiệm. Yêu cầu chỉ trở thành lịch xác nhận khi đáp ứng chính sách của LAB.', 'Each step has a responsible person. Requests become confirmed sessions only when laboratory policies are met.')}</p></div><ol className="public-workflow">{steps.map(([title, description], i) => <li key={title}><span>0{i + 1}</span><h3>{title}</h3><p>{description}</p></li>)}</ol></div></section>
+      <section className="public-section public-container lab-responsibilities" id="vai-tro"><div><h2>{t('Phối hợp trong LAB.', 'Work together in the LAB.')}</h2><p>{t('Rõ người phụ trách, rõ phạm vi công việc.', 'Clear responsibilities and access boundaries.')}</p></div><div className="public-feature-list">
+        <article><GraduationCap aria-hidden="true" /><div><h3>{t('Sinh viên & giảng viên', 'Students & lecturers')}</h3><p>{t('Sinh viên gửi hoạt động thực hành theo lớp học phần. Giảng viên theo dõi và nhận xét trong nhóm được phân công; việc xét duyệt tài nguyên vẫn do cán bộ LAB thực hiện.', 'Students submit practical activities to their course groups. Assigned lecturers review learning goals; LAB staff remain responsible for resource approval.')}</p></div></article>
+        <article><Wrench aria-hidden="true" /><div><h3>{t('Cán bộ LAB', 'LAB staff')}</h3><p>{t('Duyệt lịch, bàn giao, nhập xuất vật tư và lên lịch bảo trì trong LAB được phân công. Kiểm tra lịch bị ảnh hưởng trước khi thay đổi kế hoạch.', 'Approve bookings, manage handovers, record stock movements and schedule maintenance in assigned laboratories. Review affected bookings before changing plans.')}</p></div></article>
+        <article><ShieldCheck aria-hidden="true" /><div><h3>{t('Quản trị viên', 'Administrator')}</h3><p>{t('Quản lý toàn bộ tài nguyên, kho vật tư, tài khoản, phân công LAB và lớp học phần trên hệ thống.', 'Manage resources, inventory, accounts, laboratory assignments and course groups across the system.')}</p></div></article>
+      </div></section>
+      {children && <section id="dang-nhap" className="public-auth" aria-label={t('Đăng nhập', 'Sign in')}>{children}</section>}
     </main>
-    <footer className="public-footer public-container"><div><a className="public-brand" href="#dau-trang"><FlaskConical /><span>LAB<span>Resource Manager</span></span></a><p>Hệ thống đặt lịch, thanh toán và giám sát tài nguyên phòng thí nghiệm.</p></div><div><strong>Hệ thống</strong><a href="#gioi-thieu">Giới thiệu</a><a href="#tai-nguyen">Tài nguyên</a><a href="#quy-trinh">Quy trình đặt lịch</a><a href="#giam-sat">Giám sát</a></div><div><strong>Truy cập</strong><a href="#dang-nhap">Đăng nhập</a><button onClick={onRegister}>Đăng ký tài khoản LAB</button><a href="#vai-tro">Vai trò & trách nhiệm</a></div><div><strong>Đồ án</strong><a href="#muc-tieu">Mục tiêu</a><a href="#kien-truc">Kiến trúc</a><a href="#cong-nghe">Công nghệ</a></div><p className="public-footer-note">Lab Resource Manager · Đồ án tốt nghiệp · Tư liệu minh họa có ghi nguồn, không phải ảnh tài sản thực tế của dự án.</p></footer>
+    <footer className="public-footer public-container"><div><a className="public-brand" href="#dau-trang"><FlaskConical aria-hidden="true" /><span>LAB<span>Resource Manager</span></span></a><p>{t('Quản lý tài nguyên cho học tập và thực nghiệm.', 'Shared resources for learning and experimentation.')}</p></div><div><strong>{t('Khám phá', 'Explore')}</strong><a href="#tai-nguyen">{t('Phòng & thiết bị', 'Rooms & equipment')}</a><a href="#kiem-tra-lich">{t('Kiểm tra lịch', 'Check schedule')}</a><a href="#quy-trinh">{t('Quy trình sử dụng', 'How it works')}</a></div><div><strong>{t('Tài khoản', 'Account')}</strong>{userName ? <><button onClick={onWorkspace}>{userName}</button><button onClick={onLogout}>{t('Đăng xuất', 'Sign out')}</button></> : <><a href="#dang-nhap">{t('Đăng nhập', 'Sign in')}</a><button onClick={onRegister}>{t('Đăng ký tài khoản', 'Create account')}</button></>}<a href="#vai-tro">{t('Vai trò & trách nhiệm', 'Roles & responsibilities')}</a></div><p className="public-footer-note">Lab Resource Manager · {t('Đồ án tốt nghiệp. Tư liệu tham khảo có ghi nguồn; trạng thái giám sát chỉ có khi kết nối nguồn dữ liệu.', 'Graduation project. Reference media is attributed; monitoring requires a connected data source.')}</p></footer>
   </div>;
 }

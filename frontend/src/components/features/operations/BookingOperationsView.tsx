@@ -1,3 +1,4 @@
+import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, ClipboardList, History, RefreshCw } from "lucide-react";
 import { BookingActionModal } from "../../BookingActionModal.js";
@@ -36,6 +37,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ user, onChanged, onPayment }) => {
+  const { tr } = useLocale();
   const isStaff = ["ADMIN", "LAB_STAFF"].includes(user.role);
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
   const [filter, setFilter] = useState<FilterKey>(isStaff ? "PENDING_APPROVAL" : "ALL");
@@ -54,11 +56,11 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     try {
       setBookings(await listOperationalBookings());
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể tải dữ liệu booking.");
+      setError(requestError?.message || tr("Không thể tải dữ liệu booking."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tr]);
 
   useEffect(() => { loadBookings(); }, [loadBookings]);
   useEffect(() => { setFilter(isStaff ? "PENDING_APPROVAL" : "ALL"); }, [isStaff]);
@@ -108,7 +110,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     try {
       setHistoryState(await getBookingHistory(booking.id));
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể tải lịch sử booking.");
+      setError(requestError?.message || tr("Không thể tải lịch sử booking."));
     } finally {
       setHistoryLoading(false);
     }
@@ -121,13 +123,13 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     setError("");
     setSuccess("");
     try {
-      const updated = await cancelOwnBooking(booking.id, "Người đặt chủ động hủy booking");
+      const updated = await cancelOwnBooking(booking.id, tr("Người đặt chủ động hủy booking"));
       setSuccess(`Booking đã được hủy (${STATUS_LABELS[updated.status] || updated.status}).`);
       setCancelState(null);
       await loadBookings();
       onChanged?.();
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể hủy booking.");
+      setError(requestError?.message || tr("Không thể hủy booking."));
     } finally {
       setBusyId("");
     }
@@ -137,33 +139,32 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     <div className="operations-view" data-testid="operations-view">
       <header className="operations-header">
         <div>
-          <h2>{isStaff ? "Vận hành booking & bàn giao tài nguyên" : "Lịch đặt và tiến trình sử dụng của tôi"}</h2>
+          <h2>{isStaff ? tr("Vận hành booking & bàn giao tài nguyên") : tr("Lịch đặt và tiến trình sử dụng của tôi")}</h2>
           <p>{isStaff
-            ? "Duyệt yêu cầu → ghi nhận bàn giao → tiếp nhận hoàn trả → hoàn tất lịch đặt."
-            : "Theo dõi kết quả duyệt, thời gian sử dụng và lịch sử bàn giao. Bạn có thể hủy lịch còn đủ điều kiện hoặc tự trả phòng LAB đang sử dụng."}</p>
+            ? tr("Duyệt yêu cầu → ghi nhận bàn giao → tiếp nhận hoàn trả → hoàn tất lịch đặt.")
+            : tr("Theo dõi kết quả duyệt, thời gian sử dụng và lịch sử bàn giao. Bạn có thể hủy lịch còn đủ điều kiện hoặc tự trả phòng LAB đang sử dụng.")}</p>
         </div>
         <button type="button" className="btn btn-secondary" onClick={loadBookings} disabled={loading}>
-          <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Làm mới
-        </button>
+          <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> {tr("Làm mới")}</button>
       </header>
 
 
       {error && <div className="alert danger" role="alert"><AlertCircle size={16} /> {error}</div>}
       {success && <div className="alert success" role="status" aria-live="polite">{success}</div>}
 
-      {linkedBookingId && <p>Đang xem lịch đặt từ thông báo. <a href="#/workspace/booking">Xem tất cả lịch đặt</a></p>}
-      <nav className="operations-filter-row" aria-label="Bộ lọc workflow booking">
+      {linkedBookingId && <p>{tr("Đang xem lịch đặt từ thông báo.")}<a href="#/workspace/booking">{tr("Xem tất cả lịch đặt")}</a></p>}
+      <nav className="operations-filter-row" aria-label={tr("Bộ lọc workflow booking")}>
         {filters.map((key) => (
           <button key={key} type="button" className={filter === key ? "is-active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>
-            <span>{FILTER_LABELS[key]}</span><strong>{counts[key]}</strong>
+            <span>{tr(FILTER_LABELS[key])}</span><strong>{counts[key]}</strong>
           </button>
         ))}
       </nav>
 
       {loading ? (
-        <div className="operations-empty"><RefreshCw size={20} className="animate-spin" /> Đang tải dữ liệu thật...</div>
-      ) : error ? (<div className="operations-empty"><strong>Chưa thể tải lịch đặt.</strong><button className="secondary-button" onClick={loadBookings}>Thử lại</button></div>) : visibleBookings.length === 0 ? (
-        <div className="operations-empty"><ClipboardList size={22} /><strong>Không có booking trong nhóm này.</strong><span>Chọn nhóm khác để xem các lịch đã lưu.</span></div>
+        <div className="operations-empty"><RefreshCw size={20} className="animate-spin" /> {tr("Đang tải dữ liệu thật...")}</div>
+      ) : error ? (<div className="operations-empty"><strong>{tr("Chưa thể tải lịch đặt.")}</strong><button className="secondary-button" onClick={loadBookings}>{tr("Thử lại")}</button></div>) : visibleBookings.length === 0 ? (
+        <div className="operations-empty"><ClipboardList size={22} /><strong>{tr("Không có booking trong nhóm này.")}</strong><span>{tr("Chọn nhóm khác để xem các lịch đã lưu.")}</span></div>
       ) : (
         <div className="operations-list">
           {visibleBookings.map((booking) => (
@@ -196,27 +197,27 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
       <BaseModal2026
         isOpen={Boolean(cancelState)}
         onClose={() => { if (!busyId) setCancelState(null); }}
-        title="Xác nhận hủy booking"
-        subtitle={cancelState ? `${cancelState.resource?.code || "Tài nguyên"} · ${cancelState.title}` : ""}
+        title={tr("Xác nhận hủy booking")}
+        subtitle={cancelState ? `${cancelState.resource?.code || tr("Tài nguyên")} · ${cancelState.title}` : ""}
         maxWidth="max-w-md"
         footer={<>
-          <button type="button" className="btn btn-secondary" disabled={Boolean(busyId)} onClick={() => setCancelState(null)}>Giữ booking</button>
-          <button type="button" className="btn btn-danger" disabled={Boolean(busyId)} onClick={confirmCancellation}>{busyId ? "Đang hủy..." : "Xác nhận hủy"}</button>
+          <button type="button" className="btn btn-secondary" disabled={Boolean(busyId)} onClick={() => setCancelState(null)}>{tr("Giữ booking")}</button>
+          <button type="button" className="btn btn-danger" disabled={Boolean(busyId)} onClick={confirmCancellation}>{busyId ? tr("Đang hủy...") : tr("Xác nhận hủy")}</button>
         </>}
       >
-        <p>Booking sẽ chuyển sang trạng thái đã hủy sau khi hệ thống lưu thành công. Thao tác này không thể hoàn tác từ giao diện.</p>
+        <p>{tr("Booking sẽ chuyển sang trạng thái đã hủy sau khi hệ thống lưu thành công. Thao tác này không thể hoàn tác từ giao diện.")}</p>
       </BaseModal2026>
 
       <BaseModal2026
         isOpen={Boolean(historyState) || historyLoading}
         onClose={() => !historyLoading && setHistoryState(null)}
-        title="Lịch sử workflow booking"
-        subtitle={historyState ? `${historyState.booking.resource?.code} • ${historyState.booking.title}` : "Đang tải dữ liệu audit..."}
+        title={tr("Lịch sử workflow booking")}
+        subtitle={historyState ? `${historyState.booking.resource?.code} • ${historyState.booking.title}` : tr("Đang tải dữ liệu audit...")}
         icon={History}
         maxWidth="max-w-3xl"
       >
         {historyLoading || !historyState
-          ? <div className="operations-empty"><RefreshCw size={18} className="animate-spin" /> Đang tải timeline...</div>
+          ? <div className="operations-empty"><RefreshCw size={18} className="animate-spin" /> {tr("Đang tải timeline...")}</div>
           : <BookingWorkflowTimeline booking={historyState.booking} timeline={historyState.timeline} />}
       </BaseModal2026>
     </div>
