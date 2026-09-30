@@ -1,4 +1,4 @@
-import { openWorkspace } from "./test-utils/openWorkspace.mjs";
+import { openWorkspace, selectWorkspaceTab } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -32,10 +32,7 @@ async function login(page, email) {
 }
 
 async function openCalendar(page) {
-  if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const calendarNav = page.locator('[data-nav-id="smart_calendar"]');
-  await calendarNav.waitFor({ timeout: 5000 });
-  await calendarNav.click();
+  await selectWorkspaceTab(page, "smart_calendar");
   await page.getByRole("button", { name: "Tuần", exact: true }).waitFor();
 }
 
@@ -52,9 +49,7 @@ try {
     });
   });
   await login(zeroResPage, "b4.student@lab.test");
-  const zeroNav = zeroResPage.locator('[data-nav-id="smart_calendar"]');
-  await zeroNav.waitFor({ timeout: 5000 });
-  await zeroNav.click();
+  await selectWorkspaceTab(zeroResPage, "smart_calendar");
 
   // Verify truthful empty state
   await zeroResPage.locator(".calendar-empty-resources-card").waitFor({ timeout: 5000 });
@@ -249,8 +244,7 @@ try {
 
   // 1d. Inspect My Bookings section
   console.log("  Verifying own booking in My Bookings list...");
-  const myBookingsNav = studentPage.locator('[data-nav-id="bookings"]');
-  await myBookingsNav.click();
+  await selectWorkspaceTab(studentPage, "bookings");
   await studentPage.getByText(bookingTitle).first().waitFor({ timeout: 5000 });
 
   // Screenshot desktop

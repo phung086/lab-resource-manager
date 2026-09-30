@@ -1,4 +1,4 @@
-import { openWorkspace } from "./test-utils/openWorkspace.mjs";
+import { openWorkspace, openNavigation, selectWorkspaceTab } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import { chromium } from "playwright-core";
 
@@ -23,23 +23,27 @@ async function loginAndVerify({ email, fullName, visible, hidden }) {
     page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click()
   ]);
   await openWorkspace(page);
+  await openNavigation(page);
   await page.getByText(fullName, { exact: true }).first().waitFor();
 
   for (const label of visible) await assert.doesNotReject(() => page.locator(`[data-nav-id="${label}"]`).waitFor());
   for (const label of hidden) assert.equal(await page.locator(`[data-nav-id="${label}"]`).count(), 0);
 
   if (email === "e2e.admin@lab.test") {
-    await page.locator('[data-nav-id="users"]').click();
+    await selectWorkspaceTab(page, "users");
     await page.getByText("Batch 2 Staff", { exact: true }).waitFor();
     const staffRow = page.locator("tr", { hasText: "Batch 2 Staff" });
     assert.equal(await staffRow.locator("select").first().inputValue(), "LAB_STAFF");
   }
 
+  if (await page.locator("#workspace-navigation-panel").count()) await page.getByRole("button", { name: "Đóng menu", exact: true }).click();
   const meResponse = page.waitForResponse((response) => response.url().endsWith("/api/auth/me"));
   await page.reload({ waitUntil: "networkidle" });
   assert.equal((await meResponse).status(), 200);
+  await openNavigation(page);
   await page.getByText(fullName, { exact: true }).first().waitFor();
 
+  await page.getByRole("button", { name: "Đóng menu", exact: true }).click();
   await page.locator(".user-avatar-btn-2026").click();
   await page.getByRole("button", { name: /Đăng xuất/i }).click();
   await page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).waitFor();

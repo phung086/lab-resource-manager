@@ -1,4 +1,4 @@
-import { openWorkspace } from "./test-utils/openWorkspace.mjs";
+import { openWorkspace, selectWorkspaceTab } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { chromium } from "playwright-core";
@@ -68,7 +68,7 @@ try {
 
   const adminPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await login(adminPage, "admin");
-  await adminPage.locator('[data-nav-id="payments"]').click();
+  await selectWorkspaceTab(adminPage, "payments");
   await adminPage.getByRole("heading", { name: "Sổ giao dịch thanh toán" }).waitFor();
   const exceptionCard = adminPage.locator(".payment-card").filter({ hasText: "Phase H booking 21" });
   await exceptionCard.getByText("Cần xử lý thủ công").waitFor();

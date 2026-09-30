@@ -149,6 +149,77 @@ jobs:
       - name: Production build
         run: npm run build
 
+  workspace-navigation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lab_resources_local_demo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_local_demo?schema=public
+      DEMO_MODE: "true"
+      LOCAL_DEMO_API_PORT: "15005"
+      LOCAL_DEMO_UI_PORT: "15181"
+      RATE_LIMIT_MAX: "10000"
+      UX_FRONTEND_URL: http://127.0.0.1:15181
+      UX_API_URL: http://127.0.0.1:15005/api
+      UX_DEMO_PASSWORD: LabDemo!2026Pass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install application and browser dependencies
+        run: |
+          (cd backend && npm ci && npm run db:generate)
+          (cd frontend && npm ci && npx playwright-core install --with-deps chromium)
+      - name: Verify role overview and menu against isolated PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          node backend/scripts/startLocalDemo.mjs > "$RUNNER_TEMP/workspace-demo.log" 2>&1 &
+          demo_pid=$!
+          trap 'kill "$demo_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in {1..60}; do
+            if curl -fsS "$UX_API_URL/health/ready" >/dev/null &&
+               curl -fsS "$UX_FRONTEND_URL" >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat "$RUNNER_TEMP/workspace-demo.log"
+            exit 1
+          fi
+          (cd frontend && npm run test:ui:workspace)
+      - name: Upload workspace evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-navigation
+          path: logs/workspace-navigation/
+          if-no-files-found: ignore
+      - name: Show demo logs on failure
+        if: failure()
+        run: cat "$RUNNER_TEMP/workspace-demo.log" || true
+
   docker:
     runs-on: ubuntu-latest
     steps:

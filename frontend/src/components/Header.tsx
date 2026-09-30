@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { parseVietnamParts } from "../utils/timezone";
-import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, Shield } from "lucide-react";
+import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, Shield, UserRound } from "lucide-react";
 
 export interface HeaderProps {
   title: string;
@@ -18,6 +18,7 @@ export interface HeaderProps {
   onRefresh?: () => void;
   onOpenNotifications?: () => void;
   onOpenChangePassword?: () => void;
+  onOpenProfile?: () => void;
   onLogout?: () => void;
   onOpenAssistant?: () => void;
 }
@@ -32,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   onOpenNotifications,
   onOpenChangePassword,
+  onOpenProfile,
   onLogout,
   onOpenAssistant
 }) => {
@@ -208,6 +210,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* Actions */}
                 <div className="user-menu-actions">
+                  {onOpenProfile && <button type="button" className="user-menu-item-btn" onClick={() => { setUserMenuOpen(false); onOpenProfile(); }}><UserRound size={15} aria-hidden="true" /><span>{t("Hồ sơ cá nhân", "My profile")}</span></button>}
                   <button
                     type="button"
                     className="user-menu-item-btn"

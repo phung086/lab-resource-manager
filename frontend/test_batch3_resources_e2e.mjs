@@ -1,4 +1,4 @@
-import { openWorkspace } from "./test-utils/openWorkspace.mjs";
+import { openWorkspace, selectWorkspaceTab } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import { chromium } from "playwright-core";
 
@@ -18,8 +18,7 @@ async function login(page, email) {
 }
 
 async function openCatalog(page) {
-  if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
-  await page.locator('[data-nav-id="resources"]').click();
+  await selectWorkspaceTab(page, "resources");
   await page.getByText("Kính hiển vi điện tử E2E", { exact: true }).waitFor();
 }
 
@@ -60,7 +59,7 @@ try {
   const staffContext = await browser.newContext();
   const staffPage = await staffContext.newPage();
   await login(staffPage, "b3.staff@lab.test");
-  await staffPage.locator('[data-nav-id="admin_management"]').click();
+  await selectWorkspaceTab(staffPage, "admin_management");
   await staffPage.getByText("Kính hiển vi điện tử E2E", { exact: true }).waitFor();
   const foreignRow = staffPage.locator("tr", { hasText: "B3-E2E-CNC" });
   assert.equal(await foreignRow.getByRole("button", { name: /Sửa B3-E2E-CNC/ }).isDisabled(), true);
@@ -76,7 +75,7 @@ try {
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
   await login(adminPage, "b3.admin@lab.test");
-  await adminPage.locator('[data-nav-id="admin_management"]').click();
+  await selectWorkspaceTab(adminPage, "admin_management");
   await adminPage.getByText("Camera chờ phân loại E2E", { exact: true }).waitFor();
   if (process.env.BATCH3_DESKTOP_SCREENSHOT) {
     await adminPage.screenshot({ path: process.env.BATCH3_DESKTOP_SCREENSHOT, fullPage: true });
@@ -109,7 +108,7 @@ try {
   await adminPage.getByText(`Đã ngừng khai thác ${adminCode}; lịch sử được giữ nguyên.`, { exact: true }).waitFor();
 
   await adminPage.reload({ waitUntil: "networkidle" });
-  await adminPage.locator('[data-nav-id="admin_management"]').click();
+  await selectWorkspaceTab(adminPage, "admin_management");
   row = adminPage.locator("tr", { hasText: adminCode });
   await row.getByText("Đã ngừng khai thác", { exact: true }).first().waitFor();
 

@@ -200,7 +200,7 @@ function Application({ locale, setLocale }) {
     };
     window.addEventListener("hashchange", readRoute);
     // Replace the public login anchor without adding a redundant history entry.
-    if (!window.location.hash.startsWith("#/workspace/") && activeTab !== "home") {
+    if (!window.location.hash.startsWith("#/workspace/")) {
       window.history.replaceState(null, "", hashForTab(activeTab));
     }
     return () => window.removeEventListener("hashchange", readRoute);
@@ -325,15 +325,6 @@ function Application({ locale, setLocale }) {
         onLocaleChange={changeLocale}
       /></PublicLanding>
     );
-  }
-
-  if (activeTab === "home" && !user.passwordResetRequired) {
-    return <PublicLanding onLocaleChange={changeLocale} userName={user.fullName}
-      onRegister={() => {}} onWorkspace={() => setActiveTab("smart_calendar")}
-      onLogout={async () => { await logout(); setUser(null); window.location.hash = "dau-trang"; }}
-      onViewSchedule={id => { setCalendarResourceId(id); setActiveTab("smart_calendar"); }}
-      scheduleContent={<WorkspaceHome user={user} locale={locale} bookings={bookings} notifications={notifications} incidents={incidents} loading={loading} error={error} onRetry={loadData} onNavigate={setActiveTab} onSearch={query => { setResourceSearch(query); setActiveTab("resources"); }} />}
-    />;
   }
 
   return (

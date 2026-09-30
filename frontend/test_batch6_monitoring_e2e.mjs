@@ -1,4 +1,4 @@
-import { openWorkspace } from "./test-utils/openWorkspace.mjs";
+import { openWorkspace, selectWorkspaceTab } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -23,10 +23,7 @@ async function login(page, email) {
 }
 
 async function openNav(page, id) {
-  if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const nav = page.locator(`[data-nav-id="${id}"]`).first();
-  await nav.waitFor({ timeout: 8000 });
-  await nav.click();
+  await selectWorkspaceTab(page, id);
 }
 
 try {

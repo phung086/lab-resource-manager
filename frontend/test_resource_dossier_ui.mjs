@@ -1,4 +1,4 @@
-import { openWorkspace } from "./test-utils/openWorkspace.mjs";
+import { openWorkspace, selectWorkspaceTab } from "./test-utils/openWorkspace.mjs";
 import assert from 'node:assert/strict';
 import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright-core';
@@ -70,7 +70,7 @@ let patches=[],requests=[];
  await page.getByRole('button',{name:/ĐĂNG NHẬP VÀO HỆ THỐNG/i}).click();
  await openWorkspace(page);
  check(await page.locator('.sidebar-2026').count()===1);
- await page.locator('[data-nav-id=admin_management]').click();
+ await selectWorkspaceTab(page, "admin_management");
  await page.getByRole('button',{name:/Sửa CAM-01/}).waitFor();
  await page.getByRole('button',{name:/Sửa CAM-01/}).click();
  await page.locator('#resource-guide-steps').fill('Bước đã chỉnh sửa.\nGhi nhận kết quả.');

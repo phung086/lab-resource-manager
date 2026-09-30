@@ -179,7 +179,7 @@ try {
     await p.locator('#login-email').fill(email);
     await p.locator('#login-password').fill(password);
     await p.getByRole('button',{name:/ĐĂNG NHẬP VÀO HỆ THỐNG/i}).click();
-    await p.locator('.sidebar-nav-item-2026').first().waitFor();
+    await p.locator('.sidebar-2026').waitFor();
     for (const route of routes) {
       await p.goto(`${base}/#/workspace/${route}`,{waitUntil:'networkidle'});
       await p.waitForFunction(() => !document.querySelector('#workspace-main')?.textContent.match(/Đang tải dữ liệu thật|Đang tổng hợp dữ liệu|Đang tải hồ sơ/));

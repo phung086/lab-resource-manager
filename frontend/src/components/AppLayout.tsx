@@ -50,6 +50,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   children
 }) => {
   const { tr } = useLocale();
+  const [navigationOpen, setNavigationOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -59,6 +60,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
+
+  useEffect(() => {
+    setNavigationOpen(false);
+  }, [activeTab]);
 
   useEffect(() => {
     if (user?.passwordResetRequired) setChangePasswordOpen(true);
@@ -161,7 +166,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   }
 
   return (
-    <div className="app-shell-2026">
+    <div className="app-shell-2026 workspace-shell">
       <a className="skip-link" href="#workspace-main">{locale === "en" ? "Skip to main content" : "Đến nội dung chính"}</a>
       {/* Primary navigation */}
       <Sidebar
@@ -172,10 +177,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         incidents={incidents}
         conflictsCount={conflictsCount}
         locale={locale}
+        expanded={navigationOpen}
+        onExpandedChange={setNavigationOpen}
       />
 
       {/* 2. Main Work Area with Header */}
-      <div className="main-content-column-2026">
+      <div className="main-content-column-2026" inert={navigationOpen}>
         <Header
           title={currentTitle}
           user={user}
@@ -186,6 +193,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           onRefresh={onRefresh}
           onOpenNotifications={() => handleSelectTab("escalations")}
           onOpenChangePassword={() => setChangePasswordOpen(true)}
+          onOpenProfile={() => handleSelectTab("profile")}
           onLogout={onLogout}
           onOpenAssistant={AI_ASSISTANT_ENABLED ? () => setAssistantOpen(true) : undefined}
         />

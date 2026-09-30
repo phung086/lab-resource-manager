@@ -1,5 +1,16 @@
 # Current Project State
 
+## Workspace navigation and role overview — 2026-09-30
+
+Continuation of the interrupted UI task in draft PR #22 on
+`codex/lab-workspace-ui-draft`. Signed-in users enter a role-aware overview;
+the complete menu opens on click, with search, grouped links and keyboard focus
+management. Shared shell styling applies across authenticated screens.
+Local PostgreSQL 16 auth/calendar/handover E2E, 104 navigation checks and 78
+desktop/mobile screen checks passed. See
+`docs/WORKSPACE_NAVIGATION_REFINEMENT_20260930.md` for evidence and limits.
+The PR remains draft; this update does not merge into `main` or deploy a release.
+
 ## Resource dossier refinement — 2026-09-30
 
 User-authorized continuation of draft PR #22: shared selective media gallery,

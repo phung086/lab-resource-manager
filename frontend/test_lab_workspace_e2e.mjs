@@ -7,7 +7,7 @@ const ui = process.env.UX_FRONTEND_URL || 'http://127.0.0.1:15181';
 const api = process.env.UX_API_URL || 'http://127.0.0.1:15005/api';
 assert.ok(process.env.UX_DEMO_PASSWORD, 'UX_DEMO_PASSWORD is required');
 const out = fileURLToPath(new URL('../logs/lab-build/', import.meta.url)); fs.mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: 'msedge', headless: true });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined, headless: true, args: ['--no-sandbox'] });
 const errors = [], results = [];
 async function settleImages(page) {
   for (const card of await page.locator('.catalog-card').all()) await card.scrollIntoViewIfNeeded();
@@ -59,7 +59,7 @@ try {
     await context.addInitScript(({ session }) => { localStorage.setItem('lrm_token', session.accessToken); localStorage.setItem('lrm_user', JSON.stringify(session.user)); localStorage.setItem('lrm_locale', 'en'); }, { session });
     const p = await context.newPage(); p.on('pageerror', error => errors.push(error.message));
     await p.goto(ui, { waitUntil: 'networkidle' });
-    await p.locator('#kiem-tra-lich .lab-home').waitFor();
+    await p.locator('#workspace-main .lab-home').waitFor();
     await inspect(p, `${role}-home`);
     const routes = ['lich-dat', 'booking', 'tai-nguyen', 'ho-so', 'thong-bao', 'su-co', ...(role === 'staff' || role === 'admin' ? ['kho-vat-tu', 'bao-tri', 'van-hanh', 'telemetry'] : ['lop-hoc-phan']), ...(role === 'admin' ? ['nguoi-dung', 'lop-hoc-phan'] : [])];
     for (const route of routes) {
