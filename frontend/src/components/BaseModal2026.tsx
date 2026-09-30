@@ -1,4 +1,5 @@
 import { translate } from "../i18n.js";
+import { LanguageToggle } from "./base/LanguageToggle";
 import React, { useEffect, useRef } from "react";
 import { X, LucideIcon } from "lucide-react";
 
@@ -124,6 +125,8 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
             </button>
           </div>
         )}
+
+        <div className="modal-language-row"><LanguageToggle /></div>
 
         {/* Modal Body Content */}
         <div className="modal-body-2026 px-6 py-5 flex flex-col gap-4">

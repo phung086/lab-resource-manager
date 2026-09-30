@@ -21,7 +21,7 @@ mean actual members and submitted activities, not inferred pending reviews.
 
 Destination parameters are validated against existing categories, filters and
 roles. Catalogue/category, calendar resource, course group and directory role
-survive reload. A booking action link only opens the existing confirmation form
+survive reload. A calendar link resolves the exact authenticated resource even\nwhen it is outside the capped initial catalogue; a missing resource produces an\nexplicit error and never substitutes another one. Shared VI/EN controls inside\nmodals allow language changes without leaving the focus trap or losing a draft.\nA booking action link only opens the existing confirmation form
 after checking the authenticated list, current status and presentation role.
 Submitting still uses the existing API permission, LAB scope, evidence and state
 checks. Dismissing a form does not write business data. Choosing a booking filter

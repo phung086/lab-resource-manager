@@ -45,7 +45,7 @@ const group = await request('admin', '/lab-workspace/groups', { code: `ROLE-${Da
 await request('lecturer', `/lab-workspace/groups/${group.id}/members`, { email: 'student@lrm.local' });
 await request('student', `/lab-workspace/groups/${group.id}/activities`, { bookingId: bookings.pending.id, learningGoal: 'Measure the circuit response and document the experiment results.' });
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined, args: ['--no-sandbox'], headless: true });
-const switchLocale = async (page, locale) => { await page.locator('.header-2026').getByRole('button', { name: locale.toUpperCase(), exact: true }).click(); await page.locator(`html[lang=${locale}]`).waitFor(); };
+const switchLocale = async (page, locale) => { const scope = await page.getByRole('dialog').count() ? page.getByRole('dialog') : page.locator('.header-2026'); await scope.getByRole('button', { name: locale.toUpperCase(), exact: true }).click(); await page.locator(`html[lang=${locale}]`).waitFor(); };
 const home = async page => { await selectWorkspaceTab(page, 'home'); await page.locator('.home-attention-grid').waitFor(); await page.waitForLoadState('networkidle'); };
 try {
   for (const role of ['student', 'lecturer', 'staff', 'admin']) {

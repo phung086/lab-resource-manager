@@ -1,4 +1,5 @@
 import { translate } from "../i18n.js";
+import { LanguageToggle } from "./base/LanguageToggle";
 import React, { useState, useEffect, useRef } from "react";
 import { parseVietnamParts } from "../utils/timezone";
 import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, Shield, UserRound } from "lucide-react";
@@ -27,8 +28,6 @@ export interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   title,
   user,
-  locale,
-  onLocaleChange,
   notificationsCount = 0,
   loading = false,
   onRefresh,
@@ -95,25 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Right side: Language Segmented Control, Actions & User Profile */}
       <div className="header-right-2026">
         {onOpenAssistant && <button className="secondary-button" onClick={onOpenAssistant}>{t("ui.lab_assistant_0a8d5bc9")}</button>}
-        {/* Ultra-thin Segmented Control for VI / EN */}
-        <div className="segmented-control-2026" role="group" aria-label={translate("ui.language_selector_385e1c32")}>
-          <button
-            type="button"
-            className={`segmented-btn-2026 ${locale === "vi" ? "is-active" : ""}`}
-            onClick={() => onLocaleChange("vi")}
-            title={translate("ui.vietnamese_690829f8")}
-            aria-pressed={locale === "vi"}
-          >
-             {translate("ui.vi_dc7b94e1")} </button>
-          <button
-            type="button"
-            className={`segmented-btn-2026 ${locale === "en" ? "is-active" : ""}`}
-            onClick={() => onLocaleChange("en")}
-            title={translate("ui.english_ba118bf7")}
-            aria-pressed={locale === "en"}
-          >
-             {translate("ui.en_69374b09")} </button>
-        </div>
+        <LanguageToggle />
 
         {/* Refresh button */}
         {onRefresh && (
