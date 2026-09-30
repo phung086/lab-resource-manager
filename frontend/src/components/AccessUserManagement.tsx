@@ -172,8 +172,8 @@ export function AccessUserManagement() {
       {error && <div className="alert danger" role="alert">{translate(error)}</div>}
       {loading && <p className="empty-state">{tr("ui.loading_data_84c68bd5")}</p>}
       <div className="user-directory-filters">
-        <label>{tr("ui.home.directory.search")}<input type="search" value={search} onChange={event => setSearch(event.target.value)} maxLength={120} placeholder={tr("ui.home.directory.placeholder")} /></label>
-        <label>{tr("ui.home.directory.role")}<select value={roleFilter} onChange={event => setRoleFilter(event.target.value)}><option value="">{tr("ui.home.directory.all")}</option>{ROLES.map(role => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}</select></label>
+        <label><span id="directory-search-label">{tr("ui.home.directory.search")}</span><input aria-labelledby="directory-search-label" type="search" value={search} onChange={event => setSearch(event.target.value)} maxLength={120} placeholder={tr("ui.home.directory.placeholder")} /></label>
+        <label><span id="directory-role-label">{tr("ui.home.directory.role")}</span><select aria-labelledby="directory-role-label" value={roleFilter} onChange={event => setRoleFilter(event.target.value)}><option value="">{tr("ui.home.directory.all")}</option>{ROLES.map(role => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}</select></label>
       </div>
       <BaseModal2026 isOpen={showCreate} onClose={() => setShowCreate(false)} title={tr("ui.create_user_70f60575")} dismissible={!creating}>
             <form className="booking-operation-form" onSubmit={createUser} noValidate>
