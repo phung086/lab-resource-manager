@@ -6,10 +6,13 @@ import { chromium } from "playwright-core";
 
 const baseUrl = process.env.BATCH6_FRONTEND_URL || "http://127.0.0.1:5177";
 const password = "Batch6E2E!Pass";
+const catalogs = Object.fromEntries(["vi", "en"].map(locale => [locale,
+  JSON.parse(fs.readFileSync(new URL(`./src/locales/catalog/${locale}.json`, import.meta.url), "utf8")).messages
+]));
 const screenshotDir = path.resolve("./screenshots_batch6");
 if (!fs.existsSync(screenshotDir)) fs.mkdirSync(screenshotDir, { recursive: true });
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined, args: ["--no-sandbox"], headless: true });
 
 async function login(page, email) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
@@ -34,17 +37,31 @@ try {
 
   await openNav(studentPage, "escalations");
   await studentPage.locator("main").getByRole("heading", { name: "Trung tâm thông báo" }).waitFor();
-  await studentPage.getByText("Batch 6 lịch sắp bắt đầu").first().waitFor({ timeout: 5000 });
-  assert.equal(await studentPage.getByText("Batch 6 lịch sắp bắt đầu").count(), 1);
-  assert.equal(await studentPage.getByText("Batch 6 nhắc trả trong tương lai").count(), 0);
-
-  const visibleNotification = studentPage.locator(".notification-card", { hasText: "Batch 6 lịch sắp bắt đầu" });
-  await Promise.all([
+  const notificationCards = studentPage.locator("main .notification-card");
+  await notificationCards.getByRole("heading", { name: catalogs.vi["notification.booking.upcoming.title"], exact: true }).waitFor();
+  assert.equal(await notificationCards.count(), 1, "Only the due notification is visible");
+  const visibleNotification = notificationCards.first();
+  for (const locale of ["vi", "en"]) {
+    await studentPage.locator(".header-2026").getByRole("button", { name: locale.toUpperCase(), exact: true }).click();
+    await studentPage.locator(`html[lang=${locale}]`).waitFor();
+    await visibleNotification.getByRole("heading", { name: catalogs[locale]["notification.booking.upcoming.title"], exact: true }).waitFor();
+    assert.equal(await notificationCards.getByText(catalogs[locale]["notification.booking.return_reminder.title"], { exact: true }).count(), 0, "Future notification stays hidden after a language switch");
+    assert.ok((await visibleNotification.innerText()).includes("Batch 6 dashboard booking"), "Original booking title is preserved");
+    assert.ok((await visibleNotification.innerText()).includes("B6-E2E-HEALTHY"), "Resource identity is preserved");
+  }
+  const [readResponse] = await Promise.all([
     studentPage.waitForResponse((response) =>
       response.url().includes("/api/notifications/") && response.url().endsWith("/read") && response.status() === 200
     ),
-    visibleNotification.getByRole("button", { name: "Đã đọc" }).click()
+    visibleNotification.getByRole("button", { name: catalogs.en["ui.mark_read_2e5a0c72"], exact: true }).click()
   ]);
+  const readResult = await readResponse.json();
+  assert.equal(readResult.id, "b6000000-0000-4000-8000-000000000041");
+  assert.ok(Number.isFinite(Date.parse(readResult.readAt)), "Read state is persisted by the real API");
+  await visibleNotification.getByRole("button", { name: catalogs.en["ui.mark_read_2e5a0c72"], exact: true }).waitFor({ state: "hidden" });
+  await studentPage.locator(".header-2026").getByRole("button", { name: "VI", exact: true }).click();
+  await studentPage.locator("html[lang=vi]").waitFor();
+  await visibleNotification.getByRole("heading", { name: catalogs.vi["notification.booking.upcoming.title"], exact: true }).waitFor();
   await studentPage.screenshot({ path: path.join(screenshotDir, "student_notifications_desktop.png"), fullPage: true });
 
   console.log("=== BATCH 6 STUDENT INCIDENT REPORT ===");

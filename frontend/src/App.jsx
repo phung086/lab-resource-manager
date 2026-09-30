@@ -379,7 +379,7 @@ function Application() {
         </div>
       )}
 
-      <React.Suspense fallback={<p className="empty-state" role="status">{locale === "en" ? "Loading workspace…" : translate("ui.loading_workspace_959fb711")}</p>}>
+      <React.Suspense fallback={<p className="empty-state" role="status">{translate("ui.loading_workspace_959fb711")}</p>}>
       {/* REQUIRED CORE — Gated when passwordResetRequired */}
       {!user.passwordResetRequired && activeTab === "home" && (
         <WorkspaceHome
