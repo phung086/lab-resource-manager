@@ -112,3 +112,14 @@ form state during locale changes and original user/resource content. Calendar
 labels and assistant tool summaries carry keys; business codes and Vietnam time
 remain unchanged. See `BILINGUAL_ASSISTANT_FOUNDATION_20260930.md` for the verified
 boundary and examples of recovery tests.
+
+
+## Role entry points
+
+`pages/WorkspaceHome.tsx` selects a lazily loaded view from
+`components/features/workspace/`. Keep student discovery, lecturer teaching,
+LAB staff operations and administrative coordination distinct in information
+hierarchy. Reuse shared primitives, catalogs and existing authenticated screens.
+Carry validated resource/group/booking/filter context into the destination; action
+links open confirmation forms and never perform mutations implicitly. Disclose
+recent-record count limits. See ADR-026 and the role workspace refinement report.

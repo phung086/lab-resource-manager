@@ -218,7 +218,7 @@ jobs:
             cat "$RUNNER_TEMP/workspace-demo.log"
             exit 1
           fi
-          (cd frontend && npm run test:ui:workspace && npm run test:ui:bilingual)
+          (cd frontend && npm run test:ui:workspace && npm run test:ui:bilingual && npm run test:ui:roles)
       - name: Upload workspace evidence
         if: always()
         uses: actions/upload-artifact@v4

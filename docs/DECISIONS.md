@@ -378,3 +378,20 @@ Status: Accepted in user-authorized continuation, 2026-09-30.
   persistence/access rules remain available for later verified hardware work.
 - Subsequent screen/workflow refinement must use this same contract; do not
   add another raw-text fallback or fake service success path.
+
+
+## ADR-026: Task-focused role entry points share one workflow boundary
+
+Status: Accepted in user-authorized continuation, 2026-09-30.
+
+- Student, lecturer, LAB staff and administrative home layouts prioritise their
+  actual next task, rather than reusing a generic dashboard with different labels.
+- Role views load on demand and reuse shared VI/EN components and authenticated
+  reads. UI visibility never grants permission or performs a business action.
+- Home links carry validated destination context into existing catalogue,
+  calendar, teaching, directory and booking screens. Booking actions open the
+  ordinary evidence/confirmation form; backend scope and state checks remain final.
+- Displayed work counts disclose the bounded recent-record scope. Do not present
+  capped arrays as complete institution totals or infer pending academic reviews.
+- Later screen refinements extend the same shell, catalogs and canonical workflow
+  rather than adding a parallel routing, translation or role-permission system.

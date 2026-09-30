@@ -20,6 +20,7 @@ import type {
   BookingRecord
 } from "../../../types/booking.js";
 import "../../../styles/operations.css";
+import { canOpenBookingAction } from "../../../utils/bookingActions";
 
 export interface BookingOperationsViewProps {
   user: { id: string; role: string; fullName: string };
@@ -33,6 +34,11 @@ const FILTER_LABELS: Record<FilterKey, string> = {
   CHECKED_OUT: "ui.in_use_a07a3647", RETURNED: "ui.awaiting_inspection_cee3e686", HISTORY: "ui.history_0a235708"
 };
 const HISTORY_STATUSES = new Set(["COMPLETED", "REJECTED", "CANCELLED"]);
+const routeParams = () => new URLSearchParams(window.location.hash.split("?")[1] || "");
+function initialFilter(isStaff: boolean): FilterKey {
+  const value = routeParams().get("filter");
+  return Object.hasOwn(FILTER_LABELS, value || "") ? value as FilterKey : isStaff ? "PENDING_APPROVAL" : "ALL";
+}
 const STATUS_LABELS: Record<string, string> = {
   PENDING_APPROVAL: "ui.pending_approval_bc216c10", CONFIRMED: "ui.confirmed_0df7ecd4", CHECKED_OUT: "ui.in_use_ee0c455e",
   RETURNED: "ui.returned_ed5e4805", COMPLETED: "ui.completed_13625dbf", REJECTED: "ui.rejected_cb6ec8af", CANCELLED: "ui.cancelled_2cdb07af"
@@ -42,7 +48,9 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   const { tr } = useLocale();
   const isStaff = ["ADMIN", "LAB_STAFF"].includes(user.role);
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
-  const [filter, setFilter] = useState<FilterKey>(isStaff ? "PENDING_APPROVAL" : "ALL");
+  const [filter, setFilter] = useState<FilterKey>(() => initialFilter(isStaff));
+  const [linkedBookingId, setLinkedBookingId] = useState(() => routeParams().get("booking"));
+  const [routeAction, setRouteAction] = useState(() => routeParams().get("action") || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<LocaleMessage>("");
@@ -65,7 +73,24 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   }, []);
 
   useEffect(() => { loadBookings(); }, [loadBookings]);
-  useEffect(() => { setFilter(isStaff ? "PENDING_APPROVAL" : "ALL"); }, [isStaff]);
+  useEffect(() => { setFilter(initialFilter(isStaff)); }, [isStaff]);
+  useEffect(() => {
+    if (loading || error || !routeAction) return;
+    const booking = bookings.find(row => row.id === linkedBookingId);
+    if (booking && canOpenBookingAction(booking, routeAction, user)) setActionState({ action: routeAction, booking });
+    else setError("ui.home.route.actionUnavailable");
+    setRouteAction("");
+  }, [loading, error, routeAction, bookings, linkedBookingId, user]);
+
+  function clearRouteAction() {
+    const params = routeParams(); params.delete("action");
+    window.history.replaceState(null, "", `${window.location.hash.split("?")[0]}${params.size ? `?${params}` : ""}`);
+  }
+  function selectFilter(key: FilterKey) {
+    setFilter(key); setLinkedBookingId(null); clearRouteAction();
+    const params = new URLSearchParams({ filter: key });
+    window.history.replaceState(null, "", `${window.location.hash.split("?")[0]}?${params}`);
+  }
 
   const counts = useMemo(() => ({
     ALL: bookings.length,
@@ -76,7 +101,6 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     HISTORY: bookings.filter((b) => HISTORY_STATUSES.has(b.status)).length
   }), [bookings]);
 
-  const linkedBookingId = new URLSearchParams(window.location.hash.split("?")[1] || "").get("booking");
   const visibleBookings = useMemo(() => {
     if (linkedBookingId) return bookings.filter(b => b.id === linkedBookingId);
     if (filter === "ALL") return bookings;
@@ -98,6 +122,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
       const warning = updated.physicalStateWarningKey ? { key: updated.physicalStateWarningKey, params: { status: { key: `enum.operational.${updated.physicalStateWarningParams?.status}` } } } : updated.physicalStateWarning || "";
       setSuccess({ key: "ui.booking_updated_6643b95c", params: { value0: updated.resource?.code || updated.id, value1: { key: STATUS_LABELS[updated.status] || updated.status }, value2: warning } });
       setActionState(null);
+      clearRouteAction();
       await loadBookings();
       onChanged?.();
     } finally {
@@ -157,7 +182,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
       {linkedBookingId && <p>{tr("ui.viewing_the_booking_linked_from_13fda414")}<a href="#/workspace/booking">{tr("ui.view_all_bookings_a9efade5")}</a></p>}
       <nav className="operations-filter-row" aria-label={tr("ui.booking_workflow_filters_65688e95")}>
         {filters.map((key) => (
-          <button key={key} type="button" className={filter === key ? "is-active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>
+          <button key={key} type="button" className={filter === key ? "is-active" : ""} aria-pressed={filter === key} onClick={() => selectFilter(key)}>
             <span>{tr(FILTER_LABELS[key])}</span><strong>{counts[key]}</strong>
           </button>
         ))}
@@ -191,7 +216,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
           action={actionState.action}
           booking={actionState.booking}
           busy={busyId === actionState.booking.id}
-          onClose={() => setActionState(null)}
+          onClose={() => { setActionState(null); clearRouteAction(); }}
           onConfirm={submitAction}
         />
       )}

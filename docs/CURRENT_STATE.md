@@ -1,5 +1,18 @@
 # Current Project State
 
+## Task-focused role entry points — 2026-09-30
+
+Draft PR #22 now separates student resource finding, lecturer practical groups,
+LAB staff work stages and administrative coordination into four layouts. Exact
+booking/group/category/role links reuse the existing authenticated screens and
+confirmation forms. Shared catalogs contain 2,107 VI/EN keys; role views load on
+demand. Core/group failures have explicit recovery and no fake zero work counts.
+Local frontend gates and responsive visual QA pass. The new PostgreSQL role-flow
+suite joins navigation and bilingual checks in CI; current-head results remain
+authoritative on the PR. See `docs/ROLE_WORKSPACE_REFINEMENT_20260930.md` for
+research, routing, list-count limits and verification. No main merge, schema or
+runtime dependency change is included.
+
 ## Bilingual and assistant foundation — 2026-09-30
 
 The interrupted VI/EN + assistant work is continued in draft PR #22 on

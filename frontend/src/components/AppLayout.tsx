@@ -64,6 +64,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   useEffect(() => {
     setNavigationOpen(false);
+    const frame = requestAnimationFrame(() => document.getElementById("workspace-main")?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
   }, [activeTab]);
 
   useEffect(() => {
@@ -167,7 +169,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   return (
     <div className="app-shell-2026 workspace-shell">
-      <a className="skip-link" href="#workspace-main">{locale === "en" ? "Skip to main content" : translate("ui.skip_to_main_content_a75d7c33")}</a>
+      <a className="skip-link" href="#workspace-main">{translate("ui.skip_to_main_content_a75d7c33")}</a>
       {/* Primary navigation */}
       <Sidebar
         activeTab={activeTab}

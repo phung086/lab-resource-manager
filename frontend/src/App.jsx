@@ -117,9 +117,12 @@ function Application() {
   const [authChecking, setAuthChecking] = useState(true);
   const [activeTab, updateActiveTab] = useState(() => tabFromHash(window.location.hash));
   const [routeHash, setRouteHash] = useState(window.location.hash);
-  function setActiveTab(tab) {
+  function setActiveTab(tab, params = {}) {
+    const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value));
+    const hash = `${hashForTab(tab)}${query.size ? `?${query}` : ""}`;
     updateActiveTab(tab);
-    if (window.location.hash !== hashForTab(tab)) window.location.hash = hashForTab(tab);
+    setRouteHash(hash);
+    if (window.location.hash !== hash) window.location.hash = hash;
   }
   const [paymentBookingId, setPaymentBookingId] = useState(() => new URLSearchParams(window.location.hash.split("?")[1] || "").get("booking") || "");
   const openBookingPayment = booking => {
@@ -146,8 +149,7 @@ function Application() {
       window.history.replaceState(null, "", hashForTab("bookings"));
     }
   };
-  const [resourceSearch, setResourceSearch] = useState("");
-  const [calendarResourceId, setCalendarResourceId] = useState("");
+  const [calendarResourceId, setCalendarResourceId] = useState(() => new URLSearchParams(window.location.hash.split("?")[1] || "").get("resource") || "");
   useEffect(() => {
     if (!user) return;
     const pending = sessionStorage.getItem("lrm_pending_resource");
@@ -166,10 +168,13 @@ function Application() {
   const [logs, setLogs] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [authMode, setAuthMode] = useState("login");
   const [activeGlobalModal, setActiveGlobalModal] = useState(null);
+
+  const routeParams = new URLSearchParams(routeHash.split("?")[1] || "");
+  const openCalendar = (resourceId = "") => { setCalendarResourceId(resourceId); setActiveTab("smart_calendar", { resource: resourceId }); };
 
   const activeCopy = useMemo(() => getDictionary(locale), [locale]);
   copy = activeCopy;
@@ -357,7 +362,7 @@ function Application() {
         }
       }}
     >
-      {error && <div className="alert danger" role="alert">{translate(error)}</div>}
+      {error && activeTab !== "home" && <div className="alert danger" role="alert">{translate(error)}</div>}
       {user.passwordResetRequired && (
         <div className="card temporary-password-card" style={{ maxWidth: 680, margin: "1.5rem auto", padding: "1.75rem", border: "1px solid #fde68a", background: "#fffdf5", borderRadius: 16 }}>
           <div className="alert warning" style={{ marginBottom: "1.25rem", display: "flex", gap: "0.85rem", alignItems: "flex-start" }}>
@@ -388,17 +393,21 @@ function Application() {
           locale={locale}
           notifications={notifications}
           incidents={incidents}
-          trainings={trainings}
+          resources={resources}
+          maintenance={maintenance}
+          users={users}
+          dashboard={dashboard}
           loading={loading}
           error={translate(error)}
           onRetry={loadData}
           onNavigate={setActiveTab}
-          onSearch={(query) => { setResourceSearch(query); setActiveTab("resources"); }}
+          onSearch={(search, category) => setActiveTab("resources", { search, category })}
+          onCalendar={openCalendar}
         />
       )}
       {activeTab === "profile" && <ProfilePage user={user} onUserUpdated={setUser} />}
       {!user.passwordResetRequired && activeTab === 'stock' && canAccessTab(user.role, 'stock') && <StockPage locale={locale} user={user} maintenance={maintenance} />}
-      {!user.passwordResetRequired && activeTab === 'teaching' && canAccessTab(user.role, 'teaching') && <TeachingPage locale={locale} user={user} bookings={bookings} />}
+      {!user.passwordResetRequired && activeTab === 'teaching' && canAccessTab(user.role, 'teaching') && <TeachingPage key={routeHash} locale={locale} user={user} bookings={bookings} />}
       {!user.passwordResetRequired && PAYMENT_FEATURES_ENABLED && activeTab === "payments" && (
         <React.Suspense fallback={<p role="status">{translate("ui.loading_payments_b1f91304")}</p>}>
           <PaymentsPage user={user} bookingId={paymentBookingId} onClearBooking={() => { setPaymentBookingId(""); setActiveTab("payments"); }} />
@@ -406,21 +415,22 @@ function Application() {
       )}
       {!user.passwordResetRequired && activeTab === "smart_calendar" && (
         <SmartCalendarView
+          key={routeHash}
           user={user}
-          initialResourceId={calendarResourceId}
+          initialResourceId={routeParams.get("resource") || calendarResourceId}
           refreshKey={calendarRevision}
           onOpenBooking={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
         />
       )}
-      {!user.passwordResetRequired && activeTab === "admin_management" && <AdminResourceManagementView user={user} />}
+      {!user.passwordResetRequired && activeTab === "admin_management" && <AdminResourceManagementView key={routeHash} user={user} initialClassification={routeParams.get("classification") || "ALL"} />}
       {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter notifications={notifications} loading={loading} loadError={translate(error)} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
       {!user.passwordResetRequired && activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {!user.passwordResetRequired && activeTab === "resources" && <ResourceManagementView user={user} initialSearch={resourceSearch} onViewCalendar={(id) => { setCalendarResourceId(id); setActiveTab("smart_calendar"); }} />}
+      {!user.passwordResetRequired && activeTab === "resources" && <ResourceManagementView key={routeHash} user={user} initialSearch={routeParams.get("search") || ""} initialCategory={routeParams.get("category") || ""} onViewCalendar={openCalendar} />}
       {!user.passwordResetRequired && activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={loadData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
       {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage locale={locale} resources={resources} maintenance={maintenance} onChanged={loadData} onBookings={() => setActiveTab('bookings')} />}
       {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {activeTab === "users" && <AccessUserManagement />}
+      {activeTab === "users" && <AccessUserManagement key={routeHash} />}
 
       </React.Suspense>
 

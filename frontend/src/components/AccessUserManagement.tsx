@@ -30,6 +30,11 @@ type Assignment = { laboratoryId: string; laboratory: Laboratory };
 export function AccessUserManagement() {
   const { tr } = useLocale();
   const [users, setUsers] = useState<User[]>([]);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState(() => {
+    const value = new URLSearchParams(window.location.hash.split("?")[1] || "").get("role");
+    return ROLES.includes(value as Role) ? value : "";
+  });
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
   const [assignments, setAssignments] = useState<Record<string, Assignment[]>>({});
   const [selectedLabs, setSelectedLabs] = useState<Record<string, string>>({});
@@ -55,9 +60,14 @@ export function AccessUserManagement() {
       setUsers(nextUsers);
       setLaboratories(nextLabs);
       const staff = nextUsers.filter((user: User) => user.role === "LAB_STAFF");
-      const staffAssignments = await Promise.all(
-        staff.map(async (user: User) => [user.id, await apiRequest(`/users/${user.id}/lab-assignments`)] as const)
-      );
+      const staffAssignments: [string, Assignment[]][] = [];
+      let next = 0;
+      await Promise.all(Array.from({ length: Math.min(4, staff.length) }, async () => {
+        while (next < staff.length) {
+          const member = staff[next++];
+          staffAssignments.push([member.id, await apiRequest(`/users/${member.id}/lab-assignments`)]);
+        }
+      }));
       setAssignments(Object.fromEntries(staffAssignments));
     } catch (requestError: any) {
       setError(requestError?.message || "ui.could_not_load_users_76f5be64");
@@ -161,6 +171,10 @@ export function AccessUserManagement() {
 
       {error && <div className="alert danger" role="alert">{translate(error)}</div>}
       {loading && <p className="empty-state">{tr("ui.loading_data_84c68bd5")}</p>}
+      <div className="user-directory-filters">
+        <label>{tr("ui.home.directory.search")}<input type="search" value={search} onChange={event => setSearch(event.target.value)} maxLength={120} placeholder={tr("ui.home.directory.placeholder")} /></label>
+        <label>{tr("ui.home.directory.role")}<select value={roleFilter} onChange={event => setRoleFilter(event.target.value)}><option value="">{tr("ui.home.directory.all")}</option>{ROLES.map(role => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}</select></label>
+      </div>
       <BaseModal2026 isOpen={showCreate} onClose={() => setShowCreate(false)} title={tr("ui.create_user_70f60575")} dismissible={!creating}>
             <form className="booking-operation-form" onSubmit={createUser} noValidate>
               <label>
@@ -190,7 +204,7 @@ export function AccessUserManagement() {
             <caption className="sr-only">{tr("ui.users_roles_and_laboratory_assignments_0f27b670")}</caption>
             <thead><tr><th>{tr("ui.users_9e9519eb")}</th><th>{tr("ui.role_35195dea")}</th><th>{tr("ui.status_cb31de81")}</th><th>{tr("ui.laboratory_assignments_79925c7e")}</th></tr></thead>
             <tbody>
-              {users.map((user) => (
+              {users.filter(user => (!roleFilter || user.role === roleFilter) && `${user.fullName} ${user.email}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())).map((user) => (
                 <tr key={user.id}>
                   <td><strong>{user.fullName}</strong><br /><small>{user.email}</small></td>
                   <td>
@@ -239,6 +253,7 @@ export function AccessUserManagement() {
               ))}
             </tbody>
           </table>
+          {!users.some(user => (!roleFilter || user.role === roleFilter) && `${user.fullName} ${user.email}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())) && <p className="empty-state">{tr("ui.home.directory.empty")}</p>}
         </div>
       )}
     </section>

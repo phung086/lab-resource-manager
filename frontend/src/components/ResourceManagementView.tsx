@@ -56,6 +56,8 @@ interface ResourceManagementViewProps {
   user: UserIdentity;
   managementMode?: boolean;
   initialSearch?: string;
+  initialCategory?: string;
+  initialClassification?: string;
   onViewCalendar?: (resourceId: string) => void;
 }
 
@@ -96,11 +98,11 @@ const emptyForm = {
   beforeUse: "", steps: "", afterUse: "", safetyNotes: ""
 };
 
-export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ user, managementMode = false, initialSearch = "", onViewCalendar }) => {
+export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ user, managementMode = false, initialSearch = "", initialCategory = "", initialClassification = "ALL", onViewCalendar }) => {
   const { tr, t } = useLocale();
   const [resources, setResources] = useState<any[]>([]);
   const [laboratories, setLaboratories] = useState<any[]>([]);
-  const [filters, setFilters] = useState<Filters>({ ...initialFilters, search: initialSearch });
+  const [filters, setFilters] = useState<Filters>({ ...initialFilters, search: initialSearch.slice(0, 120), category: categories.includes(initialCategory) ? initialCategory : "", classification: initialClassification === "UNRESOLVED" ? "UNRESOLVED" : "ALL" });
   const [sort, setSort] = useState("name");
   const requestVersion = useRef(0);
   const [loading, setLoading] = useState(true);
