@@ -11,6 +11,7 @@ const output = process.env.UI_SCREENSHOT_DIR || '../logs/workspace-navigation';
 mkdirSync(output, { recursive: true });
 const catalogs = Object.fromEntries(['vi', 'en'].map(locale => [locale, JSON.parse(readFileSync(`src/locales/catalog/${locale}.json`)).messages]));
 const results = [], errors = [], sessions = {};
+const coreReadPaths = new Set(['/resources', '/bookings', '/maintenance', '/notifications', '/incidents', '/dashboard', '/users']);
 const check = (condition, label) => { assert.ok(condition, label); results.push(label); };
 async function request(role, path, body) {
   const response = await fetch(`${api}${path}`, { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', ...(sessions[role] ? { Authorization: `Bearer ${sessions[role].accessToken}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
@@ -51,10 +52,23 @@ try {
   for (const role of ['student', 'lecturer', 'staff', 'admin']) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
     const page = await context.newPage(); page.on('pageerror', error => errors.push(`${role}: ${error.message}`));
-    const mutations = [];
+    const mutations = [], coreReads = [];
+    page.on('request', req => {
+      if (req.url().startsWith(api) && req.method() === 'GET') {
+        const resourcePath = new URL(req.url()).pathname.slice(new URL(api).pathname.length);
+        if (coreReadPaths.has(resourcePath)) coreReads.push(resourcePath);
+      }
+    });
     page.on('request', req => { if (req.url().startsWith(api) && ['POST', 'PATCH', 'DELETE'].includes(req.method()) && !req.url().includes('/auth/')) mutations.push(req.url()); });
     await page.goto(base); await page.locator('#login-email').fill(`${role}@lrm.local`); await page.locator('#login-password').fill(process.env.UX_DEMO_PASSWORD);
     await page.getByRole('button', { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click(); await page.locator('.home-attention-grid').waitFor(); await page.waitForLoadState('networkidle');
+    check(coreReads.length === new Set(coreReads).size, `${role}: initial shared data reads are not duplicated`);
+    const loadedReadCount = coreReads.length;
+    await selectWorkspaceTab(page, 'escalations');
+    await page.locator('#notification-center-heading').waitFor();
+    await page.waitForLoadState('networkidle');
+    check(coreReads.length === loadedReadCount, `${role}: notifications reuse loaded data without another bulk read`);
+    await home(page);
     const canonicalRole = sessions[role].user.role;
     check(await page.locator(`[data-role-home=${canonicalRole}]`).count() === 1, `${role}: distinct entry point`);
     check(await page.locator('.home-finder').count() === (role === 'student' ? 1 : 0), `${role}: finder belongs to student workspace`);

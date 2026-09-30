@@ -184,7 +184,9 @@ function Application() {
   }, [locale]);
 
   const routeUserId = user?.id;
-  const showingSchedule = activeTab === "home";
+  const routeUserRole = user?.role;
+  const appDataController = React.useRef(null);
+  const previousTab = React.useRef(activeTab);
   const isPasswordResetRequired = Boolean(user?.passwordResetRequired);
   useEffect(() => {
     if (!routeUserId) return;
@@ -239,22 +241,27 @@ function Application() {
   const isStaff = user && ["ADMIN", "LAB_STAFF"].includes(user.role);
   const researchFeaturesEnabled = RESEARCH_FEATURES_ENABLED;
 
-  async function loadData() {
-    if (!user) return;
+  const loadData = React.useCallback(async () => {
+    if (!routeUserId) return;
+    appDataController.current?.abort();
+    const controller = new AbortController();
+    appDataController.current = controller;
     setLoading(true);
     setError("");
     try {
+      const read = path => apiRequest(path, { signal: controller.signal });
       const requests = {
-        resources: apiRequest("/resources"),
-        bookings: apiRequest("/bookings"),
-        maintenance: apiRequest("/maintenance"),
-        notifications: apiRequest("/notifications"),
-        incidents: apiRequest("/incidents"),
-        ...(["ADMIN", "LAB_STAFF"].includes(user.role) ? { dashboard: apiRequest("/dashboard") } : {}),
-        ...(user.role === "ADMIN" ? { users: apiRequest("/users") } : {})
+        resources: read("/resources"),
+        bookings: read("/bookings"),
+        maintenance: read("/maintenance"),
+        notifications: read("/notifications"),
+        incidents: read("/incidents"),
+        ...(["ADMIN", "LAB_STAFF"].includes(routeUserRole) ? { dashboard: read("/dashboard") } : {}),
+        ...(routeUserRole === "ADMIN" ? { users: read("/users") } : {})
       };
       const entries = Object.entries(requests);
       const results = await Promise.allSettled(entries.map(([, promise]) => promise));
+      if (controller.signal.aborted || appDataController.current !== controller) return;
       const data = Object.fromEntries(entries.map(([key], index) => [key, results[index]]));
       const value = (key, fallback) => data[key]?.status === "fulfilled" ? data[key].value : fallback;
 
@@ -275,15 +282,28 @@ function Application() {
         setError({ key: "ui.could_not_load_application_data_07ebdf44", params: { value0: failed.join(", ") } });
       }
     } catch (requestError) {
-      setError(requestError?.message || "ui.unable_to_load_system_data_e9df8dd1");
+      if (!controller.signal.aborted && appDataController.current === controller) {
+        setError(requestError?.message || "ui.unable_to_load_system_data_e9df8dd1");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted && appDataController.current === controller) {
+        appDataController.current = null;
+        setLoading(false);
+      }
     }
-  }
+  }, [routeUserId, routeUserRole]);
 
   useEffect(() => {
-    if (user) loadData();
-  }, [routeUserId, showingSchedule]);
+    if (!routeUserId) return;
+    loadData();
+    return () => appDataController.current?.abort();
+  }, [routeUserId, loadData]);
+
+  useEffect(() => {
+    const wasHome = previousTab.current === "home";
+    previousTab.current = activeTab;
+    if (routeUserId && activeTab === "home" && !wasHome) loadData();
+  }, [activeTab, routeUserId, loadData]);
 
   useEffect(() => {
     if (user && !canAccessTab(user.role, activeTab)) {

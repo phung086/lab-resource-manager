@@ -397,5 +397,8 @@ Status: Accepted in user-authorized continuation, 2026-09-30.
   the initial list cap. Missing or forbidden records produce an explicit error;
   never substitute another resource. Shared language controls remain reachable
   inside modal focus traps without discarding action drafts.
+- Shared application reads refresh on session change, home entry and explicit
+  refresh/completed mutations. Leaving home reuses loaded records; replacement
+  groups abort previous reads and cannot accept stale results.
 - Later screen refinements extend the same shell, catalogs and canonical workflow
   rather than adding a parallel routing, translation or role-permission system.

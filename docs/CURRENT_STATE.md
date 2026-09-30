@@ -12,7 +12,9 @@ Frontend gates, responsive visual QA and 515 PostgreSQL browser checks pass
 code revision `dc909b16e9effaa9f1ecd3e7daae6a974c99bf59`; current-head checks
 remain authoritative on the PR. Resource links resolve the exact selected record,
 and in-modal VI/EN controls preserve action drafts. Directory requests use at most
-four workers and cancel stale reads. See `docs/ROLE_WORKSPACE_REFINEMENT_20260930.md` for
+four workers and cancel stale reads. Shared application loads also cancel stale
+requests and reuse records when leaving home; role checks assert the API request
+budget on session entry and notification navigation. See `docs/ROLE_WORKSPACE_REFINEMENT_20260930.md` for
 research, routing, list-count limits and verification. No main merge, schema or
 runtime dependency change is included.
 

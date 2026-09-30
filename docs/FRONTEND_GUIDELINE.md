@@ -59,6 +59,9 @@ large unrelated diff.
 ## Data Access
 
 - Use the live API for core workflows.
+- Reuse the loaded shared records when leaving home. Refresh on session change,
+  home entry or explicit user/mutation refresh; cancel superseded bulk reads and
+  ignore their results. Do not issue another bulk load for every navigation click.
 - Avoid importing `mockData.js` into production-core flows.
 - Preserve optional/research simulations behind explicit flags or isolated
   surfaces.

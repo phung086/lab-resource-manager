@@ -41,6 +41,11 @@ and uncapped queue aggregation remain a separate API task for a larger productio
 workload. No new aggregate query or per-class fan-out is introduced here. Directory
 assignment requests now have at most four in flight. Superseded and unmounted
 directory reads are cancelled so stale responses cannot overwrite the current view.
+Shared application reads run on session change, home entry and explicit refresh or
+completed mutations; leaving home reuses the loaded records. A replacement read
+aborts the previous request group and only the current group may publish state.
+This removes a loading flicker observed in notification regression and avoids an
+extra bulk API read when users move to their next task.
 
 ## Design research and adopted decisions
 
@@ -57,6 +62,11 @@ copy uses the existing integrity-checked catalogs; original names, learning goal
 booking purposes, evidence and notes remain unchanged.
 
 ## Verification
+
+The completed validation snapshot below is code revision
+`dc909b16e9effaa9f1ecd3e7daae6a974c99bf59`. The later shared-read lifecycle fix
+adds eight real-API request-budget checks to the role suite; current-head results
+are recorded on PR #22.
 
 Local required frontend checks pass: catalog parity/integrity/source audit,
 locale recovery, lint (14 existing warnings, zero errors), TypeScript and production
@@ -75,7 +85,6 @@ entry points, exact-record navigation, validated filters, reload, locale draft
 continuity, permission-negative action links, no implicit writes and class-error
 recovery. Existing navigation and bilingual suites remain mandatory.
 
-Verified code revision: `dc909b16e9effaa9f1ecd3e7daae6a974c99bf59`.
 [CI run 36749791240](https://github.com/phung086/lab-resource-manager/actions/runs/36749791240)
 passed all required jobs, including:
 
