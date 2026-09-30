@@ -89,9 +89,11 @@ try {
       await page.locator('.home-resource-card').first().getByRole('button').click(); await page.locator('.calendar-view-switcher').waitFor();
       const selectedResource = new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('resource');
       check(Boolean(selectedResource), 'Resource preview opens calendar for its actual resource');
-      check(await page.locator('.calendar-toolbar select').first().inputValue() === selectedResource, 'Calendar selects the resource from the shortcut');
+      await page.locator(`#calendar-resource-select option[value="${selectedResource}"]`).waitFor({ state: 'attached' });
+      check(await page.locator('#calendar-resource-select').inputValue() === selectedResource, 'Calendar selects the resource from the shortcut');
       await page.reload(); await page.locator('.calendar-view-switcher').waitFor();
-      check(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('resource') === selectedResource && await page.locator('.calendar-toolbar select').first().inputValue() === selectedResource, 'Calendar resource survives reload');
+      await page.locator(`#calendar-resource-select option[value="${selectedResource}"]`).waitFor({ state: 'attached' });
+      check(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('resource') === selectedResource && await page.locator('#calendar-resource-select').inputValue() === selectedResource, 'Calendar resource survives reload');
       await home(page);
       await page.goto(`${base}/#/workspace/booking?booking=${bookings.pending.id}&action=APPROVE`); await page.getByRole('alert').filter({ hasText: catalogs.vi['ui.home.route.actionUnavailable'] }).waitFor();
       check(await page.getByRole('dialog').count() === 0, 'Student approval deep link cannot open staff action');
