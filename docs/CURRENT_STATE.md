@@ -1,5 +1,14 @@
 # Current Project State
 
+## Resource dossier refinement — 2026-09-30
+
+User-authorized continuation of draft PR #22: shared selective media gallery,
+public practical usage guides in existing resource JSON, guarded resource edits,
+restricted-booking feedback and workspace code splitting. See
+`docs/RESOURCE_DOSSIER_REFINEMENT_20260930.md` for usage, checks and limits.
+This does not advance PostgreSQL, live media/storage or production verification.
+
+
 ## Local LAB experience continuation — 2026-09-29
 
 User-authorized working-tree continuation, not a new numbered Batch or release.

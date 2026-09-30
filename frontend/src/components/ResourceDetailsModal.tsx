@@ -1,3 +1,4 @@
+import { ResourceUsageGuide } from "./ResourceUsageGuide";
 import { useLocale } from '../providers/LocaleProvider';
 import React from "react";
 import { ResourceGallery } from './ResourceGallery';
@@ -37,7 +38,7 @@ const maintenanceLabels: Record<string, string> = {
 };
 
 export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOpen, onClose, resource, onViewCalendar }) => {
-  const { tr, locale } = useLocale();
+  const { tr } = useLocale();
   if (!isOpen || !resource) return null;
   const bookings = resource.schedule?.bookings || resource.upcomingSchedule?.bookings || [];
   const maintenance = resource.schedule?.maintenanceWindows || resource.upcomingSchedule?.maintenanceWindows || [];
@@ -53,7 +54,7 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
       maxWidth="max-w-4xl"
       footer={<><button type="button" className="secondary-button" onClick={onClose}>{tr("Đóng")}</button>{onViewCalendar && <button className="primary-button" onClick={() => { onClose(); onViewCalendar(resource.id); }}>{tr("Xem lịch của tài nguyên")}</button>}</>}
     >
-      <ResourceGallery resourceId={resource.id} locale={locale} />
+      <ResourceGallery key={resource.id} resourceId={resource.id} initialItems={resource.media} />
       <div className="resource-detail-status-line">
         <span className={`resource-status-pill status-${String(resource.operationalStatus).toLowerCase()}`}>{tr(operationalLabels[resource.operationalStatus]) || resource.operationalStatus}</span>
         <span className={`resource-status-pill status-${String(resource.availability?.state || "unavailable").toLowerCase()}`}>{tr(availabilityLabels[resource.availability?.state]) || tr("Không thể đặt")}</span>
@@ -79,10 +80,12 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
         <p>{resource.description || tr("Chưa có mô tả.")}</p>
       </section>
 
-      {resource.specs && Object.keys(resource.specs).length > 0 && (
+      <ResourceUsageGuide guide={resource.specs?.usageGuide} />
+
+      {resource.specs && Object.keys(resource.specs).some(key => key !== "usageGuide") && (
         <section className="resource-detail-section">
           <h4>{tr("Thông số kỹ thuật đã lưu")}</h4>
-          <dl className="resource-spec-grid">{Object.entries(resource.specs).map(([key, value]) => <Detail key={key} label={key} value={String(value)} />)}</dl>
+          <dl className="resource-spec-grid">{Object.entries(resource.specs).filter(([key]) => key !== "usageGuide").map(([key, value]) => <Detail key={key} label={key} value={String(value)} />)}</dl>
         </section>
       )}
 

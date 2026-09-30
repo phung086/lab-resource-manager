@@ -1,3 +1,4 @@
+import { openWorkspace } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { chromium } from "playwright-core";
@@ -40,7 +41,7 @@ async function login(page, who) {
   await page.locator('input[type="email"]').fill(`${who}@phase-h.test`);
   await page.locator('input[type="password"]').first().fill("PhaseH!Pass2026");
   await page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click();
-  await page.locator(".sidebar-nav-item-2026").first().waitFor();
+  await openWorkspace(page);
 }
 
 const student = await api("/auth/login", null, { method: "POST", body: JSON.stringify({ email: "student@phase-h.test", password: "PhaseH!Pass2026" }) });
@@ -67,7 +68,7 @@ try {
 
   const adminPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await login(adminPage, "admin");
-  await adminPage.locator(".sidebar-nav-item-2026", { hasText: "Thanh toán" }).click();
+  await adminPage.locator('[data-nav-id="payments"]').click();
   await adminPage.getByRole("heading", { name: "Sổ giao dịch thanh toán" }).waitFor();
   const exceptionCard = adminPage.locator(".payment-card").filter({ hasText: "Phase H booking 21" });
   await exceptionCard.getByText("Cần xử lý thủ công").waitFor();

@@ -1,3 +1,4 @@
+import { openWorkspace } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -46,6 +47,7 @@ async function loginUi(page, email, password) {
     page.waitForResponse((response) => response.url().endsWith("/api/auth/login") && response.status() === 200),
     page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click()
   ]);
+  await openWorkspace(page);
 }
 
 function futureVietnamTime(daysAhead, hour, minute = 0) {
@@ -280,7 +282,7 @@ try {
     assert.equal(sidebarText.includes(hidden), false, `${hidden} must be hidden in the default demo`);
   }
 
-  const userNav = adminPage.locator(".sidebar-nav-item-2026", { hasText: /Quản Trị Người Dùng/i }).first();
+  const userNav = adminPage.locator('[data-nav-id="users"]').first();
   await userNav.click();
   await adminPage.getByRole("button", { name: /Tạo người dùng/i }).click();
   let dialog = adminPage.getByRole("dialog");
@@ -299,7 +301,7 @@ try {
   const staffContext = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const staffPage = await staffContext.newPage();
   await loginUi(staffPage, "demo.staff@lab.test", sharedPassword);
-  await staffPage.locator(".sidebar-nav-item-2026", { hasText: /Bảng Điều Khiển Vận Hành/i }).click();
+  await staffPage.locator('[data-nav-id="dashboard"]').click();
   await staffPage.getByRole("heading", { name: "Bảng điều khiển vận hành" }).waitFor();
   assert.ok((await staffPage.locator("main").innerText()).includes("Sự cố đang mở"));
   await staffPage.screenshot({ path: path.join(screenshotDir, "staff_graduation_dashboard.png"), fullPage: true });

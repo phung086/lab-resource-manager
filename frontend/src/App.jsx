@@ -36,24 +36,14 @@ import {
 import React, { useEffect, useMemo, useState } from "react";
 
 import { ApiError, apiRequest, getCurrentUser, hasStoredSession, login, logout, register, storeAuthResult } from "./api.js";
-import { SmartCalendarView } from "./components/SmartCalendarView.tsx";
-import { AdminResourceManagementView } from "./components/AdminResourceManagementView.tsx";
-import { ResourceManagementView } from "./components/ResourceManagementView.tsx";
-import { BookingOperationsPage } from "./pages/operations/BookingOperationsPage.tsx";
 import { QuickBookingModal } from "./components/QuickBookingModal.tsx";
 import { AuthLoginView } from "./components/AuthLoginView.tsx";
 import { AuthRegisterView } from "./components/AuthRegisterView.tsx";
 import { PublicLanding } from "./components/PublicLanding.tsx";
 import { LocaleProvider } from "./providers/LocaleProvider.tsx";
 import { WorkspaceHome } from "./pages/WorkspaceHome";
-import { StockPage, TeachingPage } from "./pages/LabWorkspace";
-import { MaintenancePage } from "./pages/MaintenancePage";
-import { ProfilePage } from "./pages/ProfilePage.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
-import { AccessUserManagement } from "./components/AccessUserManagement.tsx";
 import { NotificationCenter } from "./components/NotificationCenter.jsx";
-import { IncidentsPage } from "./pages/incidents/IncidentsPage.tsx";
-import { MonitoringDashboardPage } from "./pages/monitoring/MonitoringDashboardPage.tsx";
 import { hashForTab, tabFromHash } from "./workspaceRoutes.js";
 import {
   emptyBookingForm,
@@ -88,6 +78,18 @@ import {
   VietQrPaymentModal,
   WhatIfSimulationStudio
 } from "./research/ResearchFeatureRegistry";
+
+const SmartCalendarView = React.lazy(() => import("./components/SmartCalendarView.tsx").then(module => ({ default: module.SmartCalendarView })));
+const AdminResourceManagementView = React.lazy(() => import("./components/AdminResourceManagementView.tsx").then(module => ({ default: module.AdminResourceManagementView })));
+const ResourceManagementView = React.lazy(() => import("./components/ResourceManagementView.tsx").then(module => ({ default: module.ResourceManagementView })));
+const BookingOperationsPage = React.lazy(() => import("./pages/operations/BookingOperationsPage.tsx").then(module => ({ default: module.BookingOperationsPage })));
+const ProfilePage = React.lazy(() => import("./pages/ProfilePage.tsx").then(module => ({ default: module.ProfilePage })));
+const AccessUserManagement = React.lazy(() => import("./components/AccessUserManagement.tsx").then(module => ({ default: module.AccessUserManagement })));
+const IncidentsPage = React.lazy(() => import("./pages/incidents/IncidentsPage.tsx").then(module => ({ default: module.IncidentsPage })));
+const MonitoringDashboardPage = React.lazy(() => import("./pages/monitoring/MonitoringDashboardPage.tsx").then(module => ({ default: module.MonitoringDashboardPage })));
+const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage").then(module => ({ default: module.MaintenancePage })));
+const StockPage = React.lazy(() => import("./pages/LabWorkspace").then(module => ({ default: module.StockPage })));
+const TeachingPage = React.lazy(() => import("./pages/LabWorkspace").then(module => ({ default: module.TeachingPage })));
 
 let copy = getDictionary(defaultLocale);
 
@@ -397,6 +399,7 @@ function Application({ locale, setLocale }) {
         </div>
       )}
 
+      <React.Suspense fallback={<p className="empty-state" role="status">{locale === "en" ? "Loading workspace…" : "Đang tải không gian làm việc…"}</p>}>
       {/* REQUIRED CORE — Gated when passwordResetRequired */}
       {!user.passwordResetRequired && activeTab === "home" && (
         <WorkspaceHome
@@ -438,6 +441,8 @@ function Application({ locale, setLocale }) {
       {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
       {activeTab === "users" && <AccessUserManagement />}
+
+      </React.Suspense>
 
       {researchFeaturesEnabled && (
         <React.Suspense fallback={<p className="empty-state">Đang tải khu vực nghiên cứu...</p>}>

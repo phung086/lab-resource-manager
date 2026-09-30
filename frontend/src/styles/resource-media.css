@@ -6,3 +6,40 @@
 .lab-gallery-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .lab-gallery-choices button { max-width: 100%; white-space: normal; text-align: left; }
 .lab-gallery-choices button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-subtle); }
+
+/* Resource dossiers use existing white/navy tokens and the existing icon family. */
+.lab-gallery-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; color: var(--text-primary, #162f43); }
+.lab-gallery-heading > span { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.lab-gallery-heading small { color: var(--text-secondary, #475569); }
+.lab-resource-gallery figure { border: 1px solid var(--border, #d5dfe5); border-radius: 12px; overflow: hidden; }
+.lab-resource-gallery img, .lab-resource-gallery video { height: auto; aspect-ratio: 16/10; max-height: 420px; object-fit: contain; background: var(--surface-strong, #f1f5f9); }
+.lab-resource-gallery figcaption { display: grid; gap: 5px; padding: 16px; background: var(--surface, #fff); overflow-wrap: anywhere; }
+.lab-resource-gallery figcaption strong { color: var(--text-primary, #162f43); font-size: 14px; }
+.lab-resource-gallery a { text-decoration: underline; color: var(--accent, #174d70); }
+.lab-gallery-choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.lab-gallery-choices button { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 12px; border: 1px solid var(--border, #d5dfe5); border-radius: 8px; background: var(--surface, #fff); color: var(--text-primary, #162f43); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.lab-gallery-choices button > svg { flex-shrink: 0; }
+.lab-gallery-choices button > span { display: grid; gap: 2px; font-size: 13px; }
+.lab-gallery-choices small { font-size: 11px; color: var(--text-secondary, #475569); }
+.lab-gallery-choices button[aria-pressed="true"] { border-color: var(--accent, #174d70); background: var(--accent-subtle, #edf4f6); box-shadow: inset 3px 0 var(--accent, #174d70); }
+.lab-gallery-choices button:focus-visible, .resource-usage-guide summary:focus-visible { outline: 2px solid var(--accent, #174d70); outline-offset: 3px; }
+.lab-gallery-empty { min-height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 24px; border: 1px dashed var(--border, #d5dfe5); border-radius: 12px; color: var(--text-secondary, #475569); text-align: center; }
+.lab-gallery-empty p { margin: 0; }
+.resource-usage-guide { padding: 20px; border: 1px solid var(--border, #d5dfe5); border-radius: 12px; background: var(--surface, #fff); overflow-wrap: anywhere; }
+.resource-guide-heading { display: flex; align-items: center; gap: 10px; color: var(--text-primary, #162f43); }
+.resource-guide-heading h4 { margin: 0; font-size: 18px; }
+.resource-guide-note { margin: 12px 0 18px; font-size: 13px; line-height: 1.6; color: var(--text-secondary, #475569); }
+.resource-usage-guide details { border-top: 1px solid var(--border, #d5dfe5); }
+.resource-usage-guide summary { padding: 14px 0; min-height: 44px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.resource-usage-guide summary > span { margin-left: 10px; color: var(--text-secondary, #475569); font-size: 12px; font-weight: 400; }
+.resource-usage-guide ol { margin: 0 0 16px; padding-left: 24px; display: grid; gap: 12px; font-size: 14px; line-height: 1.65; }
+.resource-usage-guide li::marker { color: var(--accent, #174d70); font-weight: 600; }
+.resource-guide-safety { display: flex; align-items: flex-start; gap: 10px; padding: 14px; margin: 0 0 16px; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: 13px; }
+.resource-guide-safety > svg { flex-shrink: 0; }
+.resource-guide-safety p { margin: 6px 0 0; white-space: pre-line; line-height: 1.6; }
+.resource-guide-workflow summary > svg { vertical-align: middle; margin-right: 8px; }
+.resource-edit-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.resource-guide-editor { padding: 18px; margin: 20px 0; border: 1px solid var(--border, #d5dfe5); border-radius: 8px; display: grid; gap: 16px; min-width: 0; }
+.resource-guide-editor legend { font-weight: 600; padding: 0 8px; }
+.resource-guide-editor > p { margin: 0; color: var(--text-secondary, #475569); font-size: 13px; line-height: 1.6; }
+@media(max-width:560px) { .lab-gallery-choices { grid-template-columns: 1fr; } .resource-usage-guide { padding: 16px; } }

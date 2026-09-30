@@ -207,6 +207,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <button
                     key={item.id}
+                    data-nav-id={item.id}
                     type="button"
                     title={locale === "en" ? labels[item.id] || item.label : item.label}
                     onClick={() => { onSelectTab(item.id); setExpanded(false); }}

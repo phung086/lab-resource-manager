@@ -1,3 +1,4 @@
+import { openWorkspace } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -19,11 +20,12 @@ async function login(page, email) {
     page.waitForResponse((response) => response.url().endsWith("/api/auth/login") && response.status() === 200),
     page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click()
   ]);
+  await openWorkspace(page);
 }
 
 async function openMonitoring(page) {
   if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const nav = page.locator(".sidebar-nav-item-2026", { hasText: /Giám Sát Telemetry/i }).first();
+  const nav = page.locator('[data-nav-id="monitoring"]').first();
   await nav.waitFor({ timeout: 8000 });
   await nav.click();
   await page.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
@@ -82,7 +84,7 @@ try {
   const studentContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const studentPage = await studentContext.newPage();
   await login(studentPage, "b8.student@lab.test");
-  assert.equal(await studentPage.locator(".sidebar-nav-item-2026", { hasText: /Giám Sát Telemetry/i }).count(), 0);
+  assert.equal(await studentPage.locator('[data-nav-id="monitoring"]').count(), 0);
   const ordinaryDashboard = await studentPage.evaluate(async (backendUrl) => {
     const response = await fetch(`${backendUrl}/api/dashboard`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("lrm_token")}` }

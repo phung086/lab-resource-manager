@@ -4,12 +4,12 @@ import { ImageOff } from "lucide-react";
 
 /** Mount with the media URL as key so a replacement asset gets a fresh load state. */
 export function ResourceMediaPreview({ kind, url, alt }: { kind: "IMAGE" | "VIDEO"; url: string; alt: string }) {
-  const { tr } = useLocale();
+  const { tr, t } = useLocale();
   const [failed, setFailed] = useState(false);
   if (failed) return (
     <span className="catalog-media-failure" role="status">
       <ImageOff size={28} aria-hidden="true" />
-      <span>{tr("Không tải được")}{kind === "VIDEO" ? "video" : tr("ảnh")}: {alt}.</span>
+      <span>{kind === "VIDEO" ? t("Không tải được video", "Video could not be loaded") : t("Không tải được ảnh", "Image could not be loaded")}: {alt}.</span>
       <small>{tr("Bạn vẫn có thể xem thông tin và điều kiện sử dụng.")}</small>
     </span>
   );

@@ -8,7 +8,6 @@ import {
   DoorOpen,
   Info,
   Microscope,
-  Play,
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
@@ -17,6 +16,8 @@ import {
 import { apiRequest } from "../api.js";
 import { CANONICAL_BOOKING_STATUS_LABELS } from "../constants.js";
 import { GuestQuickBookingPanel } from "./GuestQuickBookingPanel";
+import { ResourceGallery } from "./ResourceGallery";
+import { ResourceUsageGuide, UsageGuide } from "./ResourceUsageGuide";
 import { ResourceMediaPreview } from "./ResourceMediaPreview";
 import { formatVietnamDateTime } from "../utils/timezone";
 import "../styles/public-catalog.css";
@@ -44,6 +45,7 @@ type Resource = {
   code: string;
   name: string;
   description?: string;
+  specs?: { usageGuide?: UsageGuide };
   category?: string;
   location: string;
   capacity: number;
@@ -104,6 +106,7 @@ export function PublicResourceCatalog({
 }) {
   const { tr, t } = useLocale();
   const [resources, setResources] = useState<Resource[]>([]);
+  const [guestBookingOpened, setGuestBookingOpened] = useState(false);
   const [selected, setSelected] = useState<Resource | null>(null);
   const [schedule, setSchedule] = useState<SchedulePayload | null>(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
@@ -168,6 +171,7 @@ export function PublicResourceCatalog({
 
   async function openDetails(row: Resource, rememberOpener = true) {
     const request = ++detailRequest.current;
+    if (rememberOpener && selected?.id !== row.id) setGuestBookingOpened(false);
     if (rememberOpener) detailOpener.current = document.activeElement as HTMLElement;
     setSelected(row);
     setDetailLoading(true);
@@ -215,6 +219,10 @@ export function PublicResourceCatalog({
 
   // Compute eligibility verdict for selected resource
   function computeEligibility(resource: Resource) {
+    if (resource.bookingState !== "bookable") return {
+      status: "RESTRICTED", label: t("Hạn chế đặt lịch", "Booking restricted"),
+      message: t("Tài nguyên hiện không nhận đặt lịch tự phục vụ. Liên hệ cán bộ LAB để được hướng dẫn.", "Self-service booking is not available for this resource. Contact LAB staff for guidance."), type: "danger"
+    };
     const isPhysicalOk = ["AVAILABLE", "IN_USE"].includes(resource.operationalStatus);
     if (!isPhysicalOk) {
       return {
@@ -383,34 +391,8 @@ export function PublicResourceCatalog({
 
           <div className="catalog-detail-layout">
             <div className="catalog-media-gallery">
-              {selected.media?.length ? (
-                selected.media.map((item) => (
-                  <figure key={item.id}>
-                    <ResourceMediaPreview
-                      key={item.url}
-                      kind={item.kind}
-                      url={item.url}
-                      alt={item.altText || item.title || selected.name}
-                    />
-                    <figcaption>
-                      <strong>{item.title}</strong>
-                      <span>
-                        {tr("Tư liệu minh họa ·")}{item.credit || tr("Nguồn do quản trị viên cung cấp")}{" "}
-                        {item.license && `· ${item.license}`}
-                      </span>
-                      {item.sourceUrl && (
-                        <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">
-                          {tr("Xem nguồn")}</a>
-                      )}
-                    </figcaption>
-                  </figure>
-                ))
-              ) : (
-                <div className="catalog-no-media">
-                  <Play size={34} aria-hidden="true" />
-                  <p>{tr("Chưa có ảnh hoặc video được xác minh nguồn cho tài nguyên này.")}</p>
-                </div>
-              )}
+              <ResourceGallery key={selected.id} resourceId={selected.id} initialItems={selected.media} />
+              <ResourceUsageGuide guide={selected.specs?.usageGuide} />
             </div>
 
             <div className="catalog-facts">
@@ -429,7 +411,7 @@ export function PublicResourceCatalog({
                       ) : (
                         <Info size={18} aria-hidden="true" />
                       )}
-                      <strong>{tr("Khả năng sử dụng:")}{verdict.label}</strong>
+                      <strong>{tr("Khả năng sử dụng:")}{" "}{verdict.label}</strong>
                     </div>
                     <p>{verdict.message}</p>
                   </div>
@@ -469,8 +451,8 @@ export function PublicResourceCatalog({
                   <div>
                     <dt>{tr("Khung giờ quy định")}</dt>
                     <dd>
-                      {selected.laboratory.labPolicy.workDayStartHour || 8}:00 –{" "}
-                      {selected.laboratory.labPolicy.workDayEndHour || 18}:00{" "}
+                      {selected.laboratory.labPolicy.workDayStartHour ?? 8}:00 –{" "}
+                      {selected.laboratory.labPolicy.workDayEndHour ?? 18}:00{" "}
                       {selected.laboratory.labPolicy.allowWeekend ? tr("(Mở cả cuối tuần)") : tr("(Ngày làm việc)")}
                     </dd>
                   </div>
@@ -531,7 +513,11 @@ export function PublicResourceCatalog({
 
               {/* Guest Quick Booking Section */}
               {onGuestBookingComplete && !detailLoading && !detailError && computeEligibility(selected).type !== "danger" && (
-                <GuestQuickBookingPanel key={selected.id} resource={selected} onComplete={onGuestBookingComplete} />
+                <details key={selected.id} className="catalog-guest-booking" onToggle={event => { if (event.currentTarget.open) setGuestBookingOpened(true); }}>
+                  <summary>{t("Đặt lịch nhanh cho khách ngoài trường", "Quick booking for external visitors")}</summary>
+                  <p>{t("Xác minh email và kiểm tra điều kiện trước khi gửi yêu cầu. Bạn có thể mở phần này khi cần đặt lịch.", "Verify your email and access requirements before submitting a request. Open this section when you are ready to book.")}</p>
+                  {guestBookingOpened && <GuestQuickBookingPanel key={selected.id} resource={selected} onComplete={onGuestBookingComplete} />}
+                </details>
               )}
             </div>
           </div>

@@ -1,3 +1,4 @@
+import { openWorkspace } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import { chromium } from "playwright-core";
 
@@ -21,13 +22,14 @@ async function loginAndVerify({ email, fullName, visible, hidden }) {
     page.waitForResponse((response) => response.url().endsWith("/api/auth/login") && response.status() === 200),
     page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click()
   ]);
+  await openWorkspace(page);
   await page.getByText(fullName, { exact: true }).first().waitFor();
 
-  for (const label of visible) await assert.doesNotReject(() => page.locator(".sidebar-nav-item-2026", { hasText: label }).waitFor());
-  for (const label of hidden) assert.equal(await page.locator(".sidebar-nav-item-2026", { hasText: label }).count(), 0);
+  for (const label of visible) await assert.doesNotReject(() => page.locator(`[data-nav-id="${label}"]`).waitFor());
+  for (const label of hidden) assert.equal(await page.locator(`[data-nav-id="${label}"]`).count(), 0);
 
   if (email === "e2e.admin@lab.test") {
-    await page.locator(".sidebar-nav-item-2026", { hasText: "Quản Trị Người Dùng" }).click();
+    await page.locator('[data-nav-id="users"]').click();
     await page.getByText("Batch 2 Staff", { exact: true }).waitFor();
     const staffRow = page.locator("tr", { hasText: "Batch 2 Staff" });
     assert.equal(await staffRow.locator("select").first().inputValue(), "LAB_STAFF");
@@ -39,7 +41,7 @@ async function loginAndVerify({ email, fullName, visible, hidden }) {
   await page.getByText(fullName, { exact: true }).first().waitFor();
 
   await page.locator(".user-avatar-btn-2026").click();
-  await page.getByRole("button", { name: /Đăng Xuất Khỏi Lab/i }).click();
+  await page.getByRole("button", { name: /Đăng xuất/i }).click();
   await page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).waitFor();
   assert.equal(await page.evaluate(() => localStorage.getItem("lrm_token")), null);
   assert.deepEqual(failures, []);
@@ -55,26 +57,26 @@ try {
   await loginAndVerify({
     email: "e2e.student@lab.test",
     fullName: "Batch 2 Student",
-    visible: ["Lịch Đặt Khung Giờ", "Lịch Đặt Của Tôi", "Danh Mục Tài Nguyên"],
-    hidden: ["Bảng Điều Khiển Vận Hành", "Quản Trị Người Dùng"]
+    visible: ["smart_calendar", "bookings", "resources"],
+    hidden: ["dashboard", "users"]
   });
   await loginAndVerify({
     email: "e2e.staff@lab.test",
     fullName: "Batch 2 Staff",
-    visible: ["Bảng Điều Khiển Vận Hành", "Lịch Bảo Trì"],
-    hidden: ["Quản Trị Người Dùng"]
+    visible: ["dashboard", "maintenance"],
+    hidden: ["users"]
   });
   await loginAndVerify({
     email: "e2e.admin@lab.test",
     fullName: "Batch 2 Admin",
-    visible: ["Bảng Điều Khiển Vận Hành", "Quản Trị Người Dùng"],
+    visible: ["dashboard", "users"],
     hidden: []
   });
   await loginAndVerify({
     email: "e2e.lecturer@lab.test",
     fullName: "Batch 2 Lecturer",
-    visible: ["Lịch Đặt Của Tôi"],
-    hidden: ["Bảng Điều Khiển Vận Hành", "Quản Trị Người Dùng"]
+    visible: ["bookings"],
+    hidden: ["dashboard", "users"]
   });
   console.log("Batch 2 frontend auth E2E: PASS (unauthenticated, STUDENT, LAB_STAFF, ADMIN, LECTURER)");
 } finally {

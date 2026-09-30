@@ -1,3 +1,4 @@
+import { openWorkspace } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -18,11 +19,12 @@ async function login(page, email) {
     page.waitForResponse((response) => response.url().endsWith("/api/auth/login") && response.status() === 200),
     page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click()
   ]);
+  await openWorkspace(page);
 }
 
 async function openOperations(page) {
   if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const nav = page.locator(".sidebar-nav-item-2026", { hasText: /Vận Hành Booking|Lịch Đặt Của Tôi/i }).first();
+  const nav = page.locator('[data-nav-id="bookings"]').first();
   await nav.waitFor({ timeout: 5000 });
   await nav.click();
   await page.locator("[data-testid=\"operations-view\"]").waitFor({ timeout: 5000 });

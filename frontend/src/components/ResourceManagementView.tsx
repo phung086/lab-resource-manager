@@ -90,11 +90,12 @@ const emptyForm = {
   capacity: "1",
   requiresApproval: false,
   manufacturer: "",
-  model: ""
+  model: "",
+  beforeUse: "", steps: "", afterUse: "", safetyNotes: ""
 };
 
 export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ user, managementMode = false, initialSearch = "", onViewCalendar }) => {
-  const { tr } = useLocale();
+  const { tr, t } = useLocale();
   const [resources, setResources] = useState<any[]>([]);
   const [laboratories, setLaboratories] = useState<any[]>([]);
   const [filters, setFilters] = useState<Filters>({ ...initialFilters, search: initialSearch });
@@ -109,6 +110,8 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [detail, setDetail] = useState<any | null>(null);
+  const detailRequest = useRef(0);
+  useEffect(() => () => { detailRequest.current += 1; }, []);
   const [detailLoadingId, setDetailLoadingId] = useState("");
   const [statusResource, setStatusResource] = useState<any | null>(null);
   const [retireResource, setRetireResource] = useState<any | null>(null);
@@ -186,7 +189,11 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       capacity: String(resource.capacity || 1),
       requiresApproval: Boolean(resource.requiresApproval),
       manufacturer: resource.manufacturer || "",
-      model: resource.model || ""
+      model: resource.model || "",
+      beforeUse: (resource.specs?.usageGuide?.beforeUse || []).join("\n"),
+      steps: (resource.specs?.usageGuide?.steps || []).join("\n"),
+      afterUse: (resource.specs?.usageGuide?.afterUse || []).join("\n"),
+      safetyNotes: resource.specs?.usageGuide?.safetyNotes || ""
     });
     setFormError("");
     setShowForm(true);
@@ -194,6 +201,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
 
   async function submitForm(event: React.FormEvent) {
     event.preventDefault();
+    if (saving) return;
     setSaving(true);
     setFormError("");
     setNotice("");
@@ -210,7 +218,16 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       capacity: Number(form.capacity),
       requiresApproval: form.requiresApproval,
       manufacturer: form.manufacturer || null,
-      model: form.model || null
+      model: form.model || null,
+      specs: {
+        ...(editing?.specs || {}),
+        usageGuide: {
+          beforeUse: form.beforeUse.split(/\r?\n/).map(line => line.trim()).filter(Boolean),
+          steps: form.steps.split(/\r?\n/).map(line => line.trim()).filter(Boolean),
+          afterUse: form.afterUse.split(/\r?\n/).map(line => line.trim()).filter(Boolean),
+          safetyNotes: form.safetyNotes.trim()
+        }
+      }
     };
     try {
       if (editing) {
@@ -232,6 +249,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
   }
 
   async function openDetail(resource: any) {
+    const request = ++detailRequest.current;
     setDetailLoadingId(resource.id);
     setError("");
     try {
@@ -240,11 +258,12 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
         apiRequest(`/resources/${resource.id}/schedule`),
         apiRequest(`/resources/${resource.id}/history`)
       ]);
+      if (request !== detailRequest.current) return;
       setDetail({ ...record, schedule, history: history.timeline || [] });
     } catch (requestError: any) {
-      setError(requestError?.message || tr("Không thể tải chi tiết tài nguyên."));
+      if (request === detailRequest.current) setError(requestError?.message || tr("Không thể tải chi tiết tài nguyên."));
     } finally {
-      setDetailLoadingId("");
+      if (request === detailRequest.current) setDetailLoadingId("");
     }
   }
 
@@ -312,6 +331,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
           <div className="panel-title"><Edit3 aria-hidden="true" /><h2 id="resource-editor-title">{editing ? `Chỉnh sửa ${editing.code}` : tr("Tạo tài nguyên mới")}</h2></div>
           {formError && <div ref={errorRef} tabIndex={-1} className="alert danger" role="alert">{formError}</div>}
           <form className="booking-form" onSubmit={submitForm}>
+            <fieldset disabled={saving} className="resource-edit-fields">
             <div className="form-grid">
               <label htmlFor="resource-code"><span>{tr("Mã tài nguyên *")}</span><input id="resource-code" required maxLength={64} value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} /></label>
               <label htmlFor="resource-name"><span>{tr("Tên tài nguyên *")}</span><input id="resource-name" required maxLength={255} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
@@ -325,7 +345,14 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
               <label htmlFor="resource-model"><span>Model</span><input id="resource-model" maxLength={255} value={form.model} onChange={(event) => setForm({ ...form, model: event.target.value })} /></label>
             </div>
             <label htmlFor="resource-description"><span>{tr("Mô tả")}</span><textarea id="resource-description" rows={3} maxLength={2000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+            <fieldset className="resource-guide-editor">
+              <legend>{t('Hướng dẫn sử dụng thực tế', 'Practical usage instructions')}</legend>
+              <p>{t('Mỗi dòng là một bước (tối đa 20 bước, 500 ký tự mỗi bước). Chỉ ghi quy trình đã được đơn vị xác minh cho đúng model.', 'One step per line (up to 20 steps, 500 characters each). Publish only instructions verified by your unit for this model.')}</p>
+              {([['beforeUse', t('Chuẩn bị & kiểm tra khi nhận', 'Preparation & handover checks')], ['steps', t('Các bước vận hành', 'Operating steps')], ['afterUse', t('Kiểm tra & hoàn trả', 'Return checks')]] as const).map(([key, label]) => <label key={key} htmlFor={`resource-guide-${key}`}><span>{label}</span><textarea id={`resource-guide-${key}`} rows={3} maxLength={10020} value={form[key]} onChange={event => setForm({ ...form, [key]: event.target.value })} /></label>)}
+              <label htmlFor="resource-guide-safety"><span>{t('Lưu ý an toàn', 'Safety notes')}</span><textarea id="resource-guide-safety" rows={3} maxLength={2000} value={form.safetyNotes} onChange={event => setForm({ ...form, safetyNotes: event.target.value })} /></label>
+            </fieldset>
             <label className="check-line"><input type="checkbox" checked={form.requiresApproval} onChange={(event) => setForm({ ...form, requiresApproval: event.target.checked })} /><span>{tr("Yêu cầu phê duyệt trước khi đặt")}</span></label>
+            </fieldset>
             <div className="resource-form-actions">
               <button type="button" className="secondary-button" onClick={resetForm} disabled={saving}>{tr("Hủy")}</button>
               <button type="submit" className="primary-button" disabled={saving}>{saving ? tr("Đang lưu...") : editing ? tr("Lưu thay đổi") : tr("Tạo tài nguyên")}</button>

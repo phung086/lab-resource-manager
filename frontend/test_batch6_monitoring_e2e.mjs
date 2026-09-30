@@ -1,3 +1,4 @@
+import { openWorkspace } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -18,11 +19,12 @@ async function login(page, email) {
     page.waitForResponse((response) => response.url().endsWith("/api/auth/login") && response.status() === 200),
     page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click()
   ]);
+  await openWorkspace(page);
 }
 
-async function openNav(page, pattern) {
+async function openNav(page, id) {
   if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const nav = page.locator(".sidebar-nav-item-2026", { hasText: pattern }).first();
+  const nav = page.locator(`[data-nav-id="${id}"]`).first();
   await nav.waitFor({ timeout: 8000 });
   await nav.click();
 }
@@ -33,7 +35,7 @@ try {
   const studentPage = await studentContext.newPage();
   await login(studentPage, "b6.student@lab.test");
 
-  await openNav(studentPage, /Thông Báo/i);
+  await openNav(studentPage, "escalations");
   await studentPage.locator("main").getByRole("heading", { name: "Trung tâm thông báo" }).waitFor();
   await studentPage.getByText("Batch 6 lịch sắp bắt đầu").first().waitFor({ timeout: 5000 });
   assert.equal(await studentPage.getByText("Batch 6 lịch sắp bắt đầu").count(), 1);
@@ -49,7 +51,7 @@ try {
   await studentPage.screenshot({ path: path.join(screenshotDir, "student_notifications_desktop.png"), fullPage: true });
 
   console.log("=== BATCH 6 STUDENT INCIDENT REPORT ===");
-  await openNav(studentPage, /Sự Cố Tài Nguyên/i);
+  await openNav(studentPage, "incidents");
   await studentPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
   assert.equal(await studentPage.getByText("Batch 6 sự cố phòng B").count(), 1);
   await studentPage.getByRole("button", { name: "Báo cáo sự cố" }).click();
@@ -71,7 +73,7 @@ try {
   const staffContext = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const staffPage = await staffContext.newPage();
   await login(staffPage, "b6.staff@lab.test");
-  await openNav(staffPage, /Sự Cố Tài Nguyên/i);
+  await openNav(staffPage, "incidents");
   await staffPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
   await staffPage.getByText("Batch 6 báo cáo từ sinh viên").waitFor();
   assert.equal(await staffPage.getByText("Batch 6 quạt làm mát bất thường").count(), 1);
@@ -105,7 +107,7 @@ try {
   await staffPage.screenshot({ path: path.join(screenshotDir, "staff_incident_resolution.png"), fullPage: true });
 
   console.log("=== BATCH 6 TELEMETRY STATES ===");
-  await openNav(staffPage, /Giám Sát Telemetry/i);
+  await openNav(staffPage, "monitoring");
   await staffPage.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
   const dashboardText = await staffPage.locator("main").innerText();
   for (const state of ["HEALTHY", "WARNING", "STALE", "UNAVAILABLE", "NO_DATA"]) {
@@ -123,11 +125,11 @@ try {
   const foreignContext = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const foreignPage = await foreignContext.newPage();
   await login(foreignPage, "b6.foreign.staff@lab.test");
-  await openNav(foreignPage, /Sự Cố Tài Nguyên/i);
+  await openNav(foreignPage, "incidents");
   await foreignPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
   assert.equal(await foreignPage.getByText("Batch 6 sự cố phòng B").count(), 1);
   assert.equal(await foreignPage.getByText("Batch 6 quạt làm mát bất thường").count(), 0);
-  await openNav(foreignPage, /Giám Sát Telemetry/i);
+  await openNav(foreignPage, "monitoring");
   await foreignPage.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
   const foreignDashboard = await foreignPage.locator("main").innerText();
   assert.ok(foreignDashboard.includes("Thiết bị phòng B"));
@@ -138,7 +140,7 @@ try {
   const adminContext = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const adminPage = await adminContext.newPage();
   await login(adminPage, "b6.admin@lab.test");
-  await openNav(adminPage, /Giám Sát Telemetry/i);
+  await openNav(adminPage, "monitoring");
   await adminPage.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
   const adminDashboard = await adminPage.locator("main").innerText();
   assert.ok(adminDashboard.includes("Máy đo môi trường A"));
@@ -149,7 +151,7 @@ try {
   const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const mobilePage = await mobileContext.newPage();
   await login(mobilePage, "b6.staff@lab.test");
-  await openNav(mobilePage, /Giám Sát Telemetry/i);
+  await openNav(mobilePage, "monitoring");
   await mobilePage.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
   assert.equal(await mobilePage.locator(".telemetry-status-card").first().isVisible(), true);
   await mobilePage.screenshot({ path: path.join(screenshotDir, "staff_dashboard_mobile.png"), fullPage: true });
