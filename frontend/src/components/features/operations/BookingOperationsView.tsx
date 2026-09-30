@@ -53,6 +53,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   const [routeAction, setRouteAction] = useState(() => routeParams().get("action") || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionLinkError, setActionLinkError] = useState("");
   const [success, setSuccess] = useState<LocaleMessage>("");
   const [busyId, setBusyId] = useState("");
   const [actionState, setActionState] = useState<{ action: BookingAction; booking: BookingRecord } | null>(null);
@@ -78,7 +79,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     if (loading || error || !routeAction) return;
     const booking = bookings.find(row => row.id === linkedBookingId);
     if (booking && canOpenBookingAction(booking, routeAction, user)) setActionState({ action: routeAction, booking });
-    else setError("ui.home.route.actionUnavailable");
+    else setActionLinkError("ui.home.route.actionUnavailable");
     setRouteAction("");
   }, [loading, error, routeAction, bookings, linkedBookingId, user]);
 
@@ -87,7 +88,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     window.history.replaceState(null, "", `${window.location.hash.split("?")[0]}${params.size ? `?${params}` : ""}`);
   }
   function selectFilter(key: FilterKey) {
-    setFilter(key); setLinkedBookingId(null); clearRouteAction();
+    setFilter(key); setLinkedBookingId(null); setActionLinkError(""); clearRouteAction();
     const params = new URLSearchParams({ filter: key });
     window.history.replaceState(null, "", `${window.location.hash.split("?")[0]}?${params}`);
   }
@@ -177,6 +178,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
 
 
       {error && <div className="alert danger" role="alert"><AlertCircle size={16} /> {translate(error)}</div>}
+      {actionLinkError && <div className="alert warning" role="alert"><AlertCircle size={16} /> {translate(actionLinkError)}</div>}
       {success && <div className="alert success" role="status" aria-live="polite">{translate(success)}</div>}
 
       {linkedBookingId && <p>{tr("ui.viewing_the_booking_linked_from_13fda414")}<a href="#/workspace/booking">{tr("ui.view_all_bookings_a9efade5")}</a></p>}

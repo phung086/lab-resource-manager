@@ -93,8 +93,9 @@ try {
       await page.reload(); await page.locator('.calendar-view-switcher').waitFor();
       check(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('resource') === selectedResource && await page.locator('.calendar-toolbar select').first().inputValue() === selectedResource, 'Calendar resource survives reload');
       await home(page);
-      await page.goto(`${base}/#/workspace/booking?booking=${bookings.pending.id}&action=APPROVE`); await page.locator('.operations-view .alert.danger').waitFor();
+      await page.goto(`${base}/#/workspace/booking?booking=${bookings.pending.id}&action=APPROVE`); await page.getByRole('alert').filter({ hasText: catalogs.vi['ui.home.route.actionUnavailable'] }).waitFor();
       check(await page.getByRole('dialog').count() === 0, 'Student approval deep link cannot open staff action');
+      check(await page.locator('.operation-card').filter({ hasText: 'Role UI pending' }).count() === 1, 'Unavailable action preserves the authorised booking details');
       await home(page);
     }
     if (['student', 'lecturer', 'admin'].includes(role)) {
