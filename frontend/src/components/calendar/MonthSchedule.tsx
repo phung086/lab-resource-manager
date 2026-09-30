@@ -1,3 +1,4 @@
+import { translate } from "../../i18n.js";
 import { useLocale } from '../../providers/LocaleProvider';
 import React from "react";
 import { Plus } from "lucide-react";
@@ -13,7 +14,7 @@ export interface MonthScheduleProps {
   onSelectBooking: (booking: any) => void;
 }
 
-const DAY_NAMES = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ Nhật"];
+const DAY_NAMES = ["ui.mon_fe6231fd", "ui.tue_c5e68032", "ui.wed_6cc94523", "ui.thu_62ec0a88", "ui.fri_ae51f616", "ui.sat_5b930566", "ui.sun_f8b05b5c"];
 
 export const MonthSchedule: React.FC<MonthScheduleProps> = ({
   anchorDate,
@@ -65,8 +66,8 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
           onClick={() => onSelectSlot(dayDateStr, "09:00")}
           aria-label={
             selectedResourceName
-              ? `Đặt ${selectedResourceName} ngày ${dayDateStr}`
-              : `Đặt lịch ngày ${dayDateStr}`
+              ? translate("ui.book_on_df27a9ce", { value0: selectedResourceName, value1: dayDateStr })
+              : translate("ui.book_on_69bca5e1", { value0: dayDateStr })
           }
           className="calendar-month-day-action flex items-center justify-between w-full text-left cursor-pointer"
         >
@@ -93,12 +94,12 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
           ))}
           {dayEvents.length > 3 && (
             <span className="calendar-month-more text-[10px] font-medium">
-              +{dayEvents.length - 3} {tr("lịch khác")}</span>
+              +{dayEvents.length - 3} {tr("ui.more_bookings_c2975333")}</span>
           )}
         </div>
 
         <div className="calendar-month-count text-[10px]">
-          {dayEvents.length > 0 ? `${dayEvents.length} lịch` : ""}
+          {dayEvents.length > 0 ? translate("ui.bookings_bf612628", { value0: dayEvents.length }) : ""}
         </div>
       </div>
     );

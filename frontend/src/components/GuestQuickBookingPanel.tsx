@@ -1,3 +1,5 @@
+import type { LocaleMessage } from "../providers/LocaleProvider";
+import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -37,21 +39,21 @@ function formatMoney(value: number) {
 }
 
 const categoryLabels: Record<string, string> = {
-  ROOM: "Phòng LAB",
-  EQUIPMENT: "Thiết bị",
-  MACHINE: "Máy móc",
-  EXPERIMENT_KIT: "Bộ thí nghiệm",
-  MATERIAL: "Vật tư"
+  ROOM: "ui.lab_room_8ed94274",
+  EQUIPMENT: "ui.resources_eb706979",
+  MACHINE: "ui.machine_1d4b86ad",
+  EXPERIMENT_KIT: "ui.experiment_kit_0acb51cf",
+  MATERIAL: "ui.material_23ab10cc"
 };
 
 const operationalLabels: Record<string, string> = {
-  AVAILABLE: "Khả dụng",
-  IN_USE: "Đang sử dụng",
-  MAINTENANCE: "Đang bảo trì",
-  CALIBRATION: "Đang hiệu chuẩn",
-  BROKEN: "Đang hỏng",
-  RETIRED: "Ngừng sử dụng",
-  OFFLINE: "Ngoại tuyến"
+  AVAILABLE: "ui.available_73dc3284",
+  IN_USE: "ui.in_use_a07a3647",
+  MAINTENANCE: "ui.under_maintenance_746ec905",
+  CALIBRATION: "ui.under_calibration_779c1ea8",
+  BROKEN: "ui.broken_53e74bf5",
+  RETIRED: "ui.offline_b4f199c3",
+  OFFLINE: "ui.offline_96a8bb03"
 };
 
 import { mapOtpErrorCode } from "../utils/otpErrors.js";
@@ -68,8 +70,8 @@ export function GuestQuickBookingPanel({
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Step 1: Resource & Booking fields
-  const [title, setTitle] = useState(`Đặt nhanh ${resource.name}`);
-  const [purpose, setPurpose] = useState(tr("Sử dụng phòng LAB mở / hợp tác học thuật"));
+  const [title, setTitle] = useState(translate("ui.quick_booking_for_f8449101", { value0: resource.name }));
+  const [purpose, setPurpose] = useState(tr("ui.open_lab_use_academic_collaboration_fe1ad425"));
   const [selectedDate, setSelectedDate] = useState(() => getVietnamTodayDateString());
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("11:00");
@@ -93,7 +95,7 @@ export function GuestQuickBookingPanel({
   const [busyOtp, setBusyOtp] = useState(false);
   const [busyBooking, setBusyBooking] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<LocaleMessage>("");
   const [error, setError] = useState("");
 
   const cooldownTimerRef = useRef<any>(null);
@@ -113,7 +115,7 @@ export function GuestQuickBookingPanel({
   }, [currentError]);
 
   useEffect(() => {
-    setTitle(`Đặt nhanh ${resource.name}`);
+    setTitle(translate("ui.quick_booking_for_f8449101", { value0: resource.name }));
     setQuote(null);
     setPricingRules([]);
     setPurposeCode("");
@@ -126,7 +128,7 @@ export function GuestQuickBookingPanel({
         }
       })
       .catch((cause: Error) => {
-        if (active) setQuoteError(cause.message || "Không tải được bảng phí.");
+        if (active) setQuoteError(cause.message || "ui.could_not_load_pricing_aade6322");
       });
     return () => {
       active = false;
@@ -155,7 +157,7 @@ export function GuestQuickBookingPanel({
         });
         if (active) setQuote({ ...result, key: quoteKey });
       } catch (cause: any) {
-        if (active) setQuoteError(cause?.message || tr("Không tính được phí sử dụng."));
+        if (active) setQuoteError(cause?.message || "ui.could_not_calculate_usage_fee_8422b88f");
       }
     }, 250);
     return () => {
@@ -190,23 +192,23 @@ export function GuestQuickBookingPanel({
     }
 
     if (!title.trim()) {
-      return invalid(tr("Vui lòng nhập tiêu đề lịch đặt."));
+      return invalid(tr("ui.enter_a_booking_title_c05aa504"));
     }
     if (!purpose.trim()) {
-      return invalid(tr("Vui lòng nhập mục đích sử dụng."));
+      return invalid(tr("ui.enter_the_purpose_of_your_2256a6ae"));
     }
     if (!selectedDate) {
-      return invalid(tr("Vui lòng chọn ngày sử dụng."));
+      return invalid(tr("ui.choose_a_date_5b0f76c4"));
     }
     const today = getVietnamTodayDateString();
     if (selectedDate < today) {
-      return invalid(tr("Ngày sử dụng không được trong quá khứ."));
+      return invalid(tr("ui.the_booking_date_cannot_be_f83fc184"));
     }
-    if (!startTime || !endTime) return invalid(tr("Vui lòng nhập giờ bắt đầu và giờ kết thúc."));
+    if (!startTime || !endTime) return invalid(tr("ui.enter_start_and_end_times_dd573c8f"));
     if (startTime >= endTime) {
-      return invalid(tr("Giờ bắt đầu phải trước giờ kết thúc."));
+      return invalid(tr("ui.start_time_must_be_before_b0b279ec"));
     }
-    if (!quote || quote.key !== quoteKey) return invalid(quoteError || tr("Vui lòng chờ phí sử dụng được cập nhật trước khi tiếp tục."));
+    if (!quote || quote.key !== quoteKey) return invalid(quoteError || tr("ui.wait_for_the_fee_to_077bf617"));
     if (advance) setStep(2);
     return true;
   }
@@ -218,20 +220,20 @@ export function GuestQuickBookingPanel({
     setStep2Error("");
 
     if (!fullName.trim() || fullName.trim().length < 2) {
-      setStep2Error(tr("Họ tên phải có ít nhất 2 ký tự."));
+      setStep2Error("ui.full_name_must_have_at_9c55a1b6");
       return;
     }
     if (!email.trim() || !email.includes("@")) {
-      setStep2Error(tr("Vui lòng nhập địa chỉ email hợp lệ."));
+      setStep2Error("ui.enter_a_valid_email_address_7b84c8c5");
       return;
     }
     const cleanPhone = phone.trim().replace(/[^\d+]/g, "");
     if (!cleanPhone || cleanPhone.length < 9 || cleanPhone.length > 20) {
-      setStep2Error(tr("Số điện thoại phải từ 9 đến 20 chữ số."));
+      setStep2Error("ui.phone_number_must_contain_9_e6d51790");
       return;
     }
     if (!address.addressLine.trim() || !address.provinceCode || !address.wardCode) {
-      setStep2Error(tr("Vui lòng chọn đầy đủ địa chỉ Việt Nam."));
+      setStep2Error("ui.complete_your_vietnam_address_ee486855");
       return;
     }
     setStep(3);
@@ -250,9 +252,9 @@ export function GuestQuickBookingPanel({
       setOtpSent(true);
       const cooldown = response?.resendAfterSeconds || 60;
       setResendCooldown(cooldown);
-      setMessage(`Mã OTP đã được gửi tới ${email}. Mã hết hạn sau 10 phút.`);
+      setMessage({ key: "ui.an_otp_has_been_sent_baef8802", params: { value0: email } });
     } catch (cause: any) {
-      setError(mapOtpErrorCode(cause?.code, cause?.message || tr("Không gửi được OTP.")));
+      setError(mapOtpErrorCode(cause?.code, cause?.message || "ui.could_not_send_verification_code_158cab3e"));
     } finally {
       setBusyOtp(false);
     }
@@ -262,7 +264,7 @@ export function GuestQuickBookingPanel({
     event.preventDefault();
     if (busyBooking || !quote || quote.key !== quoteKey) return;
     if (!otpCode || otpCode.length !== 6) {
-      setError(tr("Vui lòng nhập đủ 6 chữ số mã OTP."));
+      setError("ui.enter_the_6_digit_verification_0e45892f");
       return;
     }
     setBusyBooking(true);
@@ -291,31 +293,31 @@ export function GuestQuickBookingPanel({
       });
       if (result.requiresLogin) {
         setOtpCode("");
-        setMessage(tr("Đặt lịch thành công. Tài khoản đã tồn tại; vui lòng đăng nhập bằng mật khẩu hiện tại để tiếp tục."));
+        setMessage("ui.booking_saved_your_account_already_7ec46a96");
       }
       onComplete(result);
     } catch (cause: any) {
-      setError(mapOtpErrorCode(cause?.code, cause?.message || tr("Không hoàn tất được đặt lịch.")));
+      setError(mapOtpErrorCode(cause?.code, cause?.message || "ui.could_not_complete_booking_d0932ca8"));
     } finally {
       setBusyBooking(false);
     }
   }
 
-  const categoryName = categoryLabels[resource.category || ""] || resource.category || tr("Tài nguyên");
-  const operationalName = operationalLabels[resource.operationalStatus || ""] || resource.operationalStatus || tr("Khả dụng");
+  const categoryName = categoryLabels[resource.category || ""] || resource.category || tr("ui.resource_9a35ef53");
+  const operationalName = operationalLabels[resource.operationalStatus || ""] || resource.operationalStatus || tr("ui.available_73dc3284");
   const hasTraining = Boolean(resource.trainingRequirements && resource.trainingRequirements.length > 0);
 
   return (
-    <div ref={panelRef} className="guest-booking-panel" role="region" aria-label={tr("Đặt nhanh tài nguyên cho khách ngoài trường")} aria-busy={busy}>
+    <div ref={panelRef} className="guest-booking-panel" role="region" aria-label={tr("ui.quick_booking_for_external_visitors_0df84f94")} aria-busy={busy}>
       <div className="guest-booking-head">
         <span>
           <WalletCards size={18} aria-hidden="true" />
-          {tr("Đặt nhanh dành cho khách & đơn vị hợp tác")}</span>
-        <p>{tr("Quy trình 3 bước: Chọn thời gian → Điền thông tin → Xác thực OTP qua email để bảo đảm an toàn lịch đặt.")}</p>
+          {tr("ui.quick_booking_for_visitors_partners_33aa78be")}</span>
+        <p>{tr("ui.three_steps_choose_time_enter_c2441bb9")}</p>
       </div>
 
       {/* Step Indicator */}
-      <nav className="guest-wizard-nav" aria-label={tr("Tiến trình đặt lịch")}>
+      <nav className="guest-wizard-nav" aria-label={tr("ui.booking_progress_74e6eb3f")}>
         <button
           type="button"
           className={`guest-wizard-step ${step === 1 ? "is-active" : step > 1 ? "is-completed" : ""}`}
@@ -324,7 +326,7 @@ export function GuestQuickBookingPanel({
           aria-current={step === 1 ? "step" : undefined}
         >
           <span className="step-number">1</span>
-          <span className="step-label">{tr("Lịch đặt")}</span>
+          <span className="step-label">{tr("ui.bookings_00f5b333")}</span>
         </button>
         <span className="step-divider" aria-hidden="true">→</span>
         <button
@@ -335,7 +337,7 @@ export function GuestQuickBookingPanel({
           aria-current={step === 2 ? "step" : undefined}
         >
           <span className="step-number">2</span>
-          <span className="step-label">{tr("Liên hệ")}</span>
+          <span className="step-label">{tr("ui.contact_30814846")}</span>
         </button>
         <span className="step-divider" aria-hidden="true">→</span>
         <button
@@ -346,12 +348,12 @@ export function GuestQuickBookingPanel({
           aria-current={step === 3 ? "step" : undefined}
         >
           <span className="step-number">3</span>
-          <span className="step-label">{tr("Xác thực")}</span>
+          <span className="step-label">{tr("ui.verify_ad988d2b")}</span>
         </button>
       </nav>
 
       <h4 className="guest-step-heading" ref={stepHeadingRef} tabIndex={-1}>
-        {tr("Bước")}{step} / 3: {step === 1 ? tr("Tài nguyên và lịch đặt") : step === 2 ? tr("Thông tin người đặt") : tr("Xác thực và kiểm tra lịch đặt")}
+        {tr("ui.step_6acd2db3")}{step} / 3: {step === 1 ? tr("ui.resource_and_schedule_cd6aafbe") : step === 2 ? tr("ui.contact_details_7077b10e") : tr("ui.verification_and_review_489a004a")}
       </h4>
 
       {/* STEP 1: Resource & Booking */}
@@ -365,19 +367,19 @@ export function GuestQuickBookingPanel({
                 {operationalName}
               </span>
               <span className="badge-approval">
-                {resource.effectiveRequiresApproval ? tr("Cần cán bộ LAB duyệt") : tr("Xác nhận tự động theo chính sách")}
+                {resource.effectiveRequiresApproval ? tr("ui.lab_staff_approval_required_60bf0b59") : tr("ui.automatic_confirmation_under_policy_bfbbda9a")}
               </span>
             </div>
             <h4 className="guest-resource-title">{resource.name}</h4>
-            {resource.location && <p className="guest-resource-loc">{tr("Địa điểm:")}{resource.location}</p>}
+            {resource.location && <p className="guest-resource-loc">{tr("ui.location_87f3c284")}{resource.location}</p>}
 
             {/* Mandatory training notice */}
             <div className="guest-eligibility-notice">
               <ShieldCheck size={16} aria-hidden="true" />
               <span>
                 {hasTraining
-                  ? `Khóa an toàn bắt buộc: ${resource.trainingRequirements!.map((t) => t.name || t.code).join(", ")}. Tài khoản phải có chứng chỉ còn hiệu lực trước khi đặt lịch. Nếu chưa có, hãy liên hệ cán bộ LAB để hoàn tất đào tạo; xác thực OTP không thay thế điều kiện này.`
-                  : tr("Không yêu cầu chứng chỉ an toàn tiên quyết.")}
+                  ? translate("ui.required_safety_training_your_account_bdad2c72", { value0: resource.trainingRequirements!.map((t) => t.name || t.code).join(", ") })
+                  : tr("ui.no_prerequisite_safety_certification_required_8182eed8")}
               </span>
             </div>
           </div>
@@ -385,33 +387,33 @@ export function GuestQuickBookingPanel({
           {step1Error && (
             <div className="guest-booking-alert danger" role="alert" tabIndex={-1}>
               <AlertTriangle size={16} aria-hidden="true" />
-              {step1Error}
+              {translate(step1Error)}
             </div>
           )}
 
           <div className="guest-booking-grid">
             <label htmlFor="guest-booking-title">
-              {tr("Tiêu đề lịch đặt *")}<input
+              {tr("ui.booking_title_a845edb3")}<input
                 id="guest-booking-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 maxLength={255}
-                placeholder={tr("VD: Thực nghiệm cảm biến đồ án")}
+                placeholder={tr("ui.example_sensor_experiment_for_a_3e6f1164")}
               />
             </label>
             <label htmlFor="guest-booking-purpose">
-              {tr("Mục đích sử dụng *")}<input
+              {tr("ui.purpose_2d299730")}<input
                 id="guest-booking-purpose"
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
                 required
                 maxLength={500}
-                placeholder={tr("VD: Nghiên cứu hợp tác học thuật")}
+                placeholder={tr("ui.example_academic_research_collaboration_fa881f33")}
               />
             </label>
             <label htmlFor="guest-booking-date">
-              {tr("Ngày sử dụng (giờ Việt Nam UTC+7) *")}<input
+              {tr("ui.booking_date_vietnam_time_utc_6b3b90ae")}<input
                 id="guest-booking-date"
                 type="date"
                 value={selectedDate}
@@ -422,7 +424,7 @@ export function GuestQuickBookingPanel({
             </label>
             <div className="guest-time-row">
               <label htmlFor="guest-start-time">
-                {tr("Giờ bắt đầu *")}<input
+                {tr("ui.start_time_1dd67708")}<input
                   id="guest-start-time"
                   type="time"
                   value={startTime}
@@ -431,7 +433,7 @@ export function GuestQuickBookingPanel({
                 />
               </label>
               <label htmlFor="guest-end-time">
-                {tr("Giờ kết thúc *")}<input
+                {tr("ui.end_time_7a02aed3")}<input
                   id="guest-end-time"
                   type="time"
                   value={endTime}
@@ -444,14 +446,14 @@ export function GuestQuickBookingPanel({
 
           {pricingRules.length > 0 && (
             <label className="guest-purpose" htmlFor="guest-pricing-purpose">
-              {tr("Mục đích tính phí LAB")}<select
+              {tr("ui.lab_pricing_purpose_7ae67bf1")}<select
                 id="guest-pricing-purpose"
                 value={purposeCode}
                 onChange={(e) => setPurposeCode(e.target.value)}
               >
                 {pricingRules.map((rule) => (
                   <option key={rule.id} value={rule.purposeCode}>
-                    {rule.label} — {formatMoney(rule.hourlyRateVnd)} {tr("đ/giờ")}</option>
+                    {rule.label} — {formatMoney(rule.hourlyRateVnd)} {tr("ui.vnd_hour_c2aca1ee")}</option>
                 ))}
               </select>
             </label>
@@ -462,19 +464,19 @@ export function GuestQuickBookingPanel({
               <span role="alert" className="quote-error">{tr(quoteError)}</span>
             ) : quote?.key === quoteKey ? (
               <span>
-                {tr("Phí tạm tính:")}<strong>{formatMoney(quote.amountVnd)} {tr("đ")}</strong>
+                {tr("ui.estimated_fee_c69e3fcf")}<strong>{formatMoney(quote.amountVnd)} {tr("ui.vnd_bf502a39")}</strong>
                 {quote.amountVnd > 0
-                  ? tr(" · Nếu lịch được xác nhận, tiếp tục thanh toán qua VNPAY Sandbox.")
-                  : tr(" · Tài nguyên hoặc mục đích này đang miễn phí.")}
+                  ? tr("ui.after_confirmation_continue_to_vnpay_494a4aa6")
+                  : tr("ui.this_resource_or_purpose_has_969242bf")}
               </span>
             ) : (
-              <span>{tr("Đang tính phí…")}</span>
+              <span>{tr("ui.calculating_fee_262728ce")}</span>
             )}
           </div>
 
           <div className="guest-action-row">
             <button type="submit" className="public-primary guest-wizard-btn next">
-              {tr("Tiếp tục")}<ArrowRight size={17} aria-hidden="true" />
+              {tr("ui.continue_87a7ae88")}<ArrowRight size={17} aria-hidden="true" />
             </button>
           </div>
         </form>
@@ -485,19 +487,19 @@ export function GuestQuickBookingPanel({
         <form className="guest-step-form" onSubmit={handleGoToStep3}>
           <div className="step-info-banner">
             <User size={16} aria-hidden="true" />
-            <span>{tr("Chỉ thu thập thông tin người đặt thực tế để cấp quyền ra vào LAB và gửi mã OTP xác thực.")}</span>
+            <span>{tr("ui.provide_the_actual_booking_contact_f277fd88")}</span>
           </div>
 
           {step2Error && (
             <div className="guest-booking-alert danger" role="alert" tabIndex={-1}>
               <AlertTriangle size={16} aria-hidden="true" />
-              {step2Error}
+              {translate(step2Error)}
             </div>
           )}
 
           <div className="guest-booking-grid">
             <label htmlFor="guest-full-name">
-              {tr("Họ và tên *")}<input
+              {tr("ui.full_name_5f1d93c1")}<input
                 id="guest-full-name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -505,11 +507,11 @@ export function GuestQuickBookingPanel({
                 minLength={2}
                 maxLength={255}
                 autoComplete="name"
-                placeholder={tr("Nguyễn Văn A")}
+                placeholder={tr("ui.jane_nguyen_debd1b38")}
               />
             </label>
             <label htmlFor="guest-email">
-              {tr("Email nhận OTP *")}<input
+              {tr("ui.verification_email_2a481e07")}<input
                 id="guest-email"
                 value={email}
                 onChange={(e) => {
@@ -522,11 +524,11 @@ export function GuestQuickBookingPanel({
                 required
                 type="email"
                 autoComplete="email"
-                placeholder="email@example.com"
+                placeholder={translate("ui.email_example_com_2a539d65")}
               />
             </label>
             <label htmlFor="guest-phone">
-              {tr("Số điện thoại liên hệ *")}<input
+              {tr("ui.contact_phone_e47e9925")}<input
                 id="guest-phone"
                 type="tel"
                 value={phone}
@@ -535,31 +537,31 @@ export function GuestQuickBookingPanel({
                 minLength={9}
                 maxLength={20}
                 autoComplete="tel"
-                placeholder="0912345678"
+                placeholder={translate("ui.0912345678_20faf05b")}
               />
             </label>
             <label htmlFor="guest-organization">
-              {tr("Đơn vị / Doanh nghiệp / Tổ chức")}<input
+              {tr("ui.department_company_organization_a07413d8")}<input
                 id="guest-organization"
                 value={organization}
                 onChange={(e) => setOrganization(e.target.value)}
                 maxLength={160}
                 autoComplete="organization"
-                placeholder={tr("Không bắt buộc")}
+                placeholder={tr("ui.optional_2e85bddf")}
               />
             </label>
           </div>
 
           <div className="guest-address-block">
-            <span className="block-title">{tr("Địa chỉ liên hệ Việt Nam *")}</span>
+            <span className="block-title">{tr("ui.vietnam_contact_address_6ea949b8")}</span>
             <VietnamAddressSelector value={address} onChange={setAddress} required />
           </div>
 
           <div className="guest-action-row between">
             <button type="button" className="public-secondary guest-wizard-btn prev" onClick={() => setStep(1)}>
-              <ArrowLeft size={16} aria-hidden="true" /> {tr("Quay lại")}</button>
+              <ArrowLeft size={16} aria-hidden="true" /> {tr("ui.back_6d793582")}</button>
             <button type="submit" className="public-primary guest-wizard-btn next">
-              {tr("Tiếp tục sang bước OTP")}<ArrowRight size={17} aria-hidden="true" />
+              {tr("ui.continue_to_verification_cd039ed7")}<ArrowRight size={17} aria-hidden="true" />
             </button>
           </div>
         </form>
@@ -571,54 +573,54 @@ export function GuestQuickBookingPanel({
           {message && (
             <div className="guest-booking-alert success" role="status">
               <CheckCircle2 size={16} aria-hidden="true" />
-              {message}
+              {translate(message)}
             </div>
           )}
           {error && (
             <div className="guest-booking-alert danger" role="alert" tabIndex={-1}>
               <AlertTriangle size={16} aria-hidden="true" />
-              {error}
+              {translate(error)}
             </div>
           )}
 
           {/* Final Review Summary Card */}
           <div className="guest-review-card">
-            <h5>{tr("Kiểm tra lại thông tin lịch đặt")}</h5>
+            <h5>{tr("ui.review_your_booking_7d0cff6e")}</h5>
             <dl className="guest-review-dl">
               <div>
-                <dt>{tr("Tài nguyên")}</dt>
+                <dt>{tr("ui.resource_9a35ef53")}</dt>
                 <dd>{resource.name} ({resource.code}) · {categoryName}</dd>
               </div>
               <div>
-                <dt>{tr("Thời gian")}</dt>
-                <dd>{tr("Ngày")}{selectedDate} ({startTime} – {endTime}{tr(") · Giờ VN")}</dd>
+                <dt>{tr("ui.time_b295fd62")}</dt>
+                <dd>{tr("ui.day_c4c3ca76")}{selectedDate} ({startTime} – {endTime}{tr("ui.vietnam_time_3c29d808")}</dd>
               </div>
               <div>
-                <dt>{tr("Người đặt")}</dt>
+                <dt>{tr("ui.booked_by_0600af3f")}</dt>
                 <dd>{fullName} · {phone} · {email}</dd>
               </div>
               {organization && (
                 <div>
-                  <dt>{tr("Đơn vị")}</dt>
+                  <dt>{tr("ui.organization_9bfbf807")}</dt>
                   <dd>{organization}</dd>
                 </div>
               )}
               <div>
-                <dt>{tr("Địa chỉ")}</dt>
+                <dt>{tr("ui.address_249de6f5")}</dt>
                 <dd>{address.addressLine || "—"}</dd>
               </div>
               <div>
-                <dt>{tr("Phí sử dụng")}</dt>
+                <dt>{tr("ui.usage_fee_cdf18099")}</dt>
                 <dd>
-                  <strong>{quote?.key === quoteKey ? `${formatMoney(quote.amountVnd)} đ` : tr("Chưa xác định — quay lại bước 1 để kiểm tra phí")}</strong>
+                  <strong>{quote?.key === quoteKey ? translate("ui.vnd_e239b46a", { value0: formatMoney(quote.amountVnd) }) : tr("ui.not_calculated_return_to_step_5c596e9d")}</strong>
                 </dd>
               </div>
               <div>
-                <dt>{tr("Kỳ vọng xử lý")}</dt>
+                <dt>{tr("ui.what_happens_next_939dbedd")}</dt>
                 <dd>
                   {resource.effectiveRequiresApproval
-                    ? tr("Yêu cầu sẽ ở trạng thái Chờ duyệt để cán bộ LAB xem xét trước khi bàn giao.")
-                    : tr("Lịch đặt được xác nhận tự động theo chính sách phòng LAB.")}
+                    ? tr("ui.your_request_will_await_lab_c95e96c2")
+                    : tr("ui.the_booking_will_be_automatically_cde77fc7")}
                 </dd>
               </div>
             </dl>
@@ -639,13 +641,13 @@ export function GuestQuickBookingPanel({
                   <Mail size={16} aria-hidden="true" />
                 )}
                 {resendCooldown > 0
-                  ? `Gửi lại mã (${resendCooldown}s)`
+                  ? translate("ui.resend_code_s_e454ec41", { value0: resendCooldown })
                   : otpSent
-                  ? tr("Gửi lại OTP")
-                  : tr("Gửi mã OTP qua email")}
+                  ? tr("ui.resend_code_d4042d28")
+                  : tr("ui.send_email_verification_code_21598204")}
               </button>
               <label htmlFor="guest-otp-input">
-                {tr("Mã OTP (6 chữ số) *")}<input
+                {tr("ui.verification_code_6_digits_9ce9c26b")}<input
                   id="guest-otp-input"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -653,7 +655,7 @@ export function GuestQuickBookingPanel({
                   minLength={6}
                   maxLength={6}
                   inputMode="numeric"
-                  placeholder={tr("6 chữ số")}
+                  placeholder={tr("ui.6_digits_9046bda2")}
                   disabled={!otpSent || busy}
                   autoComplete="one-time-code"
                 />
@@ -661,14 +663,14 @@ export function GuestQuickBookingPanel({
             </div>
             {!otpSent && (
               <p className="otp-hint-text">
-                {tr("Vui lòng bấm nút")}<strong>{tr("Gửi mã OTP qua email")}</strong> {tr("để nhận mã xác thực gồm 6 chữ số gửi tới")}<strong>{email}</strong>.
+                {tr("ui.select_63228d55")}<strong>{tr("ui.send_email_verification_code_21598204")}</strong> {tr("ui.to_receive_a_6_digit_187627a5")}<strong>{email}</strong>.
               </p>
             )}
           </div>
 
           <div className="guest-action-row between">
             <button type="button" className="public-secondary guest-wizard-btn prev" disabled={busy} onClick={() => setStep(2)}>
-              <ArrowLeft size={16} aria-hidden="true" /> {tr("Quay lại thông tin")}</button>
+              <ArrowLeft size={16} aria-hidden="true" /> {tr("ui.back_to_contact_details_098e42e5")}</button>
             <button
               type="submit"
               className="public-primary guest-wizard-btn submit"
@@ -679,7 +681,7 @@ export function GuestQuickBookingPanel({
               ) : (
                 <KeyRound size={17} aria-hidden="true" />
               )}
-              {tr("Xác nhận đặt lịch")}</button>
+              {tr("ui.confirm_booking_f6a19e97")}</button>
           </div>
         </form>
       )}

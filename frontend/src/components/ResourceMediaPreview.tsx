@@ -9,8 +9,8 @@ export function ResourceMediaPreview({ kind, url, alt }: { kind: "IMAGE" | "VIDE
   if (failed) return (
     <span className="catalog-media-failure" role="status">
       <ImageOff size={28} aria-hidden="true" />
-      <span>{kind === "VIDEO" ? t("Không tải được video", "Video could not be loaded") : t("Không tải được ảnh", "Image could not be loaded")}: {alt}.</span>
-      <small>{tr("Bạn vẫn có thể xem thông tin và điều kiện sử dụng.")}</small>
+      <span>{kind === "VIDEO" ? t("ui.video_could_not_be_loaded_cbca53b9") : t("ui.image_could_not_be_loaded_3ca5ed64")}: {alt}.</span>
+      <small>{tr("ui.resource_details_and_access_requirements_cc96de10")}</small>
     </span>
   );
   return kind === "VIDEO"

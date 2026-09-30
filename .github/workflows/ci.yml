@@ -38,6 +38,14 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_fresh?schema=public
         run: npm run db:migrate
+      - name: Create and verify assistant integration database
+        env:
+          PGPASSWORD: postgres
+          ASSISTANT_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_assistant_test?schema=public
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE "lab_resources_assistant_test";'
+          DATABASE_URL="$ASSISTANT_TEST_DATABASE_URL" npm run db:migrate
+          npm run test:assistant:integration
       - name: Prove migration deployment is idempotent
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_fresh?schema=public
@@ -142,6 +150,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - name: Shared locale catalog and source gate
+        run: npm run test:i18n
       - name: Frontend lint
         run: npm run lint
       - name: Incremental TypeScript check
@@ -208,7 +218,7 @@ jobs:
             cat "$RUNNER_TEMP/workspace-demo.log"
             exit 1
           fi
-          (cd frontend && npm run test:ui:workspace)
+          (cd frontend && npm run test:ui:workspace && npm run test:ui:bilingual)
       - name: Upload workspace evidence
         if: always()
         uses: actions/upload-artifact@v4

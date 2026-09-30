@@ -1,3 +1,4 @@
+import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { apiRequest } from "../api.js";
@@ -20,7 +21,7 @@ export interface SmartCalendarViewProps {
 }
 
 export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOpenBooking, initialResourceId = "", refreshKey = 0 }) => {
-  const { tr } = useLocale();
+  const { tr, locale } = useLocale();
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
   const [selectedResourceId, setSelectedResourceId] = useState<string>(initialResourceId);
   const [resources, setResources] = useState<any[]>([]);
@@ -69,7 +70,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
       }
     } catch (err: any) {
       console.error("Failed to load resources for calendar", err);
-      setResourcesError(err?.message || tr("Không thể tải danh sách tài nguyên phòng thí nghiệm."));
+      setResourcesError(err?.message || "ui.could_not_load_laboratory_resources_02a86614");
       setResources([]);
       setSelectedResourceId("");
       setSlotsData(null);
@@ -77,7 +78,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
     } finally {
       setResourcesLoading(false);
     }
-  }, [tr]);
+  }, []);
 
   useEffect(() => {
     loadResources();
@@ -149,11 +150,11 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
       }
     } catch (err: any) {
       console.error("Error loading calendar data", err);
-      if (version === calendarRequest.current) setError(err.message || tr("Không thể tải dữ liệu lịch biểu"));
+      if (version === calendarRequest.current) setError(err.message || "ui.could_not_load_the_calendar_63365d1d");
     } finally {
       if (version === calendarRequest.current) setLoading(false);
     }
-  }, [viewMode, selectedResourceId, getAnchorDate, tr]);
+  }, [viewMode, selectedResourceId, getAnchorDate]);
 
   useEffect(() => {
     loadCalendarData();
@@ -207,21 +208,21 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
   // Compute title string
   const getHeaderTitle = () => {
     const anchor = getAnchorDate();
-    const formattedMonth = anchor.toLocaleDateString("vi-VN", { month: "long", timeZone: "UTC" });
+    const formattedMonth = anchor.toLocaleDateString(locale === "en" ? "en-GB" : "vi-VN", { month: "long", timeZone: "UTC" });
     const year = anchor.getUTCFullYear();
 
     if (viewMode === "day") {
-      return `${anchor.toLocaleDateString("vi-VN", { weekday: "long", timeZone: "UTC" })}, ${anchor.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" })}`;
+      return `${anchor.toLocaleDateString(locale === "en" ? "en-GB" : "vi-VN", { weekday: "long", timeZone: "UTC" })}, ${anchor.toLocaleDateString(locale === "en" ? "en-GB" : "vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" })}`;
     }
     if (viewMode === "month") {
-      return `${formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1)} năm ${year}`;
+      return translate("ui._3c7e1612", { value0: formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1), value1: year });
     }
     if (slotsData?.daysHeader?.length) {
       const first = slotsData.daysHeader[0]?.dateStr;
       const last = slotsData.daysHeader[6]?.dateStr;
-      return `Tuần từ ${first} đến ${last} (${year})`;
+      return translate("ui.week_from_to_48b85b54", { value0: first, value1: last, value2: year });
     }
-    return `Tháng ${anchor.getUTCMonth() + 1}, ${year}`;
+    return translate("ui.month_125e246d", { value0: anchor.getUTCMonth() + 1, value1: year });
   };
 
   const anchor = getAnchorDate();
@@ -265,34 +266,34 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
         <div className="alert danger text-xs flex items-center justify-between" role="alert">
           <div className="flex items-center gap-2">
             <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
-            <span>{resourcesError}</span>
+            <span>{translate(resourcesError)}</span>
           </div>
           <button
             type="button"
             onClick={loadResources}
             className="btn btn-secondary text-xs px-2.5 py-1"
           >
-            {tr("Thử lại")}</button>
+            {tr("ui.retry_c58d068c")}</button>
         </div>
       )}
 
       {/* Calendar Data Error Notice */}
       {error && !resourcesError && (
         <div className="alert danger text-xs flex items-center justify-between" role="alert">
-          <span>{error}</span>
+          <span>{translate(error)}</span>
           <button
             type="button"
             onClick={loadCalendarData}
             className="underline ml-2"
           >
-            {tr("Thử lại")}</button>
+            {tr("ui.retry_c58d068c")}</button>
         </div>
       )}
 
       {/* Resource Loading State */}
       {resourcesLoading && (
         <div aria-live="polite" className="calendar-week-loading">
-          {tr("Đang tải danh sách tài nguyên phòng thí nghiệm...")}</div>
+          {tr("ui.loading_laboratory_resources_e55dcf2e")}</div>
       )}
 
       {/* Honest Empty State when zero resources exist */}
@@ -302,23 +303,23 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
             <Calendar size={28} aria-hidden="true" />
           </div>
           <h3 className="text-base font-semibold text-slate-900 mb-1">
-            {tr("Chưa có tài nguyên khả dụng")}</h3>
+            {tr("ui.no_resources_available_43e76083")}</h3>
           <p className="text-sm text-slate-600 max-w-md mb-3">
-            {tr("Hiện chưa có phòng hoặc thiết bị để xem lịch và đặt chỗ.")}</p>
+            {tr("ui.no_rooms_or_equipment_are_0855c760")}</p>
           <div className="text-xs text-slate-500 max-w-md bg-slate-50 border border-slate-200 rounded-lg p-3">
             {user?.role === "ADMIN" || user?.role === "LAB_STAFF" ? (
               <span>
-                {tr("Vui lòng cấu hình và kích hoạt tài nguyên trong mục")}<strong>{tr("Quản lý tài nguyên")}</strong> {tr("trước khi sử dụng lịch biểu.")}</span>
+                {tr("ui.configure_and_activate_resources_in_c3e79799")}<strong>{tr("ui.resource_management_44713fdd")}</strong> {tr("ui.before_using_the_calendar_039200c8")}</span>
             ) : (
               <span>
-                {tr("Vui lòng liên hệ quản trị viên hoặc cán bộ phòng thí nghiệm để được cấp quyền truy cập tài nguyên.")}</span>
+                {tr("ui.contact_an_administrator_or_lab_b0a5be4d")}</span>
             )}
           </div>
         </div>
       )}
 
       {/* View Content (only rendered when a valid resource exists) */}
-      {loading && <p className="empty-state" role="status">{tr("Đang tải lịch của tài nguyên…")}</p>}
+      {loading && <p className="empty-state" role="status">{tr("ui.loading_resource_calendar_08975674")}</p>}
       {!loading && !error && !resourcesLoading && !resourcesError && resources.length > 0 && selectedResourceId && (
         <>
           {viewMode === "week" && (
@@ -369,7 +370,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
       <BaseModal2026
         isOpen={Boolean(selectedBooking)}
         onClose={() => setSelectedBooking(null)}
-        title={selectedBooking?.title || tr("Thông tin lịch đặt")}
+        title={selectedBooking?.title || tr("ui.booking_details_89353735")}
         subtitle={
           selectedBooking
             ? `${selectedBooking.resourceName || ""}`
@@ -384,7 +385,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
             onClick={() => setSelectedBooking(null)}
             className="btn btn-secondary text-xs"
           >
-            {tr("Đóng")}</button>
+            {tr("ui.close_5d54c2a1")}</button>
         }
       >
         {selectedBooking && (
@@ -400,7 +401,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
               {(selectedBooking.start || selectedBooking.startAt) && (
                 <div className="flex items-center gap-2">
                   <Clock size={13} className="text-muted shrink-0" aria-hidden="true" />
-                  <span className="text-muted">{tr("Thời gian:")}</span>
+                  <span className="text-muted">{tr("ui.time_fbe0ffb4")}</span>
                   <span className="font-medium font-mono">
                     {formatVietnamDateTime(selectedBooking.start || selectedBooking.startAt)} –{" "}
                     {formatVietnamDateTime(selectedBooking.end || selectedBooking.endAt)}
@@ -410,7 +411,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
 
               {selectedBooking.purpose && (
                 <div className="calendar-detail-subfield pt-2">
-                  <span className="text-muted block mb-0.5 font-medium">{tr("Mục đích sử dụng:")}</span>
+                  <span className="text-muted block mb-0.5 font-medium">{tr("ui.purpose_a4ade8de")}</span>
                   <span>{selectedBooking.purpose}</span>
                 </div>
               )}
@@ -418,7 +419,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
               {selectedBooking.requestedBy && (
                 <div className="calendar-detail-subfield pt-2 flex items-center gap-2">
                   <User size={13} className="text-muted shrink-0" aria-hidden="true" />
-                  <span className="text-muted">{tr("Người đặt:")}</span>
+                  <span className="text-muted">{tr("ui.booked_by_5023f9f8")}</span>
                   <span className="font-medium">
                     {selectedBooking.requestedBy.fullName || selectedBooking.requestedBy.email}
                   </span>

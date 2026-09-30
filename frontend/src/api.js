@@ -1,5 +1,4 @@
-import { getDictionary, localeStorageKey } from "./i18n.js";
-import workspaceErrors from "./locales/workspace-errors.json";
+import { getActiveLocale, hasMessage } from "./i18n.js";
 
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL || `http://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:8000`;
 const API_BASE_URL = `${configuredApiBase.replace(/\/$/, "")}${/\/api$/.test(configuredApiBase) ? "" : "/api"}`;
@@ -17,14 +16,19 @@ export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem("lrm_token");
   const headers = {
     "Content-Type": "application/json",
+    "Accept-Language": getActiveLocale(),
+    "X-LRM-Locale": getActiveLocale(),
     ...(options.headers || {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {})
   };
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  } catch (error) {
+    if (options.signal?.aborted || error.name === "AbortError") throw error;
+    throw new ApiError("api.NETWORK_UNAVAILABLE", 0, undefined, "NETWORK_UNAVAILABLE");
+  }
 
   const isJson = response.headers.get("content-type")?.includes("application/json");
   const body = isJson ? await response.json() : await response.text();
@@ -35,9 +39,8 @@ export async function apiRequest(path, options = {}) {
       clearSession();
       window.dispatchEvent(new CustomEvent("lrm:session-invalid"));
     }
-    const locale = localStorage.getItem(localeStorageKey) === "en" ? "en" : "vi";
-    const messages = getDictionary(locale).apiMessages;
-    const message = workspaceErrors[error.code]?.[locale] || messages[error.code] || error.message || messages.API_REQUEST_FAILED;
+    const key = error.messageKey || `api.${error.code || "API_REQUEST_FAILED"}`;
+    const message = hasMessage(key) ? key : "api.API_REQUEST_FAILED";
     throw new ApiError(message, response.status, error.details, error.code);
   }
 

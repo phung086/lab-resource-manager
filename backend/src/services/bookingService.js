@@ -291,6 +291,7 @@ export async function transitionBooking({
 
     const now = new Date();
     let physicalStateWarning = null;
+    let physicalStateWarningParams;
 
     if (toStatus === CHECKED_OUT) {
       if (booking.feeAmountVnd > 0) {
@@ -335,6 +336,7 @@ export async function transitionBooking({
         });
       } else if (HARD_UNAVAILABLE_RESOURCE_STATES.has(physical.operationalStatus)) {
         physicalStateWarning = `Resource remains ${physical.operationalStatus}; return was recorded without overriding the physical state.`;
+        physicalStateWarningParams = { status: physical.operationalStatus };
       }
     }
 
@@ -401,7 +403,7 @@ export async function transitionBooking({
     }
 
     await notifyBookingEvent(tx, result, toStatus, { includeOwner: true, now });
-    return physicalStateWarning ? { ...result, physicalStateWarning } : result;
+    return physicalStateWarning ? { ...result, physicalStateWarning, physicalStateWarningKey: "api.RETURN_RECORDED_PHYSICAL_STATE", physicalStateWarningParams } : result;
   });
 }
 
@@ -448,7 +450,7 @@ export async function selfReturnRoom({ bookingId, actorId, actorRole, conditionA
     await cancelPendingBookingReminders(tx, bookingId);
     await notifyBookingEvent(tx, result, "SELF_RETURN", { includeOwner: true, now });
     return HARD_UNAVAILABLE_RESOURCE_STATES.has(physical.operationalStatus)
-      ? { ...result, physicalStateWarning: `Đã ghi nhận trả phòng; tài nguyên vẫn ở trạng thái ${physical.operationalStatus}.` }
+      ? { ...result, physicalStateWarning: `Đã ghi nhận trả phòng; tài nguyên vẫn ở trạng thái ${physical.operationalStatus}.`, physicalStateWarningKey: "api.RETURN_RECORDED_PHYSICAL_STATE", physicalStateWarningParams: { status: physical.operationalStatus } }
       : result;
   });
 }

@@ -1,3 +1,4 @@
+import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, Plus, ShieldAlert } from "lucide-react";
@@ -27,24 +28,24 @@ interface Props {
 }
 
 const severityLabels: Record<IncidentSeverity, string> = {
-  low: "Thấp",
-  medium: "Trung bình",
+  low: "ui.low_4e45ab86",
+  medium: "ui.medium_928d4573",
   high: "Cao",
-  critical: "Nghiêm trọng"
+  critical: "ui.critical_9559e09a"
 };
 
 const statusLabels: Record<string, string> = {
-  reported: "Đã báo cáo",
-  triaged: "Đã phân loại",
-  assigned: "Đã phân công",
-  investigating: "Đang điều tra",
-  resolved: "Đã xử lý",
-  verified: "Đã xác minh",
-  closed: "Đã đóng"
+  reported: "ui.reported_977c15d8",
+  triaged: "ui.triaged_4652a509",
+  assigned: "ui.assigned_5dd582ca",
+  investigating: "ui.investigating_8723e350",
+  resolved: "ui.resolved_6023373b",
+  verified: "ui.verified_662e363d",
+  closed: "ui.closed_6b919498"
 };
 const resourceStatusLabels: Record<string, string> = {
-  AVAILABLE: "Sẵn sàng", IN_USE: "Đang sử dụng", MAINTENANCE: "Đang bảo trì",
-  CALIBRATION: "Đang hiệu chuẩn", BROKEN: "Hỏng", RETIRED: "Ngừng sử dụng", OFFLINE: "Ngoại tuyến"
+  AVAILABLE: "ui.available_d654065d", IN_USE: "ui.in_use_a07a3647", MAINTENANCE: "ui.under_maintenance_746ec905",
+  CALIBRATION: "ui.under_calibration_779c1ea8", BROKEN: "ui.broken_fd69bba6", RETIRED: "ui.offline_b4f199c3", OFFLINE: "ui.offline_96a8bb03"
 };
 
 export const IncidentManagementView: React.FC<Props> = ({ user, resources, incidents, onChanged }) => {
@@ -83,7 +84,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
     event.preventDefault();
     setError("");
     if (!form.resourceId || !form.title.trim() || !form.description.trim()) {
-      setError(tr("Vui lòng chọn tài nguyên và nhập đầy đủ tiêu đề, mô tả sự cố."));
+      setError("ui.choose_a_resource_and_enter_4442d487");
       return;
     }
     try {
@@ -99,7 +100,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
       setForm((current) => ({ ...current, title: "", description: "" }));
       await refresh();
     } catch (requestError: any) {
-      setError(requestError?.message || tr("Không thể gửi báo cáo sự cố."));
+      setError(requestError?.message || "ui.could_not_submit_incident_report_cb6bca65");
     } finally {
       setBusyId(null);
     }
@@ -113,7 +114,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
       else await investigateIncident(incident.id);
       await refresh();
     } catch (requestError: any) {
-      setError(requestError?.message || tr("Không thể cập nhật sự cố."));
+      setError(requestError?.message || "ui.could_not_update_incident_26d8044a");
     } finally {
       setBusyId(null);
     }
@@ -124,7 +125,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
     if (!resolving) return;
     setError("");
     if (!resolution.trim()) {
-      setError(tr("Cần nhập kết quả xử lý thực tế trước khi đánh dấu đã giải quyết."));
+      setError("ui.record_the_actual_outcome_before_489bffce");
       return;
     }
     try {
@@ -134,7 +135,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
       setResolution("");
       await refresh();
     } catch (requestError: any) {
-      setError(requestError?.message || tr("Không thể hoàn tất xử lý sự cố."));
+      setError(requestError?.message || "ui.could_not_complete_incident_resolution_d17cb3c0");
     } finally {
       setBusyId(null);
     }
@@ -144,28 +145,28 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
     <section className="content-stack" aria-labelledby="incident-heading">
       <div className="page-section-header">
         <div>
-          <p className="eyebrow">{tr("VẬN HÀNH PHÒNG THÍ NGHIỆM")}</p>
-          <h1 id="incident-heading">{tr("Sự cố tài nguyên")}</h1>
+          <p className="eyebrow">{tr("ui.laboratory_operations_9ae8194c")}</p>
+          <h1 id="incident-heading">{tr("ui.resource_incidents_0cba217b")}</h1>
           <p className="section-description">
-            {tr("Báo cáo tình trạng bất thường bằng dữ liệu thực. Cán bộ lab xử lý theo phạm vi phòng được phân công.")}</p>
+            {tr("ui.report_observed_problems_lab_staff_c71e9e68")}</p>
         </div>
         <button className="btn btn-primary" type="button" onClick={() => {
           setError("");
           setForm((current) => ({ ...current, resourceId: current.resourceId || resources[0]?.id || "" }));
           setShowReport(true);
         }}>
-          <Plus size={16} /> {tr("Báo cáo sự cố")}</button>
+          <Plus size={16} /> {tr("ui.report_an_incident_0527866e")}</button>
       </div>
 
-      {error && <div role="alert" className="alert danger">{error}</div>}
+      {error && <div role="alert" className="alert danger">{translate(error)}</div>}
 
       <div className="operational-summary-grid">
-        <Summary label={tr("Tổng sự cố")} value={incidents.length} />
-        <Summary label={tr("Đang xử lý")} value={openCount} />
-        <Summary label={tr("Đã giải quyết")} value={incidents.length - openCount} />
+        <Summary label={tr("ui.total_incidents_4c1b245c")} value={incidents.length} />
+        <Summary label={tr("ui.processing_e84898db")} value={openCount} />
+        <Summary label={tr("ui.resolved_1c5b11f2")} value={incidents.length - openCount} />
       </div>
 
-      <div className="booking-queue-toolbar" role="group" aria-label={tr("Lọc sự cố")}>
+      <div className="booking-queue-toolbar" role="group" aria-label={tr("ui.filter_incidents_695f1591")}>
         {(["ALL", "OPEN", "RESOLVED"] as const).map((value) => (
           <button
             key={value}
@@ -174,7 +175,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
             aria-pressed={filter === value}
             onClick={() => setFilter(value)}
           >
-            {value === "ALL" ? tr("Tất cả") : value === "OPEN" ? tr("Đang xử lý") : tr("Đã giải quyết")}
+            {value === "ALL" ? tr("ui.all_49c73a31") : value === "OPEN" ? tr("ui.processing_e84898db") : tr("ui.resolved_1c5b11f2")}
           </button>
         ))}
       </div>
@@ -183,7 +184,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
         {filtered.length === 0 ? (
           <div className="empty-state">
             <CheckCircle2 size={28} />
-            <p>{tr("Không có sự cố phù hợp với bộ lọc hiện tại.")}</p>
+            <p>{tr("ui.no_incidents_match_the_current_e09d6f91")}</p>
           </div>
         ) : filtered.map((incident) => {
           const open = ["reported", "triaged", "assigned", "investigating"].includes(incident.status);
@@ -208,28 +209,28 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
               <p>{incident.description}</p>
 
               <dl className="operational-evidence-grid">
-                <div><dt>{tr("Người báo cáo")}</dt><dd>{incident.reportedBy?.fullName || "—"}</dd></div>
-                <div><dt>{tr("Người phụ trách")}</dt><dd>{incident.assignedTo?.fullName || tr("Chưa phân công")}</dd></div>
-                <div><dt>{tr("Trạng thái tài nguyên")}</dt><dd>{tr(resourceStatusLabels[incident.resource?.operationalStatus || ""]) || "—"}</dd></div>
-                <div><dt>{tr("Kết quả xử lý")}</dt><dd>{incident.resolution || tr("Chưa có")}</dd></div>
+                <div><dt>{tr("ui.reported_by_635a2e8b")}</dt><dd>{incident.reportedBy?.fullName || "—"}</dd></div>
+                <div><dt>{tr("ui.assigned_to_02be53a1")}</dt><dd>{incident.assignedTo?.fullName || tr("ui.unassigned_1f379993")}</dd></div>
+                <div><dt>{tr("ui.resource_status_1e524f19")}</dt><dd>{tr(resourceStatusLabels[incident.resource?.operationalStatus || ""]) || "—"}</dd></div>
+                <div><dt>{tr("ui.resolution_4677c393")}</dt><dd>{incident.resolution || tr("ui.none_recorded_bc2b97d6")}</dd></div>
               </dl>
 
               {isStaff && open && (
                 <div className="operational-card-actions">
                   {incident.status === "reported" && (
                     <button disabled={busyId === incident.id} className="btn btn-secondary" type="button" onClick={() => runAction(incident, "triage")}>
-                      {tr("Phân loại")}</button>
+                      {tr("ui.classification_a077263e")}</button>
                   )}
                   {["triaged", "assigned"].includes(incident.status) && (
                     <button disabled={busyId === incident.id} className="btn btn-secondary" type="button" onClick={() => runAction(incident, "investigate")}>
-                      {tr("Bắt đầu điều tra")}</button>
+                      {tr("ui.start_investigation_f9b7e9ae")}</button>
                   )}
                   <button className="btn btn-primary" type="button" onClick={() => {
                     setError("");
                     setResolution("");
                     setResolving(incident);
                   }}>
-                    {tr("Xác nhận đã xử lý")}</button>
+                    {tr("ui.confirm_resolution_df20cec5")}</button>
                 </div>
               )}
             </article>
@@ -237,45 +238,45 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
         })}
       </div>
 
-      <BaseModal2026 isOpen={showReport} onClose={() => setShowReport(false)} title={tr("Báo cáo sự cố")} icon={ShieldAlert} dismissible={busyId !== "create"}>
+      <BaseModal2026 isOpen={showReport} onClose={() => setShowReport(false)} title={tr("ui.report_an_incident_0527866e")} icon={ShieldAlert} dismissible={busyId !== "create"}>
             <form className="booking-operation-form" onSubmit={submitReport} noValidate>
               <label>
-                {tr("Tài nguyên")}<select value={form.resourceId} onChange={(event) => setForm({ ...form, resourceId: event.target.value })}>
-                  <option value="">{tr("Chọn tài nguyên")}</option>
+                {tr("ui.resource_9a35ef53")}<select value={form.resourceId} onChange={(event) => setForm({ ...form, resourceId: event.target.value })}>
+                  <option value="">{tr("ui.select_a_resource_8849f4e1")}</option>
                   {resources.map((resource) => <option key={resource.id} value={resource.id}>{resource.code} — {resource.name}</option>)}
                 </select>
               </label>
               <label>
-                {tr("Mức độ")}<select value={form.severity} onChange={(event) => setForm({ ...form, severity: event.target.value as IncidentSeverity })}>
+                {tr("ui.severity_9709dbac")}<select value={form.severity} onChange={(event) => setForm({ ...form, severity: event.target.value as IncidentSeverity })}>
                   {Object.entries(severityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </label>
               <label>
-                {tr("Nhóm sự cố")}<input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} maxLength={100} />
+                {tr("ui.incident_category_293fddf9")}<input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} maxLength={100} />
               </label>
               <label>
-                {tr("Tiêu đề")}<input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} maxLength={255} />
+                {tr("ui.title_df5a0009")}<input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} maxLength={255} />
               </label>
               <label>
-                {tr("Mô tả thực tế")}<textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={5} maxLength={4000} />
+                {tr("ui.observed_problem_bc874db6")}<textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={5} maxLength={4000} />
               </label>
               <div className="modal-actions">
-                <button className="btn btn-secondary" type="button" onClick={() => setShowReport(false)}>{tr("Hủy")}</button>
-                <button className="btn btn-primary" type="submit" disabled={busyId === "create"}>{busyId === "create" ? tr("Đang gửi...") : tr("Gửi báo cáo")}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => setShowReport(false)}>{tr("ui.cancel_74fcd352")}</button>
+                <button className="btn btn-primary" type="submit" disabled={busyId === "create"}>{busyId === "create" ? tr("ui.submitting_abf01d43") : tr("ui.submit_report_2c993a8a")}</button>
               </div>
             </form>
       </BaseModal2026>
 
-      <BaseModal2026 isOpen={Boolean(resolving)} onClose={() => setResolving(null)} title={tr("Xác nhận xử lý sự cố")} icon={AlertTriangle} dismissible={busyId !== resolving?.id}>
+      <BaseModal2026 isOpen={Boolean(resolving)} onClose={() => setResolving(null)} title={tr("ui.confirm_incident_resolution_def9ce3f")} icon={AlertTriangle} dismissible={busyId !== resolving?.id}>
           {resolving && (
             <form className="booking-operation-form" onSubmit={submitResolution} noValidate>
               <p>{resolving.title}</p>
               <label>
-                {tr("Kết quả xử lý thực tế")}<textarea value={resolution} onChange={(event) => setResolution(event.target.value)} rows={5} maxLength={4000} />
+                {tr("ui.actual_resolution_outcome_11cccb6a")}<textarea value={resolution} onChange={(event) => setResolution(event.target.value)} rows={5} maxLength={4000} />
               </label>
               <div className="modal-actions">
-                <button className="btn btn-secondary" type="button" onClick={() => setResolving(null)}>{tr("Hủy")}</button>
-                <button className="btn btn-primary" type="submit" disabled={busyId === resolving.id}>{busyId === resolving.id ? tr("Đang lưu...") : tr("Lưu kết quả xử lý")}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => setResolving(null)}>{tr("ui.cancel_74fcd352")}</button>
+                <button className="btn btn-primary" type="submit" disabled={busyId === resolving.id}>{busyId === resolving.id ? tr("ui.saving_2b5c2a46") : tr("ui.save_resolution_f867848a")}</button>
               </div>
             </form>
           )}

@@ -1,3 +1,4 @@
+import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useMemo, useState } from "react";
 import { apiRequest } from "../api.js";
@@ -33,7 +34,7 @@ export function VietnamAddressSelector({ value, onChange, required = false, comp
     setError("");
     apiRequest("/address/vietnam/provinces")
       .then((payload: { provinces: Province[] }) => { if (active) setProvinces(payload.provinces || []); })
-      .catch((cause: Error) => { if (active) setError(cause.message || tr("Không tải được danh mục tỉnh/thành.")); })
+      .catch((cause: Error) => { if (active) setError(cause.message || "ui.could_not_load_provinces_cities_88e7ed68"); })
       .finally(() => { if (active) setLoadingProvinces(false); });
     return () => { active = false; };
   }, [tr]);
@@ -48,7 +49,7 @@ export function VietnamAddressSelector({ value, onChange, required = false, comp
     setError("");
     apiRequest(`/address/vietnam/wards?provinceCode=${encodeURIComponent(value.provinceCode)}`)
       .then((payload: { wards: Ward[] }) => { if (active) setWards(payload.wards || []); })
-      .catch((cause: Error) => { if (active) setError(cause.message || tr("Không tải được danh mục phường/xã.")); })
+      .catch((cause: Error) => { if (active) setError(cause.message || "ui.could_not_load_wards_communes_0086e07a"); })
       .finally(() => { if (active) setLoadingWards(false); });
     return () => { active = false; };
   }, [value.provinceCode, tr]);
@@ -61,7 +62,7 @@ export function VietnamAddressSelector({ value, onChange, required = false, comp
     <div className={`vietnam-address-selector ${className}`.trim()}>
       <div className={compact ? "grid grid-cols-2 gap-3" : "profile-form-grid"}>
         <div className="flex flex-col gap-1">
-          <label htmlFor="address-province" className={compact ? "font-mono text-[11px] text-slate-300" : "profile-label"}>{tr("Tỉnh / thành phố")}{required ? "*" : ""}</label>
+          <label htmlFor="address-province" className={compact ? "font-mono text-[11px] text-slate-300" : "profile-label"}>{tr("ui.province_city_9c21469d")}{required ? "*" : ""}</label>
           <select
             id="address-province"
             className={inputClass}
@@ -70,12 +71,12 @@ export function VietnamAddressSelector({ value, onChange, required = false, comp
             required={required}
             onChange={(event) => onChange({ ...value, provinceCode: event.target.value, wardCode: "" })}
           >
-            <option value="">{loadingProvinces ? tr("Đang tải...") : tr("Chọn tỉnh/thành")}</option>
+            <option value="">{loadingProvinces ? tr("ui.loading_148ded83") : tr("ui.choose_province_city_7e798e8f")}</option>
             {provinceOptions.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor="address-ward" className={compact ? "font-mono text-[11px] text-slate-300" : "profile-label"}>{tr("Phường / xã")}{required ? "*" : ""}</label>
+          <label htmlFor="address-ward" className={compact ? "font-mono text-[11px] text-slate-300" : "profile-label"}>{tr("ui.ward_commune_a0d567f2")}{required ? "*" : ""}</label>
           <select
             id="address-ward"
             className={inputClass}
@@ -84,13 +85,13 @@ export function VietnamAddressSelector({ value, onChange, required = false, comp
             required={required}
             onChange={(event) => onChange({ ...value, wardCode: event.target.value })}
           >
-            <option value="">{loadingWards ? tr("Đang tải...") : tr("Chọn phường/xã")}</option>
+            <option value="">{loadingWards ? tr("ui.loading_148ded83") : tr("ui.choose_ward_commune_1c0f35a4")}</option>
             {wardOptions.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}
           </select>
         </div>
       </div>
       <div className="flex flex-col gap-1 mt-3">
-        <label htmlFor="address-line" className={compact ? "font-mono text-[11px] text-slate-300" : "profile-label"}>{tr("Số nhà, đường, tòa nhà")}{required ? "*" : ""}</label>
+        <label htmlFor="address-line" className={compact ? "font-mono text-[11px] text-slate-300" : "profile-label"}>{tr("ui.building_street_and_house_number_97bd1e3f")}{required ? "*" : ""}</label>
         <input
           id="address-line"
           className={inputClass}
@@ -99,11 +100,11 @@ export function VietnamAddressSelector({ value, onChange, required = false, comp
           minLength={5}
           maxLength={300}
           autoComplete="street-address"
-          placeholder={tr("VD: Tòa A, số 1 Đại Cồ Việt")}
+          placeholder={tr("ui.building_and_street_address_1a9ff21f")}
           onChange={(event) => onChange({ ...value, addressLine: event.target.value })}
         />
       </div>
-      {error && <p className={compact ? "text-xs text-rose-300 mt-2" : "profile-error"} role="alert">{error}</p>}
+      {error && <p className={compact ? "text-xs text-rose-300 mt-2" : "profile-error"} role="alert">{translate(error)}</p>}
     </div>
   );
 }

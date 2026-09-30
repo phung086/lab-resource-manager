@@ -1,3 +1,4 @@
+import { localeMiddleware, localizeError } from "./locales/index.js";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -29,7 +30,7 @@ import incidentRouter from "./routes/incidents.js";
 import telemetryRouter from "./routes/telemetry.js";
 import paymentRouter from "./routes/payments.js";
 import assistantRouter from "./routes/assistant.js";
-import { handleMcp } from "./assistant/mcpServer.js";
+import { handleMcp, mcpRateLimit } from "./assistant/mcpServer.js";
 import { requireAuth } from "./middleware/auth.js";
 
 export function createApp() {
@@ -40,6 +41,7 @@ export function createApp() {
   }
 
   app.use(helmet());
+  app.use(localeMiddleware);
   app.use(
     cors({
       origin: (origin, callback) => {
@@ -57,7 +59,7 @@ export function createApp() {
     // the one-time secure hash and provider evidence.
     skip: (req) => /^\/api\/payments\/vnpay\/(?:ipn|return)(?:\?|$)/.test(req.originalUrl || req.url)
   }));
-  app.use(rateLimit({ windowMs: config.rateLimitWindowMs, limit: config.rateLimitMax }));
+  app.use(rateLimit({ windowMs: config.rateLimitWindowMs, limit: config.rateLimitMax, standardHeaders: "draft-7", legacyHeaders: false, handler: (req, res) => res.status(429).json({ error: { code: "RATE_LIMITED", message: localizeError(req.locale, "RATE_LIMITED") } }) }));
   app.use(metricsMiddleware);
 
   // Health check endpoints
@@ -124,7 +126,7 @@ export function createApp() {
   if (config.paymentsEnabled) app.use("/api/payments", paymentRouter);
   if (config.mcpAssistantEnabled) {
     app.use("/api/assistant", assistantRouter);
-    app.post("/mcp", requireAuth, handleMcp);
+    app.post("/mcp", requireAuth, mcpRateLimit, handleMcp);
     app.all("/mcp", requireAuth, (_req, res) => res.sendStatus(405));
   }
 

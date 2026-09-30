@@ -1,3 +1,5 @@
+import { setImmediate as yieldEventLoop } from "node:timers/promises";
+import { assertNotAborted } from "./assistantRuntime.js";
 import { prisma } from "../db.js";
 import { HttpError } from "../middleware/errors.js";
 import { assertBookingAccess } from "../middleware/labScope.js";
@@ -118,6 +120,7 @@ export const assistantTools = [
     {
       resourceId: id,
       query: str,
+      category: { type: "string", enum: categories },
       from: date,
       to: date,
       durationMinutes: { type: "integer", minimum: 15, maximum: 480 },
@@ -166,6 +169,7 @@ export const assistantTools = [
     "Filter real resources by text and documented VRAM. Missing specifications are not inferred.",
     {
       query: str,
+      category: { type: "string", enum: categories },
       minVramGb: { type: "number", minimum: 0, maximum: 10000 },
       limit,
     },
@@ -292,6 +296,9 @@ async function notifications(input, actor) {
         id: true,
         type: true,
         title: true,
+        titleKey: true,
+        messageKey: true,
+        messageParams: true,
         message: true,
         readAt: true,
         createdAt: true,
@@ -465,7 +472,7 @@ async function eligibility({ resourceId }, actor) {
     source: "database",
   };
 }
-async function findSlots(input, actor) {
+async function findSlots(input, actor, { signal } = {}) {
   const now = new Date();
   const [from, to] = interval(
     input.from || now.toISOString(),
@@ -477,6 +484,7 @@ async function findSlots(input, actor) {
     : await prisma.resource.findMany({
         where: {
           ...(await resourceScope(actor)),
+          ...(input.category ? { category: input.category } : {}),
           ...(input.query
             ? {
                 OR: ["code", "name", "description"].map((k) => ({
@@ -490,7 +498,11 @@ async function findSlots(input, actor) {
         take: 20,
       });
   const slots = [];
-  for (const resource of resources) {
+  let checks = 0, resourcesChecked = 0, searchTruncated = false;
+  resourceLoop: for (const resource of resources) {
+    assertNotAborted(signal);
+    if (!["AVAILABLE", "IN_USE"].includes(resource.operationalStatus) || resource.bookingState !== "bookable") continue;
+    resourcesChecked += 1;
     const data = await blocks(resource.id, from, to);
     // Fixed 15-minute grid in absolute time (UTC+7 has no DST); canonical policy evaluates VN wall time.
     for (
@@ -499,6 +511,9 @@ async function findSlots(input, actor) {
       t + duration * 60000 <= to.getTime();
       t += 900000
     ) {
+      if (checks >= 4096) { searchTruncated = true; break resourceLoop; }
+      checks += 1;
+      if (checks % 64 === 0) { await yieldEventLoop(); assertNotAborted(signal); }
       const startAt = new Date(t),
         endAt = new Date(t + duration * 60000);
       if (policyResult(resource, startAt, endAt, now)) continue;
@@ -533,14 +548,16 @@ async function findSlots(input, actor) {
   }
   return {
     slots,
-    resourcesChecked: resources.length,
+    resourcesChecked,
+    candidatesChecked: checks,
+    searchTruncated,
     source: "database",
     timeZone: "Asia/Ho_Chi_Minh",
     finalValidationRequired: true,
   };
 }
 async function recommend(input, actor) {
-  const data = await searchResources({ query: input.query, limit: 20 }, actor);
+  const data = await searchResources({ query: input.query, category: input.category, limit: 20 }, actor);
   const resources = data.resources
     .filter(
       (r) =>

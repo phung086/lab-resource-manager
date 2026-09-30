@@ -1,3 +1,4 @@
+import { translate } from "../i18n.js";
 import React, { useEffect, useRef } from "react";
 import { X, LucideIcon } from "lucide-react";
 
@@ -84,7 +85,7 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
       }}
       role="dialog"
       aria-modal="true"
-      aria-label={title || "Hộp thoại"}
+      aria-label={title || translate("ui.dialog_f750f1ee")}
     >
       <div ref={dialogRef} className={`modal-container-2026 ${maxWidth} mx-4 flex flex-col`}>
         {/* Modal Header */}
@@ -116,8 +117,8 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
               onClick={() => { if (dismissible) onCloseRef.current(); }}
               aria-disabled={!dismissible}
               className="modal-close-button-2026 flex items-center justify-center cursor-pointer"
-              title="Đóng (Esc)"
-              aria-label="Đóng hộp thoại"
+              title={translate("ui.close_esc_19ad3ad9")}
+              aria-label={translate("ui.close_dialog_69eb60a0")}
             >
               <X size={15} />
             </button>

@@ -1,3 +1,4 @@
+import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
@@ -93,41 +94,40 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   // Map activeTab to readable header title
   const tabTitles: Record<string, string> = {
-    stock: "Kho vật tư", teaching: "Lớp học phần",
-    home: tr("Không gian làm việc"),
-    profile: "Hồ sơ & ưu tiên LAB",
-    payments: "Thanh toán",
-    smart_calendar: "Lịch Đặt Khung Giờ",
-    ai_analytics: "AI Tính Toán Hiệu Suất",
-    ai_advisor: "AI Cố Vấn Lịch Đặt",
-    admin_management: "Quản lý tài nguyên phòng thí nghiệm",
-    conflict_queue: "Xử Lý Xung Đột Lịch Đặt",
-    quota_fairness: "Hạn Ngạch & Phân Bổ",
-    chargeback: "Quyết Toán Chi Phí",
-    policy_config: "Chính Sách & Quy Định Lab",
-    escalations: tr("Trung tâm thông báo"),
-    allocations: "Điều Phối Yêu Cầu",
-    dashboard: tr("Bảng điều khiển vận hành"),
-    digital_twin: "Bản Sao Số & Mặt Bằng Lab",
-    what_if: "Mô Phỏng Kịch Bản",
-    resources: tr("Danh mục tài nguyên phòng thí nghiệm"),
-    bookings: "Lịch Đặt & Bàn Giao Tài Nguyên",
-    maintenance: "Lịch Bảo Trì & Kiểm Định",
-    monitoring: "Giám sát vận hành & Telemetry",
-    pareto: "Khảo Sát Tối Ưu Hóa",
-    timeline: "Nhật Ký Điều Phối",
-    concurrency: "Kiểm Soát Tranh Chấp Lịch",
-    ga_solver: "Thuật Toán Điều Lịch",
-    ai_rca: "Phân Tích Nguyên Nhân Sự Cố",
-    assistant: "Trợ Lý Vận Hành Lab",
-    incidents: tr("Sự cố tài nguyên"),
-    training: "Đào Tạo & An Toàn Lab",
-    logs: "Nhật Ký Kiểm Toán",
-    users: "Quản Trị Người Dùng"
+    stock: translate("ui.materials_inventory_2b570ac6"), teaching: translate("ui.course_groups_73951b09"),
+    home: tr("ui.workspace_970a97e3"),
+    profile: translate("ui.profile_and_lab_preferences_ab1e68a1"),
+    payments: translate("ui.payments_d4b946cc"),
+    smart_calendar: translate("ui.resource_calendar_ad1e4c6d"),
+    ai_analytics: translate("ui.ai_efficiency_analysis_2d29dbaa"),
+    ai_advisor: translate("ui.ai_scheduling_advisor_c75d577c"),
+    admin_management: translate("ui.laboratory_resource_management_3b4ed242"),
+    conflict_queue: translate("ui.booking_conflict_resolution_6439428e"),
+    quota_fairness: translate("ui.quotas_and_allocations_3c016409"),
+    chargeback: translate("ui.cost_reconciliation_cc6aca63"),
+    policy_config: translate("ui.lab_policies_and_rules_fdb49bbf"),
+    escalations: tr("ui.notifications_0c951eef"),
+    allocations: translate("ui.request_coordination_47867edf"),
+    dashboard: tr("ui.operations_dashboard_6a44426c"),
+    digital_twin: translate("ui.lab_digital_twin_and_floor_4d1ee395"),
+    what_if: translate("ui.scenario_simulation_b0012576"),
+    resources: tr("ui.laboratory_resource_catalogue_84d37caf"),
+    bookings: translate("ui.bookings_and_resource_handover_2ada6d5a"),
+    maintenance: translate("ui.maintenance_and_calibration_schedule_ed6489ac"),
+    monitoring: translate("ui.operational_monitoring_and_telemetry_296bd9d7"),
+    pareto: translate("ui.optimization_explorer_8e8c6b09"),
+    timeline: translate("ui.coordination_history_e087e3dc"),
+    concurrency: translate("ui.booking_concurrency_control_9b5313ac"),
+    ga_solver: translate("ui.scheduling_algorithm_4c48c66a"),
+    ai_rca: translate("ui.incident_root_cause_analysis_83e98bb2"),
+    assistant: translate("ui.lab_operations_assistant_9d99d2ba"),
+    incidents: tr("ui.resource_incidents_0cba217b"),
+    training: translate("ui.lab_training_and_safety_26f5f367"),
+    logs: translate("ui.audit_logs_da29e2f6"),
+    users: translate("ui.user_administration_4150792e")
   };
 
-  const englishTitles: Record<string, string> = { home: "Workspace", stock: "Materials inventory", teaching: "Course groups", resources: "Rooms and equipment", bookings: "Bookings and handover", smart_calendar: "Resource calendar", maintenance: "Maintenance and calibration", profile: "My profile", users: "Users and assignments", admin_management: "Resource administration", monitoring: "Equipment monitoring", dashboard: "LAB operations", escalations: "Notifications", incidents: "Incidents", payments: "Payments" };
-  const currentTitle = (locale === "en" ? englishTitles[activeTab] || activeTab.replaceAll("_", " ") : tabTitles[activeTab]) || "Hệ thống đặt lịch và tài nguyên phòng thí nghiệm";
+  const currentTitle = tr(tabTitles[activeTab]) || tr("core.app.name");
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   async function handlePasswordSubmit(e: React.FormEvent) {
@@ -135,15 +135,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     if (passwordBusy) return;
     setPasswordError("");
     if (!currentPassword) {
-      setPasswordError(tr("Vui lòng nhập mật khẩu hiện tại."));
+      setPasswordError("ui.enter_your_current_password_840cc081");
       return;
     }
     if (!newPassword || newPassword.length < 8) {
-      setPasswordError(tr("Mật khẩu mới phải có ít nhất 8 ký tự."));
+      setPasswordError("ui.your_new_password_must_have_b32509a2");
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError(tr("Xác nhận mật khẩu không trùng khớp."));
+      setPasswordError("ui.passwords_do_not_match_633c4090");
       return;
     }
 
@@ -159,7 +159,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: any) {
-      setPasswordError(error?.message || tr("Không thể đổi mật khẩu."));
+      setPasswordError(error?.message || "ui.could_not_change_your_password_6c44efd3");
     } finally {
       setPasswordBusy(false);
     }
@@ -167,7 +167,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   return (
     <div className="app-shell-2026 workspace-shell">
-      <a className="skip-link" href="#workspace-main">{locale === "en" ? "Skip to main content" : "Đến nội dung chính"}</a>
+      <a className="skip-link" href="#workspace-main">{locale === "en" ? "Skip to main content" : translate("ui.skip_to_main_content_a75d7c33")}</a>
       {/* Primary navigation */}
       <Sidebar
         activeTab={activeTab}
@@ -201,10 +201,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         <main id="workspace-main" tabIndex={-1} className="main-body-container-2026">
           {children}
         </main>
-        <footer className="workspace-footer"><span>Lab Resource Manager</span><span>{tr("Đặt lịch · Bàn giao · Theo dõi")}</span><span>{tr("Giờ Việt Nam · UTC+07:00")}</span></footer>
+        <footer className="workspace-footer"><span>{translate("ui.lab_resource_manager_ec7709de")}</span><span>{tr("ui.book_handover_track_a5b85bae")}</span><span>{tr("ui.vietnam_time_utc_07_00_1f741bd1")}</span></footer>
       </div>
 
-      {AI_ASSISTANT_ENABLED && assistantOpen && <React.Suspense fallback={<p role="status">Đang mở trợ lý…</p>}><LaboratoryAssistant onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} /></React.Suspense>}
+      {AI_ASSISTANT_ENABLED && assistantOpen && <React.Suspense fallback={<p role="status">{translate("ui.opening_assistant_9a8f8008")}</p>}><LaboratoryAssistant onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} /></React.Suspense>}
       {RESEARCH_FEATURES_ENABLED && (
         <React.Suspense fallback={null}>
           <FloatingCopilotFab
@@ -227,63 +227,63 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         isOpen={changePasswordOpen}
         onClose={closePasswordModal}
         dismissible={!passwordBusy && (!user?.passwordResetRequired || passwordSuccess)}
-        title={user?.passwordResetRequired ? tr("Thiết lập mật khẩu mới") : tr("Đổi mật khẩu")}
-        subtitle={user?.passwordResetRequired ? tr("Mật khẩu hiện tại là số điện thoại đã dùng khi đặt nhanh. Bạn phải đổi mật khẩu trước khi dùng các chức năng khác.") : tr("Cập nhật mật khẩu truy cập tài khoản phòng lab")}
+        title={user?.passwordResetRequired ? tr("ui.set_a_new_password_d9d5f864") : tr("ui.change_password_4598a666")}
+        subtitle={user?.passwordResetRequired ? tr("ui.your_temporary_password_is_the_ede673e9") : tr("ui.update_your_lab_account_password_97a8f11c")}
         icon={KeyRound}
         maxWidth="max-w-md"
         footer={<>
-          {(!user?.passwordResetRequired || passwordSuccess) && <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>{tr("Đóng")}</button>}
-          {!passwordSuccess && <button type="submit" form="change-password-form" className="btn btn-primary" disabled={passwordBusy}>{passwordBusy ? tr("Đang cập nhật...") : tr("Cập nhật mật khẩu")}</button>}
+          {(!user?.passwordResetRequired || passwordSuccess) && <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>{tr("ui.close_5d54c2a1")}</button>}
+          {!passwordSuccess && <button type="submit" form="change-password-form" className="btn btn-primary" disabled={passwordBusy}>{passwordBusy ? tr("ui.updating_01c0991e") : tr("ui.update_password_a9f9616f")}</button>}
         </>}
       >
             <form id="change-password-form" onSubmit={handlePasswordSubmit} className="booking-form">
               {passwordError && (
                 <div className="alert danger text-xs flex items-center gap-2" role="alert">
                   <ShieldAlert size={14} aria-hidden="true" />
-                  <span>{passwordError}</span>
+                  <span>{translate(passwordError)}</span>
                 </div>
               )}
               {passwordSuccess && (
                 <div className="alert success text-xs flex items-center gap-2" role="status">
                   <Check size={14} aria-hidden="true" />
-                  <span>{tr("Mật khẩu đã được cập nhật thành công.")}</span>
+                  <span>{tr("ui.your_password_has_been_updated_90d53208")}</span>
                 </div>
               )}
 
               <div>
-                <label htmlFor="current-password" className="text-xs text-slate-400 mb-1 block">{tr("Mật khẩu hiện tại")}</label>
+                <label htmlFor="current-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.current_password_7f06b3a5")}</label>
                 <input
                   id="current-password"
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder={tr("Nhập mật khẩu hiện tại")}
+                  placeholder={tr("ui.enter_current_password_60f70758")}
                   autoComplete="current-password"
                   required
                 />
               </div>
 
               <div>
-                <label htmlFor="new-password" className="text-xs text-slate-400 mb-1 block">{tr("Mật khẩu mới")}</label>
+                <label htmlFor="new-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.new_password_8f6cace3")}</label>
                 <input
                   id="new-password"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder={tr("Tối thiểu 8 ký tự")}
+                  placeholder={tr("ui.at_least_8_characters_5b6fe49d")}
                   autoComplete="new-password"
                   required
                 />
               </div>
 
               <div>
-                <label htmlFor="confirm-password" className="text-xs text-slate-400 mb-1 block">{tr("Xác nhận mật khẩu mới")}</label>
+                <label htmlFor="confirm-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.confirm_new_password_7a0fe0f4")}</label>
                 <input
                   id="confirm-password"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder={tr("Nhập lại mật khẩu")}
+                  placeholder={tr("ui.repeat_password_f012d34b")}
                   autoComplete="new-password"
                   required
                 />

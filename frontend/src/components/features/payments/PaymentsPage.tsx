@@ -1,3 +1,4 @@
+import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
 import { apiRequest } from "../../../api.js";
@@ -37,11 +38,11 @@ type Qr = {
   content: string;
 };
 const labels: Record<string, string> = {
-  pending: "Chờ thanh toán",
-  success: "Đã xác minh thanh toán",
-  failed: "Thanh toán thất bại",
-  expired: "Phiên đã hết hạn",
-  refunded: "Đã hoàn tiền",
+  pending: "ui.awaiting_payment_dd717eb2",
+  success: "ui.payment_verified_c37ae36e",
+  failed: "ui.payment_failed_39d4ec59",
+  expired: "ui.session_expired_213530d5",
+  refunded: "ui.refunded_d0d4c45f",
 };
 const money = (v: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
@@ -123,7 +124,7 @@ function PaymentsLedger({
     if (admin)
       apiRequest("/bookings")
         .then(setBookings)
-        .catch(() => setError("Không tải được danh sách lịch đặt."));
+        .catch(() => setError("ui.unable_to_load_bookings_23dea77f"));
   }, [admin, bookingId]);
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -205,10 +206,10 @@ function PaymentsLedger({
   async function copy(value: string, label: string) {
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(`Đã sao chép: ${label}`);
+      setCopied(translate("ui.copied_092dba1f", { value0: label }));
     } catch {
       setCopied(
-        "Không thể sao chép tự động; bạn có thể chọn nội dung để sao chép.",
+        translate("ui.automatic_copying_failed_select_the_2c75e78e"),
       );
     }
   }
@@ -219,55 +220,50 @@ function PaymentsLedger({
         <div>
           <h1>
             {bookingId
-              ? "Thanh toán lịch đặt LAB"
+              ? translate("ui.lab_booking_payment_5e2f0fb9")
               : admin
-                ? "Sổ giao dịch thanh toán"
-                : "Thanh toán của tôi"}
+                ? translate("ui.payment_ledger_49cf3f23")
+                : translate("ui.my_payments_dae6e05a")}
           </h1>
           <p className="section-description">
-            Khoản thu được tạo theo phí đã chốt khi lịch đặt được xác nhận, hoặc do quản trị viên lập.
-            Trạng thái thanh toán được theo dõi riêng cho từng lịch đặt.
-          </p>
+             {translate("ui.charges_use_the_confirmed_booking_d4c0b90a")} </p>
         </div>
         <button
           className="secondary-button"
           disabled={loading || !!busy}
           onClick={load}
         >
-          {tr("Làm mới")}</button>
+          {tr("ui.refresh_b4c61340")}</button>
       </header>
       {bookingId && (
         <div className="alert">
           <p>
-            Khoản thu và biên nhận của lịch đặt:{" "}
+             {translate("ui.charges_and_receipts_for_booking_522439cb")}{" "}
             <span className="payment-ref">{bookingId}</span>
           </p>
           <p>
-            Chọn yêu cầu thanh toán bên dưới để tiếp tục qua VNPAY Sandbox hoặc
-            VietQR. Lịch cần duyệt chỉ có khoản thu sau khi được xác nhận; lịch miễn phí không cần thanh toán.
-          </p>
+             {translate("ui.choose_a_charge_below_to_a13ee3b9")} </p>
           <button className="secondary-button" onClick={onClearBooking}>
-            Xem tất cả giao dịch
-          </button>
+             {translate("ui.view_all_transactions_6001f878")} </button>
         </div>
       )}
       {error && (
         <div role="alert" className="alert danger">
-          {error}
+          {translate(error)}
         </div>
       )}
       {admin && (
         <details className="panel payment-charge">
-          <summary>Tạo yêu cầu thanh toán</summary>
+          <summary>{translate("ui.create_a_payment_request_7a755c80")}</summary>
           <form onSubmit={create} className="booking-form">
             <label>
-              {tr("Lịch đặt")}<select
+              {tr("ui.bookings_00f5b333")}<select
                 name="bookingId"
                 required
                 defaultValue={bookingId || ""}
                 key={bookingId || "all"}
               >
-                <option value="">Chọn lịch đặt</option>
+                <option value="">{translate("ui.select_a_booking_ee647416")}</option>
                 {bookings.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.title} · {b.id}
@@ -276,8 +272,7 @@ function PaymentsLedger({
               </select>
             </label>
             <label>
-              Nội dung yêu cầu
-              <input
+               {translate("ui.request_description_6784151f")} <input
                 name="description"
                 minLength={3}
                 maxLength={500}
@@ -285,10 +280,9 @@ function PaymentsLedger({
               />
             </label>
             <p>
-              Số tiền luôn lấy từ phí VND đã chốt trên booking. Lịch miễn phí hoặc chưa được duyệt không thể tạo khoản thu.
-            </p>
+               {translate("ui.the_amount_always_comes_from_cde307a2")} </p>
             <button className="primary-button" disabled={!!busy}>
-              {tr("Tạo yêu cầu")}</button>
+              {tr("ui.request_created_a7754180")}</button>
           </form>
         </details>
       )}
@@ -300,17 +294,16 @@ function PaymentsLedger({
         }}
       >
         <label>
-          Tìm giao dịch
-          <input
+           {translate("ui.find_transactions_dcd7a5a8")} <input
             value={search}
             maxLength={100}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Mã giao dịch hoặc lịch đặt"
+            placeholder={translate("ui.transaction_or_booking_reference_50e37320")}
           />
         </label>
         <label>
-          {tr("Trạng thái")}<select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="">{tr("Tất cả")}</option>
+          {tr("ui.status_cb31de81")}<select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">{tr("ui.all_49c73a31")}</option>
             {Object.entries(labels).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
@@ -319,37 +312,35 @@ function PaymentsLedger({
           </select>
         </label>
         <label>
-          Phương thức
-          <select
+           {translate("ui.method_2d29dd82")} <select
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
           >
-            <option value="">{tr("Tất cả")}</option>
-            <option value="unselected">Chưa chọn</option>
-            <option value="vnpay">VNPAY Sandbox</option>
-            <option value="vietqr">VietQR</option>
+            <option value="">{tr("ui.all_49c73a31")}</option>
+            <option value="unselected">{translate("ui.not_selected_e5f50074")}</option>
+            <option value="vnpay">{translate("ui.vnpay_sandbox_667598b8")}</option>
+            <option value="vietqr">{translate("ui.vietqr_d3f03ab0")}</option>
           </select>
         </label>
         <button className="secondary-button" disabled={loading}>
-          Lọc giao dịch
-        </button>
+           {translate("ui.filter_transactions_d79035fe")} </button>
       </form>
       {loading ? (
-        <p role="status">Đang tải giao dịch…</p>
+        <p role="status">{translate("ui.loading_transactions_68570a8d")}</p>
       ) : !rows.length ? (
         <p className="empty-state">
           {error
-            ? "Không thể tải giao dịch. Hãy thử lại."
-            : "Chưa có yêu cầu thanh toán phù hợp."}
+            ? translate("ui.unable_to_load_transactions_please_79da9051")
+            : translate("ui.no_matching_payment_requests_4df227bf")}
         </p>
       ) : (
         <div className="payment-list">
           {rows.map((row) => (
             <article className="panel payment-card" key={row.id}>
               <div className="payment-card-heading">
-                <h2>{row.booking?.title || "Lịch đặt không còn liên kết"}</h2>
+                <h2>{row.booking?.title || translate("ui.booking_no_longer_linked_6ba25274")}</h2>
                 <span className={`payment-state payment-${row.status}`}>
-                  {labels[row.status]}
+                  {tr(labels[row.status])}
                 </span>
               </div>
               <p>
@@ -357,32 +348,32 @@ function PaymentsLedger({
               </p>
               <strong className="payment-amount">{money(row.amount)}</strong>
               <dl>
-                <dt>Mã giao dịch</dt>
+                <dt>{translate("ui.transaction_reference_717b27eb")}</dt>
                 <dd>{row.txnRef}</dd>
-                <dt>Người thanh toán</dt>
+                <dt>{translate("ui.payer_9f6325a0")}</dt>
                 <dd>{row.user.fullName}</dd>
-                <dt>Phương thức</dt>
+                <dt>{translate("ui.method_2d29dd82")}</dt>
                 <dd>
                   {row.provider === "vnpay"
                     ? "VNPAY · SANDBOX"
                     : row.provider === "vietqr"
                       ? row.status === "pending"
-                        ? "VietQR · Chờ đối soát"
+                        ? translate("ui.vietqr_awaiting_reconciliation_38b30832")
                         : "VietQR"
-                      : "Chưa chọn"}
+                      : translate("ui.not_selected_e5f50074")}
                 </dd>
-                <dt>Tạo lúc</dt>
+                <dt>{translate("ui.created_at_b1415fd5")}</dt>
                 <dd>{formatVietnamDateTime(row.createdAt)}</dd>
                 {row.paidAt && (
                   <>
-                    <dt>Đã thanh toán lúc</dt>
+                    <dt>{translate("ui.paid_at_bd0811f0")}</dt>
                     <dd>{formatVietnamDateTime(row.paidAt)}</dd>
                   </>
                 )}
                 {row.reconciliationStatus !== "none" && (
                   <>
-                    <dt>Đối soát</dt>
-                    <dd>{row.reconciliationStatus === "manual_review" ? "Cần xử lý thủ công" : tr("Đã xử lý")}</dd>
+                    <dt>{translate("ui.reconciliation_e262387b")}</dt>
+                    <dd>{row.reconciliationStatus === "manual_review" ? translate("ui.manual_review_required_680d6657") : tr("ui.resolved_6023373b")}</dd>
                   </>
                 )}
               </dl>
@@ -398,8 +389,7 @@ function PaymentsLedger({
                       setError("");
                     }}
                   >
-                    Xem yêu cầu thanh toán
-                  </button>
+                     {translate("ui.view_payment_request_61463436")} </button>
                 )}
                 {row.status === "success" && (
                   <button
@@ -407,8 +397,7 @@ function PaymentsLedger({
                     disabled={!!busy}
                     onClick={() => openReceipt(row)}
                   >
-                    Mở biên nhận
-                  </button>
+                     {translate("ui.open_receipt_68f863f1")} </button>
                 )}
                 {admin && row.reconciliationStatus === "manual_review" && (
                   <button
@@ -419,8 +408,7 @@ function PaymentsLedger({
                       setError("");
                     }}
                   >
-                    Xử lý đối soát
-                  </button>
+                     {translate("ui.review_reconciliation_1c73909a")} </button>
                 )}
               </div>
             </article>
@@ -428,24 +416,22 @@ function PaymentsLedger({
         </div>
       )}
       <p className="section-description">
-        Hiển thị tối đa 100 giao dịch mới nhất phù hợp bộ lọc.
-      </p>
+         {translate("ui.showing_up_to_100_recent_6f1a8435")} </p>
       <BaseModal2026
         isOpen={!!selected}
         onClose={() => {
           if (!busy) setSelected(null);
         }}
         dismissible={!busy}
-        title="Yêu cầu thanh toán"
-        subtitle="Thanh toán không tự duyệt hoặc hoàn tất booking"
+        title={translate("ui.payment_request_ec7f1b84")}
+        subtitle={translate("ui.payment_does_not_approve_or_5e1b6b4b")}
         footer={
           <button
             className="secondary-button"
             onClick={load}
             disabled={loading || !!busy}
           >
-            Làm mới trạng thái
-          </button>
+             {translate("ui.refresh_status_5c5763c1")} </button>
         }
       >
         {selected && (
@@ -455,24 +441,24 @@ function PaymentsLedger({
             <strong className="payment-amount">{money(selected.amount)}</strong>
             <span className={`payment-state payment-${selected.status}`}>
               {selected.provider === "vietqr" && selected.status === "pending"
-                ? "Đang chờ đối soát"
-                : labels[selected.status]}
+                ? translate("ui.awaiting_reconciliation_06361b86")
+                : tr(labels[selected.status])}
             </span>
-            <p className="payment-ref">Mã giao dịch · {selected.txnRef}</p>
+            <p className="payment-ref">{translate("ui.transaction_reference_05a9f7a2")} {selected.txnRef}</p>
             {selected.reconciliationStatus !== "none" && (
               <div className="alert warning" role="status">
-                <strong>{selected.reconciliationStatus === "manual_review" ? "Cần đối soát thủ công" : "Đối soát đã được xử lý"}</strong>
-                <p>{selected.reconciliationReason || "Giao dịch cần quản trị viên kiểm tra."}</p>
+                <strong>{selected.reconciliationStatus === "manual_review" ? translate("ui.manual_reconciliation_required_ad0551a4") : translate("ui.reconciliation_resolved_6c18a62d")}</strong>
+                <p>{selected.reconciliationReason || translate("ui.an_administrator_needs_to_review_463c5778")}</p>
               </div>
             )}
-            <ol className="payment-timeline" aria-label="Tiến trình thanh toán">
-              <li className="is-complete"><strong>Yêu cầu đã tạo</strong><time dateTime={selected.createdAt}>{formatVietnamDateTime(selected.createdAt)}</time></li>
-              <li className={selected.provider !== "unselected" ? "is-complete" : ""}><strong>{selected.provider !== "unselected" ? "Đã chọn phương thức" : "Chọn phương thức"}</strong><span>{selected.provider === "vnpay" ? "VNPAY Sandbox" : selected.provider === "vietqr" ? "VietQR" : "Chưa khởi tạo"}</span></li>
-              <li className={selected.status === "success" ? "is-complete" : ""}><strong>{selected.status === "success" ? tr("Đã xác minh") : selected.status === "failed" ? "Giao dịch thất bại" : "Chờ xác minh"}</strong><span>{selected.paidAt ? formatVietnamDateTime(selected.paidAt) : "Chưa ghi nhận thanh toán thành công"}</span></li>
+            <ol className="payment-timeline" aria-label={translate("ui.payment_progress_280450c6")}>
+              <li className="is-complete"><strong>{translate("ui.request_created_8af32592")}</strong><time dateTime={selected.createdAt}>{formatVietnamDateTime(selected.createdAt)}</time></li>
+              <li className={selected.provider !== "unselected" ? "is-complete" : ""}><strong>{selected.provider !== "unselected" ? translate("ui.method_selected_ef6b1341") : translate("ui.choose_method_da36b3c9")}</strong><span>{selected.provider === "vnpay" ? "VNPAY Sandbox" : selected.provider === "vietqr" ? "VietQR" : translate("ui.not_initiated_fd25f9ff")}</span></li>
+              <li className={selected.status === "success" ? "is-complete" : ""}><strong>{selected.status === "success" ? tr("ui.verified_662e363d") : selected.status === "failed" ? translate("ui.transaction_failed_46b69156") : translate("ui.awaiting_verification_74870609")}</strong><span>{selected.paidAt ? formatVietnamDateTime(selected.paidAt) : translate("ui.no_verified_successful_payment_8b0b9cfd")}</span></li>
             </ol>
             {error && (
               <p className="alert danger" role="alert">
-                {error}
+                {translate(error)}
               </p>
             )}
             {selected.status === "pending" && (
@@ -487,7 +473,7 @@ function PaymentsLedger({
                     }
                     onClick={() => initiate("vnpay")}
                   >
-                    VNPAY Sandbox <small>SANDBOX · thử nghiệm</small>
+                     {translate("ui.vnpay_sandbox_667598b8")} <small>{translate("ui.sandbox_test_environment_e18f63fb")}</small>
                   </button>
                   <button
                     className="secondary-button"
@@ -498,63 +484,54 @@ function PaymentsLedger({
                     }
                     onClick={() => initiate("vietqr")}
                   >
-                    VietQR <small>Chuyển khoản ngân hàng</small>
+                     {translate("ui.vietqr_d3f03ab0")} <small>{translate("ui.bank_transfer_952fce3f")}</small>
                   </button>
                 </div>
                 {(!providers.vnpay || !providers.vietqr) && (
                   <p>
-                    Phương thức bị vô hiệu hóa chưa được cấu hình trên máy chủ.
-                  </p>
+                     {translate("ui.disabled_methods_have_not_been_09179a99")} </p>
                 )}
                 <p>
-                  Khi đã khởi tạo, phương thức được giữ cố định để tránh thanh
-                  toán trùng.
-                </p>
+                   {translate("ui.after_initiation_the_method_is_e228edda")} </p>
               </>
             )}
-            {busy && <p role="status">Đang xử lý…</p>}
+            {busy && <p role="status">{translate("ui.processing_79eb2035")}</p>}
             {selected.status === "pending" && url && (
               <div className="alert">
-                <strong>VNPAY SANDBOX</strong>
+                <strong>{translate("ui.vnpay_sandbox_00e87848")}</strong>
                 <p>
-                  Chưa có kết quả được xác minh. Sau thử nghiệm, quay lại và làm
-                  mới trạng thái.
-                </p>
+                   {translate("ui.no_result_has_been_verified_e5466f99")} </p>
                 <a
                   className="primary-button"
                   href={url}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Tiếp tục đến VNPAY Sandbox
-                </a>
+                   {translate("ui.continue_to_vnpay_sandbox_e35da209")} </a>
               </div>
             )}
             {selected.status === "pending" && qr && (
               <>
                 <p className="alert">
-                  Đang chờ đối soát. Mã QR đã được tạo; hệ thống chưa xác minh
-                  tiền đã nhận. Chuyển khoản tới tài khoản thật có thể gửi tiền
-                  thật.
-                </p>
+                   {translate("ui.awaiting_reconciliation_the_qr_code_53e0c4b8")} </p>
                 <img
                   className="payment-qr"
                   src={qr.qrUrl}
-                  alt={`VietQR cho giao dịch ${selected.txnRef}`}
+                  alt={translate("ui.vietqr_for_transaction_2dbf8b17", { value0: selected.txnRef })}
                   onError={() =>
                     setError(
-                      "Không tải được ảnh QR từ provider. Không thực hiện chuyển khoản nếu chưa kiểm tra thông tin.",
+                      "ui.unable_to_load_the_provider_5b97408c",
                     )
                   }
                   referrerPolicy="no-referrer"
                 />
                 <dl>
                   {[
-                    ["Ngân hàng (BIN)", qr.bank],
-                    ["Tên tài khoản", qr.accountName],
-                    ["Số tài khoản", qr.accountNumber],
-                    ["Số tiền", String(qr.amount)],
-                    ["Nội dung chuyển khoản", qr.content],
+                    [translate("ui.bank_bin_18dfee69"), qr.bank],
+                    [translate("ui.account_holder_4c1976fc"), qr.accountName],
+                    [translate("ui.account_number_0ff9e285"), qr.accountNumber],
+                    [translate("ui.amount_4cbdc55b"), String(qr.amount)],
+                    [translate("ui.transfer_description_bcc3b45e"), qr.content],
                   ].map(([label, value]) => (
                     <React.Fragment key={label}>
                       <dt>{label}</dt>
@@ -564,7 +541,7 @@ function PaymentsLedger({
                           className="table-action"
                           onClick={() => copy(value, label)}
                         >
-                          Sao chép {label.toLowerCase()}
+                           {translate("ui.copy_68b42caf")} {label.toLowerCase()}
                         </button>
                       </dd>
                     </React.Fragment>
@@ -581,19 +558,17 @@ function PaymentsLedger({
                   setSelected(null);
                 }}
               >
-                Mở biên nhận
-              </button>
+                 {translate("ui.open_receipt_68f863f1")} </button>
             )}
             {admin && selected.reconciliationStatus === "manual_review" && (
               <div className="booking-form">
                 <label>
-                  Kết quả xử lý thủ công
-                  <textarea
+                   {translate("ui.manual_resolution_outcome_06042ed2")} <textarea
                     value={reconciliationReason}
                     minLength={3}
                     maxLength={500}
                     onChange={(event) => setReconciliationReason(event.target.value)}
-                    placeholder="Ghi bằng chứng xử lý hoặc quyết định hoàn tiền ngoài hệ thống"
+                    placeholder={translate("ui.record_external_resolution_evidence_or_397a40a1")}
                   />
                 </label>
                 <button
@@ -601,9 +576,8 @@ function PaymentsLedger({
                   disabled={!!busy || reconciliationReason.trim().length < 3}
                   onClick={() => void resolveReconciliation()}
                 >
-                  Đánh dấu đã xử lý
-                </button>
-                <small>Thao tác này không gọi API hoàn tiền VNPAY và không thay đổi trạng thái booking.</small>
+                   {translate("ui.mark_as_resolved_de951dcd")} </button>
+                <small>{translate("ui.this_action_does_not_call_1935b651")}</small>
               </div>
             )}
           </div>
@@ -612,35 +586,34 @@ function PaymentsLedger({
       <BaseModal2026
         isOpen={!!receipt}
         onClose={() => setReceipt(null)}
-        title="Biên nhận thanh toán nội bộ"
+        title={translate("ui.internal_payment_receipt_d9efbde5")}
         footer={
           <button className="primary-button" onClick={() => window.print()}>
-            In biên nhận
-          </button>
+             {translate("ui.print_receipt_ce9c48ea")} </button>
         }
       >
         {receipt && (
           <article className="payment-receipt">
             <h2>{receipt.title}</h2>
             <p className="payment-state payment-success">
-              {labels[receipt.transaction.status]} ·{" "}
+              {tr(labels[receipt.transaction.status])} ·{" "}
               {receipt.transaction.provider === "vnpay"
                 ? "VNPAY SANDBOX"
                 : receipt.transaction.provider}
             </p>
             <dl>
               {Object.entries({
-                "Mã giao dịch": receipt.transaction.txnRef,
-                "Số tiền": `${money(receipt.transaction.amount)} (${receipt.transaction.currency})`,
-                "Người thanh toán": receipt.transaction.user.fullName,
-                "Lịch đặt":
-                  receipt.transaction.booking?.title || "Không còn liên kết",
-                "Mã lịch đặt": receipt.transaction.booking?.id || "—",
-                "Tài nguyên": `${receipt.transaction.booking?.resource.code || ""} ${receipt.transaction.booking?.resource.name || ""}`,
-                "Thanh toán lúc": receipt.transaction.paidAt
+                [translate("ui.transaction_reference_717b27eb")]: receipt.transaction.txnRef,
+                [translate("ui.amount_4cbdc55b")]: `${money(receipt.transaction.amount)} (${receipt.transaction.currency})`,
+                [translate("ui.payer_9f6325a0")]: receipt.transaction.user.fullName,
+                [translate("ui.bookings_00f5b333")]:
+                  receipt.transaction.booking?.title || translate("ui.no_longer_linked_774c604c"),
+                [translate("ui.booking_reference_189e7a5d")]: receipt.transaction.booking?.id || "—",
+                [translate("ui.resource_9a35ef53")]: `${receipt.transaction.booking?.resource.code || ""} ${receipt.transaction.booking?.resource.name || ""}`,
+                [translate("ui.payment_time_cfbad42e")]: receipt.transaction.paidAt
                   ? formatVietnamDateTime(receipt.transaction.paidAt)
                   : "—",
-                "Biên nhận tạo lúc": formatVietnamDateTime(receipt.generatedAt),
+                [translate("ui.receipt_generated_at_9f7b0997")]: formatVietnamDateTime(receipt.generatedAt),
               }).map(([k, v]) => (
                 <React.Fragment key={k}>
                   <dt>{k}</dt>

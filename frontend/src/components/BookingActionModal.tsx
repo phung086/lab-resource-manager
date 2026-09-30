@@ -1,3 +1,4 @@
+import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ClipboardCheck, ShieldCheck } from "lucide-react";
@@ -14,18 +15,18 @@ export interface BookingActionModalProps {
 }
 
 const ACTION_COPY: Record<BookingAction, { title: string; submit: string; hint: string }> = {
-  APPROVE: { title: "Duyệt yêu cầu đặt lịch", submit: "Duyệt booking", hint: "Xác nhận booking sau khi đã kiểm tra lịch và điều kiện sử dụng." },
-  REJECT: { title: "Từ chối yêu cầu đặt lịch", submit: "Xác nhận từ chối", hint: "Lý do từ chối được lưu vào lịch sử và hiển thị cho người đặt." },
-  CHECK_OUT: { title: "Bàn giao tài nguyên", submit: "Xác nhận bàn giao", hint: "Ghi nhận tình trạng thực tế trước khi người dùng nhận tài nguyên." },
-  RETURN: { title: "Tiếp nhận hoàn trả tài nguyên", submit: "Xác nhận hoàn trả", hint: "Ghi nhận tình trạng thực tế của tài nguyên tại thời điểm nhận lại." },
-  SELF_RETURN: { title: "Trả phòng và kết thúc sử dụng", submit: "Xác nhận trả phòng", hint: "Xác nhận bạn đã rời phòng và mô tả tình trạng sau sử dụng. Phần lịch còn lại được giải phóng ngay; cán bộ lab nhận thông báo để theo dõi." },
-  COMPLETE: { title: "Hoàn tất hồ sơ booking", submit: "Hoàn tất workflow", hint: "Hoàn tất hồ sơ sau khi đã đối soát việc bàn giao và hoàn trả." }
+  APPROVE: { title: "ui.approve_booking_request_2869fbf5", submit: "ui.approve_booking_99c61da3", hint: "ui.confirm_the_booking_after_checking_59798436" },
+  REJECT: { title: "ui.reject_booking_request_ff54380e", submit: "ui.confirm_rejection_91e2bcc4", hint: "ui.the_reason_is_saved_in_f8364d49" },
+  CHECK_OUT: { title: "ui.hand_over_resource_2b919047", submit: "ui.confirm_handover_fe4a1650", hint: "ui.record_the_actual_condition_before_abca3376" },
+  RETURN: { title: "ui.receive_returned_resource_0c4b837a", submit: "ui.confirm_return_b2f47ecd", hint: "ui.record_the_actual_condition_when_5f156705" },
+  SELF_RETURN: { title: "ui.return_room_and_end_session_b4578431", submit: "ui.confirm_room_return_4ffc6e19", hint: "ui.confirm_you_have_left_the_f20d8d44" },
+  COMPLETE: { title: "ui.complete_booking_record_2b8ff0eb", submit: "ui.complete_workflow_519742b0", hint: "ui.complete_the_record_after_reviewing_ee0112ff" }
 };
 
 const CONDITION_SUGGESTIONS = [
-  "Ngoại quan nguyên vẹn",
-  "Phụ kiện được kiểm đếm đầy đủ",
-  "Không phát hiện bất thường khi kiểm tra cơ bản"
+  "ui.exterior_appears_intact_40f7fcf7",
+  "ui.all_accessories_counted_1fce6c68",
+  "ui.no_irregularities_found_during_the_1ec0829c"
 ];
 
 export const BookingActionModal: React.FC<BookingActionModalProps> = ({
@@ -47,7 +48,7 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
   const copy = Object.fromEntries(Object.entries(ACTION_COPY[action]).map(([key, value]) => [key, tr(value)]));
   const conditionField = action === "CHECK_OUT" ? "conditionBefore" : ["RETURN", "SELF_RETURN"].includes(action) ? "conditionAfter" : null;
   const reasonRequired = action === "REJECT";
-  const subtitle = useMemo(() => `${booking?.resource?.code || tr("Tài nguyên")} • ${booking?.title || "Booking"}`, [booking, tr]);
+  const subtitle = useMemo(() => `${booking?.resource?.code || tr("ui.resource_9a35ef53")} • ${booking?.title || "Booking"}`, [booking, tr]);
 
   if (!isOpen || !booking) return null;
 
@@ -61,13 +62,13 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
     const normalizedCondition = condition.trim();
 
     if (reasonRequired && !normalizedReason) {
-      setError(tr("Vui lòng nhập lý do từ chối."));
+      setError("ui.enter_a_reason_for_rejection_e9310bb1");
       return;
     }
     if (conditionField && !normalizedCondition) {
       setError(action === "CHECK_OUT"
-        ? tr("Vui lòng ghi nhận tình trạng tài nguyên trước khi bàn giao.")
-        : tr("Vui lòng ghi nhận tình trạng tài nguyên sau khi hoàn trả."));
+        ? "ui.record_the_resource_condition_before_667112c6"
+        : "ui.record_the_resource_condition_after_e8d0fb71");
       return;
     }
 
@@ -80,7 +81,7 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
     try {
       await onConfirm(payload);
     } catch (requestError: any) {
-      setError(requestError?.message || tr("Không thể thực hiện thao tác. Vui lòng kiểm tra và thử lại."));
+      setError(requestError?.message || "ui.could_not_complete_the_action_490d03ab");
     }
   }
 
@@ -95,10 +96,10 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
       maxWidth="max-w-xl"
       footer={
         <>
-          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>{tr("Hủy")}</button>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>{tr("ui.cancel_74fcd352")}</button>
           <button type="submit" form="booking-operation-form" className={`btn ${action === "REJECT" ? "btn-danger" : "btn-primary"}`} disabled={busy}>
             <CheckCircle2 size={15} />
-            <span>{busy ? tr("Đang lưu...") : copy.submit}</span>
+            <span>{busy ? tr("ui.saving_2b5c2a46") : copy.submit}</span>
           </button>
         </>
       }
@@ -113,16 +114,16 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
         </div>
 
         <p className="operation-modal-hint">{copy.hint}</p>
-        {action === "RETURN" && booking.handoverCondition && <p className="operation-modal-hint">{tr("Tình trạng khi bàn giao:")}{booking.handoverCondition}</p>}
-        {error && <div className="alert danger" role="alert">{error}</div>}
+        {action === "RETURN" && booking.handoverCondition && <p className="operation-modal-hint">{tr("ui.condition_at_handover_9424ef4d")}{booking.handoverCondition}</p>}
+        {error && <div className="alert danger" role="alert">{translate(error)}</div>}
 
         {(action === "APPROVE" || action === "REJECT" || action === "COMPLETE") && (
           <label className="operation-field">
-            <span>{action === "REJECT" ? tr("Lý do từ chối *") : tr("Ghi chú / lý do")}</span>
+            <span>{action === "REJECT" ? tr("ui.reason_for_rejection_ee9546e9") : tr("ui.notes_reason_9fd08697")}</span>
             <textarea
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder={action === "REJECT" ? tr("Nêu rõ lý do để người đặt có thể hiểu và xử lý tiếp.") : tr("Ghi chú vận hành (không bắt buộc)")}
+              placeholder={action === "REJECT" ? tr("ui.explain_the_reason_so_the_bdd20cef") : tr("ui.operational_notes_optional_eea98d3f")}
               maxLength={1000}
               required={reasonRequired}
               autoFocus
@@ -133,24 +134,24 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
         {conditionField && (
           <div className="operation-field">
             <label htmlFor="booking-condition-evidence">
-              {action === "CHECK_OUT" ? tr("Tình trạng trước khi sử dụng *") : tr("Tình trạng sau khi sử dụng *")}
+              {action === "CHECK_OUT" ? tr("ui.condition_before_use_714a3dda") : tr("ui.condition_after_use_7497e72b")}
             </label>
             <textarea
               id="booking-condition-evidence"
               value={condition}
               onChange={(event) => setCondition(event.target.value)}
-              placeholder={tr("Mô tả tình trạng thực tế bạn quan sát sau khi sử dụng.")}
+              placeholder={tr("ui.describe_the_actual_condition_observed_f139d5a7")}
               maxLength={2000}
               required
             />
-            <div className="operation-suggestion-row" aria-label={tr("Gợi ý nhập nhanh, chưa được xác nhận")}>
+            <div className="operation-suggestion-row" aria-label={tr("ui.suggested_wording_requires_your_verification_43f66e27")}>
               {CONDITION_SUGGESTIONS.map((suggestion) => (
-                <button key={suggestion} type="button" className="operation-suggestion" onClick={() => addSuggestion(suggestion)}>
-                  + {suggestion}
+                <button key={suggestion} type="button" className="operation-suggestion" onClick={() => addSuggestion(tr(suggestion))}>
+                  + {tr(suggestion)}
                 </button>
               ))}
             </div>
-            <small>{tr("Các gợi ý chỉ hỗ trợ nhập liệu và không được xem là kết quả kiểm tra cho đến khi người thực hiện xác nhận.")}</small>
+            <small>{tr("ui.suggestions_help_with_data_entry_6dc67fde")}</small>
           </div>
         )}
       </form>

@@ -1,3 +1,4 @@
+import { useLocale } from '../../providers/LocaleProvider';
 import React from "react";
 import { Clock, User, Calendar } from "lucide-react";
 import { BookingStatusBadge } from "../BookingStatusBadge.js";
@@ -14,6 +15,8 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
   onClick,
   compact = false
 }) => {
+  const { tr } = useLocale();
+  const title = event.titleKey ? tr(event.titleKey, event.titleParams) : event.title;
   const isMaintenance = event.type === "maintenance" || event.type === "calibration";
   const startTime = toVietnamTimeString(event.start);
   const endTime = toVietnamTimeString(event.end);
@@ -28,11 +31,11 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
           if (onClick) onClick(event);
         }}
         className={`calendar-event-card-wrap ${appearance} w-full text-left text-[11px] px-2 py-1 rounded border cursor-pointer truncate`}
-        title={`${event.title} (${startTime} - ${endTime})`}
+        title={`${title} (${startTime} - ${endTime})`}
       >
         <span className="font-medium">
           {event.isMine ? <span aria-hidden="true">★ </span> : null}
-          {event.title}
+          {title}
         </span>
         {startTime && <span className="calendar-event-time ml-1 text-[10px]">({startTime})</span>}
       </button>
@@ -48,7 +51,7 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
       <div className="flex items-start justify-between gap-2">
         <h4 className="text-sm font-medium leading-snug">
           {event.isMine && <span aria-hidden="true" className="calendar-own-marker mr-1">●</span>}
-          {event.title}
+          {title}
         </h4>
         <BookingStatusBadge status={event.status} occupancy={event.occupancy} />
       </div>

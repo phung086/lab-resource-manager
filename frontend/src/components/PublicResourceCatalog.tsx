@@ -1,3 +1,4 @@
+import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -74,21 +75,21 @@ type ScheduleBlock = { id: string; status?: string; kind?: string; title?: strin
 type SchedulePayload = { bookings: ScheduleBlock[]; maintenanceWindows: ScheduleBlock[] };
 
 const categoryLabels: Record<string, string> = {
-  ROOM: "Phòng LAB",
-  EQUIPMENT: "Thiết bị",
-  MACHINE: "Máy móc",
-  EXPERIMENT_KIT: "Bộ thí nghiệm",
-  MATERIAL: "Vật tư"
+  ROOM: "ui.lab_room_8ed94274",
+  EQUIPMENT: "ui.resources_eb706979",
+  MACHINE: "ui.machine_1d4b86ad",
+  EXPERIMENT_KIT: "ui.experiment_kit_0acb51cf",
+  MATERIAL: "ui.material_23ab10cc"
 };
 
 const operationalBadgeLabels: Record<string, { label: string; class: string }> = {
-  AVAILABLE: { label: "Khả dụng", class: "badge-op-available" },
-  IN_USE: { label: "Đang sử dụng", class: "badge-op-inuse" },
-  MAINTENANCE: { label: "Bảo trì", class: "badge-op-maintenance" },
-  CALIBRATION: { label: "Hiệu chuẩn", class: "badge-op-calibration" },
-  BROKEN: { label: "Hỏng hóc", class: "badge-op-broken" },
-  RETIRED: { label: "Ngừng sử dụng", class: "badge-op-retired" },
-  OFFLINE: { label: "Ngoại tuyến", class: "badge-op-offline" }
+  AVAILABLE: { label: "ui.available_73dc3284", class: "badge-op-available" },
+  IN_USE: { label: "ui.in_use_a07a3647", class: "badge-op-inuse" },
+  MAINTENANCE: { label: "ui.maintenance_8ad424bd", class: "badge-op-maintenance" },
+  CALIBRATION: { label: "ui.calibration_a71e17c8", class: "badge-op-calibration" },
+  BROKEN: { label: "ui.broken_969112a4", class: "badge-op-broken" },
+  RETIRED: { label: "ui.offline_b4f199c3", class: "badge-op-retired" },
+  OFFLINE: { label: "ui.offline_96a8bb03", class: "badge-op-offline" }
 };
 
 const bookingBlockStatuses = new Set(["PENDING_APPROVAL", "CONFIRMED", "CHECKED_OUT", "RETURNED"]);
@@ -154,7 +155,7 @@ export function PublicResourceCatalog({
         }
       })
       .catch((cause: Error) => {
-        if (active) setError(cause.message || tr("Không tải được danh mục tài nguyên."));
+        if (active) setError(cause.message || "ui.could_not_load_the_resource_f0ca2a15");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -199,9 +200,9 @@ export function PublicResourceCatalog({
     ]);
     if (request !== detailRequest.current) return;
     if (detailResult.status === "fulfilled") setSelected(detailResult.value);
-    else setDetailError(tr("Chưa tải được điều kiện sử dụng. Vui lòng thử lại trước khi đặt lịch."));
+    else setDetailError("ui.could_not_load_access_requirements_f8f02857");
     if (scheduleResult.status === "fulfilled") setSchedule(scheduleResult.value);
-    if (scheduleResult.status === "rejected") setScheduleError(tr("Chưa tải được lịch bận của tài nguyên này."));
+    if (scheduleResult.status === "rejected") setScheduleError("ui.could_not_load_this_resource_3e14358b");
     setScheduleLoading(false);
     setDetailLoading(false);
   }
@@ -220,15 +221,15 @@ export function PublicResourceCatalog({
   // Compute eligibility verdict for selected resource
   function computeEligibility(resource: Resource) {
     if (resource.bookingState !== "bookable") return {
-      status: "RESTRICTED", label: t("Hạn chế đặt lịch", "Booking restricted"),
-      message: t("Tài nguyên hiện không nhận đặt lịch tự phục vụ. Liên hệ cán bộ LAB để được hướng dẫn.", "Self-service booking is not available for this resource. Contact LAB staff for guidance."), type: "danger"
+      status: "RESTRICTED", label: t("ui.booking_restricted_7636ca33"),
+      message: t("ui.self_service_booking_is_not_abeb64ab"), type: "danger"
     };
     const isPhysicalOk = ["AVAILABLE", "IN_USE"].includes(resource.operationalStatus);
     if (!isPhysicalOk) {
       return {
         status: "UNAVAILABLE",
-        label: tr("Tạm ngưng phục vụ"),
-        message: t('Tài nguyên tạm thời không nhận lịch mới. Kiểm tra trạng thái thiết bị hoặc liên hệ cán bộ LAB.', 'This resource is not accepting new bookings. Check its physical status or contact LAB staff.'),
+        label: tr("ui.temporarily_unavailable_47a89b92"),
+        message: t("ui.this_resource_is_not_accepting_b608ddec"),
         type: "danger"
       };
     }
@@ -237,8 +238,8 @@ export function PublicResourceCatalog({
     if (trainingList.length === 0) {
       return {
         status: "ELIGIBLE",
-        label: tr("Đủ điều kiện"),
-        message: tr("Tài nguyên không yêu cầu chứng chỉ an toàn tiên quyết."),
+        label: tr("ui.no_training_prerequisite_40cc3697"),
+        message: tr("ui.no_prerequisite_safety_certification_is_2196781b"),
         type: "success"
       };
     }
@@ -246,16 +247,16 @@ export function PublicResourceCatalog({
     if (!currentUser) {
       return {
         status: "AUTH_REQUIRED",
-        label: tr("Cần chứng nhận an toàn"),
-        message: t('Yêu cầu hoàn thành: ', 'Required training: ') + trainingList.map(item => item.name || item.code).join(', ') + t('. Tài khoản phải có chứng chỉ còn hiệu lực trước khi đặt lịch; OTP không thay thế điều kiện này.', '. Your account must hold valid certifications before booking; OTP does not replace this requirement.'),
+        label: tr("ui.safety_certification_required_fd466d1a"),
+        message: t("ui.required_training_cfc8f7a5") + trainingList.map(item => item.name || item.code).join(', ') + t("ui.your_account_must_hold_valid_064ccae3"),
         type: "info"
       };
     }
 
     return {
       status: "TRAINING_REQUIRED",
-      label: t('Cần kiểm tra chứng nhận', 'Certification check required'),
-      message: t('Yêu cầu: ', 'Required: ') + trainingList.map(item => item.name || item.code).join(', ') + t('. Hệ thống kiểm tra chứng chỉ còn hiệu lực khi gửi lịch đặt.', '. Valid certifications are verified when you submit a booking.'),
+      label: t("ui.certification_check_required_b7981848"),
+      message: t("ui.required_42499a23") + trainingList.map(item => item.name || item.code).join(', ') + t("ui.valid_certifications_are_verified_when_afa12870"),
       type: "info"
     };
   }
@@ -264,24 +265,24 @@ export function PublicResourceCatalog({
     <div className="public-live-catalog">
       <div className="catalog-head">
         <div>
-          <h3>{tr("Khám phá phòng và thiết bị LAB")}</h3>
+          <h3>{tr("ui.explore_lab_rooms_and_equipment_be952c10")}</h3>
           <p>
-            {tr("Danh mục tài nguyên từ hệ thống. Tra cứu trạng thái vận hành, điều kiện sử dụng và lịch khả dụng trước khi đặt.")}</p>
+            {tr("ui.review_physical_condition_access_requirements_f841db8b")}</p>
         </div>
-        <button type="button" onClick={() => setRevision((value) => value + 1)} aria-label={tr("Tải lại danh mục")}>
+        <button type="button" onClick={() => setRevision((value) => value + 1)} aria-label={tr("ui.refresh_catalogue_31811f79")}>
           <RefreshCw size={17} aria-hidden="true" />
         </button>
       </div>
 
-      <label className="catalog-search-label">{t('Tìm phòng hoặc thiết bị', 'Find a room or equipment')}<input type="search" value={search} maxLength={120} onChange={event => { setSearch(event.target.value); setLimit(6); }} placeholder={t('Tên, mã tài nguyên hoặc vị trí', 'Name, resource code or location')} /></label>
-      <div className="catalog-filters" role="group" aria-label={tr("Lọc tài nguyên")}>
+      <label className="catalog-search-label">{t("ui.find_a_room_or_equipment_818cf711")}<input type="search" value={search} maxLength={120} onChange={event => { setSearch(event.target.value); setLimit(6); }} placeholder={t("ui.name_resource_code_or_location_9c88af3a")} /></label>
+      <div className="catalog-filters" role="group" aria-label={tr("ui.filter_resources_011c6ead")}>
         {[
-          ["ALL", tr("Tất cả")],
-          ["ROOM", tr("Phòng LAB")],
-          ["EQUIPMENT", tr("Thiết bị")],
-          ["MACHINE", tr("Máy móc")],
-          ["EXPERIMENT_KIT", tr("Bộ thí nghiệm")],
-          ["MATERIAL", tr("Vật tư")]
+          ["ALL", tr("ui.all_49c73a31")],
+          ["ROOM", tr("ui.lab_room_8ed94274")],
+          ["EQUIPMENT", tr("ui.resources_eb706979")],
+          ["MACHINE", tr("ui.machine_1d4b86ad")],
+          ["EXPERIMENT_KIT", tr("ui.experiment_kit_0acb51cf")],
+          ["MATERIAL", tr("ui.material_23ab10cc")]
         ].map(([code, label]) => (
           <button
             key={code}
@@ -294,16 +295,16 @@ export function PublicResourceCatalog({
         ))}
       </div>
 
-      {loading && <p role="status">{tr("Đang tải danh mục phòng và thiết bị…")}</p>}
+      {loading && <p role="status">{tr("ui.loading_rooms_and_equipment_e2ad6ba4")}</p>}
       {error && (
         <div className="catalog-message" role="alert">
-          {error}{" "}
+          {translate(error)}{" "}
           <button type="button" onClick={() => setRevision((value) => value + 1)}>
-            {tr("Thử lại")}</button>
+            {tr("ui.retry_c58d068c")}</button>
         </div>
       )}
       {!loading && !error && visible.length === 0 && (
-        <p className="catalog-message">{tr("Chưa có tài nguyên trong nhóm này.")}</p>
+        <p className="catalog-message">{tr("ui.no_resources_in_this_category_4f1d40ef")}</p>
       )}
 
       {/* Catalog Cards Grid */}
@@ -320,14 +321,14 @@ export function PublicResourceCatalog({
                 type="button"
                 className="catalog-cover"
                 onClick={() => void openDetails(row)}
-                aria-label={`${t('Xem chi tiết', 'View details')}: ${row.name}`}
+                aria-label={`${t("ui.view_details_f6f88b0f")}: ${row.name}`}
               >
                 {image ? (
                   <ResourceMediaPreview key={image.url} kind="IMAGE" url={image.url} alt={image.altText || row.name} />
                 ) : (
                   <span className="catalog-placeholder">
                     {row.category === "ROOM" ? <DoorOpen size={48} /> : <Microscope size={48} />}
-                    <small>{tr("Chưa có ảnh minh họa")}</small>
+                    <small>{tr("ui.no_image_available_dcd8ffe7")}</small>
                   </span>
                 )}
               </button>
@@ -337,10 +338,10 @@ export function PublicResourceCatalog({
                 <div className="catalog-card-badges">
                   <span className={`card-badge ${opBadge.class}`}>{tr(opBadge.label)}</span>
                   <span className="card-badge badge-approval">
-                    {row.effectiveRequiresApproval ? tr("Cần duyệt") : tr("Tự động")}
+                    {row.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : tr("ui.automatic_a25c8028")}
                   </span>
                   {row.trainingRequirements && row.trainingRequirements.length > 0 && (
-                    <span className="card-badge badge-training">{tr("Cần chứng chỉ")}</span>
+                    <span className="card-badge badge-training">{tr("ui.training_required_cf046e4c")}</span>
                   )}
                 </div>
 
@@ -356,7 +357,7 @@ export function PublicResourceCatalog({
                   className="catalog-card-cta"
                   onClick={() => void openDetails(row)}
                 >
-                  {tr("Xem lịch & đặt")}<ArrowRight size={16} aria-hidden="true" />
+                  {tr("ui.view_schedule_book_8ca5d3f1")}<ArrowRight size={16} aria-hidden="true" />
                 </button>
               </div>
             </article>
@@ -364,7 +365,7 @@ export function PublicResourceCatalog({
         })}
       </div>
 
-      {!loading && !error && matches.length > limit && <button type="button" className="public-secondary catalog-show-more" onClick={() => setLimit(value => value + 6)}>{t('Xem thêm tài nguyên', 'Show more resources')} ({matches.length - limit})</button>}
+      {!loading && !error && matches.length > limit && <button type="button" className="public-secondary catalog-show-more" onClick={() => setLimit(value => value + 6)}>{t("ui.show_more_resources_8cf8a7b8")} ({matches.length - limit})</button>}
       {/* Resource Detail Section */}
       {selected && (
         <section className="catalog-detail" id="chi-tiet-tai-nguyen" aria-labelledby="catalog-detail-title">
@@ -376,16 +377,16 @@ export function PublicResourceCatalog({
               <h3 id="catalog-detail-title" ref={detailHeading} tabIndex={-1}>{selected.name}</h3>
               <p>{selected.laboratory?.name || selected.location}</p>
             </div>
-            <button type="button" onClick={closeDetails} aria-label={tr("Đóng chi tiết")}>
-              {tr("Đóng")}</button>
+            <button type="button" onClick={closeDetails} aria-label={tr("ui.close_details_f6d87bfc")}>
+              {tr("ui.close_5d54c2a1")}</button>
           </div>
 
           {detailLoading ? (
-            <p role="status">{tr("Đang kiểm tra thông tin và điều kiện sử dụng…")}</p>
+            <p role="status">{tr("ui.checking_information_and_access_requirements_72ae64fb")}</p>
           ) : detailError ? (
             <div className="catalog-message" role="alert">
-              {detailError}{" "}
-              <button type="button" onClick={() => void openDetails(selected, false)}>{tr("Thử lại")}</button>
+              {translate(detailError)}{" "}
+              <button type="button" onClick={() => void openDetails(selected, false)}>{tr("ui.retry_c58d068c")}</button>
             </div>
           ) : null}
 
@@ -411,7 +412,7 @@ export function PublicResourceCatalog({
                       ) : (
                         <Info size={18} aria-hidden="true" />
                       )}
-                      <strong>{tr("Khả năng sử dụng:")}{" "}{verdict.label}</strong>
+                      <strong>{tr("ui.access_requirements_6c692202")}{" "}{verdict.label}</strong>
                     </div>
                     <p>{verdict.message}</p>
                   </div>
@@ -419,47 +420,47 @@ export function PublicResourceCatalog({
               })()}
 
               <p className="catalog-description">
-                {selected.description || tr("Thông tin mô tả chi tiết được cán bộ quản lý LAB cập nhật.")}
+                {selected.description || tr("ui.lab_staff_maintain_the_detailed_af9d4644")}
               </p>
 
               <dl className="catalog-spec-dl">
                 <div>
-                  <dt>{tr("Địa điểm")}</dt>
+                  <dt>{tr("ui.location_4c781313")}</dt>
                   <dd>{selected.location}</dd>
                 </div>
                 <div>
-                  <dt>{tr("Sức chứa / Số lượng")}</dt>
+                  <dt>{tr("ui.capacity_quantity_a35ef20e")}</dt>
                   <dd>{selected.capacity}</dd>
                 </div>
                 <div>
-                  <dt>{tr("Phê duyệt")}</dt>
+                  <dt>{tr("ui.approve_e94fc148")}</dt>
                   <dd>
                     {selected.effectiveRequiresApproval
-                      ? tr("Cần cán bộ LAB duyệt trước khi bàn giao")
-                      : tr("Xác nhận tự động theo chính sách")}
+                      ? tr("ui.staff_approval_required_before_handover_4d6bf5a3")
+                      : tr("ui.automatic_confirmation_under_policy_bfbbda9a")}
                   </dd>
                 </div>
                 <div>
-                  <dt>{tr("Đào tạo an toàn")}</dt>
+                  <dt>{tr("ui.safety_training_d48b0cef")}</dt>
                   <dd>
                     {selected.trainingRequirements && selected.trainingRequirements.length > 0
                       ? selected.trainingRequirements.map((t) => t.name || t.code).join(", ")
-                      : tr("Không yêu cầu")}
+                      : tr("ui.not_required_ae94c3a4")}
                   </dd>
                 </div>
                 {selected.laboratory?.labPolicy && (
                   <div>
-                    <dt>{tr("Khung giờ quy định")}</dt>
+                    <dt>{tr("ui.operating_hours_7850d7de")}</dt>
                     <dd>
                       {selected.laboratory.labPolicy.workDayStartHour ?? 8}:00 –{" "}
                       {selected.laboratory.labPolicy.workDayEndHour ?? 18}:00{" "}
-                      {selected.laboratory.labPolicy.allowWeekend ? tr("(Mở cả cuối tuần)") : tr("(Ngày làm việc)")}
+                      {selected.laboratory.labPolicy.allowWeekend ? tr("ui.weekends_included_1da10d25") : tr("ui.working_days_629bf527")}
                     </dd>
                   </div>
                 )}
                 {selected.model && (
                   <div>
-                    <dt>{tr("Model / Ký hiệu")}</dt>
+                    <dt>{tr("ui.model_reference_da0677f5")}</dt>
                     <dd>{selected.model}</dd>
                   </div>
                 )}
@@ -468,18 +469,18 @@ export function PublicResourceCatalog({
               {/* Busy Schedule in Next 14 Days */}
               <div className="catalog-schedule">
                 <div>
-                  <strong>{tr("Lịch bận 14 ngày tới")}</strong>
-                  <span>{tr("Giờ Việt Nam · UTC+07:00. Hệ thống tự động kiểm tra xung đột thời gian khi bạn gửi yêu cầu đặt lịch.")}</span>
+                  <strong>{tr("ui.busy_times_in_the_next_d56621b7")}</strong>
+                  <span>{tr("ui.vietnam_time_utc_07_00_f7f7e8e0")}</span>
                 </div>
-                {scheduleLoading && <p role="status">{tr("Đang tải khung bận…")}</p>}
+                {scheduleLoading && <p role="status">{tr("ui.loading_busy_times_045df5bf")}</p>}
                 {scheduleError && (
                   <p role="alert">
-                    {scheduleError}{" "}
-                    <button type="button" onClick={() => void openDetails(selected, false)}>{tr("Thử lại")}</button>
+                    {translate(scheduleError)}{" "}
+                    <button type="button" onClick={() => void openDetails(selected, false)}>{tr("ui.retry_c58d068c")}</button>
                   </p>
                 )}
                 {!scheduleLoading && !scheduleError && busyBookings.length === 0 && busyMaintenance.length === 0 && (
-                  <p>{tr("Chưa có khung bận hoặc bảo trì trong khoảng này. Hệ thống vẫn kiểm tra điều kiện và thời gian khi bạn gửi yêu cầu.")}</p>
+                  <p>{tr("ui.no_bookings_or_maintenance_in_aede2f1d")}</p>
                 )}
                 <ul>
                   {busyBookings.slice(0, 6).map((row) => (
@@ -490,13 +491,13 @@ export function PublicResourceCatalog({
                   ))}
                   {busyMaintenance.slice(0, 4).map((row) => (
                     <li key={`maintenance-${row.id}`}>
-                      <span>{row.kind === "calibration" ? tr("Hiệu chuẩn") : tr("Bảo trì")}</span>
+                      <span>{row.kind === "calibration" ? tr("ui.calibration_a71e17c8") : tr("ui.maintenance_8ad424bd")}</span>
                       <strong>{formatRange(row.startAt, row.endAt)}</strong>
                     </li>
                   ))}
                 </ul>
                 {(busyBookings.length > 6 || busyMaintenance.length > 4) && (
-                  <p>{tr("Đang hiển thị")}{Math.min(busyBookings.length, 6) + Math.min(busyMaintenance.length, 4)} / {busyBookings.length + busyMaintenance.length} {tr("khung bận. Đăng nhập để xem lịch đầy đủ.")}</p>
+                  <p>{tr("ui.showing_68091fea")}{Math.min(busyBookings.length, 6) + Math.min(busyMaintenance.length, 4)} / {busyBookings.length + busyMaintenance.length} {tr("ui.busy_periods_sign_in_for_432bdad0")}</p>
                 )}
               </div>
 
@@ -507,15 +508,15 @@ export function PublicResourceCatalog({
                 onClick={() => onViewSchedule(selected.id)}
                 disabled={detailLoading || Boolean(detailError) || computeEligibility(selected).type === "danger"}
               >
-                <CalendarDays size={18} aria-hidden="true" /> {currentUser ? t('Mở lịch để đặt', 'Open calendar to book') : tr('Đăng nhập tài khoản trường để đặt lịch nội bộ')}{" "}
+                <CalendarDays size={18} aria-hidden="true" /> {currentUser ? t("ui.open_calendar_to_book_47ce166f") : tr("ui.sign_in_to_book_with_df7c9bb7")}{" "}
                 <ArrowRight size={17} aria-hidden="true" />
               </button>
 
               {/* Guest Quick Booking Section */}
               {onGuestBookingComplete && !detailLoading && !detailError && computeEligibility(selected).type !== "danger" && (
                 <details key={selected.id} className="catalog-guest-booking" onToggle={event => { if (event.currentTarget.open) setGuestBookingOpened(true); }}>
-                  <summary>{t("Đặt lịch nhanh cho khách ngoài trường", "Quick booking for external visitors")}</summary>
-                  <p>{t("Xác minh email và kiểm tra điều kiện trước khi gửi yêu cầu. Bạn có thể mở phần này khi cần đặt lịch.", "Verify your email and access requirements before submitting a request. Open this section when you are ready to book.")}</p>
+                  <summary>{t("ui.quick_booking_for_external_visitors_81f66209")}</summary>
+                  <p>{t("ui.verify_your_email_and_access_8a527832")}</p>
                   {guestBookingOpened && <GuestQuickBookingPanel key={selected.id} resource={selected} onComplete={onGuestBookingComplete} />}
                 </details>
               )}

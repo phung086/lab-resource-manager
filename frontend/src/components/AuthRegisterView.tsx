@@ -1,3 +1,4 @@
+import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useState, useRef, useEffect } from "react";
 import { Server, ShieldCheck, Lock, Mail, User, BookOpen, ArrowRight, Sparkles, Terminal, CheckCircle2 } from "lucide-react";
@@ -36,9 +37,9 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
 
   const perks = [
-    { title: tr("Tài khoản sinh viên mặc định"), desc: tr("Vai trò đặc quyền chỉ do quản trị viên phân công"), color: "text-emerald-400" },
-    { title: tr("Bảo vệ lịch đặt ở cơ sở dữ liệu"), desc: tr("Ngăn hai yêu cầu đồng thời chiếm cùng một tài nguyên"), color: "text-cyan-400" },
-    { title: tr("Quy trình duyệt và bàn giao"), desc: tr("Theo dõi trạng thái đặt lịch và lịch sử sử dụng"), color: "text-amber-400" }
+    { title: tr("ui.student_account_by_default_eb7e5226"), desc: tr("ui.privileged_roles_are_assigned_by_1602dd73"), color: "text-emerald-400" },
+    { title: tr("ui.database_booking_protection_f11937be"), desc: tr("ui.prevent_concurrent_requests_from_reserving_3fe3227a"), color: "text-cyan-400" },
+    { title: tr("ui.approval_and_handover_workflow_2ab20f09"), desc: tr("ui.track_booking_status_and_usage_38c3ffde"), color: "text-amber-400" }
   ];
 
   async function handleSubmit(e: React.FormEvent) {
@@ -51,7 +52,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
       const result = await register({ email, password, fullName, studentId, department, phone, organization, customerType, address });
       onRegisterSuccess(result.user);
     } catch (requestError: any) {
-      setError(requestError?.message || tr("Không thể đăng ký tài khoản."));
+      setError(requestError?.message || "ui.could_not_create_your_account_40c2f4b9");
     } finally {
       setIsLoading(false);
     }
@@ -80,8 +81,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
                 }`}
               >
-                VI
-              </button>
+                 {translate("ui.vi_dc7b94e1")} </button>
               <button
                 type="button"
                 onClick={() => onLocaleChange && onLocaleChange("en")}
@@ -92,8 +92,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
                 }`}
               >
-                EN
-              </button>
+                 {translate("ui.en_69374b09")} </button>
             </div>
           </div>
 
@@ -101,20 +100,20 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
           <div className="auth-form-content my-auto w-full mx-auto">
             <div className="mb-4">
               <h3 className="text-2xl font-bold font-heading text-white tracking-tight">
-                {tr("Đăng Ký Tài Khoản")}</h3>
+                {tr("ui.create_an_account_aa096410")}</h3>
               <p className="text-xs text-slate-400 mt-1 font-sans">
-                {tr("Tạo tài khoản LAB để đặt lịch tài nguyên, theo dõi thanh toán và lưu địa chỉ mặc định cho các nghiệp vụ mượn thiết bị sau này.")}</p>
+                {tr("ui.create_a_lab_account_to_5b26383a")}</p>
             </div>
 
             {error && (
               <div className="alert danger mb-4 text-xs" role="alert" tabIndex={-1} ref={errorRef}>
-                {error}
+                {translate(error)}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
-                <label htmlFor="register-full-name" className="font-mono text-[11px] text-slate-300">{tr("Họ và tên đầy đủ *")}</label>
+                <label htmlFor="register-full-name" className="font-mono text-[11px] text-slate-300">{tr("ui.full_name_00e2b103")}</label>
                 <div className="relative">
                   <User size={14} className="auth-input-icon text-slate-400" />
                   <input
@@ -126,7 +125,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder={tr("VD: Nguyễn Mai Phương")}
+                    placeholder={tr("ui.your_full_name_f26b86e8")}
                     className="auth-form-input has-icon w-full text-xs"
                   />
                 </div>
@@ -134,20 +133,20 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-student-id" className="font-mono text-[11px] text-slate-300">{tr("Mã số sinh viên (không bắt buộc)")}</label>
+                  <label htmlFor="register-student-id" className="font-mono text-[11px] text-slate-300">{tr("ui.student_id_optional_b502e713")}</label>
                   <input
                     id="register-student-id"
                     type="text"
                     maxLength={50}
                     value={studentId}
                     onChange={(e) => setStudentId(e.target.value)}
-                    placeholder="VD: 20261456"
+                    placeholder={translate("ui.vd_20261456_224f830c")}
                     className="auth-form-input w-full text-xs"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-email" className="font-mono text-[11px] text-slate-300">{tr("Email tài khoản *")}</label>
+                  <label htmlFor="register-email" className="font-mono text-[11px] text-slate-300">{tr("ui.account_email_8b7609c7")}</label>
                   <input
                     id="register-email"
                     autoComplete="email"
@@ -155,7 +154,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="maiphuong@ailab.edu.vn"
+                    placeholder={translate("ui.maiphuong_ailab_edu_vn_dda7481d")}
                     className="auth-form-input w-full text-xs"
                   />
                 </div>
@@ -163,34 +162,34 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-department" className="font-mono text-[11px] text-slate-300">{tr("Khoa / Bộ môn")}</label>
-                  <input id="register-department" value={department} onChange={e => setDepartment(e.target.value)} maxLength={100} autoComplete="organization" placeholder={tr("Nội bộ trường")} className="auth-form-input w-full text-xs" />
+                  <label htmlFor="register-department" className="font-mono text-[11px] text-slate-300">{tr("ui.faculty_department_2612ad06")}</label>
+                  <input id="register-department" value={department} onChange={e => setDepartment(e.target.value)} maxLength={100} autoComplete="organization" placeholder={tr("ui.institution_member_c405637f")} className="auth-form-input w-full text-xs" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-organization" className="font-mono text-[11px] text-slate-300">{tr("Đơn vị / tổ chức")}</label>
-                  <input id="register-organization" value={organization} onChange={e => setOrganization(e.target.value)} maxLength={160} autoComplete="organization" placeholder={tr("Khách ngoài trường nếu có")} className="auth-form-input w-full text-xs" />
+                  <label htmlFor="register-organization" className="font-mono text-[11px] text-slate-300">{tr("ui.organization_317f6525")}</label>
+                  <input id="register-organization" value={organization} onChange={e => setOrganization(e.target.value)} maxLength={160} autoComplete="organization" placeholder={tr("ui.external_organization_if_applicable_506f737e")} className="auth-form-input w-full text-xs" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-phone" className="font-mono text-[11px] text-slate-300">{tr("Số điện thoại *")}</label>
-                  <input id="register-phone" required value={phone} onChange={e => setPhone(e.target.value)} maxLength={20} autoComplete="tel" placeholder={tr("Dùng cho liên hệ bàn giao")} className="auth-form-input w-full text-xs" />
+                  <label htmlFor="register-phone" className="font-mono text-[11px] text-slate-300">{tr("ui.phone_number_837d435d")}</label>
+                  <input id="register-phone" required value={phone} onChange={e => setPhone(e.target.value)} maxLength={20} autoComplete="tel" placeholder={tr("ui.for_handover_coordination_2b6b1a36")} className="auth-form-input w-full text-xs" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="register-customer-type" className="font-mono text-[11px] text-slate-300">{tr("Nhóm sử dụng tự khai")}</label>
+                  <label htmlFor="register-customer-type" className="font-mono text-[11px] text-slate-300">{tr("ui.self_declared_user_group_753919d6")}</label>
                   <select id="register-customer-type" value={customerType} onChange={e => setCustomerType(e.target.value)} className="auth-form-input w-full text-xs">
-                    <option value="INTERNAL">{tr("Nội bộ trường (chưa xác minh)")}</option>
-                    <option value="EXTERNAL">{tr("Khách / đơn vị ngoài trường")}</option>
+                    <option value="INTERNAL">{tr("ui.institution_member_unverified_c6ed94d8")}</option>
+                    <option value="EXTERNAL">{tr("ui.external_visitor_organization_1ef50442")}</option>
                   </select>
-                  <span className="font-mono text-[10px] leading-4 text-slate-400">{tr("Không dùng để cấp quyền hoặc ưu đãi.")}</span>
+                  <span className="font-mono text-[10px] leading-4 text-slate-400">{tr("ui.this_does_not_grant_access_a721d72e")}</span>
                 </div>
               </div>
 
               <VietnamAddressSelector value={address} onChange={setAddress} required compact />
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="register-password" className="font-mono text-[11px] text-slate-300">{tr("Mật khẩu khởi tạo *")}</label>
+                <label htmlFor="register-password" className="font-mono text-[11px] text-slate-300">{tr("ui.password_e985d714")}</label>
                 <div className="relative">
                   <Lock size={14} className="auth-input-icon text-slate-400" />
                   <input
@@ -202,10 +201,10 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                     onChange={(e) => setPassword(e.target.value)}
                     minLength={8}
                     maxLength={128}
-                    placeholder={tr("Tối thiểu 8 ký tự...")}
+                    placeholder={tr("ui.at_least_8_characters_39d8466f")}
                     className="auth-form-input has-icon password-input w-full text-xs"
                   />
-                  <button className="password-toggle" type="button" aria-label={showPassword ? tr("Ẩn mật khẩu") : tr("Hiện mật khẩu")} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <button className="password-toggle" type="button" aria-label={showPassword ? tr("ui.hide_password_edd2eb31") : tr("ui.show_password_acfb0b77")} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
               </div>
 
@@ -214,7 +213,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
                 disabled={isLoading}
                 className="auth-submit-button mt-2 text-xs btn-cyan-gradient flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>{isLoading ? tr("ĐANG TẠO HỒ SƠ...") : tr("HOÀN TẤT ĐĂNG KÝ")}</span>
+                <span>{isLoading ? tr("ui.creating_account_b67f21a2") : tr("ui.create_account_cb84eafd")}</span>
                 <ArrowRight size={14} />
               </button>
             </form>
@@ -222,13 +221,13 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({
 
           {/* Switch to Login */}
           <div className="text-center pt-3 border-t border-white/10 text-xs text-slate-400">
-            <span>{tr("Đã có tài khoản phòng lab?")}</span>
+            <span>{tr("ui.already_have_a_lab_account_007025ab")}</span>
             <button
               type="button"
               onClick={onSwitchToLogin}
               className="auth-switch-link text-blue-400 font-semibold cursor-pointer ml-1"
             >
-              {tr("Đăng nhập ngay ➔")}</button>
+              {tr("ui.sign_in_b1912c20")}</button>
           </div>
         </div>
       </div>

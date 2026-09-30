@@ -32,7 +32,7 @@
     "demo:seed-infrastructure": "node scripts/seedGraduationDemoInfrastructure.mjs",
     "demo:seed-local": "node scripts/seedLocalDemo.mjs",
     "demo:local": "node scripts/startLocalDemo.mjs",
-    "test:required": "npm run test:core && npm run test:release-security",
+    "test:required": "npm run test:core && npm run test:release-security && npm run test:assistant",
     "test:release-security": "cross-env LOG_FORMAT=dev node --test test/releaseSecurity.test.js",
     "test:research": "node --test test/concurrency.test.js test/conflictForecasting.test.js test/geneticScheduler.test.js test/hybridDispatch.test.js test/integrations.test.js test/mqttTelemetry.test.js test/multiObjectiveAndBenchmark.test.js test/optimization.test.js test/orchestrationV2.test.js test/reputationScore.test.js test/services.test.js test/smartBookingPlatform.test.js",
     "test:batch7": "cross-env LOG_FORMAT=dev node --test test/batch7.production-demo-hardening.integration.test.js",
@@ -42,7 +42,9 @@
     "test:phase-f": "cross-env LOG_FORMAT=dev PAYMENTS_ENABLED=true node --test test/phaseF.system-audit.integration.test.js",
     "test:phase-h": "cross-env LOG_FORMAT=dev PAYMENTS_ENABLED=true node --test test/phaseH.payment-lifecycle.integration.test.js",
     "test:migration-safety": "node test/migrationSafetyMatrix.mjs",
-    "test:lab-workspace": "node --test test/labWorkspace.integration.test.js"
+    "test:lab-workspace": "node --test test/labWorkspace.integration.test.js",
+    "test:assistant": "cross-env LOG_FORMAT=dev node --test test/assistantRuntime.test.js",
+    "test:assistant:integration": "node --test test/assistant.integration.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1138.0",

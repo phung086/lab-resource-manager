@@ -1,5 +1,22 @@
 # Current Project State
 
+## Bilingual and assistant foundation — 2026-09-30
+
+The interrupted VI/EN + assistant work is continued in draft PR #22 on
+`codex/lab-workspace-ui-draft`. One 1,947-key catalog and verified backend
+projection replace parallel translation maps; failed/tampered language loads
+retry without discarding drafts. API errors, calendar/system labels, notifications
+and OTP mail use the shared boundary. Original user/resource evidence is retained.
+The authenticated assistant is read-only, reports local/model provenance, limits
+work and releases capacity after abort/deadline. Camera/sensor UI is deferred by
+a default-off flag. No runtime dependency or schema migration is added.
+Local PostgreSQL 16 integration/business regressions, 298 bilingual browser
+checks and 104 navigation checks passed. See
+`docs/BILINGUAL_ASSISTANT_FOUNDATION_20260930.md` for contracts, configuration,
+performance measurements and unverified external-provider boundaries. Current-head
+CI is authoritative on the PR; this is not a production deployment or main merge.
+
+
 ## Workspace navigation and role overview — 2026-09-30
 
 Continuation of the interrupted UI task in draft PR #22 on

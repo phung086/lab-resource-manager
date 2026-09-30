@@ -1,3 +1,4 @@
+import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import {
@@ -25,7 +26,7 @@ import "../styles/profile.css";
 type AddressValue = { addressLine: string; provinceCode: string; wardCode: string };
 
 function money(value: number) {
-  return `${new Intl.NumberFormat("vi-VN").format(value || 0)} đ`;
+  return translate("ui.vnd_e239b46a", { value0: new Intl.NumberFormat("vi-VN").format(value || 0) });
 }
 
 function tierLabel(tier?: string) {
@@ -33,10 +34,10 @@ function tierLabel(tier?: string) {
 }
 
 const CANONICAL_ROLE_LABELS: Record<string, string> = {
-  ADMIN: "Quản trị viên (ADMIN)",
-  LAB_STAFF: "Cán bộ phòng LAB (LAB_STAFF)",
-  LECTURER: "Giảng viên (LECTURER)",
-  STUDENT: "Sinh viên / Người dùng (STUDENT)"
+  ADMIN: "ui.administrator_admin_f4c6efe0",
+  LAB_STAFF: "ui.lab_staff_lab_staff_bd8c87d9",
+  LECTURER: "ui.lecturer_lecturer_62bdf7c0",
+  STUDENT: "ui.student_user_student_e7f5a647"
 };
 
 export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated: (user: any) => void }) {
@@ -78,7 +79,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
           wardCode: payload.defaultAddress?.wardCode || ""
         });
       })
-      .catch((cause: any) => { if (active) setError(cause?.message || "Không tải được hồ sơ."); })
+      .catch((cause: any) => { if (active) setError(cause?.message || "ui.could_not_load_profile_8b6760f5"); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [user?.id]);
@@ -97,9 +98,9 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
       setProfile(payload);
       localStorage.setItem("lrm_user", JSON.stringify(payload));
       onUserUpdated(payload);
-      setSuccess(tr("Thông tin liên hệ và địa chỉ đã được cập nhật thành công."));
+      setSuccess("ui.contact_information_and_address_updated_f70717db");
     } catch (cause: any) {
-      setError(cause?.message || tr("Không cập nhật được hồ sơ."));
+      setError(cause?.message || "ui.could_not_update_profile_07393170");
     } finally {
       setSaving(false);
     }
@@ -112,15 +113,15 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
     setPasswordSuccess("");
 
     if (!currentPassword) {
-      setPasswordError(tr("Vui lòng nhập mật khẩu hiện tại."));
+      setPasswordError("ui.enter_your_current_password_840cc081");
       return;
     }
     if (!newPassword || newPassword.length < 8) {
-      setPasswordError(tr("Mật khẩu mới phải có ít nhất 8 ký tự."));
+      setPasswordError("ui.your_new_password_must_have_b32509a2");
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError(tr("Xác nhận mật khẩu mới không khớp."));
+      setPasswordError("ui.new_passwords_do_not_match_c6f3eeb4");
       return;
     }
 
@@ -130,7 +131,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         method: "POST",
         body: JSON.stringify({ currentPassword, newPassword })
       });
-      setPasswordSuccess(tr("Đã cập nhật mật khẩu mới thành công."));
+      setPasswordSuccess(tr("ui.new_password_saved_f9b9598f"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -140,7 +141,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
       localStorage.setItem("lrm_user", JSON.stringify(updated));
       onUserUpdated(updated);
     } catch (cause: any) {
-      setPasswordError(cause?.message || tr("Không thể cập nhật mật khẩu."));
+      setPasswordError(cause?.message || "ui.could_not_update_password_f06947fb");
     } finally {
       setPasswordBusy(false);
     }
@@ -149,7 +150,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
   if (loading) {
     return (
       <div className="profile-page">
-        <p role="status"><Loader2 className="spin" size={18} /> {tr("Đang tải hồ sơ…")}</p>
+        <p role="status"><Loader2 className="spin" size={18} /> {tr("ui.loading_profile_6e226af8")}</p>
       </div>
     );
   }
@@ -161,45 +162,45 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
     <section className="profile-page" aria-labelledby="profile-title">
       <div className="profile-hero">
         <div>
-          <span className="profile-kicker">{tr("HỒ SƠ TRUY CẬP VÀ VẬN HÀNH")}</span>
-          <h1 id="profile-title">{tr("Hồ sơ người dùng & Quyền hạn LAB")}</h1>
+          <span className="profile-kicker">{tr("ui.account_profile_6fe53df4")}</span>
+          <h1 id="profile-title">{tr("ui.profile_lab_access_258f772e")}</h1>
           <p>
-            {tr("Quản lý thông tin định danh, bảo mật tài khoản, phân loại đối tượng sử dụng, chứng chỉ an toàn phòng lab và thông tin liên hệ.")}</p>
+            {tr("ui.manage_your_identity_account_security_4ef0a46e")}</p>
         </div>
       </div>
 
       {error && <div className="profile-alert danger" role="alert">{tr(error)}</div>}
-      {success && <div className="profile-alert success" role="status"><CheckCircle2 size={16} />{success}</div>}
+      {success && <div className="profile-alert success" role="status"><CheckCircle2 size={16} />{translate(success)}</div>}
 
       {/* 1. IDENTITY */}
       <article className="profile-card profile-section-identity" aria-labelledby="section-identity-title">
         <div className="profile-card-title">
           <User size={20} />
           <div>
-            <h2 id="section-identity-title">{tr("1. Thông tin danh tính")}</h2>
-            <p>{tr("Thông tin định danh người dùng trong hệ thống Open LAB.")}</p>
+            <h2 id="section-identity-title">{tr("ui.1_identity_f9782d52")}</h2>
+            <p>{tr("ui.your_account_identity_in_open_a32f046c")}</p>
           </div>
         </div>
         <div className="profile-identity-grid">
           <div className="identity-item">
-            <span className="profile-label">{tr("Họ và tên")}</span>
+            <span className="profile-label">{tr("ui.full_name_03de764f")}</span>
             <strong>{profile?.fullName || "—"}</strong>
           </div>
           <div className="identity-item">
-            <span className="profile-label">{tr("Email tài khoản")}</span>
+            <span className="profile-label">{tr("ui.account_email_f78e1851")}</span>
             <strong>{profile?.email || "—"}</strong>
           </div>
           <div className="identity-item">
-            <span className="profile-label">{tr("Vai trò hệ thống (RBAC)")}</span>
+            <span className="profile-label">{tr("ui.system_role_rbac_35f59705")}</span>
             <span className="role-badge">{roleName}</span>
           </div>
           <div className="identity-item">
-            <span className="profile-label">{tr("Mã định danh hệ thống")}</span>
+            <span className="profile-label">{tr("ui.account_id_8283358a")}</span>
             <code>{profile?.id}</code>
           </div>
           {profile?.createdAt && (
             <div className="identity-item">
-              <span className="profile-label">{tr("Thời gian khởi tạo")}</span>
+              <span className="profile-label">{tr("ui.created_on_ed06d9e5")}</span>
               <span>{formatVietnamDateTime(profile.createdAt)}</span>
             </div>
           )}
@@ -211,22 +212,22 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <Shield size={20} />
           <div>
-            <h2 id="section-security-title">{tr("2. Tài khoản & Bảo mật")}</h2>
-            <p>{tr("Trạng thái tài khoản và đổi mật khẩu truy cập.")}</p>
+            <h2 id="section-security-title">{tr("ui.2_account_security_8c130463")}</h2>
+            <p>{tr("ui.account_status_and_password_settings_56c3576f")}</p>
           </div>
         </div>
 
         <div className="security-status-row">
           <div>
-            <span className="profile-label">{tr("Trạng thái tài khoản")}</span>
+            <span className="profile-label">{tr("ui.account_status_00a4b83c")}</span>
             <span className={`status-badge ${profile?.isActive !== false ? "active" : "inactive"}`}>
-              {profile?.isActive !== false ? tr("Hoạt động bình thường") : tr("Tài khoản bị tạm khóa")}
+              {profile?.isActive !== false ? tr("ui.active_ebe65b34") : tr("ui.account_suspended_e99d8854")}
             </span>
           </div>
           <div>
-            <span className="profile-label">{tr("Yêu cầu đổi mật khẩu")}</span>
+            <span className="profile-label">{tr("ui.password_reset_requirement_9026bfc9")}</span>
             <span className={`status-badge ${isTemporaryPassword ? "warning" : "ok"}`}>
-              {isTemporaryPassword ? tr("Bắt buộc đổi mật khẩu") : tr("Mật khẩu an toàn")}
+              {isTemporaryPassword ? tr("ui.password_change_required_e4691737") : tr("ui.password_setup_complete_6805895a")}
             </span>
           </div>
         </div>
@@ -235,51 +236,51 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
           <div className="profile-alert warning" role="alert">
             <ShieldAlert size={18} />
             <div>
-              <strong>{tr("Tài khoản đang dùng mật khẩu tạm thời")}</strong>
-              <p>{tr("Mật khẩu hiện tại là số điện thoại đăng ký đặt lịch nhanh. Bạn cần thiết lập mật khẩu mới ngay để bảo vệ tài khoản.")}</p>
+              <strong>{tr("ui.your_account_uses_a_temporary_1ae2a5d7")}</strong>
+              <p>{tr("ui.your_temporary_password_is_the_c2cf7b9c")}</p>
             </div>
           </div>
         )}
 
-        {passwordError && <div className="profile-alert danger" role="alert">{passwordError}</div>}
+        {passwordError && <div className="profile-alert danger" role="alert">{translate(passwordError)}</div>}
         {passwordSuccess && <div className="profile-alert success" role="status"><CheckCircle2 size={16} />{passwordSuccess}</div>}
 
         <form onSubmit={handlePasswordChange} className="password-change-form">
-          <h3 className="sub-heading"><KeyRound size={16} /> {tr("Đổi mật khẩu")}</h3>
+          <h3 className="sub-heading"><KeyRound size={16} /> {tr("ui.change_password_4598a666")}</h3>
           <div className="password-inputs-grid">
             <label>
-              <span className="profile-label">{tr("Mật khẩu hiện tại")}</span>
+              <span className="profile-label">{tr("ui.current_password_7f06b3a5")}</span>
               <input
                 type="password"
                 className="profile-input"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder={isTemporaryPassword ? tr("Số điện thoại đã đặt lịch") : tr("Nhập mật khẩu hiện tại")}
+                placeholder={isTemporaryPassword ? tr("ui.phone_number_used_for_booking_9dbbeafd") : tr("ui.enter_current_password_60f70758")}
                 required
                 autoComplete="current-password"
               />
             </label>
             <label>
-              <span className="profile-label">{tr("Mật khẩu mới (tối thiểu 8 ký tự)")}</span>
+              <span className="profile-label">{tr("ui.new_password_at_least_8_73426eef")}</span>
               <input
                 type="password"
                 className="profile-input"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder={tr("Nhập mật khẩu mới")}
+                placeholder={tr("ui.enter_new_password_ab4479c1")}
                 required
                 minLength={8}
                 autoComplete="new-password"
               />
             </label>
             <label>
-              <span className="profile-label">{tr("Xác nhận mật khẩu mới")}</span>
+              <span className="profile-label">{tr("ui.confirm_new_password_7a0fe0f4")}</span>
               <input
                 type="password"
                 className="profile-input"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={tr("Nhập lại mật khẩu mới")}
+                placeholder={tr("ui.repeat_new_password_df8e638b")}
                 required
                 minLength={8}
                 autoComplete="new-password"
@@ -288,7 +289,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
           </div>
           <button type="submit" className="profile-button-secondary" disabled={passwordBusy}>
             {passwordBusy ? <Loader2 className="spin" size={16} /> : <KeyRound size={16} />}
-            {tr("Cập nhật mật khẩu")}</button>
+            {tr("ui.update_password_a9f9616f")}</button>
         </form>
       </article>
 
@@ -297,26 +298,26 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <ShieldCheck size={20} />
           <div>
-            <h2 id="section-access-title">{tr("3. Phân loại đối tượng & Nguyên tắc truy cập")}</h2>
-            <p>{tr("Khai báo đối tượng sử dụng và phạm vi hiệu lực phân quyền.")}</p>
+            <h2 id="section-access-title">{tr("ui.3_user_classification_access_rules_88c093ba")}</h2>
+            <p>{tr("ui.self_declared_classification_and_access_29a705f2")}</p>
           </div>
         </div>
 
         <div className="customer-classification-card">
           <div className="classification-header">
             <div>
-              <span className="profile-label">{tr("Phân loại khách hàng tự khai")}</span>
-              <strong>{customerType === "INTERNAL" ? tr("Nội bộ trường (INTERNAL)") : tr("Khách ngoài / Đối tác (EXTERNAL)")}</strong>
+              <span className="profile-label">{tr("ui.self_declared_user_classification_ebebf177")}</span>
+              <strong>{customerType === "INTERNAL" ? tr("ui.institution_member_internal_24446cca") : tr("ui.external_visitor_partner_external_cc813018")}</strong>
             </div>
             <div className="semantics-tag">
-              <code>customerTypeSemantics = SELF_DECLARED_UNVERIFIED</code>
+              <code>{translate("ui.customertypesemantics_self_declared_unverified_209a3e15")}</code>
             </div>
           </div>
 
           <div className="disclaimer-box">
-            <strong>{tr("Nguyên tắc thẩm quyền Open LAB:")}</strong>
+            <strong>{tr("ui.open_lab_access_rules_4ce4fd97")}</strong>
             <p>
-              {tr("Phân loại nhóm sử dụng là thông tin")}<strong>{tr("tự khai báo (SELF_DECLARED_UNVERIFIED)")}</strong> {tr("nhằm hỗ trợ thu thập hồ sơ liên hệ. Thông tin này")}<strong>{tr("KHÔNG")}</strong> {tr("cấp thẩm quyền tổ chức được xác minh,")}<strong>{tr("KHÔNG")}</strong> {tr("thay thế vai trò RBAC của hệ thống,")}<strong>{tr("KHÔNG")}</strong> {tr("tự động thay đổi giá dịch vụ, và")}<strong>{tr("KHÔNG")}</strong> {tr("miễn trừ bất kỳ điều kiện đào tạo an toàn bắt buộc nào.")}</p>
+              {tr("ui.user_classification_is_2f207bc9")}<strong>{tr("ui.self_declared_self_declared_unverified_5c40272e")}</strong> {tr("ui.and_supports_contact_records_this_c85e3f85")}<strong>{tr("ui.not_cc80ff68")}</strong> {tr("ui.grant_verified_institutional_authority_6b61b924")}<strong>{tr("ui.not_cc80ff68")}</strong> {tr("ui.replace_the_system_role_8cca235c")}<strong>{tr("ui.not_cc80ff68")}</strong> {tr("ui.automatically_change_prices_or_cc819d0c")}<strong>{tr("ui.not_cc80ff68")}</strong> {tr("ui.waive_mandatory_safety_training_77deccc5")}</p>
           </div>
         </div>
       </article>
@@ -326,8 +327,8 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <Award size={20} />
           <div>
-            <h2 id="section-training-title">{tr("4. Đào tạo & Chứng nhận an toàn phòng LAB")}</h2>
-            <p>{tr("Chứng chỉ hoàn thành khóa đào tạo bắt buộc để sử dụng máy móc và phòng lab chuyên dụng.")}</p>
+            <h2 id="section-training-title">{tr("ui.4_training_safety_certification_ab2b8bab")}</h2>
+            <p>{tr("ui.certifications_required_to_use_specialist_8a51f0ef")}</p>
           </div>
         </div>
 
@@ -336,11 +337,11 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
             <table className="certifications-table">
               <thead>
                 <tr>
-                  <th scope="col">{tr("Mã khóa")}</th>
-                  <th scope="col">{tr("Tên khóa đào tạo")}</th>
-                  <th scope="col">{tr("Trạng thái")}</th>
-                  <th scope="col">{tr("Ngày cấp")}</th>
-                  <th scope="col">{tr("Hạn chứng nhận")}</th>
+                  <th scope="col">{tr("ui.course_code_8fb3d641")}</th>
+                  <th scope="col">{tr("ui.training_course_8c81d890")}</th>
+                  <th scope="col">{tr("ui.status_cb31de81")}</th>
+                  <th scope="col">{tr("ui.issued_on_834bf76c")}</th>
+                  <th scope="col">{tr("ui.expires_on_a7d00cd0")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -350,11 +351,11 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
                     <td><strong>{cert.name}</strong></td>
                     <td>
                       <span className={`cert-badge cert-${cert.status.toLowerCase()}`}>
-                        {cert.status === "VALID" ? tr("Đủ điều kiện (VALID)") : cert.status === "EXPIRED" ? tr("Hết hạn (EXPIRED)") : cert.status}
+                        {cert.status === "VALID" ? tr("ui.valid_certification_63267c19") : cert.status === "EXPIRED" ? tr("ui.expired_c1275ab3") : cert.status}
                       </span>
                     </td>
                     <td>{formatVietnamDateTime(cert.issuedAt)}</td>
-                    <td>{cert.expiresAt ? formatVietnamDateTime(cert.expiresAt) : tr("Vô thời hạn")}</td>
+                    <td>{cert.expiresAt ? formatVietnamDateTime(cert.expiresAt) : tr("ui.no_expiry_e29f043f")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -362,8 +363,8 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
           </div>
         ) : (
           <div className="empty-cert-notice">
-            <p>{tr("Chưa có chứng nhận an toàn phòng lab nào được ghi nhận cho tài khoản này.")}</p>
-            <small>{tr("Khi đặt các thiết bị yêu cầu chứng chỉ (ví dụ: máy phay CNC, máy laser, hóa chất), hệ thống sẽ kiểm tra và yêu cầu hoàn thành khóa đào tạo tương ứng.")}</small>
+            <p>{tr("ui.no_safety_certifications_are_recorded_641de470")}</p>
+            <small>{tr("ui.for_equipment_requiring_certification_the_b9c56c97")}</small>
           </div>
         )}
       </article>
@@ -373,14 +374,14 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <MapPinned size={20} />
           <div>
-            <h2 id="section-contact-title">{tr("5. Thông tin liên hệ & Địa chỉ mặc định")}</h2>
-            <p>{tr("Thông tin phục vụ liên lạc bàn giao thiết bị, gửi thông báo và xác nhận đặt lịch.")}</p>
+            <h2 id="section-contact-title">{tr("ui.5_contact_information_address_1cb1b94e")}</h2>
+            <p>{tr("ui.contact_details_for_handover_coordination_aaf95d98")}</p>
           </div>
         </div>
 
         <div className="profile-form-grid">
           <label>
-            <span className="profile-label">{tr("Họ và tên")}</span>
+            <span className="profile-label">{tr("ui.full_name_03de764f")}</span>
             <input
               className="profile-input"
               value={fullName}
@@ -391,7 +392,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
             />
           </label>
           <label>
-            <span className="profile-label">{tr("Số điện thoại liên hệ")}</span>
+            <span className="profile-label">{tr("ui.contact_phone_3b6da57f")}</span>
             <input
               className="profile-input"
               value={phone}
@@ -401,7 +402,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
             />
           </label>
           <label>
-            <span className="profile-label">{tr("Đơn vị / Khoa / Tổ chức")}</span>
+            <span className="profile-label">{tr("ui.department_organization_e30b494a")}</span>
             <input
               className="profile-input"
               value={organization}
@@ -411,26 +412,26 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
             />
           </label>
           <label>
-            <span className="profile-label">{tr("Nhóm sử dụng tự khai")}</span>
+            <span className="profile-label">{tr("ui.self_declared_user_group_753919d6")}</span>
             <select
               className="profile-input"
               value={customerType}
               onChange={(e) => setCustomerType(e.target.value)}
             >
-              <option value="INTERNAL">{tr("Nội bộ trường (tự khai, chưa xác minh)")}</option>
-              <option value="EXTERNAL">{tr("Đơn vị / Khách ngoài trường")}</option>
+              <option value="INTERNAL">{tr("ui.institution_member_self_declared_unverified_41cbfa62")}</option>
+              <option value="EXTERNAL">{tr("ui.external_organization_visitor_38c915d8")}</option>
             </select>
           </label>
         </div>
 
         <div className="address-section-block">
-          <span className="profile-label">{tr("Địa chỉ mặc định")}</span>
+          <span className="profile-label">{tr("ui.default_address_adc739e0")}</span>
           <VietnamAddressSelector value={address} onChange={setAddress} required />
         </div>
 
         <button className="profile-save" type="submit" disabled={saving}>
           {saving ? <Loader2 className="spin" size={17} /> : <Save size={17} />}
-          {tr("Lưu thông tin liên hệ")}</button>
+          {tr("ui.save_contact_information_226431d2")}</button>
       </form>
 
       {/* 6. BOOKING SUMMARY */}
@@ -438,26 +439,26 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <CalendarCheck size={20} />
           <div>
-            <h2 id="section-booking-title">{tr("6. Tổng hợp lịch đặt LAB")}</h2>
-            <p>{tr("Tổng quan tiến trình các lịch đặt tài nguyên đã thực hiện.")}</p>
+            <h2 id="section-booking-title">{tr("ui.6_booking_summary_b37a89e1")}</h2>
+            <p>{tr("ui.overview_of_your_resource_bookings_f59eaa62")}</p>
           </div>
         </div>
 
         <div className="profile-stats-grid">
           <div className="stat-card">
-            <span>{tr("Hoàn tất sử dụng")}</span>
+            <span>{tr("ui.completed_sessions_0bcef6c3")}</span>
             <strong>{profile?.bookingSummary?.completed || 0}</strong>
-            <small>{tr("Đã hoàn trả và nghiệm thu")}</small>
+            <small>{tr("ui.returned_and_completed_752f06e1")}</small>
           </div>
           <div className="stat-card">
-            <span>{tr("Lịch đang hoạt động")}</span>
+            <span>{tr("ui.active_bookings_dc59721f")}</span>
             <strong>{profile?.bookingSummary?.active || 0}</strong>
-            <small>{tr("Chờ duyệt, đã duyệt hoặc đang sử dụng")}</small>
+            <small>{tr("ui.pending_confirmed_or_in_use_fbb49eba")}</small>
           </div>
           <div className="stat-card">
-            <span>{tr("Tổng số lịch")}</span>
+            <span>{tr("ui.total_bookings_1f94eda9")}</span>
             <strong>{profile?.bookingSummary?.total || 0}</strong>
-            <small>{tr("Bao gồm mọi trạng thái")}</small>
+            <small>{tr("ui.all_statuses_included_735dbe96")}</small>
           </div>
         </div>
 
@@ -477,40 +478,40 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
         <div className="profile-card-title">
           <WalletCards size={20} />
           <div>
-            <h2 id="section-loyalty-title">{tr("7. Thông tin ưu tiên & Tích lũy LAB (Thông tin tham khảo)")}</h2>
-            <p>{tr("Hạng và điểm tích lũy phục vụ hỗ trợ vận hành. Không thay thế thẩm quyền phê duyệt an toàn.")}</p>
+            <h2 id="section-loyalty-title">{tr("ui.7_lab_priority_points_reference_b6cf06b0")}</h2>
+            <p>{tr("ui.tiers_and_points_support_administration_38bfe6cc")}</p>
           </div>
         </div>
 
         <div className="loyalty-grid">
           <div className="profile-tier-card">
-            <span className="tier-kicker">{tr("Hạng tài khoản")}</span>
+            <span className="tier-kicker">{tr("ui.account_tier_0d8dbf74")}</span>
             <strong>{tierLabel(profile?.loyalty?.tier)}</strong>
-            <span>{profile?.loyalty?.points || 0} {tr("điểm LAB")}</span>
-            <small>{profile?.loyalty?.basis}</small>
+            <span>{profile?.loyalty?.points || 0} {tr("ui.lab_points_54b2bf0e")}</span>
+            <small>{tr("profile.loyaltyBasis")}</small>
           </div>
 
           <div className="profile-stats-grid">
             <div className="stat-card">
-              <span><WalletCards size={16} /> {tr("Tổng chi phí")}</span>
+              <span><WalletCards size={16} /> {tr("ui.total_charges_f3aa0a19")}</span>
               <strong>{money(profile?.spending?.totalSpendVnd || 0)}</strong>
-              <small>{profile?.spending?.successfulPayments || 0} {tr("giao dịch thành công")}</small>
+              <small>{profile?.spending?.successfulPayments || 0} {tr("ui.successful_transactions_8a78b428")}</small>
             </div>
             <div className="stat-card">
-              <span><BadgePercent size={16} /> {tr("Discount hỗ trợ")}</span>
+              <span><BadgePercent size={16} /> {tr("ui.discount_161ccd26")}</span>
               <strong>{((profile?.loyalty?.discountBps || 0) / 100).toFixed(1)}%</strong>
-              <small>{tr("Áp dụng theo chính sách quản trị")}</small>
+              <small>{tr("ui.subject_to_administrative_policy_fbecbd8e")}</small>
             </div>
             <div className="stat-card">
-              <span><TrendingUp size={16} /> {tr("Điểm ưu tiên điều phối")}</span>
+              <span><TrendingUp size={16} /> {tr("ui.scheduling_priority_score_89c8f69c")}</span>
               <strong>+{profile?.loyalty?.priorityBoost || 0}</strong>
-              <small>{tr("Tín hiệu tham khảo, không vượt quyền duyệt")}</small>
+              <small>{tr("ui.advisory_only_does_not_bypass_eb8b2ff8")}</small>
             </div>
           </div>
         </div>
 
         <p className="commercial-disclaimer">
-          {tr("* Điểm tích lũy và xếp hạng chỉ mang tính tham khảo hỗ trợ quản trị, không được dùng để thay thế quy trình kiểm tra an toàn hoặc bỏ qua phê duyệt của cán bộ phòng lab.")}</p>
+          {tr("ui.points_and_tiers_are_advisory_4987a090")}</p>
       </article>
     </section>
   );

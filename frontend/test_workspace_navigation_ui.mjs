@@ -32,7 +32,7 @@ try {
     verify(await page.getByRole('textbox', { name: 'Tìm chức năng', exact: true }).evaluate(node => node === document.activeElement), `${role}: focus enters menu search`);
     verify(await page.locator('[data-nav-id=users]').count() === (role === 'admin' ? 1 : 0), `${role}: user administration restricted`);
     verify(await page.locator('[data-nav-id=stock]').count() === (['staff','admin'].includes(role) ? 1 : 0), `${role}: stock navigation restricted`);
-    verify(await page.locator('[data-nav-id=monitoring]').count() === (['staff','admin'].includes(role) ? 1 : 0), `${role}: monitoring navigation restricted`);
+    verify(await page.locator('[data-nav-id=monitoring]').count() === (process.env.UX_TELEMETRY_ENABLED === 'true' && ['staff','admin'].includes(role) ? 1 : 0), `${role}: monitoring navigation respects feature flag and role`);
     const search = page.getByRole('textbox', { name: 'Tìm chức năng', exact: true });
     await search.fill('lich phong');
     verify(await page.locator('[data-nav-id=smart_calendar]').count() === 1 && await page.locator('[data-nav-id=resources]').count() === 0, `${role}: Vietnamese search supports missing accents`);

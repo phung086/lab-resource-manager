@@ -1,3 +1,4 @@
+import { translate } from "../i18n.js";
 import React from "react";
 
 export class ErrorBoundary extends React.Component {
@@ -22,9 +23,9 @@ export class ErrorBoundary extends React.Component {
           minHeight: "100vh", padding: 40, textAlign: "center", color: "var(--text-primary)", background: "var(--bg)"
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, fontFamily: "var(--font-heading)" }}>Đã xảy ra lỗi không mong đợi</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, fontFamily: "var(--font-heading)" }}>{translate("ui.an_unexpected_error_occurred_29bea024")}</h2>
           <p style={{ color: "var(--text-secondary)", maxWidth: 480, marginBottom: 24, lineHeight: 1.6 }}>
-            {this.state.error?.message || "Một component đã gặp lỗi khi render. Vui lòng tải lại trang."}
+            {translate("ui.a_component_could_not_render_33573011")}
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -34,8 +35,7 @@ export class ErrorBoundary extends React.Component {
               fontWeight: 600, cursor: "pointer", transition: "opacity 0.18s ease"
             }}
           >
-            Tải lại trang
-          </button>
+             {translate("ui.reload_page_25668805")} </button>
         </div>
       );
     }

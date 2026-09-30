@@ -1,3 +1,5 @@
+import { TELEMETRY_FEATURES_ENABLED } from "../../config/featureFlags";
+import { translate } from "../../i18n.js";
 import { useLocale } from '../../providers/LocaleProvider';
 import React, { useState } from "react";
 import { Activity, AlertTriangle, Bell, CalendarClock, Camera, Gauge, Server, ShieldAlert } from "lucide-react";
@@ -23,18 +25,18 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
       <section className="content-stack">
         <div className="empty-state">
           <Activity size={28} />
-          <p>{loading ? tr("Đang tải dữ liệu vận hành...") : tr("Không thể tải dashboard từ dữ liệu hệ thống.")}</p>
-          {onRefresh && <button className="btn btn-secondary" type="button" onClick={onRefresh}>{tr("Thử lại")}</button>}
+          <p>{loading ? tr("ui.loading_operational_data_2a8d4625") : tr("ui.could_not_load_operational_dashboard_96cfaabb")}</p>
+          {onRefresh && <button className="btn btn-secondary" type="button" onClick={onRefresh}>{tr("ui.retry_c58d068c")}</button>}
         </div>
       </section>
     );
   }
 
   const metrics = [
-    { label: tr("Tổng tài nguyên"), value: dashboard.summary.totalResources, icon: Server },
-    { label: tr("Booking đang hoạt động"), value: dashboard.summary.activeBookingsCount, icon: CalendarClock },
-    { label: tr("Sự cố đang mở"), value: dashboard.summary.openIncidentCount, icon: AlertTriangle },
-    { label: tr("Thông báo chưa đọc"), value: dashboard.summary.unreadNotifications, icon: Bell }
+    { label: tr("ui.total_resources_69ad5e68"), value: dashboard.summary.totalResources, icon: Server },
+    { label: tr("ui.active_bookings_1a5f8201"), value: dashboard.summary.activeBookingsCount, icon: CalendarClock },
+    { label: tr("ui.open_incidents_a8d69cb9"), value: dashboard.summary.openIncidentCount, icon: AlertTriangle },
+    { label: tr("ui.unread_notifications_66bab952"), value: dashboard.summary.unreadNotifications, icon: Bell }
   ];
 
   async function acknowledge(alertId: string) {
@@ -44,7 +46,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
       await acknowledgeMonitoringAlert(alertId);
       onRefresh?.();
     } catch (error: any) {
-      setActionError(error?.message || tr("Không thể xác nhận cảnh báo."));
+      setActionError(error?.message || "ui.could_not_acknowledge_alert_e60e1f41");
     } finally {
       setAcknowledgingId(null);
     }
@@ -54,13 +56,13 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
     <section className="content-stack" aria-labelledby="monitoring-dashboard-heading">
       <div className="page-section-header">
         <div>
-          <h1 id="monitoring-dashboard-heading">{operations ? tr("Bảng điều khiển vận hành") : tr("Giám sát telemetry")}</h1>
+          <h1 id="monitoring-dashboard-heading">{operations ? tr("ui.operations_dashboard_6a44426c") : tr("ui.telemetry_monitoring_5752a8cc")}</h1>
           <p className="section-description">
-            {operations ? tr("Theo dõi lịch đặt, bàn giao, mức sử dụng và sự cố từ hồ sơ đã lưu trong hệ thống.") : tr("Theo dõi mẫu đo và kết nối nguồn cảm biến. Chưa nhận được mẫu hợp lệ sẽ hiển thị Chưa có dữ liệu.")}
+            {operations ? tr("ui.track_bookings_handovers_usage_and_3f87ab04") : tr("ui.track_measurements_and_sensor_connections_3bd3dc30")}
           </p>
-          <p className="data-source-note">{operations ? tr("Nguồn: booking, thời điểm bàn giao/hoàn trả và sự cố trong cơ sở dữ liệu.") : tr("Nguồn: thiết bị hoặc exporter gửi dữ liệu qua API tiếp nhận có xác thực; chỉ mẫu được chấp nhận mới hiển thị.")} {tr("Cập nhật:")}{formatVietnamDateTime(dashboard.generatedAt)}.</p>
+          <p className="data-source-note">{operations ? tr("ui.source_saved_bookings_handover_return_5d03d25a") : tr("ui.source_devices_or_exporters_using_8b01b568")} {tr("ui.updated_97c6e2ca")}{formatVietnamDateTime(dashboard.generatedAt)}.</p>
         </div>
-        {onRefresh && <button className="btn btn-secondary" type="button" onClick={onRefresh} disabled={loading}>{loading ? tr("Đang cập nhật...") : tr("Cập nhật")}</button>}
+        {onRefresh && <button className="btn btn-secondary" type="button" onClick={onRefresh} disabled={loading}>{loading ? tr("ui.updating_01c0991e") : tr("ui.last_update_5293d03c")}</button>}
       </div>
 
       {operations && <div className="operational-summary-grid">
@@ -72,42 +74,42 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
         ))}
       </div>}
 
-      {actionError && <div className="alert danger" role="alert">{actionError}</div>}
+      {actionError && <div className="alert danger" role="alert">{translate(actionError)}</div>}
 
       {operations && <div className="dashboard-data-grid">
         <article className="card dashboard-data-panel">
           <div className="panel-heading">
             <Gauge size={17} />
-            <h2>{tr("Mức sử dụng 30 ngày")}</h2>
+            <h2>{tr("ui.30_day_utilization_b9f84182")}</h2>
           </div>
           <dl className="operational-evidence-grid">
-            <div><dt>{tr("Theo lịch đã đặt")}</dt><dd>{dashboard.utilization.scheduledUtilizationRate.toFixed(2)}%</dd></div>
-            <div><dt>{tr("Sử dụng thực tế")}</dt><dd>{dashboard.utilization.actualUtilizationRate.toFixed(2)}%</dd></div>
-            <div><dt>{tr("Phút đã lên lịch")}</dt><dd>{dashboard.utilization.scheduledMinutes}</dd></div>
-            <div><dt>{tr("Phút sử dụng thực tế")}</dt><dd>{dashboard.utilization.actualUsageMinutes}</dd></div>
+            <div><dt>{tr("ui.scheduled_usage_6b04915f")}</dt><dd>{dashboard.utilization.scheduledUtilizationRate.toFixed(2)}%</dd></div>
+            <div><dt>{tr("ui.actual_usage_c7e4c2f8")}</dt><dd>{dashboard.utilization.actualUtilizationRate.toFixed(2)}%</dd></div>
+            <div><dt>{tr("ui.scheduled_minutes_cbc3f780")}</dt><dd>{dashboard.utilization.scheduledMinutes}</dd></div>
+            <div><dt>{tr("ui.actual_minutes_8f20eef8")}</dt><dd>{dashboard.utilization.actualUsageMinutes}</dd></div>
           </dl>
-          <p className="data-source-note">{tr("Nguồn:")}{dashboard.utilization.source}{tr("; cửa sổ")}{dashboard.utilization.windowDays} {tr("ngày.")}</p>
+          <p className="data-source-note">{tr("ui.source_dcfd8415")}{dashboard.utilization.source}{tr("ui.window_3f23504e")}{dashboard.utilization.windowDays} {tr("ui.days_8071ee3b")}</p>
         </article>
 
         <article className="card dashboard-data-panel">
           <div className="panel-heading">
             <AlertTriangle size={17} />
-            <h2>{tr("Sự cố")}</h2>
+            <h2>{tr("ui.incident_36824380")}</h2>
           </div>
           <dl className="operational-evidence-grid">
-            <div><dt>{tr("Tổng")}</dt><dd>{dashboard.incidents.total}</dd></div>
-            <div><dt>{tr("Đang mở")}</dt><dd>{dashboard.incidents.open}</dd></div>
-            <div><dt>{tr("Nghiêm trọng")}</dt><dd>{dashboard.incidents.bySeverity.critical || 0}</dd></div>
-            <div><dt>{tr("Mức cao")}</dt><dd>{dashboard.incidents.bySeverity.high || 0}</dd></div>
+            <div><dt>{tr("ui.total_13fdbadf")}</dt><dd>{dashboard.incidents.total}</dd></div>
+            <div><dt>{tr("ui.open_98235c77")}</dt><dd>{dashboard.incidents.open}</dd></div>
+            <div><dt>{tr("ui.critical_9559e09a")}</dt><dd>{dashboard.incidents.bySeverity.critical || 0}</dd></div>
+            <div><dt>{tr("ui.high_f87c2db7")}</dt><dd>{dashboard.incidents.bySeverity.high || 0}</dd></div>
           </dl>
         </article>
       </div>}
 
-      {!operations && <>
+      {!operations && TELEMETRY_FEATURES_ENABLED && <>
       <div className="card dashboard-data-panel">
         <div className="panel-heading">
           <Activity size={17} />
-          <h2>{tr("Trạng thái telemetry")}</h2>
+          <h2>{tr("ui.telemetry_status_1f1f6882")}</h2>
         </div>
         <div className="telemetry-summary-row">
           {(["HEALTHY", "WARNING", "STALE", "UNAVAILABLE", "NO_DATA"] as const).map((state) => (
@@ -122,7 +124,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
       <div className="card dashboard-data-panel">
         <div className="panel-heading">
           <ShieldAlert size={17} />
-          <h2>{tr("Cảnh báo giám sát đã lưu")}</h2>
+          <h2>{tr("ui.recorded_monitoring_alerts_56b20cd9")}</h2>
         </div>
         {dashboard.monitoringAlerts.length ? (
           <div className="content-stack compact">
@@ -131,21 +133,21 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
                 <div>
                   <strong>{alert.severity} · {alert.ruleCode}</strong>
                   <span>{alert.resourceCode || alert.resourceId} · {alert.message}</span>
-                  {alert.incident && <span>Incident: {alert.incident.id} ({alert.incident.status})</span>}
+                  {alert.incident && <span>{translate("ui.incident_32dcf81b")} {alert.incident.id} ({alert.incident.status})</span>}
                 </div>
                 <div>
                   <span>{alert.status}</span>
                   <time dateTime={alert.lastObservedAt}>{formatVietnamDateTime(alert.lastObservedAt)}</time>
                   {alert.status === "OPEN" && (
                     <button className="btn btn-secondary" type="button" disabled={acknowledgingId === alert.id} onClick={() => acknowledge(alert.id)}>
-                      {acknowledgingId === alert.id ? tr("Đang xác nhận...") : tr("Xác nhận")}
+                      {acknowledgingId === alert.id ? tr("ui.acknowledging_58cf7ba6") : tr("ui.confirm_1503b0d0")}
                     </button>
                   )}
                 </div>
               </div>
             ))}
           </div>
-        ) : <div className="empty-state">{tr("Không có cảnh báo giám sát đang hoạt động.")}</div>}
+        ) : <div className="empty-state">{tr("ui.no_active_monitoring_alerts_d544ae55")}</div>}
       </div>
 
       <TelemetryStatusGrid telemetry={dashboard.telemetry} />
@@ -153,29 +155,29 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
       <div className="card dashboard-data-panel">
         <div className="panel-heading">
           <Camera size={17} />
-          <h2>{tr("Camera và hỗ trợ cảnh báo an toàn")}</h2>
+          <h2>{tr("ui.cameras_safety_alerts_9768aa1d")}</h2>
         </div>
         <div className="alert warning">
-          <strong>NON-CERTIFIED · NOT A FIRE ALARM</strong>
-          <span>{tr("Không thay thế hệ thống báo cháy vật lý, quy trình an toàn hoặc xác minh của con người.")}</span>
+          <strong>{translate("ui.non_certified_not_a_fire_83ece6d0")}</strong>
+          <span>{tr("ui.does_not_replace_physical_fire_857990d1")}</span>
         </div>
         {dashboard.cameras.length ? (
           <div className="content-stack compact">
             {dashboard.cameras.map((camera) => (
               <div className="dashboard-booking-row" key={camera.id}>
-                <div><strong>{camera.code} — {camera.name}</strong><span>{tr("Metadata phạm vi tài nguyên")}{camera.resourceId}</span></div>
-                <div><span>{camera.state}</span><small>{camera.enabled ? tr("Đã bật cấu hình") : tr("Tắt theo mặc định")}</small></div>
+                <div><strong>{camera.code} — {camera.name}</strong><span>{tr("ui.resource_scoped_metadata_bc029213")}{camera.resourceId}</span></div>
+                <div><span>{camera.state}</span><small>{camera.enabled ? tr("ui.configuration_enabled_bc2db5a3") : tr("ui.disabled_by_default_313eed81")}</small></div>
               </div>
             ))}
           </div>
-        ) : <div className="empty-state">{tr("NOT_CONFIGURED — Không có camera được cấu hình; không tạo luồng video giả.")}</div>}
+        ) : <div className="empty-state">{tr("ui.not_configured_no_camera_configured_0fa994f5")}</div>}
       </div>
 
       </>}
       {operations && <div className="card dashboard-data-panel">
         <div className="panel-heading">
           <CalendarClock size={17} />
-          <h2>{tr("Booking sắp tới")}</h2>
+          <h2>{tr("ui.upcoming_bookings_f78bd751")}</h2>
         </div>
         {dashboard.upcomingBookings.length ? (
           <div className="content-stack compact">
@@ -192,7 +194,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
               </div>
             ))}
           </div>
-        ) : <div className="empty-state">{tr("Không có booking hoạt động trong phạm vi hiện tại.")}</div>}
+        ) : <div className="empty-state">{tr("ui.no_active_bookings_in_the_2faaa45b")}</div>}
       </div>}
     </section>
   );

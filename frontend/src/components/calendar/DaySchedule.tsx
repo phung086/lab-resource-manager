@@ -1,3 +1,4 @@
+import { translate } from "../../i18n.js";
 import { useLocale } from '../../providers/LocaleProvider';
 import React from "react";
 import { Plus, Clock } from "lucide-react";
@@ -59,27 +60,27 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
                       onClick={onSelectBooking}
                     />
                   ))
-                ) : blocked ? <span className="section-description">{tr("Tài nguyên đang tạm ngừng nhận lịch")}</span> : (
+                ) : blocked ? <span className="section-description">{tr("ui.this_resource_is_not_accepting_7365dfdb")}</span> : (
                   <button
                     type="button"
                     onClick={() => onSelectSlot(currentDateStr, hourStr)}
                     className="calendar-day-available w-full text-left py-2 px-3 rounded text-xs flex items-center justify-between transition-colors cursor-pointer"
                     aria-label={
                       selectedResourceName
-                        ? `Đặt ${selectedResourceName} lúc ${hourStr} ngày ${currentDateStr}`
-                        : `Đặt khung giờ ${hourStr} ngày ${currentDateStr}`
+                        ? translate("ui.book_at_on_a37b206a", { value0: selectedResourceName, value1: hourStr, value2: currentDateStr })
+                        : translate("ui.book_the_slot_on_983948ae", { value0: hourStr, value1: currentDateStr })
                     }
                     title={
                       selectedResourceName
-                        ? `Đặt ${selectedResourceName} lúc ${hourStr} ngày ${currentDateStr}`
-                        : `Đặt khung giờ ${hourStr} ngày ${currentDateStr}`
+                        ? translate("ui.book_at_on_a37b206a", { value0: selectedResourceName, value1: hourStr, value2: currentDateStr })
+                        : translate("ui.book_the_slot_on_983948ae", { value0: hourStr, value1: currentDateStr })
                     }
                   >
                     <span className="calendar-day-slot-idle" aria-hidden="true">
                       <span className="calendar-day-idle-dot" />
                     </span>
                     <span className="calendar-day-slot-hover font-medium">
-                      {tr("+ Đặt")}{hourStr}
+                      {tr("ui.book_f0937e77")}{hourStr}
                     </span>
                     <Plus size={13} className="calendar-day-slot-icon" aria-hidden="true" />
                   </button>

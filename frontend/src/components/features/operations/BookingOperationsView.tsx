@@ -1,3 +1,5 @@
+import type { LocaleMessage } from "../../../providers/LocaleProvider";
+import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, ClipboardList, History, RefreshCw } from "lucide-react";
@@ -27,13 +29,13 @@ export interface BookingOperationsViewProps {
 
 type FilterKey = "ALL" | "PENDING_APPROVAL" | "CONFIRMED" | "CHECKED_OUT" | "RETURNED" | "HISTORY";
 const FILTER_LABELS: Record<FilterKey, string> = {
-  ALL: "Tất cả", PENDING_APPROVAL: "Chờ duyệt", CONFIRMED: "Chờ bàn giao",
-  CHECKED_OUT: "Đang sử dụng", RETURNED: "Chờ hoàn tất", HISTORY: "Lịch sử"
+  ALL: "ui.all_49c73a31", PENDING_APPROVAL: "ui.pending_approval_6af96613", CONFIRMED: "ui.awaiting_handover_de28611f",
+  CHECKED_OUT: "ui.in_use_a07a3647", RETURNED: "ui.awaiting_inspection_cee3e686", HISTORY: "ui.history_0a235708"
 };
 const HISTORY_STATUSES = new Set(["COMPLETED", "REJECTED", "CANCELLED"]);
 const STATUS_LABELS: Record<string, string> = {
-  PENDING_APPROVAL: "chờ duyệt", CONFIRMED: "đã xác nhận", CHECKED_OUT: "đang sử dụng",
-  RETURNED: "đã hoàn trả", COMPLETED: "hoàn tất", REJECTED: "bị từ chối", CANCELLED: "đã hủy"
+  PENDING_APPROVAL: "ui.pending_approval_bc216c10", CONFIRMED: "ui.confirmed_0df7ecd4", CHECKED_OUT: "ui.in_use_ee0c455e",
+  RETURNED: "ui.returned_ed5e4805", COMPLETED: "ui.completed_13625dbf", REJECTED: "ui.rejected_cb6ec8af", CANCELLED: "ui.cancelled_2cdb07af"
 };
 
 export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ user, onChanged, onPayment }) => {
@@ -43,7 +45,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   const [filter, setFilter] = useState<FilterKey>(isStaff ? "PENDING_APPROVAL" : "ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [success, setSuccess] = useState<LocaleMessage>("");
   const [busyId, setBusyId] = useState("");
   const [actionState, setActionState] = useState<{ action: BookingAction; booking: BookingRecord } | null>(null);
   const [historyState, setHistoryState] = useState<BookingHistoryResponse | null>(null);
@@ -56,11 +58,11 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     try {
       setBookings(await listOperationalBookings());
     } catch (requestError: any) {
-      setError(requestError?.message || tr("Không thể tải dữ liệu booking."));
+      setError(requestError?.message || "ui.could_not_load_bookings_60c9a71f");
     } finally {
       setLoading(false);
     }
-  }, [tr]);
+  }, []);
 
   useEffect(() => { loadBookings(); }, [loadBookings]);
   useEffect(() => { setFilter(isStaff ? "PENDING_APPROVAL" : "ALL"); }, [isStaff]);
@@ -93,8 +95,8 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     setSuccess("");
     try {
       const updated = await performBookingAction(actionState.booking.id, actionState.action, payload);
-      const warning = updated.physicalStateWarning ? ` ${updated.physicalStateWarning}` : "";
-      setSuccess(`Đã cập nhật booking ${updated.resource?.code || updated.id}: ${STATUS_LABELS[updated.status] || updated.status}.${warning}`);
+      const warning = updated.physicalStateWarningKey ? { key: updated.physicalStateWarningKey, params: { status: { key: `enum.operational.${updated.physicalStateWarningParams?.status}` } } } : updated.physicalStateWarning || "";
+      setSuccess({ key: "ui.booking_updated_6643b95c", params: { value0: updated.resource?.code || updated.id, value1: { key: STATUS_LABELS[updated.status] || updated.status }, value2: warning } });
       setActionState(null);
       await loadBookings();
       onChanged?.();
@@ -110,7 +112,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     try {
       setHistoryState(await getBookingHistory(booking.id));
     } catch (requestError: any) {
-      setError(requestError?.message || tr("Không thể tải lịch sử booking."));
+      setError(requestError?.message || "ui.could_not_load_booking_history_c55f6dd0");
     } finally {
       setHistoryLoading(false);
     }
@@ -123,13 +125,13 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     setError("");
     setSuccess("");
     try {
-      const updated = await cancelOwnBooking(booking.id, tr("Người đặt chủ động hủy booking"));
-      setSuccess(`Booking đã được hủy (${STATUS_LABELS[updated.status] || updated.status}).`);
+      const updated = await cancelOwnBooking(booking.id, tr("ui.booking_cancelled_by_its_owner_4c4bf2b5"));
+      setSuccess({ key: "ui.booking_cancelled_c79a4ab7", params: { value0: { key: STATUS_LABELS[updated.status] || updated.status } } });
       setCancelState(null);
       await loadBookings();
       onChanged?.();
     } catch (requestError: any) {
-      setError(requestError?.message || tr("Không thể hủy booking."));
+      setError(requestError?.message || "ui.could_not_cancel_the_booking_ac1c23d2");
     } finally {
       setBusyId("");
     }
@@ -139,21 +141,21 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     <div className="operations-view" data-testid="operations-view">
       <header className="operations-header">
         <div>
-          <h2>{isStaff ? tr("Vận hành booking & bàn giao tài nguyên") : tr("Lịch đặt và tiến trình sử dụng của tôi")}</h2>
+          <h2>{isStaff ? tr("ui.bookings_resource_handover_824d4680") : tr("ui.my_bookings_usage_448d20e9")}</h2>
           <p>{isStaff
-            ? tr("Duyệt yêu cầu → ghi nhận bàn giao → tiếp nhận hoàn trả → hoàn tất lịch đặt.")
-            : tr("Theo dõi kết quả duyệt, thời gian sử dụng và lịch sử bàn giao. Bạn có thể hủy lịch còn đủ điều kiện hoặc tự trả phòng LAB đang sử dụng.")}</p>
+            ? tr("ui.review_requests_record_handover_receive_957f896f")
+            : tr("ui.track_approval_usage_times_and_8a2a3e05")}</p>
         </div>
         <button type="button" className="btn btn-secondary" onClick={loadBookings} disabled={loading}>
-          <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> {tr("Làm mới")}</button>
+          <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> {tr("ui.refresh_b4c61340")}</button>
       </header>
 
 
-      {error && <div className="alert danger" role="alert"><AlertCircle size={16} /> {error}</div>}
-      {success && <div className="alert success" role="status" aria-live="polite">{success}</div>}
+      {error && <div className="alert danger" role="alert"><AlertCircle size={16} /> {translate(error)}</div>}
+      {success && <div className="alert success" role="status" aria-live="polite">{translate(success)}</div>}
 
-      {linkedBookingId && <p>{tr("Đang xem lịch đặt từ thông báo.")}<a href="#/workspace/booking">{tr("Xem tất cả lịch đặt")}</a></p>}
-      <nav className="operations-filter-row" aria-label={tr("Bộ lọc workflow booking")}>
+      {linkedBookingId && <p>{tr("ui.viewing_the_booking_linked_from_13fda414")}<a href="#/workspace/booking">{tr("ui.view_all_bookings_a9efade5")}</a></p>}
+      <nav className="operations-filter-row" aria-label={tr("ui.booking_workflow_filters_65688e95")}>
         {filters.map((key) => (
           <button key={key} type="button" className={filter === key ? "is-active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>
             <span>{tr(FILTER_LABELS[key])}</span><strong>{counts[key]}</strong>
@@ -162,9 +164,9 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
       </nav>
 
       {loading ? (
-        <div className="operations-empty"><RefreshCw size={20} className="animate-spin" /> {tr("Đang tải dữ liệu thật...")}</div>
-      ) : error ? (<div className="operations-empty"><strong>{tr("Chưa thể tải lịch đặt.")}</strong><button className="secondary-button" onClick={loadBookings}>{tr("Thử lại")}</button></div>) : visibleBookings.length === 0 ? (
-        <div className="operations-empty"><ClipboardList size={22} /><strong>{tr("Không có booking trong nhóm này.")}</strong><span>{tr("Chọn nhóm khác để xem các lịch đã lưu.")}</span></div>
+        <div className="operations-empty"><RefreshCw size={20} className="animate-spin" /> {tr("ui.loading_data_84c68bd5")}</div>
+      ) : error ? (<div className="operations-empty"><strong>{tr("ui.could_not_load_bookings_82846d8c")}</strong><button className="secondary-button" onClick={loadBookings}>{tr("ui.retry_c58d068c")}</button></div>) : visibleBookings.length === 0 ? (
+        <div className="operations-empty"><ClipboardList size={22} /><strong>{tr("ui.no_bookings_in_this_group_1391cc5e")}</strong><span>{tr("ui.choose_another_group_to_view_00eb6689")}</span></div>
       ) : (
         <div className="operations-list">
           {visibleBookings.map((booking) => (
@@ -197,27 +199,27 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
       <BaseModal2026
         isOpen={Boolean(cancelState)}
         onClose={() => { if (!busyId) setCancelState(null); }}
-        title={tr("Xác nhận hủy booking")}
-        subtitle={cancelState ? `${cancelState.resource?.code || tr("Tài nguyên")} · ${cancelState.title}` : ""}
+        title={tr("ui.confirm_booking_cancellation_2ffe0ef3")}
+        subtitle={cancelState ? `${cancelState.resource?.code || tr("ui.resource_9a35ef53")} · ${cancelState.title}` : ""}
         maxWidth="max-w-md"
         footer={<>
-          <button type="button" className="btn btn-secondary" disabled={Boolean(busyId)} onClick={() => setCancelState(null)}>{tr("Giữ booking")}</button>
-          <button type="button" className="btn btn-danger" disabled={Boolean(busyId)} onClick={confirmCancellation}>{busyId ? tr("Đang hủy...") : tr("Xác nhận hủy")}</button>
+          <button type="button" className="btn btn-secondary" disabled={Boolean(busyId)} onClick={() => setCancelState(null)}>{tr("ui.keep_booking_bbac0317")}</button>
+          <button type="button" className="btn btn-danger" disabled={Boolean(busyId)} onClick={confirmCancellation}>{busyId ? tr("ui.cancelling_2b9c94bf") : tr("ui.confirm_cancellation_127e2fed")}</button>
         </>}
       >
-        <p>{tr("Booking sẽ chuyển sang trạng thái đã hủy sau khi hệ thống lưu thành công. Thao tác này không thể hoàn tác từ giao diện.")}</p>
+        <p>{tr("ui.the_booking_will_be_cancelled_8f137b50")}</p>
       </BaseModal2026>
 
       <BaseModal2026
         isOpen={Boolean(historyState) || historyLoading}
         onClose={() => !historyLoading && setHistoryState(null)}
-        title={tr("Lịch sử workflow booking")}
-        subtitle={historyState ? `${historyState.booking.resource?.code} • ${historyState.booking.title}` : tr("Đang tải dữ liệu audit...")}
+        title={tr("ui.booking_history_1045c541")}
+        subtitle={historyState ? `${historyState.booking.resource?.code} • ${historyState.booking.title}` : tr("ui.loading_audit_history_a0a87a60")}
         icon={History}
         maxWidth="max-w-3xl"
       >
         {historyLoading || !historyState
-          ? <div className="operations-empty"><RefreshCw size={18} className="animate-spin" /> {tr("Đang tải timeline...")}</div>
+          ? <div className="operations-empty"><RefreshCw size={18} className="animate-spin" /> {tr("ui.loading_timeline_27459f56")}</div>
           : <BookingWorkflowTimeline booking={historyState.booking} timeline={historyState.timeline} />}
       </BaseModal2026>
     </div>

@@ -355,3 +355,26 @@ Status: Accepted in user-authorized local continuation, 2026-09-29.
   lecturers manage assigned groups, students submit their own learning goals.
   Academic review is separate from resource approval and operational handover.
 - Original user content and historical evidence are not rewritten by translation.
+
+
+## ADR-025 — Shared locale messages and bounded read-only assistance
+
+Status: Accepted in user-authorized continuation, 2026-09-30.
+
+- Canonical VI/EN catalogs author UI and shared server messages; the backend
+  consumes a checked projection, never imports frontend runtime code.
+- A language is activated only after catalog integrity/schema checks. Failed
+  loads leave mounted form state and the last valid language intact.
+- System feedback stores message IDs and parameters; user content and historical
+  evidence remain original. Canonical codes, dates, roles and state transitions
+  are independent of presentation language.
+- Assistant facts come from authenticated read-only MCP tools with existing
+  account/object/lab scope. Model prose, local summaries and failure states are
+  distinguishable. Only form-prefill suggestions are allowed.
+- Active work, per-account request rate, deadlines, search scans and provider
+  retries are bounded. Abort/close paths release capacity; repeated provider
+  failures pause model calls. These gates are per backend process.
+- Camera/sensor navigation is opt-in and deferred in normal use. Existing
+  persistence/access rules remain available for later verified hardware work.
+- Subsequent screen/workflow refinement must use this same contract; do not
+  add another raw-text fallback or fake service success path.
