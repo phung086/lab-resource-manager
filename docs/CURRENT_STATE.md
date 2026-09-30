@@ -7,9 +7,9 @@ LAB staff work stages and administrative coordination into four layouts. Exact
 booking/group/category/role links reuse the existing authenticated screens and
 confirmation forms. Shared catalogs contain 2,107 VI/EN keys; role views load on
 demand. Core/group failures have explicit recovery and no fake zero work counts.
-Frontend gates, responsive visual QA and 515 PostgreSQL browser checks pass
-(104 navigation + 298 bilingual + 113 role entry). All nine workflows passed on
-code revision `dc909b16e9effaa9f1ecd3e7daae6a974c99bf59`; current-head checks
+Frontend gates, responsive visual QA and 523 PostgreSQL browser checks pass
+(104 navigation + 298 bilingual + 121 role entry). All nine workflows passed on
+code revision `e815fd82b184e6c7d94ad7b9be51177faaa8ea20`; current-head checks
 remain authoritative on the PR. Resource links resolve the exact selected record,
 and in-modal VI/EN controls preserve action drafts. Directory requests use at most
 four workers and cancel stale reads. Shared application loads also cancel stale

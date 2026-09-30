@@ -64,14 +64,13 @@ booking purposes, evidence and notes remain unchanged.
 ## Verification
 
 The completed validation snapshot below is code revision
-`dc909b16e9effaa9f1ecd3e7daae6a974c99bf59`. The later shared-read lifecycle fix
-adds eight real-API request-budget checks to the role suite; current-head results
-are recorded on PR #22.
+`e815fd82b184e6c7d94ad7b9be51177faaa8ea20`. This includes the shared-read lifecycle fix
+and eight real-API request-budget checks. Current-head results remain on PR #22.
 
 Local required frontend checks pass: catalog parity/integrity/source audit,
-locale recovery, lint (14 existing warnings, zero errors), TypeScript and production
+locale recovery, lint (13 existing warnings, zero errors), TypeScript and production
 build. Catalogs now have 2,107 matching VI/EN keys. The main JS entry is approximately
-354.23 kB / 105.27 kB gzip, compared with 350.55 / 104.35 kB before this pass; role
+354.70 kB / 105.45 kB gzip, compared with 350.55 / 104.35 kB before this pass; role
 views load separately. No runtime package was added.
 
 Local Chromium visual fixture QA covers all four roles, VI/EN and 375, 768, 1024,
@@ -85,23 +84,24 @@ entry points, exact-record navigation, validated filters, reload, locale draft
 continuity, permission-negative action links, no implicit writes and class-error
 recovery. Existing navigation and bilingual suites remain mandatory.
 
-[CI run 36749791240](https://github.com/phung086/lab-resource-manager/actions/runs/36749791240)
+[CI run 36754099832](https://github.com/phung086/lab-resource-manager/actions/runs/36754099832)
 passed all required jobs, including:
 
 - 104 navigation, role, keyboard, history, locale, failure and viewport checks.
 - 298 bilingual UI, accessibility, draft continuity and language-recovery checks.
-- 113 role-entry checks against PostgreSQL records: four VI/EN role layouts,
+- 121 role-entry checks against PostgreSQL records: four VI/EN role layouts,
   exact-resource calendars outside the initial list, missing-resource recovery,
-  class links, staff forms, in-modal language switching and permission-negative links.
+  class links, staff forms, in-modal language switching, permission-negative links
+  and shared-data request budgets on session entry and notification navigation.
 
-The total is **515 browser checks**, with no browser exceptions. Catalog checks
-audit 76 active source modules; lint has zero errors and 14 pre-existing warnings.
+The total is **523 browser checks**, with no browser exceptions. Catalog checks
+audit 76 active source modules; lint has zero errors and 13 pre-existing warnings.
 All **nine workflows** on this code revision passed: CI, Batch 5/6 full-stack E2E,
 Batch 5/6/7 backend regressions, Batch 7 graduation demo, Batch 8 smart-monitoring
 release gate and Phase H payment reconciliation. The monitoring gate is a regression
 check, not evidence of live hardware integration.
 
-[CI screenshots and reports](https://github.com/phung086/lab-resource-manager/actions/runs/36749791240/artifacts/11113882864)
+[CI screenshots and reports](https://github.com/phung086/lab-resource-manager/actions/runs/36754099832/artifacts/11115847965)
 include the role-entry screenshots for both languages on desktop and mobile.
 The follow-up documentation commit records these completed code-revision results;
 its own current-head checks remain visible on PR #22.
