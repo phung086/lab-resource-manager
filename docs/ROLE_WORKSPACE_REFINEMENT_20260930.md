@@ -21,7 +21,11 @@ mean actual members and submitted activities, not inferred pending reviews.
 
 Destination parameters are validated against existing categories, filters and
 roles. Catalogue/category, calendar resource, course group and directory role
-survive reload. A calendar link resolves the exact authenticated resource even\nwhen it is outside the capped initial catalogue; a missing resource produces an\nexplicit error and never substitutes another one. Shared VI/EN controls inside\nmodals allow language changes without leaving the focus trap or losing a draft.\nA booking action link only opens the existing confirmation form
+survive reload. A calendar link resolves the exact authenticated resource even
+when it is outside the capped initial catalogue; a missing resource produces an
+explicit error and never substitutes another one. Shared VI/EN controls inside
+modals allow language changes without leaving the focus trap or losing a draft.
+A booking action link only opens the existing confirmation form
 after checking the authenticated list, current status and presentation role.
 Submitting still uses the existing API permission, LAB scope, evidence and state
 checks. Dismissing a form does not write business data. Choosing a booking filter
@@ -35,7 +39,8 @@ not the capped resource catalogue. Admin role counts include active and inactive
 accounts, while the banner separately labels active accounts. Historical pagination
 and uncapped queue aggregation remain a separate API task for a larger production
 workload. No new aggregate query or per-class fan-out is introduced here. Directory
-assignment requests now have at most four in flight.
+assignment requests now have at most four in flight. Superseded and unmounted
+directory reads are cancelled so stale responses cannot overwrite the current view.
 
 ## Design research and adopted decisions
 
@@ -56,7 +61,7 @@ booking purposes, evidence and notes remain unchanged.
 Local required frontend checks pass: catalog parity/integrity/source audit,
 locale recovery, lint (14 existing warnings, zero errors), TypeScript and production
 build. Catalogs now have 2,107 matching VI/EN keys. The main JS entry is approximately
-354.14 kB / 105.17 kB gzip, compared with 350.55 / 104.35 kB before this pass; role
+354.23 kB / 105.27 kB gzip, compared with 350.55 / 104.35 kB before this pass; role
 views load separately. No runtime package was added.
 
 Local Chromium visual fixture QA covers all four roles, VI/EN and 375, 768, 1024,
@@ -68,8 +73,29 @@ creates real bookings through authenticated APIs, moves them through approval,
 handover and return, and submits a real teaching activity. It verifies role-specific
 entry points, exact-record navigation, validated filters, reload, locale draft
 continuity, permission-negative action links, no implicit writes and class-error
-recovery. Existing navigation and bilingual suites remain mandatory. CI results
-for this implementation commit are recorded after the run completes.
+recovery. Existing navigation and bilingual suites remain mandatory.
+
+Verified code revision: `dc909b16e9effaa9f1ecd3e7daae6a974c99bf59`.
+[CI run 36749791240](https://github.com/phung086/lab-resource-manager/actions/runs/36749791240)
+passed all required jobs, including:
+
+- 104 navigation, role, keyboard, history, locale, failure and viewport checks.
+- 298 bilingual UI, accessibility, draft continuity and language-recovery checks.
+- 113 role-entry checks against PostgreSQL records: four VI/EN role layouts,
+  exact-resource calendars outside the initial list, missing-resource recovery,
+  class links, staff forms, in-modal language switching and permission-negative links.
+
+The total is **515 browser checks**, with no browser exceptions. Catalog checks
+audit 76 active source modules; lint has zero errors and 14 pre-existing warnings.
+All **nine workflows** on this code revision passed: CI, Batch 5/6 full-stack E2E,
+Batch 5/6/7 backend regressions, Batch 7 graduation demo, Batch 8 smart-monitoring
+release gate and Phase H payment reconciliation. The monitoring gate is a regression
+check, not evidence of live hardware integration.
+
+[CI screenshots and reports](https://github.com/phung086/lab-resource-manager/actions/runs/36749791240/artifacts/11113882864)
+include the role-entry screenshots for both languages on desktop and mobile.
+The follow-up documentation commit records these completed code-revision results;
+its own current-head checks remain visible on PR #22.
 
 This remains a draft development update, not a main merge or production deployment.
 External SMTP/model/payment services and hardware are outside this UI verification.

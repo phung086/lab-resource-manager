@@ -7,9 +7,12 @@ LAB staff work stages and administrative coordination into four layouts. Exact
 booking/group/category/role links reuse the existing authenticated screens and
 confirmation forms. Shared catalogs contain 2,107 VI/EN keys; role views load on
 demand. Core/group failures have explicit recovery and no fake zero work counts.
-Local frontend gates and responsive visual QA pass. The new PostgreSQL role-flow
-suite joins navigation and bilingual checks in CI; current-head results remain
-authoritative on the PR. See `docs/ROLE_WORKSPACE_REFINEMENT_20260930.md` for
+Frontend gates, responsive visual QA and 515 PostgreSQL browser checks pass
+(104 navigation + 298 bilingual + 113 role entry). All nine workflows passed on
+code revision `dc909b16e9effaa9f1ecd3e7daae6a974c99bf59`; current-head checks
+remain authoritative on the PR. Resource links resolve the exact selected record,
+and in-modal VI/EN controls preserve action drafts. Directory requests use at most
+four workers and cancel stale reads. See `docs/ROLE_WORKSPACE_REFINEMENT_20260930.md` for
 research, routing, list-count limits and verification. No main merge, schema or
 runtime dependency change is included.
 

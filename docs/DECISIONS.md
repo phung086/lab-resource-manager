@@ -393,5 +393,9 @@ Status: Accepted in user-authorized continuation, 2026-09-30.
   ordinary evidence/confirmation form; backend scope and state checks remain final.
 - Displayed work counts disclose the bounded recent-record scope. Do not present
   capped arrays as complete institution totals or infer pending academic reviews.
+- A resource calendar link resolves the requested authenticated record even beyond
+  the initial list cap. Missing or forbidden records produce an explicit error;
+  never substitute another resource. Shared language controls remain reachable
+  inside modal focus traps without discarding action drafts.
 - Later screen refinements extend the same shell, catalogs and canonical workflow
   rather than adding a parallel routing, translation or role-permission system.

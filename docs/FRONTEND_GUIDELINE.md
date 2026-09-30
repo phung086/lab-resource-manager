@@ -108,7 +108,9 @@ Use `useLocale().t(key, params)` with canonical IDs in `src/locales/catalog`.
 Add matching VI/EN entries and run `npm run i18n:sync`; CI runs `test:i18n`.
 Do not resolve messages at module initialization or add inline bilingual pairs.
 Keep parameterized notices as `LocaleMessage` descriptors until render. Preserve
-form state during locale changes and original user/resource content. Calendar
+form state during locale changes and original user/resource content. Use the shared
+`components/base/LanguageToggle.tsx` in headers and modal focus traps so language
+changes remain reachable while a form is open. Calendar
 labels and assistant tool summaries carry keys; business codes and Vietnam time
 remain unchanged. See `BILINGUAL_ASSISTANT_FOUNDATION_20260930.md` for the verified
 boundary and examples of recovery tests.
