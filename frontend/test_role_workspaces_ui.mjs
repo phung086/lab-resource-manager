@@ -53,8 +53,12 @@ try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
     const page = await context.newPage(); page.on('pageerror', error => errors.push(`${role}: ${error.message}`));
     const mutations = [], coreReads = [];
+    let signedIn = false;
+    page.on('response', response => {
+      if (response.url() === `${api}/auth/login` && response.status() === 200) signedIn = true;
+    });
     page.on('request', req => {
-      if (req.url().startsWith(api) && req.method() === 'GET') {
+      if (signedIn && req.url().startsWith(api) && req.method() === 'GET') {
         const resourcePath = new URL(req.url()).pathname.slice(new URL(api).pathname.length);
         if (coreReadPaths.has(resourcePath)) coreReads.push(resourcePath);
       }
@@ -62,7 +66,7 @@ try {
     page.on('request', req => { if (req.url().startsWith(api) && ['POST', 'PATCH', 'DELETE'].includes(req.method()) && !req.url().includes('/auth/')) mutations.push(req.url()); });
     await page.goto(base); await page.locator('#login-email').fill(`${role}@lrm.local`); await page.locator('#login-password').fill(process.env.UX_DEMO_PASSWORD);
     await page.getByRole('button', { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click(); await page.locator('.home-attention-grid').waitFor(); await page.waitForLoadState('networkidle');
-    check(coreReads.length === new Set(coreReads).size, `${role}: initial shared data reads are not duplicated`);
+    check(coreReads.length > 0 && coreReads.length === new Set(coreReads).size, `${role}: initial shared data reads are not duplicated (${coreReads.join(', ')})`);
     const loadedReadCount = coreReads.length;
     await selectWorkspaceTab(page, 'escalations');
     await page.locator('#notification-center-heading').waitFor();
