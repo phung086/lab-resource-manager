@@ -271,7 +271,7 @@ try {
   await loginUi(adminPage, adminEmail, adminPassword);
 
   await openNavigation(adminPage);
-  const sidebarText = await adminPage.locator("aside").innerText();
+  const sidebarText = await adminPage.locator("#workspace-navigation-panel").innerText();
   for (const hidden of [
     "AI Tính Toán Hiệu Suất",
     "AI Cố Vấn",

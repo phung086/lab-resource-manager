@@ -57,6 +57,10 @@ ephemeral PostgreSQL 16 service and uploads screenshots/results. Existing E2E
 scripts now open the drawer explicitly before choosing its stable `data-nav-id`
 links; domain assertions remain in place. GitHub runs on the previous branch head
 passed all nine workflows. Results on the new commit are tracked in PR #22.
+The first continuation run passed CI (including the 104 new checks), but the
+graduation demo's broad `aside` selector also matched the overview's related-work
+panel. The selector now targets the open navigation drawer explicitly; its
+optional-feature assertions and all ten persisted workflow steps are retained.
 
 The production main JS entry is 441.25 kB / 130.09 kB gzip, compared with
 434.92 / 128.55 kB at the starting checkpoint. The added shell/overview costs
