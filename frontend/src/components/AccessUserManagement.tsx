@@ -1,6 +1,6 @@
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, RefreshCw, ShieldCheck, UserCheck, UserX } from "lucide-react";
 
 import { apiRequest } from "../api.js";
@@ -29,6 +29,7 @@ type Assignment = { laboratoryId: string; laboratory: Laboratory };
 
 export function AccessUserManagement() {
   const { tr } = useLocale();
+  const loadAbort = useRef<AbortController | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState(() => {
@@ -50,33 +51,38 @@ export function AccessUserManagement() {
   });
 
   const load = useCallback(async () => {
+    loadAbort.current?.abort();
+    const controller = new AbortController();
+    loadAbort.current = controller;
+    const read = (path: string) => apiRequest(path, { signal: controller.signal });
     setLoading(true);
     setError("");
     try {
       const [nextUsers, nextLabs] = await Promise.all([
-        apiRequest("/users"),
-        apiRequest("/users/laboratories")
+        read("/users"),
+        read("/users/laboratories")
       ]);
+      if (controller.signal.aborted) return;
       setUsers(nextUsers);
       setLaboratories(nextLabs);
       const staff = nextUsers.filter((user: User) => user.role === "LAB_STAFF");
       const staffAssignments: [string, Assignment[]][] = [];
       let next = 0;
       await Promise.all(Array.from({ length: Math.min(4, staff.length) }, async () => {
-        while (next < staff.length) {
+        while (next < staff.length && !controller.signal.aborted) {
           const member = staff[next++];
-          staffAssignments.push([member.id, await apiRequest(`/users/${member.id}/lab-assignments`)]);
+          staffAssignments.push([member.id, await read(`/users/${member.id}/lab-assignments`)]);
         }
       }));
-      setAssignments(Object.fromEntries(staffAssignments));
+      if (!controller.signal.aborted) setAssignments(Object.fromEntries(staffAssignments));
     } catch (requestError: any) {
-      setError(requestError?.message || "ui.could_not_load_users_76f5be64");
+      if (!controller.signal.aborted) setError(requestError?.message || "ui.could_not_load_users_76f5be64");
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); return () => loadAbort.current?.abort(); }, [load]);
 
   async function updateRole(user: User, role: Role) {
     setError("");
