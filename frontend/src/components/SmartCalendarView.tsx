@@ -55,6 +55,11 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
     try {
       const data = await apiRequest("/resources");
       const list = Array.isArray(data) ? data : data.items || [];
+      // A filtered catalogue can link to a resource outside the first 250 rows.
+      // Resolve that exact resource rather than silently selecting another one.
+      if (initialResourceId && !list.some((row: any) => row.id === initialResourceId)) {
+        list.push(await apiRequest(`/resources/${encodeURIComponent(initialResourceId)}`));
+      }
       setResources(list);
       if (list.length > 0) {
         setSelectedResourceId((prev) => {
@@ -78,7 +83,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
     } finally {
       setResourcesLoading(false);
     }
-  }, []);
+  }, [initialResourceId]);
 
   useEffect(() => {
     loadResources();

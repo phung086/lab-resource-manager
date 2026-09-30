@@ -86,14 +86,25 @@ try {
       await page.reload(); await page.locator('.resource-card').first().waitFor();
       check(await page.getByLabel(catalogs.en['ui.resource_category_5fc170bb'], { exact: true }).inputValue() === 'ROOM', 'Catalogue filter survives reload');
       await home(page); await switchLocale(page, 'vi');
+      const previewId = await page.locator('.home-resource-card').first().getAttribute('data-resource-id');
+      // Simulate the existing list cap using actual server rows; the exact resource
+      // read still reaches PostgreSQL with the user's token.
+      await page.route('**/api/resources', async route => {
+        const response = await route.fetch(), rows = await response.json();
+        await route.fulfill({ response, json: rows.filter(row => row.id !== previewId) });
+      });
       await page.locator('.home-resource-card').first().getByRole('button').click(); await page.locator('.calendar-view-switcher').waitFor();
       const selectedResource = new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('resource');
-      check(Boolean(selectedResource), 'Resource preview opens calendar for its actual resource');
+      check(selectedResource === previewId, 'Resource preview opens calendar for its actual resource');
       await page.locator(`#calendar-resource-select option[value="${selectedResource}"]`).waitFor({ state: 'attached' });
       check(await page.locator('#calendar-resource-select').inputValue() === selectedResource, 'Calendar selects the resource from the shortcut');
       await page.reload(); await page.locator('.calendar-view-switcher').waitFor();
       await page.locator(`#calendar-resource-select option[value="${selectedResource}"]`).waitFor({ state: 'attached' });
       check(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('resource') === selectedResource && await page.locator('#calendar-resource-select').inputValue() === selectedResource, 'Calendar resource survives reload');
+      await page.unroute('**/api/resources');
+      await page.goto(`${base}/#/workspace/lich-dat?resource=00000000-0000-4000-8000-000000000000`);
+      await page.locator('.alert.danger').first().waitFor();
+      check(await page.locator('#calendar-resource-select').inputValue() === '', 'Missing resource is explicit and never selects another resource');
       await home(page);
       await page.goto(`${base}/#/workspace/booking?booking=${bookings.pending.id}&action=APPROVE`); await page.getByRole('alert').filter({ hasText: catalogs.vi['ui.home.route.actionUnavailable'] }).waitFor();
       check(await page.getByRole('dialog').count() === 0, 'Student approval deep link cannot open staff action');
@@ -148,6 +159,6 @@ try {
     await context.close();
   }
   assert.deepEqual(errors, []);
-  writeFileSync(`${output}/role-workspace-results.json`, JSON.stringify({ checks: results.length, results, errors, environment: 'Isolated PostgreSQL 16 local demo; real authenticated API writes seed bookings and teaching activity. Only group-error recovery is intercepted. No external providers or hardware claim.' }, null, 2));
+  writeFileSync(`${output}/role-workspace-results.json`, JSON.stringify({ checks: results.length, results, errors, environment: 'Isolated PostgreSQL 16 local demo; real authenticated API writes seed bookings and teaching activity. Only group-error recovery and a capped catalogue list using actual server rows are intercepted. No external providers or hardware claim.' }, null, 2));
   console.log(`PASS: ${results.length} role entry, task routing, real records, locale, viewport and recovery checks.`);
 } finally { await browser.close(); }
