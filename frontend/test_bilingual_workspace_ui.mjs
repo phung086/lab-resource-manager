@@ -24,7 +24,7 @@ async function audit(page, locale, label) {
   const strings = await page.evaluate(() => {
     const values = [];
     for (const element of document.body.querySelectorAll('*')) {
-      if (['SCRIPT', 'STYLE', 'OPTION'].includes(element.tagName) || !element.getClientRects().length || element.closest('[inert]')) continue;
+      if (['SCRIPT', 'STYLE', 'OPTION'].includes(element.tagName) || !element.getClientRects().length || element.closest('[inert]') || element.closest('.assistant-question')) continue;
       for (const node of element.childNodes) if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) values.push(node.textContent.trim());
       for (const attribute of ['placeholder', 'title', 'aria-label', 'alt']) if (element.getAttribute(attribute)) values.push(element.getAttribute(attribute));
     }
@@ -106,7 +106,10 @@ try {
       pending = reply(); await page.locator('.assistant-compose').getByRole('button').click(); response = await pending;
       check(response.ok(), 'Explicit duration override uses the real authenticated assistant');
       check(response.request().postDataJSON().durationMinutes === 120, 'A duration explicitly entered in the form takes priority');
-      await page.locator('.assistant-turn').nth(3).waitFor(); await audit(page, 'en', `${role}/assistant-duration-en`);
+      await page.locator('.assistant-turn').nth(3).waitFor();
+      assert.deepEqual(await page.locator('.assistant-question').allTextContents(), ['Find equipment', 'Tìm thiết bị', 'Tìm khung giờ trống trong 90 phút', 'Find available slots for 90 minutes'], 'User questions retain their original language when the UI switches');
+      results.push('Assistant history preserves original user questions in both languages');
+      await audit(page, 'en', `${role}/assistant-duration-en`);
     }
     await page.keyboard.press('Escape');
     await context.close();
