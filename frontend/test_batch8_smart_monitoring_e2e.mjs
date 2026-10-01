@@ -59,9 +59,12 @@ try {
   const alertRow = main.locator(".dashboard-booking-row", { hasText: "TEMPERATURE_CRITICAL" }).first();
   await Promise.all([
     staffPage.waitForResponse((response) => response.url().includes("/api/telemetry/alerts/") && response.url().endsWith("/acknowledge") && response.status() === 200),
+    staffPage.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/dashboard" && url.searchParams.get("includeTelemetry") === "true" && response.status() === 200;
+    }),
     alertRow.getByRole("button", { name: "Xác nhận" }).click()
   ]);
-  await staffPage.waitForResponse((response) => response.url().endsWith("/api/dashboard") && response.status() === 200);
   await staffPage.getByText("ACKNOWLEDGED", { exact: true }).first().waitFor();
   await staffPage.screenshot({ path: path.join(screenshotDir, "staff_smart_monitoring_desktop.png"), fullPage: true });
   await staffContext.close();
