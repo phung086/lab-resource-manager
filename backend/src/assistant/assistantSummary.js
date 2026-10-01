@@ -4,6 +4,7 @@ export function buildAssistantSummary(results) {
   if (!results.length) return [message('assistant.guidance')];
   return results.flatMap(({ result: r }) => {
     if (r.error) return [message(`api.${r.error.code || 'DATA_UNAVAILABLE'}`)];
+    if (r.deferred) return [message('assistant.hardwareDeferred')];
     if (typeof r.resources === 'number') return [message('assistant.operational', { resources: r.resources, unread: r.unreadNotifications }, { scope: `assistant.scope.${r.scope}` }), ...(r.bookings || []).map(b => message('assistant.bookingCount', { count: b.count }, { status: stateKey('booking', b.status) }))];
     if (r.slots) return r.searchTruncated ? [message('assistant.searchLimited'), ...r.slots.map(s => message('assistant.slotLine', { code: s.resourceCode }, {}, { start: s.startAt, end: s.endAt })), message('assistant.slotBoundary')] : r.slots.length ? [message('assistant.slotHeading'), ...r.slots.map(s => message('assistant.slotLine', { code: s.resourceCode }, {}, { start: s.startAt, end: s.endAt })), message('assistant.slotBoundary')] : [message('assistant.noSlots')];
     if (Array.isArray(r.resources)) return r.resources.length ? [message('assistant.resourceHeading'), ...r.resources.map(x => message('assistant.resourceLine', { code: x.code, name: x.name || '' }, { status: stateKey('operational', x.operationalStatus) }))] : [message('assistant.noResources')];

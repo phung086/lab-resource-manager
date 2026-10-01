@@ -282,6 +282,14 @@
     "notification.return.reminder.message": "{title} · {resourceCode} · {endAt}",
     "notification.return.reminder.title": "Resource return reminder",
     "assistant.changeLanguage": "Change assistant language",
-    "profile.loyaltyBasis": "Calculated from successful payments and completed bookings in the database"
+    "profile.loyaltyBasis": "Calculated from successful payments and completed bookings in the database",
+    "api.REQUEST_TIMEOUT": "The request timed out. Check the result before trying again.",
+    "assistant.documentVersion": "Version {version}",
+    "assistant.durationAuto": "Infer from the question",
+    "assistant.durationHelp": "Leave blank to use the duration in your question; the default is 60 minutes when none is stated. Enter minutes to choose a different duration.",
+    "assistant.hardwareDeferred": "Camera and sensor monitoring is deferred. No verified hardware data is available; use bookings, maintenance and incidents for operational checks.",
+    "assistant.invalidDuration": "Duration must be a whole number of minutes from 15 to 480.",
+    "assistant.guidanceSummary": "System guidance",
+    "assistant.fromGuidance": "System guidance; no lookup tools were used."
   }
 }

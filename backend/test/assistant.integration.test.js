@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 const url = new URL(process.env.ASSISTANT_TEST_DATABASE_URL || '');
 assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname));
 assert.equal(url.pathname, '/lab_resources_assistant_test', 'Refuse to mutate a non-assistant test database');
-Object.assign(process.env, { DATABASE_URL: url.href, NODE_ENV: 'test', JWT_SECRET: 'assistant-test-secret-at-least-32-characters', MCP_ASSISTANT_ENABLED: 'true', ASSISTANT_MAX_CONCURRENT: '2', ASSISTANT_TIMEOUT_MS: '1000', ASSISTANT_TOOL_TIMEOUT_MS: '1500', RATE_LIMIT_MAX: '10000', REMINDER_SCHEDULER_ENABLED: 'false', OPENAI_API_KEY: '', OPENAI_MODEL: '', PAYMENTS_ENABLED: 'false' });
+Object.assign(process.env, { DATABASE_URL: url.href, NODE_ENV: 'test', JWT_SECRET: 'assistant-test-secret-at-least-32-characters', MCP_ASSISTANT_ENABLED: 'true', HARDWARE_TELEMETRY_ENABLED: 'false', ASSISTANT_MAX_CONCURRENT: '2', ASSISTANT_TIMEOUT_MS: '1000', ASSISTANT_TOOL_TIMEOUT_MS: '1500', RATE_LIMIT_MAX: '10000', REMINDER_SCHEDULER_ENABLED: 'false', OPENAI_API_KEY: '', OPENAI_MODEL: '', PAYMENTS_ENABLED: 'false' });
 const [{ createApp }, { prisma }, { config }] = await Promise.all([import('../src/app.js'), import('../src/db.js'), import('../src/config.js')]);
 const app = createApp(), users = {}, tokens = {}, marker = id();
 let base, lab, foreignLab, equipment, foreignEquipment, privateBooking, stall = false, intercepted;
@@ -38,7 +38,7 @@ test.before(async () => {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   config.port = server.address().port; base = `http://127.0.0.1:${config.port}`;
   const hash = await bcrypt.hash('AssistantTest!2026', 4);
-  for (const [name, role] of Object.entries({ student: 'STUDENT', peer: 'STUDENT', lecturer: 'LECTURER', staff: 'LAB_STAFF', admin: 'ADMIN', timeout: 'STUDENT', cancel: 'STUDENT', busy: 'STUDENT', load: 'STUDENT', rejected: 'STUDENT', rate: 'STUDENT' })) {
+  for (const [name, role] of Object.entries({ student: 'STUDENT', peer: 'STUDENT', lecturer: 'LECTURER', staff: 'LAB_STAFF', admin: 'ADMIN', core: 'ADMIN', timeout: 'STUDENT', cancel: 'STUDENT', busy: 'STUDENT', load: 'STUDENT', rejected: 'STUDENT', rate: 'STUDENT' })) {
     users[name] = await prisma.user.create({ data: { id: id(), email: `${name}-${marker}@example.test`, fullName: `Original ${name}`, role, passwordHash: hash } });
     const response = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: users[name].email, password: 'AssistantTest!2026' }) });
     assert.equal(response.status, 200); tokens[name] = (await response.json()).accessToken;
@@ -116,6 +116,33 @@ test('HTTP cancellation and concurrent overload recover without leaving the acco
 test('per-account rate limiting rejects excess work with a localized retry boundary', async () => {
   for (let i = 0; i < 6; i += 1) assert.equal((await call('rate')).status, 200);
   const excess = await call('rate'); assert.equal(excess.status, 429); assert.equal(excess.body.error.code, 'ASSISTANT_RATE_LIMITED'); assert.ok(excess.headers.get('retry-after')); assert.match(excess.body.error.message, /too many questions.*wait/i);
+});
+
+test('real MCP slot reads leave the ordinary API budget intact and honor a natural-language duration', async () => {
+  const previous = { rateLimitMax: config.rateLimitMax, port: config.port };
+  config.rateLimitMax = 2; const isolated = http.createServer(createApp()); config.rateLimitMax = previous.rateLimitMax;
+  try {
+    await new Promise(resolve => isolated.listen(0, '127.0.0.1', resolve)); config.port = isolated.address().port;
+    const target = `http://127.0.0.1:${config.port}`;
+    const response = await fetch(`${target}/api/assistant/chat`, { method: 'POST', headers: { Authorization: `Bearer ${tokens.core}`, 'Content-Type': 'application/json', 'Accept-Language': 'en' }, body: JSON.stringify({ message: 'Find available slots for 90 minutes', resourceId: equipment.id, locale: 'en' }) });
+    const body = await response.json(); assert.equal(response.status, 200, JSON.stringify(body));
+    assert.deepEqual(body.toolsUsed, ['find_available_slots', 'check_user_eligibility']); assert.ok(body.actions.length);
+    assert.ok(body.actions.every(action => Date.parse(action.payload.endAt) - Date.parse(action.payload.startAt) === 90 * 60000));
+    assert.equal((await fetch(`${target}/health`)).status, 200, 'MCP protocol/tool traffic does not spend the second API request');
+    assert.equal((await fetch(`${target}/health`)).status, 429, 'The ordinary API limit remains enforced');
+  } finally { config.port = previous.port; await new Promise(resolve => isolated.close(resolve)); }
+});
+test('business dashboard and assistant explicitly defer hardware while retaining role and lab checks', async () => {
+  const headers = name => ({ Authorization: `Bearer ${tokens[name]}`, 'Accept-Language': 'en' });
+  const response = await fetch(`${base}/api/dashboard?includeTelemetry=false`, { headers: headers('staff') });
+  const body = await response.json(); assert.equal(response.status, 200, JSON.stringify(body));
+  assert.equal(body.telemetryIncluded, false); assert.equal(body.telemetrySummary, null); assert.deepEqual(body.cameras, []);
+  assert.equal(body.summary.totalResources, 1); assert.equal(Object.hasOwn(body.summary, 'activeMonitoringAlertCount'), false);
+  assert.equal((await fetch(`${base}/api/dashboard?includeTelemetry=false`, { headers: headers('student') })).status, 403);
+  assert.equal((await fetch(`${base}/api/dashboard?includeTelemetry=invalid`, { headers: headers('staff') })).status, 400);
+  const monitoring = await call('admin', 'Monitoring'); assert.equal(monitoring.status, 200); assert.equal(monitoring.body.toolResults[0].result.deferred, true); assert.match(monitoring.body.answer, /deferred/);
+  const scoped = await call('staff', 'Find available slots', 'en', { resourceId: foreignEquipment.id });
+  assert.equal(scoped.status, 200); assert.equal(scoped.body.toolResults[0].result.error.code, 'NOT_FOUND'); assert.doesNotMatch(scoped.body.toolResults[0].result.error.message, /[À-ỹĐđ]/);
 });
 
 test('OTP email follows request locale, escapes identity and persists only the hashed code', async () => {

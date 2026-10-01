@@ -254,3 +254,23 @@ Requirement status shall be assessed against current code and verification artif
 
 Implementation and verification boundaries are recorded in
 `LAB_WORKSPACE_EXPERIENCE_REPORT_20260929.md`.
+
+
+## Appendix C. User-approved bilingual assistant foundation (2026-10-01)
+
+- LAB-I18N-01: Active UI and system feedback shall use matching VI/EN message
+  catalogs. Integrity/load failures shall preserve the last valid locale and
+  drafts, with explicit recovery; original user evidence shall remain unchanged.
+- LAB-AI-01: Global assistant lookups shall use authenticated read-only tools and
+  existing account/object/lab scope. Suggested actions shall return to normal
+  confirmation forms and never perform implicit business mutations.
+- LAB-AI-02: Assistant/MCP work shall have finite independent admission/rate
+  budgets, deadlines and cancellation. Model calls shall require usable evidence,
+  bounded input/output and failure recovery with truthful provenance.
+- LAB-LOAD-01: Shared requests shall preserve caller cancellation, have finite
+  response deadlines and avoid automatic mutation retries after uncertainty.
+- LAB-HW-01: Normal hardware-off business views shall omit camera/sensor reads
+  and disclose deferred monitoring without fabricated health data.
+
+See ADR-025 and `ASSISTANT_REQUEST_HARDENING_20261001.md` for the implemented
+boundary and verification evidence.

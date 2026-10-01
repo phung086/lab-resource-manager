@@ -1,5 +1,34 @@
 # Current Project State
 
+## Assistant and request isolation — 2026-10-01
+
+Continuation stays on `codex/lab-workspace-ui-draft`, draft PR #22, preserving
+the accepted role views, shared catalogs and navigation read budgets. MCP ingress
+now has its own bounded IP allowance; internal protocol/tool calls cannot spend
+the ordinary business API allowance. Disconnects and deadlines reach active tools;
+admission remains occupied until an already-started database read settles.
+
+VI/EN duration questions support minutes, hours, decimal hours and combined
+hours/minutes. An untouched assistant field no longer overrides the question;
+explicit minutes take priority. Eligibility is read once per resource per answer.
+Missing/deferred evidence skips model generation; complete model input is capped
+at 24,000 UTF-8 bytes. API deadlines cover fetch and body reads, preserve caller
+cancellation and never automatically retry a mutation. Shared catalogs now contain
+2,115 keys, including localized deadline and deferred-hardware feedback.
+
+Normal workspace dashboards request `includeTelemetry=false`, avoiding camera,
+sample, threshold and hardware-alert reads. Deferred monitoring is explicit,
+not a healthy-zero measurement. Legacy authenticated hardware routes retain their
+contracts; assistant hardware reads additionally require
+`HARDWARE_TELEMETRY_ENABLED=true`. No schema or runtime dependency changes.
+
+Local verification: 60 required backend tests (38 core, 3 security, 19 assistant
+unit/HTTP transport), backend lint/configuration, 7 frontend locale/network tests,
+76-module source audit, typecheck and production build pass. Frontend lint has
+zero errors and 13 existing warnings. PostgreSQL and browser cases are included
+in the existing CI gates; exact current-head outcomes remain authoritative on
+PR #22. See `ASSISTANT_REQUEST_HARDENING_20261001.md`. Main is not merged or deployed.
+
 ## Task-focused role entry points — 2026-09-30
 
 Draft PR #22 now separates student resource finding, lecturer practical groups,

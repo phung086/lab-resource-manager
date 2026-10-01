@@ -4,12 +4,13 @@ import { createPortal } from 'react-dom';
 import { X, Send, Bot } from 'lucide-react';
 import { apiRequest } from '../../../api.js';
 import { hasMessage } from '../../../i18n.js';
-import { formatVietnamDateTime } from '../../../utils/timezone';
+import { formatVietnamDateTime, vietnamTimeToIso } from '../../../utils/timezone';
 import './assistant.css';
 type Slot = { resourceId: string; startAt: string; endAt: string };
 type Segment = { text?: string; key?: string; params?: Record<string, unknown>; labels?: Record<string, string>; times?: Record<string, string> };
 type Resource = { id: string; name: string; code: string; category?: string; location?: string; operationalStatus?: string };
-type Answer = { answer: string; summary: Segment[]; locale: string; provider: string; modelStatus: string; toolsUsed: string[]; actions: { type: string; labelKey: string; payload: Slot }[]; toolResults: { tool: string; result: Record<string, unknown> }[] };
+type Source = { chunkId: string; excerpt: string; document: { title: string; version?: string; fileName?: string } };
+type Answer = { answer: string; summary: Segment[]; locale: string; provider: string; modelStatus: string; source: string; toolsUsed: string[]; actions: { type: string; labelKey: string; payload: Slot }[]; toolResults: { tool: string; result: Record<string, unknown> }[] };
 export default function LaboratoryAssistant({ onClose, onPrefill }: { onClose: () => void; onPrefill: (slot: Slot) => void }) {
   const { locale, tr, changeLocale } = useLocale();
   const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
@@ -18,7 +19,7 @@ export default function LaboratoryAssistant({ onClose, onPrefill }: { onClose: (
   const [messages, setMessages] = useState<{ question: string; response: Answer }[]>([]), [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [suggestions, setSuggestions] = useState<string[]>([]), [mode, setMode] = useState('CHECKING');
   const [resources, setResources] = useState<Resource[]>([]), [resourceId, setResourceId] = useState('');
-  const [duration, setDuration] = useState(60), [startAt, setStartAt] = useState(''), [endAt, setEndAt] = useState('');
+  const [duration, setDuration] = useState(''), [startAt, setStartAt] = useState(''), [endAt, setEndAt] = useState('');
   useEffect(() => { latestTurn.current?.scrollIntoView({ block: 'start', behavior: 'instant' }); }, [messages]);
   useEffect(() => {
     mounted.current = true; const controller = new AbortController();
@@ -48,11 +49,18 @@ export default function LaboratoryAssistant({ onClose, onPrefill }: { onClose: (
   function cancel() { inFlight.current?.abort(); setError('assistant.cancelled'); }
   async function send(text: string) {
     if (inFlight.current || text.trim().length < 2) return;
+    if (duration !== '' && (!Number.isInteger(Number(duration)) || Number(duration) < 15 || Number(duration) > 480)) { setError('assistant.invalidDuration'); return; }
+    let startIso: string | undefined, endIso: string | undefined;
+    try {
+      const parse = (value: string) => { const [date, time] = value.split('T'); return vietnamTimeToIso(date, time); };
+      startIso = startAt ? parse(startAt) : undefined; endIso = endAt ? parse(endAt) : undefined;
+      if (startIso && endIso && startIso >= endIso) throw new Error();
+    } catch { setError('api.INVALID_BOOKING_TIME'); return; }
     const controller = new AbortController(); inFlight.current = controller;
     const timer = window.setTimeout(() => { setError('assistant.timeout'); controller.abort(); }, 65000);
     setBusy(true); setError('');
     try {
-      const response = await apiRequest('/assistant/chat', { method: 'POST', signal: controller.signal, body: JSON.stringify({ message: text, locale, ...(resourceId ? { resourceId } : {}), durationMinutes: duration, ...(startAt ? { startAt: new Date(`${startAt}:00+07:00`).toISOString() } : {}), ...(endAt ? { endAt: new Date(`${endAt}:00+07:00`).toISOString() } : {}) }) });
+      const response = await apiRequest('/assistant/chat', { method: 'POST', signal: controller.signal, body: JSON.stringify({ message: text, locale, ...(resourceId ? { resourceId } : {}), ...(duration !== '' ? { durationMinutes: Number(duration) } : {}), ...(startIso ? { startAt: startIso } : {}), ...(endIso ? { endAt: endIso } : {}) }) });
       if (!mounted.current || controller.signal.aborted) return;
       setMessages(previous => [...previous.slice(-9), { question: text, response }]); setQuestion(current => current.trim() === text.trim() ? '' : current);
     } catch (failure) { if (mounted.current && !controller.signal.aborted) setError((failure as Error).message); }
@@ -68,18 +76,18 @@ export default function LaboratoryAssistant({ onClose, onPrefill }: { onClose: (
       <div className="lab-assistant-content"><p className="assistant-boundary">{tr('assistant.boundary')}</p><p className="assistant-verified">{label(`assistant.mode.${mode}`)}</p>
         <details><summary>{tr('assistant.context')}</summary><div className="assistant-context">
           <label>{tr('assistant.resource')}<select value={resourceId} onChange={event => setResourceId(event.target.value)}><option value="">{tr('assistant.inferResource')}</option>{resources.map(resource => <option value={resource.id} key={resource.id}>{resource.code} · {resource.name}</option>)}</select></label>
-          <label>{tr('assistant.duration')}<input type="number" min={15} max={480} step={15} value={duration} onChange={event => setDuration(Number(event.target.value))} /></label>
+          <label>{tr('assistant.duration')}<input type="number" min={15} max={480} step={1} value={duration} placeholder={tr('assistant.durationAuto')} aria-describedby="assistant-duration-help" onChange={event => setDuration(event.target.value)} /><small id="assistant-duration-help">{tr('assistant.durationHelp')}</small></label>
           <label>{tr('assistant.start')}<input type="datetime-local" value={startAt} onChange={event => setStartAt(event.target.value)} /></label><label>{tr('assistant.end')}<input type="datetime-local" value={endAt} onChange={event => setEndAt(event.target.value)} /></label>
         </div></details>
         {!messages.length && <div className="assistant-suggestions"><h3>{tr('assistant.getStarted')}</h3>{suggestions.map(key => <button className="secondary-button" key={key} disabled={busy} onClick={() => void send(label(key))}>{label(key)}</button>)}</div>}
         <div aria-live="polite" aria-relevant="additions">{messages.map((turn, index) => <article key={index} className="assistant-turn" ref={index === messages.length - 1 ? latestTurn : undefined}>
           <p className="assistant-question">{turn.question}</p><div className="assistant-answer">
             {turn.response.provider === 'openai' && <><h3>{tr('assistant.modelSummary')}</h3><p>{turn.response.answer}</p>{turn.response.locale !== locale && <small>{tr('assistant.previousLanguage', { locale: turn.response.locale.toUpperCase() })}</small>}</>}
-            <h3>{tr('assistant.summary')}</h3><p>{summary(turn.response.summary || []).join('\n')}</p><small>{tr(turn.response.provider === 'local' ? 'assistant.fromTools' : 'assistant.fromModel')}</small>
+            <h3>{tr(turn.response.source === 'local_guidance' ? 'assistant.guidanceSummary' : 'assistant.summary')}</h3><p>{summary(turn.response.summary || []).join('\n')}</p><small>{tr(turn.response.source === 'local_guidance' ? 'assistant.fromGuidance' : turn.response.provider === 'local' ? 'assistant.fromTools' : 'assistant.fromModel')}</small>
             {turn.response.modelStatus === 'MODEL_UNAVAILABLE' && <p>{tr('assistant.modelUnavailable')}</p>}{turn.response.modelStatus === 'CIRCUIT_OPEN' && <p>{tr('assistant.circuitOpen')}</p>}{turn.response.modelStatus === 'INPUT_TOO_LARGE' && <p>{tr('assistant.inputLarge')}</p>}
             {turn.response.toolResults?.filter(result => ['search_resources', 'recommend_equipment'].includes(result.tool)).flatMap(result => Array.isArray(result.result.resources) ? result.result.resources as Resource[] : []).map(resource => <article className="assistant-resource-result" key={resource.id}><strong>{resource.name}</strong><small>{resource.code} · {label(`enum.category.${resource.category}`)}</small><dl><div><dt>{tr('assistant.location')}</dt><dd>{resource.location || tr('core.empty.value')}</dd></div><div><dt>{tr('assistant.operationalStatus')}</dt><dd>{label(`enum.operational.${resource.operationalStatus}`)}</dd></div></dl><p>{tr('assistant.resourceBoundary')}</p></article>)}
             <details><summary>{tr('assistant.sourceDetails')}</summary><div className="assistant-tools">{turn.response.toolsUsed.map(tool => <span key={tool}>{label(`assistant.tool.${tool}`)}</span>)}</div></details>
-            {turn.response.toolResults?.some(result => Array.isArray(result.result.sources) && result.result.sources.length) && <details><summary>{tr('assistant.originalDocuments')}</summary><pre>{JSON.stringify(turn.response.toolResults.filter(result => result.tool === 'search_knowledge_base').map(result => result.result), null, 2)}</pre></details>}
+            {turn.response.toolResults?.some(result => Array.isArray(result.result.sources) && result.result.sources.length) && <details><summary>{tr('assistant.originalDocuments')}</summary>{turn.response.toolResults.filter(result => result.tool === 'search_knowledge_base').flatMap(result => Array.isArray(result.result.sources) ? result.result.sources as Source[] : []).map(source => <article className="assistant-resource-result" key={source.chunkId}><strong>{source.document.title}</strong>{source.document.version && <small>{tr('assistant.documentVersion', { version: source.document.version })}</small>}{source.document.fileName && <small>{source.document.fileName}</small>}<p>{source.excerpt}</p></article>)}</details>}
             {turn.response.actions?.filter(action => action.type === 'PREFILL_BOOKING').map(action => <div className="assistant-slot-result" key={`${action.payload.resourceId}-${action.payload.startAt}`}><strong>{resources.find(resource => resource.id === action.payload.resourceId)?.name || tr('assistant.resource')}</strong><p>{formatVietnamDateTime(action.payload.startAt)} → {formatVietnamDateTime(action.payload.endAt)}</p><small>{tr('assistant.vietnamTime')}</small><button className="secondary-button" onClick={() => { onClose(); onPrefill(action.payload); }}>{tr('assistant.openBooking')}</button></div>)}
           </div></article>)}</div>
         {busy && <p role="status">{tr('assistant.lookupBusy')}</p>}{error && <p className="alert danger" role="alert">{tr(error)}</p>}

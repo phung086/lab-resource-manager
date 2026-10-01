@@ -111,3 +111,13 @@ return through the normal booking form/API. The guarded integration test require
 `ASSISTANT_TEST_DATABASE_URL` pointing to local `lab_resources_assistant_test`.
 See `BILINGUAL_ASSISTANT_FOUNDATION_20260930.md` for current limits and deployment
 flags. Backend code must not import frontend runtime packages.
+
+MCP protocol ingress uses a separate bounded IP bucket; never exempt it from
+authentication, account rate limits or actor/object/lab scope. Transport aborts
+must reach tools, and pending non-cancellable reads retain admission until they
+settle. Assistant evidence errors/deferred hardware never start model generation.
+The complete question plus tool-results payload has a 24,000-byte UTF-8 model
+budget. Reuse eligibility only within one answer and one resource; never cache it
+across users or business submissions. Business dashboards can explicitly request
+`includeTelemetry=false`; omit monitoring counts and return `telemetrySummary=null`
+with `telemetryIncluded=false` rather than claiming healthy hardware.

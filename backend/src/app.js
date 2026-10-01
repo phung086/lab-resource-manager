@@ -59,7 +59,15 @@ export function createApp() {
     // the one-time secure hash and provider evidence.
     skip: (req) => /^\/api\/payments\/vnpay\/(?:ipn|return)(?:\?|$)/.test(req.originalUrl || req.url)
   }));
-  app.use(rateLimit({ windowMs: config.rateLimitWindowMs, limit: config.rateLimitMax, standardHeaders: "draft-7", legacyHeaders: false, handler: (req, res) => res.status(429).json({ error: { code: "RATE_LIMITED", message: localizeError(req.locale, "RATE_LIMITED") } }) }));
+  const ingressLimit = limit => rateLimit({
+    windowMs: config.rateLimitWindowMs, limit, standardHeaders: "draft-7", legacyHeaders: false,
+    handler: (req, res) => res.status(429).json({ error: { code: "RATE_LIMITED", message: localizeError(req.locale, "RATE_LIMITED") } })
+  });
+  // MCP initialization and tool reads share the loopback IP, but must not spend
+  // the ordinary API budget. Both ingress paths remain bounded before auth.
+  const apiIngress = ingressLimit(config.rateLimitMax);
+  const mcpIngress = ingressLimit(config.rateLimitMax * 10);
+  app.use((req, res, next) => (req.path.toLowerCase().replace(/\/$/, "") === "/mcp" ? mcpIngress : apiIngress)(req, res, next));
   app.use(metricsMiddleware);
 
   // Health check endpoints

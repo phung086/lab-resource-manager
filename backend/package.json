@@ -43,7 +43,7 @@
     "test:phase-h": "cross-env LOG_FORMAT=dev PAYMENTS_ENABLED=true node --test test/phaseH.payment-lifecycle.integration.test.js",
     "test:migration-safety": "node test/migrationSafetyMatrix.mjs",
     "test:lab-workspace": "node --test test/labWorkspace.integration.test.js",
-    "test:assistant": "cross-env LOG_FORMAT=dev node --test test/assistantRuntime.test.js",
+    "test:assistant": "cross-env LOG_FORMAT=dev node --test test/assistantRuntime.test.js test/assistantTransport.test.js",
     "test:assistant:integration": "node --test test/assistant.integration.test.js"
   },
   "dependencies": {

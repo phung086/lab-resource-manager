@@ -31,6 +31,7 @@ export const config = {
   assistantModelFailureThreshold: Math.min(parsePositiveInteger(process.env.ASSISTANT_MODEL_FAILURE_THRESHOLD, 3), 10),
   assistantModelCooldownMs: Math.min(Math.max(parsePositiveInteger(process.env.ASSISTANT_MODEL_COOLDOWN_MS, 30000), 1000), 300000),
   mcpAssistantEnabled: process.env.MCP_ASSISTANT_ENABLED === "true",
+  hardwareTelemetryEnabled: process.env.HARDWARE_TELEMETRY_ENABLED === "true",
   trustProxy: process.env.TRUST_PROXY === "true",
   logFormat,
   jsonBodyLimit,

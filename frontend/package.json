@@ -22,7 +22,7 @@
     "test:e2e:smart-monitoring": "node test_batch8_smart_monitoring_e2e.mjs",
     "test:ui:workspace": "node test_workspace_navigation_ui.mjs",
     "i18n:sync": "node scripts/syncLocales.mjs --write",
-    "test:i18n": "node scripts/syncLocales.mjs && node scripts/auditLocaleSource.mjs && node --test test_locale_loader.mjs",
+    "test:i18n": "node scripts/syncLocales.mjs && node scripts/auditLocaleSource.mjs && node --test test_locale_loader.mjs test_api_request.mjs",
     "test:ui:bilingual": "node test_bilingual_workspace_ui.mjs",
     "test:ui:roles": "node test_role_workspaces_ui.mjs"
   },

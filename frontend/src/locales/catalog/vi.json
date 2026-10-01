@@ -2108,6 +2108,14 @@
     "ui.home.student.search": "Tìm tài nguyên",
     "ui.home.student.searchPlaceholder": "Tên tài nguyên, mã hoặc phòng LAB…",
     "ui.home.student.stepsTitle": "Ba bước để bắt đầu",
-    "ui.home.student.title": "Buổi thực hành tiếp theo bắt đầu từ đây."
+    "ui.home.student.title": "Buổi thực hành tiếp theo bắt đầu từ đây.",
+    "api.REQUEST_TIMEOUT": "Yêu cầu quá thời gian chờ. Vui lòng kiểm tra kết quả trước khi thử lại.",
+    "assistant.documentVersion": "Phiên bản {version}",
+    "assistant.durationAuto": "Tự xác định từ câu hỏi",
+    "assistant.durationHelp": "Để trống để dùng thời lượng trong câu hỏi; mặc định 60 phút nếu không nêu. Nhập số phút để chọn thời lượng khác.",
+    "assistant.hardwareDeferred": "Giám sát camera và cảm biến đang tạm hoãn. Chưa có dữ liệu phần cứng được xác minh; hãy kiểm tra lịch đặt, bảo trì và sự cố trong nghiệp vụ.",
+    "assistant.invalidDuration": "Thời lượng phải là số phút nguyên từ 15 đến 480.",
+    "assistant.guidanceSummary": "Hướng dẫn hệ thống",
+    "assistant.fromGuidance": "Hướng dẫn hệ thống; chưa sử dụng công cụ tra cứu."
   }
 }

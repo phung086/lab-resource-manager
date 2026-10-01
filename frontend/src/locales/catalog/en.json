@@ -2108,6 +2108,14 @@
     "ui.home.student.search": "Find resources",
     "ui.home.student.searchPlaceholder": "Resource name, code or laboratory…",
     "ui.home.student.stepsTitle": "Three steps to get started",
-    "ui.home.student.title": "Your next lab session starts here."
+    "ui.home.student.title": "Your next lab session starts here.",
+    "api.REQUEST_TIMEOUT": "The request timed out. Check the result before trying again.",
+    "assistant.documentVersion": "Version {version}",
+    "assistant.durationAuto": "Infer from the question",
+    "assistant.durationHelp": "Leave blank to use the duration in your question; the default is 60 minutes when none is stated. Enter minutes to choose a different duration.",
+    "assistant.hardwareDeferred": "Camera and sensor monitoring is deferred. No verified hardware data is available; use bookings, maintenance and incidents for operational checks.",
+    "assistant.invalidDuration": "Duration must be a whole number of minutes from 15 to 480.",
+    "assistant.guidanceSummary": "System guidance",
+    "assistant.fromGuidance": "System guidance; no lookup tools were used."
   }
 }

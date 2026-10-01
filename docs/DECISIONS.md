@@ -379,6 +379,14 @@ Status: Accepted in user-authorized continuation, 2026-09-30.
 - Subsequent screen/workflow refinement must use this same contract; do not
   add another raw-text fallback or fake service success path.
 
+Clarification, 2026-10-01: MCP ingress and business API ingress have separate
+bounded IP budgets; authenticated account, object and lab checks stay mandatory.
+Socket/deadline cancellation reaches tool work, and non-cancellable pending reads
+retain admission until they settle. Model generation requires usable evidence and
+a complete input no larger than 24,000 UTF-8 bytes. Hardware-off workspace reads
+explicitly omit telemetry queries and label monitoring as deferred. Shared client
+deadlines never automatically retry business mutations.
+
 
 ## ADR-026: Task-focused role entry points share one workflow boundary
 

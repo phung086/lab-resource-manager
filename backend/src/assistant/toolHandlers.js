@@ -1,6 +1,7 @@
 import { setImmediate as yieldEventLoop } from "node:timers/promises";
 import { assertNotAborted } from "./assistantRuntime.js";
 import { prisma } from "../db.js";
+import { config } from "../config.js";
 import { HttpError } from "../middleware/errors.js";
 import { assertBookingAccess } from "../middleware/labScope.js";
 import {
@@ -637,6 +638,7 @@ async function monitoring(input, actor) {
       undefined,
       "FORBIDDEN",
     );
+  if (!config.hardwareTelemetryEnabled) return { deferred: true, source: "deferred" };
   const rows = await prisma.resource.findMany({
     where: await resourceScope(actor),
     include: {

@@ -56,7 +56,7 @@ import { getDictionary, interpolate, localeOptions } from "./i18n.js";
 import { buildMonitoringRows, getMonitoringSummary, toBarWidth } from "./monitoring.js";
 import { classNames, formatDateTime, formatPercent } from "./utils.js";
 import { formatVietnamDateTime, vietnamTimeToIso } from "./utils/timezone.js";
-import { RESEARCH_FEATURES_ENABLED, PAYMENT_FEATURES_ENABLED, isTabEnabled } from "./config/featureFlags";
+import { RESEARCH_FEATURES_ENABLED, PAYMENT_FEATURES_ENABLED, TELEMETRY_FEATURES_ENABLED, isTabEnabled } from "./config/featureFlags";
 const PaymentsPage = React.lazy(() => import("./components/features/payments/PaymentsPage"));
 import {
   AiDiagnosticStudio,
@@ -256,7 +256,7 @@ function Application() {
         maintenance: read("/maintenance"),
         notifications: read("/notifications"),
         incidents: read("/incidents"),
-        ...(["ADMIN", "LAB_STAFF"].includes(routeUserRole) ? { dashboard: read("/dashboard") } : {}),
+        ...(["ADMIN", "LAB_STAFF"].includes(routeUserRole) ? { dashboard: read(`/dashboard?includeTelemetry=${TELEMETRY_FEATURES_ENABLED}`) } : {}),
         ...(routeUserRole === "ADMIN" ? { users: read("/users") } : {})
       };
       const entries = Object.entries(requests);

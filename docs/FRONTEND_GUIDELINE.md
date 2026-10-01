@@ -128,3 +128,16 @@ hierarchy. Reuse shared primitives, catalogs and existing authenticated screens.
 Carry validated resource/group/booking/filter context into the destination; action
 links open confirmation forms and never perform mutations implicitly. Disclose
 recent-record count limits. See ADR-026 and the role workspace refinement report.
+
+
+## Request deadlines and assistant context
+
+Use the shared `apiRequest` cancellation and deadline boundary: normal requests
+wait at most 30 seconds, chat 65 seconds, including response-body reads. Preserve
+caller cancellation and catalog error IDs. Do not automatically retry mutations
+after a timeout; the backend may already have committed. Leave assistant duration
+blank until the user explicitly chooses minutes, so VI/EN question duration is
+not silently replaced by a UI default. Use the canonical Vietnam-time conversion.
+Render original document titles, versions and excerpts as text; never expose raw
+transport JSON or render source content as HTML. Hardware-off workspace reads
+request `/dashboard?includeTelemetry=false` without adding a second data loader.

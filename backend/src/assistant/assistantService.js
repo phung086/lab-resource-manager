@@ -13,8 +13,21 @@ const plain = (text) =>
   text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
+    .replace(/[đĐ]/g, "d")
     .toLowerCase();
+function slotDuration(data, normalized) {
+  if (data.durationMinutes !== undefined) return data.durationMinutes;
+  const matches = [...normalized.matchAll(/(-?\d+(?:[.,]\d+)?)\s*(minutes?|mins?|phut|hours?|hrs?|gio)\b/g)];
+  if (!matches.length) return 60;
+  const inHours = match => /hours?|hrs?|gio/.test(match[2]);
+  const asMinutes = match => Number(match[1].replace(',', '.')) * (inHours(match) ? 60 : 1);
+  const combined = matches.length === 2 && inHours(matches[0]) && !inHours(matches[1]) && /^\s*(?:and|va)?\s*$/.test(normalized.slice(matches[0].index + matches[0][0].length, matches[1].index));
+  if (matches.length > 1 && !combined) throw new HttpError(400, 'VALIDATION_ERROR', undefined, 'VALIDATION_ERROR');
+  const minutes = matches.reduce((sum, match) => sum + asMinutes(match), 0);
+  if (matches.some(match => asMinutes(match) < 0)) throw new HttpError(400, 'VALIDATION_ERROR', undefined, 'VALIDATION_ERROR');
+  if (!Number.isInteger(minutes) || minutes < 15 || minutes > 480) throw new HttpError(400, 'VALIDATION_ERROR', undefined, 'VALIDATION_ERROR');
+  return minutes;
+}
 export function planAssistantQuestion(data) {
   const n = plain(data.message);
   const code = data.message.match(/\b[A-Z][A-Z0-9]*-[A-Z0-9-]+\b/)?.[0];
@@ -74,9 +87,7 @@ export function planAssistantQuestion(data) {
               : {}),
           ...(data.startAt ? { from: data.startAt } : {}),
           ...(data.endAt ? { to: data.endAt } : {}),
-          durationMinutes:
-            data.durationMinutes ||
-            Number(n.match(/(\d+)\s*(?:gio|hours?)/)?.[1] || 1) * 60,
+          durationMinutes: slotDuration(data, n),
           limit: 5,
         },
       },
@@ -105,9 +116,9 @@ export function planAssistantQuestion(data) {
     return [{ name: "search_resources", input: { ...(query ? { query } : {}), ...(category ? { category } : {}) } }];
   return [{ name: "get_operational_summary", input: {} }];
 }
-function realClient(authorization, signal, settings) {
+function realClient(authorization, signal, settings, locale) {
   const client = new Client({ name: 'lrm-assistant', version: '1.0.0' });
-  const transport = new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${settings.port}/mcp`), { requestInit: { headers: { Authorization: authorization }, signal } });
+  const transport = new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${settings.port}/mcp`), { requestInit: { headers: { Authorization: authorization, 'Accept-Language': locale, 'X-LRM-Locale': locale }, signal } });
   return { client, transport };
 }
 async function realModel({ question, toolResults, locale, signal, settings }) {
@@ -131,7 +142,12 @@ export function createAssistantService({ settings = config, clientFactory = real
     let client, stop;
     try {
       assertNotAborted(signal);
-      const connection = clientFactory(authorization, signal, settings); client = connection.client;
+      const plan = planAssistantQuestion(data);
+      if (!plan.length) {
+        const summary = buildAssistantSummary([]);
+        return { answer: renderAssistantSummary(summary, (key, params) => localize(locale, key, params), locale), summary, locale, provider: 'local', modelStatus: 'LOCAL_ONLY', toolsUsed: [], toolResults: [], actions: [], source: 'local_guidance', generatedAt: new Date().toISOString() };
+      }
+      const connection = clientFactory(authorization, signal, settings, locale); client = connection.client;
       stop = () => { void closeWithin(client); }; signal.addEventListener('abort', stop, { once: true });
       await withinSignal(() => client.connect(connection.transport, { signal, timeout: settings.assistantToolTimeoutMs }), signal);
       const call = async step => {
@@ -139,10 +155,15 @@ export function createAssistantService({ settings = config, clientFactory = real
         const response = await withinSignal(() => client.callTool({ name: step.name, arguments: step.input }, { signal, timeout: settings.assistantToolTimeoutMs }), signal);
         return response.structuredContent || JSON.parse(response.content?.find(x => x.type === 'text')?.text || '{}');
       };
-      for (const step of planAssistantQuestion(data)) {
+      const eligibilityByResource = new Map();
+      for (const step of plan) {
         const result = await call(step); toolResults.push({ tool: step.name, result }); toolsUsed.add(step.name);
         for (const slot of (result.slots || []).slice(0, 5)) {
-          const eligibility = await call({ name: 'check_user_eligibility', input: { resourceId: slot.resourceId } }); toolsUsed.add('check_user_eligibility');
+          if (!eligibilityByResource.has(slot.resourceId)) {
+            eligibilityByResource.set(slot.resourceId, await call({ name: 'check_user_eligibility', input: { resourceId: slot.resourceId } }));
+            toolsUsed.add('check_user_eligibility');
+          }
+          const eligibility = eligibilityByResource.get(slot.resourceId);
           if (eligibility?.bookable && !eligibility.missingTraining?.length) actions.push({ type: 'PREFILL_BOOKING', labelKey: 'assistant.openForm', payload: slot });
         }
       }
@@ -150,9 +171,11 @@ export function createAssistantService({ settings = config, clientFactory = real
       const summary = buildAssistantSummary(toolResults);
       let answer = renderAssistantSummary(summary, (key, params) => localize(locale, key, params), locale), provider = 'local', modelStatus = 'NOT_CONFIGURED';
       if (settings.openaiApiKey && settings.openaiModel) {
-        const lease = breaker.enter();
-        if (!lease) modelStatus = 'CIRCUIT_OPEN';
-        else if (Buffer.byteLength(JSON.stringify(toolResults)) > 100000) { modelStatus = 'INPUT_TOO_LARGE'; breaker.finish(lease, 'cancelled'); }
+        const usable = toolResults.length && !toolResults.some(({ result }) => result.error || result.deferred);
+        const lease = usable ? breaker.enter() : null;
+        if (!usable) modelStatus = toolResults.some(({ result }) => result.error) ? 'TOOL_UNAVAILABLE' : 'LOCAL_ONLY';
+        else if (!lease) modelStatus = 'CIRCUIT_OPEN';
+        else if (Buffer.byteLength(JSON.stringify({ question: data.message, toolResults })) > 24000) { modelStatus = 'INPUT_TOO_LARGE'; breaker.finish(lease, 'cancelled'); }
         else {
           try {
             const text = await withinSignal(() => modelCall({ question: data.message, toolResults, locale, signal, settings }), signal);

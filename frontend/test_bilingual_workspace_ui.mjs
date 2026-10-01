@@ -90,7 +90,25 @@ try {
     check(await page.locator('.assistant-turn').count() === 1, `${role}: assistant history survives the language switch`);
     await audit(page, 'vi', `${role}/assistant-history-vi`);
     await page.locator('#assistant-question').fill('Tìm thiết bị'); await page.locator('.assistant-compose').getByRole('button').click(); await page.locator('.assistant-turn').nth(1).waitFor();
-    await audit(page, 'vi', `${role}/assistant-vi`); await page.keyboard.press('Escape');
+    await audit(page, 'vi', `${role}/assistant-vi`);
+    if (role === 'student') {
+      const reply = () => page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/assistant/chat') && response.request().method() === 'POST');
+      await page.locator('#assistant-question').fill('Tìm khung giờ trống trong 90 phút');
+      let pending = reply(); await page.locator('.assistant-compose').getByRole('button').click();
+      let response = await pending; check(response.ok(), 'Natural-language duration uses the real authenticated assistant');
+      check(!Object.hasOwn(response.request().postDataJSON(), 'durationMinutes'), 'An untouched duration field does not override the question');
+      await page.locator('.assistant-turn').nth(2).waitFor();
+      await page.getByRole('dialog').getByText(catalogs.vi['assistant.context'], { exact:true }).click();
+      const duration = page.getByRole('spinbutton', { name: catalogs.vi['assistant.duration'] }); await duration.fill('120');
+      await switchLocale(page, 'en', '.assistant-language');
+      check(await page.getByRole('spinbutton', { name: catalogs.en['assistant.duration'] }).inputValue() === '120', 'Explicit duration survives an assistant language switch');
+      await page.locator('#assistant-question').fill('Find available slots for 90 minutes');
+      pending = reply(); await page.locator('.assistant-compose').getByRole('button').click(); response = await pending;
+      check(response.ok(), 'Explicit duration override uses the real authenticated assistant');
+      check(response.request().postDataJSON().durationMinutes === 120, 'A duration explicitly entered in the form takes priority');
+      await page.locator('.assistant-turn').nth(3).waitFor(); await audit(page, 'en', `${role}/assistant-duration-en`);
+    }
+    await page.keyboard.press('Escape');
     await context.close();
   }
   // Catalog faults are the only intercepted requests. Business data remains real PostgreSQL.
