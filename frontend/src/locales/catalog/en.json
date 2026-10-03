@@ -44,6 +44,7 @@
     "api.CURRENT_PASSWORD_INVALID": "Your current password is incorrect.",
     "api.DATA_UNAVAILABLE": "Data is unavailable. Please try again.",
     "api.DATABASE_UNAVAILABLE": "The database is unavailable. Please try again.",
+    "api.METRICS_UNAVAILABLE": "Metrics access is not configured.",
     "api.DUPLICATE_ASSIGNMENT": "This laboratory assignment already exists.",
     "api.DUPLICATE_CHARGE": "This booking already has a pending or successful charge.",
     "api.DUPLICATE_DATA": "The data already exists in the system",
@@ -2116,6 +2117,12 @@
     "assistant.hardwareDeferred": "Camera and sensor monitoring is deferred. No verified hardware data is available; use bookings, maintenance and incidents for operational checks.",
     "assistant.invalidDuration": "Duration must be a whole number of minutes from 15 to 480.",
     "assistant.guidanceSummary": "System guidance",
-    "assistant.fromGuidance": "System guidance; no lookup tools were used."
+    "assistant.fromGuidance": "System guidance; no lookup tools were used.",
+    "ui.queue.page": "Page {page} of {pages}",
+    "ui.queue.previous": "Previous",
+    "ui.queue.pagination": "Queue pages",
+    "ui.queue.countScope": "Booking and incident counts cover all records you can access. Lists show one page at a time.",
+    "ui.queue.range": "Showing {start}–{end} of {total}",
+    "ui.queue.next": "Next"
   }
 }

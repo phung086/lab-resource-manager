@@ -43,6 +43,7 @@
     "api.CURRENT_PASSWORD_INVALID": "Your current password is incorrect.",
     "api.DATA_UNAVAILABLE": "Data is unavailable. Please try again.",
     "api.DATABASE_UNAVAILABLE": "The database is unavailable. Please try again.",
+    "api.METRICS_UNAVAILABLE": "Metrics access is not configured.",
     "api.DUPLICATE_ASSIGNMENT": "This laboratory assignment already exists.",
     "api.DUPLICATE_CHARGE": "This booking already has a pending or successful charge.",
     "api.DUPLICATE_DATA": "The data already exists in the system",

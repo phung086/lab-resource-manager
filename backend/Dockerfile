@@ -24,14 +24,15 @@ RUN apk add --no-cache postgresql-client
 WORKDIR /app
 
 ENV NODE_ENV=production
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data && chown node:node /app /app/data
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY package*.json ./
-COPY prisma ./prisma
-COPY src ./src
-COPY scripts ./scripts
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node package*.json ./
+COPY --chown=node:node prisma ./prisma
+COPY --chown=node:node src ./src
+COPY --chown=node:node scripts ./scripts
 
+USER node
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD wget -qO- http://127.0.0.1:8000/health || exit 1
 CMD ["sh", "-c", "npm run db:deploy && npm run start:prod"]

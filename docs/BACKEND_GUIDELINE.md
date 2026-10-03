@@ -36,6 +36,20 @@ Every sensitive route must verify:
 
 Do not rely on client-provided identity or lab fields.
 
+## Workspace queue reads
+
+`GET /api/bookings` and `GET /api/incidents` opt into the paginated contract when
+`page` is supplied. Validate all page/filter fields, cap `pageSize` at 100, and
+return `{ items, pagination, summary }`. Filter before applying `skip`/`take`;
+derive summary counts from the complete authorized scope. Queries without `page`
+retain their legacy array contracts and caps.
+
+Apply current `UserLabAssignment` scope inside every staff list and aggregate
+query. Admin reads remain global; lecturer/student reads retain ownership scope.
+Use deterministic ordering with an ID tie-breaker. Items and counts share one
+Repeatable Read transaction per response; successive pages are separate snapshots.
+See [queue contract and verification](WORKSPACE_QUEUE_PAGINATION_20261003.md).
+
 ## Persistence Rules
 
 - Use Prisma migrations for approved schema changes.

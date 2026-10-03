@@ -25,6 +25,7 @@ export interface AppLayoutProps {
   onLocaleChange: (locale: string) => void;
   notifications?: Array<{ id: string | number; readAt?: string | null }>;
   incidents?: Array<{ id: string | number; status?: string }>;
+  incidentOpenCount?: number;
   conflictsCount?: number;
   loading?: boolean;
   onRefresh?: () => void;
@@ -42,6 +43,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onLocaleChange,
   notifications = [],
   incidents = [],
+  incidentOpenCount,
   conflictsCount = 0,
   loading = false,
   onRefresh,
@@ -177,6 +179,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         user={user}
         notifications={notifications}
         incidents={incidents}
+        incidentOpenCount={incidentOpenCount}
         conflictsCount={conflictsCount}
         locale={locale}
         expanded={navigationOpen}

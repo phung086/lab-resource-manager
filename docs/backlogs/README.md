@@ -1,5 +1,8 @@
 # Backlogs
 
+Current bounded follow-up: [review response, verification and prioritized work](review-followup-20261003.md).
+It continues draft PR #22; it does not open a new numbered Batch.
+
 This folder is reserved for batch plans and scoped implementation backlogs.
 
 Backlog items should include:

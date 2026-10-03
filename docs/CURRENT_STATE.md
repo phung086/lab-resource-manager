@@ -1,5 +1,70 @@
 # Current Project State
 
+## Review publication request - 2026-10-03
+
+The user authorized committing/pushing the verified queue and review follow-up
+to the existing draft PR #22 for Claude assessment. Source, tests and relevant
+project documentation are included; unrelated disk audits, local provider images
+and generated report packages remain local. No main merge, deployment or new
+Batch is authorized by this publication. The verification entries below record
+local runs; published-HEAD GitHub checks are a separate gate.
+
+## Review follow-up - 2026-10-03
+
+Continuation of draft PR #22, without a new Batch. The supplied DOCX was read
+fully and assessed against current requirements/source. Removed 13 unreferenced
+duplicate JSX components and 2 unused mock/store files, preserving active
+implementations and earlier local changes. Legacy booking reads now use validated
+service queries with persisted lab/owner scope; bounded string IDs support older
+resources. Maintenance editing preserves the nested API resource ID (QA-01 fixed).
+
+SRS use cases/permissions, a schema-derived core ERD, documentation index,
+actual UI/UX guidance and current threat model replace gaps/outdated claims.
+Production metrics require a configured bearer; observability services are
+opt-in and the production API image runs as node.
+
+Fresh verification: 63 required backend tests, 5 isolated PostgreSQL integration
+tests, 54 real-browser checks including persisted maintenance rescheduling,
+backend lint/config/ERD, frontend required gate (7 locale/network tests, 2,122
+keys, 9 existing lint warnings, typecheck/build), Compose configuration and
+Docker build/UID/writable-data/Prisma initialization all pass. Full backend audit
+reports 4 high development-tool dependency findings; production-only audit
+reports zero. No dependency upgrade or full historical regression was performed.
+GitHub CI and live providers/hardware remain separate verification steps.
+
+See [review disposition, evidence and remaining work](backlogs/review-followup-20261003.md).
+Earlier QA and pagination entries below are their original snapshots.
+
+## Workspace queue pagination - 2026-10-03
+
+User-authorized continuation on `codex/lab-workspace-ui-draft`, draft PR #22;
+no new Batch. Booking and incident reads opt into server pagination with `page`.
+Status filtering and full totals run inside the authenticated owner/lab scope,
+with stable ordering and a consistent PostgreSQL snapshot per response. Legacy
+array reads keep their existing limits. Staff home, administrative priority counts,
+booking operations, incident operations and the incident navigation badge use the
+new contract. Confirmation forms still use the existing authorized mutations.
+
+Local verification passes: 60 required backend tests, 4 new PostgreSQL integration
+tests with 160 bookings/86 incidents, 51 real-browser checks, backend lint, frontend
+locale/network checks, lint (13 existing warnings), TypeScript and production build.
+The new isolated PostgreSQL/browser CI job is configured but has not run on GitHub
+for these local changes. See [queue report](WORKSPACE_QUEUE_PAGINATION_20261003.md)
+for contracts, reproduction and remaining limits. Earlier local QA/documents and
+artifacts are preserved. No schema migration, dependency change, push, merge or
+deployment is included.
+
+## Workflow QA checkpoint - 2026-10-03
+
+PR #22 at `66e744473c940515548048d448019beb3d311e9b` was checked through
+required tests, backend integrations, business browser suites and role/bilingual
+UI checks. [QA report](QA_WORKFLOW_REPORT_20261003.md) records evidence, setup
+corrections and external integration limits. A P2 issue remains open: the
+maintenance edit form reads `resourceId` while the API returns nested
+`resource.id`, clearing the selected resource during rescheduling. Selecting it
+again allows the tested workflow to finish; this does not close the issue.
+No application source was changed in this QA task; PR remains draft.
+
 ## Assistant and request isolation — 2026-10-01
 
 Continuation stays on `codex/lab-workspace-ui-draft`, draft PR #22, preserving

@@ -5,9 +5,9 @@
 | Document field | Value |
 |---|---|
 | Document ID | LRM-SRS-001 |
-| Version | 1.1 |
+| Version | 1.2 |
 | Status | Working baseline for the current project checkpoint |
-| Prepared | 28 September 2026 |
+| Prepared | 28 September 2026; clarified 3 October 2026 |
 | Product | Lab Resource Manager |
 
 ## 1. Introduction
@@ -63,8 +63,8 @@ At a high level, the system supports:
 |---|---|---|
 | `ADMIN` | Manage users, roles, laboratory assignments, resources, policies, and cross-lab administration | Global administrative permission, enforced by backend |
 | `LAB_STAFF` | Operate resources, process bookings, maintenance, monitoring, and incidents | Limited to laboratories assigned through `UserLabAssignment` |
-| `LECTURER` | Discover resources and manage own bookings | Authenticated self-service; no staff operations |
-| `STUDENT` | Discover resources and manage own bookings | Authenticated self-service; external business identity may be separately marked `EXTERNAL` |
+| `LECTURER` | Manage own bookings and supervise assigned course groups | Own bookings/incidents; assigned group membership and academic review; no staff operations |
+| `STUDENT` | Manage own bookings and submit/revise own course activities | Own records and membership-scoped groups; external business identity may be separately marked `EXTERNAL` |
 
 Public visitors may view explicitly public catalog and schedule projections. Public access does not grant booking mutation or account privileges.
 
@@ -138,6 +138,7 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | FR-BKG-06 | The system shall prevent overlapping active bookings at the database level, including concurrent requests. |
 | FR-BKG-07 | Availability shall be derived from operational status, booking intervals, maintenance windows, and applicable policy. |
 | FR-BKG-08 | Public schedule data shall omit requester identity and private booking titles. |
+| FR-BKG-09 | Workspace booking and incident queues shall expose older authorized records through bounded server pages and complete scoped totals; recent list caps shall not define queue totals. |
 
 ### 4.4 Handover and return
 
@@ -274,3 +275,59 @@ Implementation and verification boundaries are recorded in
 
 See ADR-025 and `ASSISTANT_REQUEST_HARDENING_20261001.md` for the implemented
 boundary and verification evidence.
+
+## Appendix C. Actor permissions and operational use cases (2026-10-03)
+
+This clarification follows the existing contracts and the approved extension in
+Appendix B. It does not create another role or change resource approval authority.
+The required core is booking, resource operations, truthful monitoring and their
+supporting accounts/history. Stock, teaching groups, global VI/EN and media are
+approved product extensions. Payment, SMTP, object storage, AI and hardware need
+their own configuration/evidence. Research dashboards are disabled by default.
+
+### Permission matrix
+
+Every permission is enforced by the server; navigation visibility is only a UX aid.
+"Assigned labs" means current persisted `UserLabAssignment`, never a request field.
+
+| Operation | ADMIN | LAB_STAFF | LECTURER | STUDENT |
+|---|---|---|---|---|
+| Users, roles, lab assignments administration | Global | No | No | No |
+| Profile/password self-service | Own | Own | Own | Own |
+| Resources and operational state | Global | Assigned labs | Public/authenticated safe reads | Public/authenticated safe reads |
+| Read booking/incident queues | Global | Assigned labs | Own records | Own records |
+| Request/cancel booking | Canonical actor/owner rules | Canonical actor/owner rules | Own eligible booking | Own eligible booking |
+| Approve/reject, checkout, staff return/complete | Global | Assigned labs | No | No |
+| Owner ROOM self-return | Own checked-out ROOM | Own checked-out ROOM | Own checked-out ROOM | Own checked-out ROOM |
+| Maintenance/incident operational handling | Global | Assigned labs | Own incident reporting | Own incident reporting |
+| Material receipts/issues/history | Global | Assigned labs | No | No |
+| Inventory count adjustments | Global | No | No | No |
+| Create group/assign lecturer | Global | No | No | No |
+| Group membership and academic review | Global | No | Assigned groups | No |
+| Course activity submission/revision | No student impersonation | No | No | Own booking/activity in member group |
+| System audit administration | Global | No | No | No |
+
+Lecturers may see students' booking evidence through the assigned teaching group
+projection, not through a global booking queue. Students do not receive classmates'
+private activity records. Academic endorsement leaves booking status unchanged.
+
+### Use cases and acceptance paths
+
+| ID / actor | Preconditions and normal path | Failure or alternate path | Requirements / verification entry |
+|---|---|---|---|
+| UC-01 Account access / all | Persisted active account; login, retrieve current identity, use authorized workspace | Bad credentials, inactive user or unavailable DB deny access; public registration remains STUDENT | FR-AUTH-01–05 / `test:batch2`, `test:release-security` |
+| UC-02 Discover and request / lecturer, student | Inspect safe resource/schedule; select eligible interval; submit; persist pending or confirmed booking | Conflict, training/policy failure or hard operational state rejects request; no fake success | FR-RES-01, FR-BKG-01–03,06–08 / `test:batch4` |
+| UC-03 Process queue / admin, assigned staff | Page/filter complete scoped queue; open exact booking; approve/reject eligible pending request | Wrong lab/owner cannot widen read or mutate; invalid transition rejected; read failure has retry | FR-BKG-04,09, BR-05 / `test:queue-pagination`, frontend `test:ui:queue-pagination` |
+| UC-04 Handover and close / admin, assigned staff | Confirm booking and actual evidence; checkout; record return condition; review and complete | Preserve BROKEN/MAINTENANCE and other hard states; rejected transition keeps state/history intact | FR-OPS-01–06 / `test:batch5` |
+| UC-05 Owner room return / owner | Checked-out ROOM; declare condition through owner-return; staff review follows existing policy | Other owner's booking or non-ROOM self-return denied; declaration is not staff inspection | FR-OPS-04–05 / `test:batch5` |
+| UC-06 Reschedule maintenance / admin, assigned staff | Open scheduled job with its resource preserved; enter reason/time; preview impact; save allowed change | Conflict blocks saving; terminal job remains closed; missing resource is validation failure | FR-SUP-01, LAB-MAINT-01 / `test:lab-workspace`, maintenance regression in browser queue suite |
+| UC-07 Handle incident/notification / all, operators | Owner reports incident; assigned operator reviews/resolves with evidence; recipient reads own notification | Cross-lab operations denied; missing email configuration never means delivered email | FR-SUP-02–04 / `test:batch6`, `test:queue-pagination` |
+| UC-08 Material ledger / admin, assigned staff | Initialize verified receipt/unit; issue available quantity with reference; optional open same-lab maintenance link | Negative/overspent balance, changed retry, wrong unit/lab/job rejected; only admin adjusts count | LAB-STOCK-01–02 / `test:lab-workspace` |
+| UC-09 Course supervision / admin, lecturer, student | Admin assigns lecturer; authorized membership; student submits own booking goal; lecturer gives feedback; student revises | Non-member, other lecturer, archived group or other owner's booking denied; no resource approval implied | LAB-TEACH-01 / `test:lab-workspace` |
+| UC-10 Monitoring / configured source, operators | Authenticate persisted source; ingest valid sample; show freshness/provenance; inspect actual alert/incident | Missing/stale source remains NO_DATA/stale; replay/invalid scope denied; no automated physical-state change | FR-MON-01–04 / `test:batch8` |
+
+These are acceptance paths and test entry points, not a claim that every suite was
+rerun on this revision. Current run scope and remaining failures are recorded in
+[current state](CURRENT_STATE.md) and the dated [review follow-up](backlogs/review-followup-20261003.md).
+Use [core ERD](DB-erd/core-erd.md) for persisted relationships and the
+[graduation demo runbook](GRADUATION_DEMO_RUNBOOK.md) for the presentation sequence.

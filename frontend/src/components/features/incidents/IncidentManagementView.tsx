@@ -1,9 +1,12 @@
 import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
-import React, { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Plus, ShieldAlert } from "lucide-react";
+import React, { useState } from "react";
+import { AlertTriangle, CheckCircle2, Plus, RefreshCw, ShieldAlert } from "lucide-react";
 import { BaseModal2026 } from "../../BaseModal2026.js";
 import { formatVietnamDateTime } from "../../../utils/timezone.js";
+import { useQueuePage } from "../../../hooks/useQueuePage";
+import { QueuePagination } from "../../base/QueuePagination";
+import type { IncidentQueueSummary } from "../../../types/queue";
 
 import type { IncidentRecord, IncidentSeverity } from "../../../types/incident";
 import {
@@ -48,7 +51,7 @@ const resourceStatusLabels: Record<string, string> = {
   CALIBRATION: "ui.under_calibration_779c1ea8", BROKEN: "ui.broken_fd69bba6", RETIRED: "ui.offline_b4f199c3", OFFLINE: "ui.offline_96a8bb03"
 };
 
-export const IncidentManagementView: React.FC<Props> = ({ user, resources, incidents, onChanged }) => {
+export const IncidentManagementView: React.FC<Props> = ({ user, resources, onChanged }) => {
   const { tr } = useLocale();
   const isStaff = ["ADMIN", "LAB_STAFF"].includes(user?.role || "");
   const [filter, setFilter] = useState<"ALL" | "OPEN" | "RESOLVED">("ALL");
@@ -65,18 +68,11 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
     description: ""
   });
 
-  const filtered = useMemo(() => incidents.filter((incident) => {
-    const open = ["reported", "triaged", "assigned", "investigating"].includes(incident.status);
-    if (filter === "OPEN") return open;
-    if (filter === "RESOLVED") return !open;
-    return true;
-  }), [incidents, filter]);
-
-  const openCount = incidents.filter((incident) =>
-    ["reported", "triaged", "assigned", "investigating"].includes(incident.status)
-  ).length;
+  const queue = useQueuePage<IncidentRecord, IncidentQueueSummary>("/incidents", filter, `${user?.id}:${user?.role}`);
+  const filtered = queue.items;
 
   async function refresh() {
+    queue.refresh();
     await onChanged?.();
   }
 
@@ -158,12 +154,12 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
           <Plus size={16} /> {tr("ui.report_an_incident_0527866e")}</button>
       </div>
 
-      {error && <div role="alert" className="alert danger">{translate(error)}</div>}
+      {(error || queue.error) && <div role="alert" className="alert danger">{translate(error || queue.error)}</div>}
 
       <div className="operational-summary-grid">
-        <Summary label={tr("ui.total_incidents_4c1b245c")} value={incidents.length} />
-        <Summary label={tr("ui.processing_e84898db")} value={openCount} />
-        <Summary label={tr("ui.resolved_1c5b11f2")} value={incidents.length - openCount} />
+        <Summary label={tr("ui.total_incidents_4c1b245c")} value={queue.data?.summary.total ?? "—"} />
+        <Summary label={tr("ui.processing_e84898db")} value={queue.data?.summary.open ?? "—"} />
+        <Summary label={tr("ui.resolved_1c5b11f2")} value={queue.data?.summary.resolved ?? "—"} />
       </div>
 
       <div className="booking-queue-toolbar" role="group" aria-label={tr("ui.filter_incidents_695f1591")}>
@@ -178,10 +174,11 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
             {value === "ALL" ? tr("ui.all_49c73a31") : value === "OPEN" ? tr("ui.processing_e84898db") : tr("ui.resolved_1c5b11f2")}
           </button>
         ))}
+        <button className="btn btn-secondary" type="button" onClick={() => queue.refresh()} disabled={queue.loading}><RefreshCw size={16} aria-hidden="true" />{tr("ui.refresh_b4c61340")}</button>
       </div>
 
       <div className="content-stack">
-        {filtered.length === 0 ? (
+        {queue.loading ? <p role="status">{tr("ui.loading_data_84c68bd5")}</p> : queue.error ? <button className="secondary-button" onClick={() => queue.refresh()}>{tr("ui.retry_c58d068c")}</button> : filtered.length === 0 ? (
           <div className="empty-state">
             <CheckCircle2 size={28} />
             <p>{tr("ui.no_incidents_match_the_current_e09d6f91")}</p>
@@ -238,6 +235,8 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
         })}
       </div>
 
+      {queue.pagination && <QueuePagination pagination={queue.pagination} onPage={queue.setPage} disabled={queue.loading || Boolean(busyId)} />}
+
       <BaseModal2026 isOpen={showReport} onClose={() => setShowReport(false)} title={tr("ui.report_an_incident_0527866e")} icon={ShieldAlert} dismissible={busyId !== "create"}>
             <form className="booking-operation-form" onSubmit={submitReport} noValidate>
               <label>
@@ -285,7 +284,7 @@ export const IncidentManagementView: React.FC<Props> = ({ user, resources, incid
   );
 };
 
-const Summary = ({ label, value }: { label: string; value: number }) => (
+const Summary = ({ label, value }: { label: string; value: number | string }) => (
   <div className="card operational-summary-card">
     <span>{label}</span>
     <strong>{value}</strong>

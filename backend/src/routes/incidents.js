@@ -6,6 +6,7 @@ import { ADMIN, LAB_STAFF } from "../constants/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { createIncident, incidentScopeWhere, transitionIncident } from "../services/incidentService.js";
+import { incidentPageSchema, listIncidentPage } from "../services/workspaceQueueService.js";
 
 const router = express.Router();
 
@@ -38,6 +39,16 @@ router.use(requireAuth);
 
 router.get("/", async (req, res, next) => {
   try {
+    if (req.query.page !== undefined) {
+      return res.json(await listIncidentPage(prisma, req.user, incidentPageSchema.parse(req.query), {
+        resource: { select: { id: true, code: true, name: true, laboratoryId: true, operationalStatus: true } },
+        reportedBy: { select: { id: true, fullName: true, role: true } },
+        assignedTo: { select: { id: true, fullName: true, role: true } },
+        telemetrySource: { select: { id: true, code: true, name: true } },
+        telemetrySample: { select: { id: true, sampledAt: true } },
+        monitoringAlert: { select: { id: true, ruleCode: true, severity: true, status: true } }
+      }));
+    }
     const query = incidentListSchema.parse(req.query);
     const incidents = await prisma.incident.findMany({
       where: {

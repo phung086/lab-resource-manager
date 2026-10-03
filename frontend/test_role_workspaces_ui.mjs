@@ -60,7 +60,7 @@ try {
     page.on('request', req => {
       if (signedIn && req.url().startsWith(api) && req.method() === 'GET') {
         const resourcePath = new URL(req.url()).pathname.slice(new URL(api).pathname.length);
-        if (coreReadPaths.has(resourcePath)) coreReads.push(resourcePath);
+        if (coreReadPaths.has(resourcePath)) coreReads.push(resourcePath + new URL(req.url()).search);
       }
     });
     page.on('request', req => { if (req.url().startsWith(api) && ['POST', 'PATCH', 'DELETE'].includes(req.method()) && !req.url().includes('/auth/')) mutations.push(req.url()); });

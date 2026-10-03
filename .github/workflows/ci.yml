@@ -83,6 +83,69 @@ jobs:
           PHASE_F_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_phase_f_ci?schema=public
         run: npm run test:phase-f
 
+  queue-pagination:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lab_resources_queue_pagination_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_queue_pagination_test?schema=public
+      QUEUE_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_queue_pagination_test?schema=public
+      UI_SCREENSHOT_DIR: ../logs/queue-pagination-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install application and browser dependencies
+        run: |
+          (cd backend && npm ci && npm run db:generate && npm run db:migrate)
+          (cd frontend && npm ci && npx playwright-core install --with-deps chromium)
+      - name: Verify queues with PostgreSQL and a real browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd backend && npm run test:queue-pagination)
+          node backend/test/helpers/queuePaginationServer.mjs > "$RUNNER_TEMP/queue-api.log" 2>&1 &
+          api_pid=$!
+          (cd frontend && VITE_API_BASE_URL=http://127.0.0.1:15015/api node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 15185 --strictPort) > "$RUNNER_TEMP/queue-ui.log" 2>&1 &
+          ui_pid=$!
+          trap 'kill "$api_pid" "$ui_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:15015/health/ready >/dev/null && curl -fsS http://127.0.0.1:15185 >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat "$RUNNER_TEMP/queue-api.log" "$RUNNER_TEMP/queue-ui.log"
+            exit 1
+          fi
+          (cd frontend && npm run test:ui:queue-pagination)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: queue-pagination-browser
+          path: logs/queue-pagination-ci
+
   migration-safety:
     runs-on: ubuntu-latest
     services:
@@ -132,6 +195,8 @@ jobs:
       - run: npm run db:generate
       - name: Backend lint
         run: npm run lint
+      - name: Canonical ERD matches the generated Prisma model
+        run: npm run docs:erd:check
       - name: Production configuration contract
         run: npm run verify:prod-config
       - name: Required backend unit tests

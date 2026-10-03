@@ -13,9 +13,13 @@ dist/
 coverage/
 *.log
 logs/
+.secrets/
 .local-pgdata/
 
 # Local browser verification artifacts (existing tracked references remain tracked)
 frontend/screenshot_*.png
 frontend/screenshots_phase_g*/
+frontend/screenshots_*/
+frontend/test-results/
+frontend/playwright-report/
 frontend/baseline_results.json

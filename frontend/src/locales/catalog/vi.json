@@ -44,6 +44,7 @@
     "api.CURRENT_PASSWORD_INVALID": "Mật khẩu hiện tại không chính xác.",
     "api.DATA_UNAVAILABLE": "Chưa thể truy cập dữ liệu. Vui lòng thử lại.",
     "api.DATABASE_UNAVAILABLE": "Cơ sở dữ liệu chưa sẵn sàng. Vui lòng thử lại.",
+    "api.METRICS_UNAVAILABLE": "Chưa cấu hình quyền truy cập số liệu vận hành.",
     "api.DUPLICATE_ASSIGNMENT": "Phân công LAB này đã tồn tại.",
     "api.DUPLICATE_CHARGE": "Lịch đặt đã có yêu cầu thanh toán đang chờ hoặc đã thành công.",
     "api.DUPLICATE_DATA": "Dữ liệu đã tồn tại trong hệ thống",
@@ -2116,6 +2117,12 @@
     "assistant.hardwareDeferred": "Giám sát camera và cảm biến đang tạm hoãn. Chưa có dữ liệu phần cứng được xác minh; hãy kiểm tra lịch đặt, bảo trì và sự cố trong nghiệp vụ.",
     "assistant.invalidDuration": "Thời lượng phải là số phút nguyên từ 15 đến 480.",
     "assistant.guidanceSummary": "Hướng dẫn hệ thống",
-    "assistant.fromGuidance": "Hướng dẫn hệ thống; chưa sử dụng công cụ tra cứu."
+    "assistant.fromGuidance": "Hướng dẫn hệ thống; chưa sử dụng công cụ tra cứu.",
+    "ui.queue.page": "Trang {page} / {pages}",
+    "ui.queue.previous": "Trang trước",
+    "ui.queue.pagination": "Phân trang hàng đợi",
+    "ui.queue.countScope": "Số booking và sự cố gồm toàn bộ bản ghi bạn có quyền xem. Danh sách hiển thị theo từng trang.",
+    "ui.queue.range": "Hiển thị {start}–{end} trên {total} bản ghi",
+    "ui.queue.next": "Trang sau"
   }
 }

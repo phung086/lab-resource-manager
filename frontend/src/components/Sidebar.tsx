@@ -9,6 +9,7 @@ export interface SidebarProps {
   user: { fullName: string; role: string; email?: string } | null;
   notifications?: Array<{ id: string | number; readAt?: string | null }>;
   incidents?: Array<{ id: string | number; status?: string }>;
+  incidentOpenCount?: number;
   conflictsCount?: number;
   locale?: string;
   expanded: boolean;
@@ -16,7 +17,7 @@ export interface SidebarProps {
 }
 interface NavItem { id: string; labelKey: string; icon: LucideIcon; badge?: number }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, notifications = [], incidents = [], locale = "vi", expanded, onExpandedChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, notifications = [], incidentOpenCount, locale = "vi", expanded, onExpandedChange }) => {
   const t = translate;
   const role = user?.role || "";
   const staff = ["ADMIN", "LAB_STAFF"].includes(role);
@@ -38,7 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, 
       { id: "monitoring", labelKey: "ui.telemetry_monitoring_5752a8cc",  icon: Activity },
       { id: "maintenance", labelKey: "ui.maintenance_and_calibration_fa8ebcfe",  icon: Wrench },
       { id: "stock", labelKey: "ui.materials_inventory_2b570ac6",  icon: Layers },
-      { id: "incidents", labelKey: "ui.resource_incidents_0cba217b",  icon: ShieldAlert, badge: incidents.filter(row => !["resolved", "closed"].includes((row.status || "").toLowerCase())).length },
+      { id: "incidents", labelKey: "ui.resource_incidents_0cba217b",  icon: ShieldAlert, badge: incidentOpenCount },
       { id: "escalations", labelKey: "ui.notifications_a9b656f5",  icon: Bell, badge: notifications.filter(row => !row.readAt).length },
     ] },
     { id: "account", labelKey: role === "ADMIN" ? "ui.account_and_administration_cade4bec" : "ui.account_09128ce8",  items: [

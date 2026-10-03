@@ -22,6 +22,7 @@ services:
       PORT: 8000
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
       CORS_ORIGINS: ${CORS_ORIGINS}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-}
@@ -103,17 +104,21 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.0.1
+    profiles: [observability]
     restart: unless-stopped
     volumes:
       - ./infra/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    secrets:
+      - metrics_token
     depends_on:
       - backend
 
   node-exporter:
     image: prom/node-exporter:v1.8.2
+    profiles: [observability]
     restart: unless-stopped
     pid: host
     volumes:
@@ -126,3 +131,7 @@ services:
 volumes:
   postgres-data:
   prometheus-data:
+
+secrets:
+  metrics_token:
+    file: ${METRICS_TOKEN_FILE:-./.secrets/metrics-token}

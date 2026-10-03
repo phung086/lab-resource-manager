@@ -2,6 +2,9 @@
 
 Hệ thống quản lý, đặt lịch và giám sát tài nguyên phòng thí nghiệm phục vụ đồ án tốt nghiệp.
 
+Tài liệu hiện hành: [chỉ mục](docs/README.md), [SRS và use case](docs/srs.md),
+[ERD từ Prisma](docs/DB-erd/core-erd.md), [kết quả xử lý nhận xét](docs/backlogs/review-followup-20261003.md).
+
 ## Phạm vi sản phẩm
 
 Luồng REQUIRED CORE hiện tập trung vào:
@@ -59,6 +62,10 @@ Mặc định:
 - Backend readiness: http://localhost:8000/health/ready
 - Backend metrics: http://localhost:8000/metrics
 - Prometheus: http://localhost:9090
+
+Địa chỉ metrics trên dùng cho cấu hình local. Production yêu cầu bearer
+`METRICS_TOKEN`; Prometheus/Node Exporter chỉ chạy khi bật profile
+`observability`. Xem [hướng dẫn deployment](docs/DEPLOYMENT.md).
 
 Local container sử dụng Prisma migration, không dùng `prisma db push` để tự thay đổi schema.
 

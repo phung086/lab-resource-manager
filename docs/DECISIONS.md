@@ -410,3 +410,9 @@ Status: Accepted in user-authorized continuation, 2026-09-30.
   groups abort previous reads and cannot accept stale results.
 - Later screen refinements extend the same shell, catalogs and canonical workflow
   rather than adding a parallel routing, translation or role-permission system.
+
+Clarification, 2026-10-03: booking/incident workspace queues now use bounded
+server pages with complete scoped totals. Staff/admin queue figures use these
+totals; remaining capped previews must still disclose their own limits. Every
+page, count and old-record shortcut retains current persisted owner/lab scope.
+See `WORKSPACE_QUEUE_PAGINATION_20261003.md` and the review follow-up for evidence.

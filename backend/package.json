@@ -8,6 +8,8 @@
     "start": "node src/server.js",
     "start:prod": "node src/server.js",
     "db:generate": "prisma generate",
+    "docs:erd": "node scripts/generateCoreErd.mjs",
+    "docs:erd:check": "node scripts/generateCoreErd.mjs --check",
     "db:migrate": "node scripts/deployCanonicalMigrations.mjs",
     "db:status": "prisma migrate status",
     "db:push": "prisma db push",
@@ -33,7 +35,7 @@
     "demo:seed-local": "node scripts/seedLocalDemo.mjs",
     "demo:local": "node scripts/startLocalDemo.mjs",
     "test:required": "npm run test:core && npm run test:release-security && npm run test:assistant",
-    "test:release-security": "cross-env LOG_FORMAT=dev node --test test/releaseSecurity.test.js",
+    "test:release-security": "cross-env LOG_FORMAT=dev node --test test/releaseSecurity.test.js test/metricsAccess.test.js",
     "test:research": "node --test test/concurrency.test.js test/conflictForecasting.test.js test/geneticScheduler.test.js test/hybridDispatch.test.js test/integrations.test.js test/mqttTelemetry.test.js test/multiObjectiveAndBenchmark.test.js test/optimization.test.js test/orchestrationV2.test.js test/reputationScore.test.js test/services.test.js test/smartBookingPlatform.test.js",
     "test:batch7": "cross-env LOG_FORMAT=dev node --test test/batch7.production-demo-hardening.integration.test.js",
     "test:batch8": "cross-env LOG_FORMAT=dev node --test test/batch8.smart-monitoring.integration.test.js",
@@ -44,7 +46,8 @@
     "test:migration-safety": "node test/migrationSafetyMatrix.mjs",
     "test:lab-workspace": "node --test test/labWorkspace.integration.test.js",
     "test:assistant": "cross-env LOG_FORMAT=dev node --test test/assistantRuntime.test.js test/assistantTransport.test.js",
-    "test:assistant:integration": "node --test test/assistant.integration.test.js"
+    "test:assistant:integration": "node --test test/assistant.integration.test.js",
+    "test:queue-pagination": "node --test test/queuePagination.integration.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1138.0",

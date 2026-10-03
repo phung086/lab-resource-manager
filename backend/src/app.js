@@ -9,6 +9,7 @@ import { config } from "./config.js";
 import { prisma } from "./db.js";
 import { errorHandler, HttpError, notFoundHandler } from "./middleware/errors.js";
 import { metricsMiddleware, metricsRouter } from "./metrics.js";
+import { metricsAccess } from "./middleware/metricsAccess.js";
 
 // Core Routers
 import authRouter from "./routes/auth.js";
@@ -103,7 +104,7 @@ export function createApp() {
   app.get("/api/health/ready", readinessHandler);
 
   // Prometheus Metrics
-  app.use("/metrics", metricsRouter);
+  app.use("/metrics", metricsAccess(), metricsRouter);
 
   // 1. Auth & Identity
   app.use("/api/auth", authRouter);

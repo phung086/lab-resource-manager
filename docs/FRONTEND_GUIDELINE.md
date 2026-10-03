@@ -65,6 +65,13 @@ large unrelated diff.
 - Avoid importing `mockData.js` into production-core flows.
 - Preserve optional/research simulations behind explicit flags or isolated
   surfaces.
+- Booking and incident operation queues use server pagination through
+  `hooks/useQueuePage.ts`, with 20 rows per page; the staff home queue uses five.
+  Reset the page when actor/filter changes, cancel superseded requests, hide stale
+  actionable rows during loading/failure, and refresh after confirmed mutations.
+  Clamp an emptied last page after refresh. Read totals from the server summary,
+  never from the current page length. Use the shared accessible VI/EN
+  `QueuePagination` control and preserve keyboard focus after changing pages.
 
 ## Forms And Tables
 
@@ -126,8 +133,11 @@ boundary and examples of recovery tests.
 LAB staff operations and administrative coordination distinct in information
 hierarchy. Reuse shared primitives, catalogs and existing authenticated screens.
 Carry validated resource/group/booking/filter context into the destination; action
-links open confirmation forms and never perform mutations implicitly. Disclose
-recent-record count limits. See ADR-026 and the role workspace refinement report.
+links open confirmation forms and never perform mutations implicitly. Staff/admin
+booking and incident counts cover all authorized records; their previews show one
+page. Other bounded lists must continue disclosing their recent-record limits.
+See ADR-026, the role workspace refinement report, and
+[queue pagination](WORKSPACE_QUEUE_PAGINATION_20261003.md).
 
 
 ## Request deadlines and assistant context

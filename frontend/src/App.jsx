@@ -162,6 +162,8 @@ function Application() {
   const [dashboard, setDashboard] = useState(null);
   const [resources, setResources] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [bookingSummary, setBookingSummary] = useState(null);
+  const [incidentSummary, setIncidentSummary] = useState(null);
   const [maintenance, setMaintenance] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [trainings, setTrainings] = useState({ courses: [], certifications: [] });
@@ -252,10 +254,10 @@ function Application() {
       const read = path => apiRequest(path, { signal: controller.signal });
       const requests = {
         resources: read("/resources"),
-        bookings: read("/bookings"),
+        bookings: read("/bookings?page=1&pageSize=100"),
         maintenance: read("/maintenance"),
         notifications: read("/notifications"),
-        incidents: read("/incidents"),
+        incidents: read("/incidents?page=1&pageSize=50&filter=OPEN"),
         ...(["ADMIN", "LAB_STAFF"].includes(routeUserRole) ? { dashboard: read(`/dashboard?includeTelemetry=${TELEMETRY_FEATURES_ENABLED}`) } : {}),
         ...(routeUserRole === "ADMIN" ? { users: read("/users") } : {})
       };
@@ -267,12 +269,14 @@ function Application() {
 
       setDashboard(value("dashboard", null));
       setResources(value("resources", []));
-      setBookings(value("bookings", []));
+      setBookings(value("bookings", null)?.items || []);
+      setBookingSummary(value("bookings", null)?.summary || null);
+      setIncidentSummary(value("incidents", null)?.summary || null);
       setMaintenance(value("maintenance", []));
       setNotifications(value("notifications", []));
       setUsers(value("users", []));
       setLogs([]);
-      setIncidents(value("incidents", []));
+      setIncidents(value("incidents", null)?.items || []);
       setTrainings({ courses: [], certifications: [] });
 
       const failed = entries
@@ -360,6 +364,7 @@ function Application() {
       onLocaleChange={changeLocale}
       notifications={notifications}
       incidents={incidents}
+      incidentOpenCount={loading || error ? undefined : incidentSummary?.open}
       conflictsCount={0}
       loading={loading}
       onRefresh={loadData}
@@ -408,6 +413,8 @@ function Application() {
       {/* REQUIRED CORE — Gated when passwordResetRequired */}
       {!user.passwordResetRequired && activeTab === "home" && (
         <WorkspaceHome
+          bookingSummary={bookingSummary}
+          incidentSummary={incidentSummary}
           user={user}
           bookings={bookings}
           locale={locale}

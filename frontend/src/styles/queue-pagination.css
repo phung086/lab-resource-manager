@@ -1,0 +1,7 @@
+.queue-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); color: var(--text-secondary); font-size: 13px; }
+.queue-pagination p { margin: 0; }
+.queue-pagination > div { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.queue-pagination button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; }
+.queue-pagination button:disabled { opacity: .5; cursor: default; }
+.queue-pagination button:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 3px; }
+@media (max-width: 480px) { .queue-pagination > div { width: 100%; justify-content: space-between; gap: 6px; } }

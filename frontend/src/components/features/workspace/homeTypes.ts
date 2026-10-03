@@ -1,4 +1,5 @@
 import type { BookingRecord } from "../../../types/booking";
+import type { BookingQueueSummary, IncidentQueueSummary } from "../../../types/queue";
 
 export type HomeNavigate = (tab: string, params?: Record<string, string>) => void;
 export interface HomeResource {
@@ -19,6 +20,7 @@ export interface RoleHomeProps {
   user: { id: string; fullName: string; role: string };
   bookings: BookingRecord[]; resources: HomeResource[]; notifications: HomeNotice[];
   maintenance: HomeMaintenance[]; incidents: HomeIncident[];
+  bookingSummary: BookingQueueSummary | null; incidentSummary: IncidentQueueSummary | null;
   users: { id: string; role: string; isActive: boolean }[];
   dashboard?: { summary: { totalResources: number; criticalIncidentCount: number } } | null;
   groups: TeachingGroup[]; groupsLoading: boolean; groupsError: string; onRetryGroups: () => void;
