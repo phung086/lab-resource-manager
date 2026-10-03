@@ -149,6 +149,7 @@ try {
   await login(adminPage, "b5.admin@lab.test");
   await openOperations(adminPage);
   await adminPage.getByRole("button", { name: "Tất cả" }).click();
+  await adminPage.getByText("Batch 5 foreign lab booking").first().waitFor({ state: "visible" });
   assert.ok(await adminPage.getByText("Batch 5 foreign lab booking").first().isVisible());
   await adminPage.screenshot({ path: path.join(screenshotDir, "admin_operations_desktop.png"), fullPage: true });
   await adminContext.close();
@@ -158,6 +159,7 @@ try {
   const mobilePage = await mobileContext.newPage();
   await login(mobilePage, "b5.student@lab.test");
   await openOperations(mobilePage);
+  await mobilePage.locator(".operation-card").first().waitFor({ state: "visible" });
   await mobilePage.screenshot({ path: path.join(screenshotDir, "student_operations_mobile.png"), fullPage: true });
   assert.equal(await mobilePage.locator(".operation-card").first().isVisible(), true);
   await mobileContext.close();

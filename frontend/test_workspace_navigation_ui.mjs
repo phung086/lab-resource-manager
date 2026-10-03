@@ -74,8 +74,13 @@ try {
     await page.screenshot({ path: `${output}/${role}-overview-mobile.png`, fullPage: true });
     await openNavigation(page); await page.screenshot({ path: `${output}/${role}-menu-mobile.png` }); await page.keyboard.press('Escape');
     // A missing dependency must not display healthy/zero work counts.
-    await page.route('**/api/bookings', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Intentional isolated UI failure' } }) }));
+    let failedBookingReads = 0;
+    await page.route(url => url.origin === new URL(api).origin && url.pathname === `${new URL(api).pathname}/bookings`, route => {
+      failedBookingReads += 1;
+      return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Intentional isolated UI failure' } }) });
+    });
     await page.reload(); await page.locator('.home-error').waitFor();
+    verify(failedBookingReads > 0, `${role}: failure injection reaches the current booking read contract`);
     verify(await page.locator('.home-attention-card').count() === 0, `${role}: data failure does not masquerade as zero pending work`);
     await context.close();
   }

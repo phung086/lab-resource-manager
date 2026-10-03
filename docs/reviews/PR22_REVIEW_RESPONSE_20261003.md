@@ -49,6 +49,17 @@ servers and untracked artifacts are preserved.
 
 ## Remaining limits
 
+CI follow-up on `e153bc9`: six workflows passed, including the production demo,
+payment reconciliation and monitoring release gate. CI's queue, frontend,
+backend, database, migration-safety and Docker jobs passed. Three workflows
+failed on outdated browser assumptions: navigation failure injection matched
+only the old URL without query parameters, and the shared Batch 5 operations
+test asserted visibility immediately after a server-side filter change. The
+tests now match the booking endpoint with query parameters and wait for the
+expected row to become visible; the failure injection also asserts it ran.
+These corrections require a new CI run. Local navigation replay could not start
+because no application was listening at port 15181; it is not a passing run.
+
 Guest setup recovery after losing the OTP-issued session is not implemented;
 phone login is deliberately unavailable until setup completes. This patch also
 does not revoke bearer tokens issued before the fix or on password change.
