@@ -67,6 +67,7 @@ try {
   console.log("=== BATCH 6 STUDENT INCIDENT REPORT ===");
   await openNav(studentPage, "incidents");
   await studentPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
+  await studentPage.getByText("Batch 6 sự cố phòng B").waitFor({ state: "visible" });
   assert.equal(await studentPage.getByText("Batch 6 sự cố phòng B").count(), 1);
   await studentPage.getByRole("button", { name: "Báo cáo sự cố" }).click();
   let dialog = studentPage.getByRole("dialog");
@@ -141,6 +142,7 @@ try {
   await login(foreignPage, "b6.foreign.staff@lab.test");
   await openNav(foreignPage, "incidents");
   await foreignPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
+  await foreignPage.getByText("Batch 6 sự cố phòng B").waitFor({ state: "visible" });
   assert.equal(await foreignPage.getByText("Batch 6 sự cố phòng B").count(), 1);
   assert.equal(await foreignPage.getByText("Batch 6 quạt làm mát bất thường").count(), 0);
   await openNav(foreignPage, "monitoring");

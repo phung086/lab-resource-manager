@@ -60,6 +60,12 @@ expected row to become visible; the failure injection also asserts it ran.
 These corrections require a new CI run. Local navigation replay could not start
 because no application was listening at port 15181; it is not a passing run.
 
+On `8d530d3`, eight of nine workflows passed, including all seven CI jobs and
+Batch 5 full-stack. Batch 6 progressed to its incident assertions and exposed the
+same immediate-count assumption after page navigation. Its student and foreign
+staff cases now wait for the expected incident before checking counts/scope.
+The complete result for the latest published commit is recorded in PR #22 checks.
+
 Guest setup recovery after losing the OTP-issued session is not implemented;
 phone login is deliberately unavailable until setup completes. This patch also
 does not revoke bearer tokens issued before the fix or on password change.
