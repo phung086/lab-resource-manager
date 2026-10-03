@@ -6,7 +6,7 @@ import request from 'supertest';
 
 const url = new URL(process.env.LAB_WORKSPACE_TEST_URL || '');
 assert.ok(['localhost', '127.0.0.1'].includes(url.hostname));
-assert.equal(url.pathname, '/lab_resources_workspace_test', 'Refuse to mutate any non-workspace test database');
+assert.ok(['/lab_resources_workspace_test', '/lab_resources_workspace_review_test'].includes(url.pathname), 'Refuse to mutate any non-workspace test database');
 process.env.DATABASE_URL = url.href;
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'workspace-test-secret-at-least-32-characters';
@@ -24,7 +24,7 @@ const movement = (kind, quantity, resourceId = material.id) => ({ id: id(), reso
 
 test.before(async () => {
   const [db] = await prisma.$queryRaw`SELECT current_database() AS name`;
-  assert.equal(db.name, 'lab_resources_workspace_test');
+  assert.equal(db.name, url.pathname.slice(1));
   const campus = await prisma.campus.create({ data: { id: id(), code: marker, name: 'Workspace test campus' } });
   const building = await prisma.building.create({ data: { id: id(), code: marker, name: 'Test building', campusId: campus.id } });
   lab = await prisma.laboratory.create({ data: { id: id(), code: `A-${marker}`, name: 'Assigned lab', buildingId: building.id } });
@@ -104,4 +104,19 @@ test('maintenance impact, rescheduling reason and terminal states are enforced b
   assert.equal((await call('patch', path, 'staff', { status: 'completed', changeReason: 'Recorded work completion' })).status, 200);
   assert.equal((await call('patch', path, 'staff', { status: 'scheduled', changeReason: 'Try reopening closed work' })).status, 409);
   assert.equal((await call('post', '/lab-workspace/stock', 'staff', { ...movement('ISSUE', 1), maintenanceId: created.body.id })).status, 409);
+});
+
+test('maintenance save rechecks bookings created after a clear impact preview', async () => {
+  const data = { resourceId: equipment.id, title: 'Preview race regression', kind: 'maintenance', startAt: '2026-10-08T02:00:00Z', endAt: '2026-10-08T03:00:00Z' };
+  const created = await call('post', '/maintenance', 'staff', data);
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const update = { startAt: '2026-10-09T02:00:00Z', endAt: '2026-10-09T03:00:00Z', changeReason: 'Technician requested a new date' };
+  const impact = await call('get', `/maintenance/impact?${new URLSearchParams({ resourceId: equipment.id, startAt: update.startAt, endAt: update.endAt })}`, 'staff');
+  assert.equal(impact.status, 200);
+  assert.deepEqual(impact.body.conflicts, []);
+  await prisma.booking.create({ data: { id: id(), resourceId: equipment.id, requestedById: users.student.id, title: 'Booking committed after preview', purpose: 'Race regression', status: 'CONFIRMED', startAt: new Date(update.startAt), endAt: new Date(update.endAt) } });
+  const saved = await call('patch', `/maintenance/${created.body.id}`, 'staff', update);
+  assert.equal(saved.status, 409, JSON.stringify(saved.body));
+  const persisted = await prisma.maintenanceWindow.findUnique({ where: { id: created.body.id } });
+  assert.equal(persisted.startAt.toISOString(), data.startAt.replace('Z', '.000Z'));
 });

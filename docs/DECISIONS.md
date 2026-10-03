@@ -416,3 +416,10 @@ server pages with complete scoped totals. Staff/admin queue figures use these
 totals; remaining capped previews must still disclose their own limits. Every
 page, count and old-record shortcut retains current persisted owner/lab scope.
 See `WORKSPACE_QUEUE_PAGINATION_20261003.md` and the review follow-up for evidence.
+
+Security clarification, 2026-10-03: a new external guest's phone-based temporary
+credential is not an authentication factor. Password login rejects EXTERNAL
+accounts with `passwordResetRequired`; the email-verified booking session may
+complete password setup, after which normal login works. Recovery after loss of
+that setup session and revocation of existing tokens remain separate unresolved
+work. See `reviews/PR22_REVIEW_RESPONSE_20261003.md` for tests and limits.

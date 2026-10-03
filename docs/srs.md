@@ -276,7 +276,7 @@ Implementation and verification boundaries are recorded in
 See ADR-025 and `ASSISTANT_REQUEST_HARDENING_20261001.md` for the implemented
 boundary and verification evidence.
 
-## Appendix C. Actor permissions and operational use cases (2026-10-03)
+## Appendix D. Actor permissions and operational use cases (2026-10-03)
 
 This clarification follows the existing contracts and the approved extension in
 Appendix B. It does not create another role or change resource approval authority.
@@ -305,7 +305,8 @@ Every permission is enforced by the server; navigation visibility is only a UX a
 | Create group/assign lecturer | Global | No | No | No |
 | Group membership and academic review | Global | No | Assigned groups | No |
 | Course activity submission/revision | No student impersonation | No | No | Own booking/activity in member group |
-| System audit administration | Global | No | No | No |
+| Read system audit events | Global | Assigned labs | No | No |
+| Manually edit/delete system audit events | No | No | No | No |
 
 Lecturers may see students' booking evidence through the assigned teaching group
 projection, not through a global booking queue. Students do not receive classmates'

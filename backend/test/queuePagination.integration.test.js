@@ -101,7 +101,7 @@ test("legacy booking filters validate canonical statuses and both read contracts
     assert.equal(response.body.error.code, "VALIDATION_ERROR");
   }
   const id = fixture.resources.assigned.id;
-  const legacy = await get(`/bookings?status=pending_approval&resourceId=${id}`);
+  const legacy = await get(`/bookings?status=pending_approval&resourceId=${id}&_=123&take=1`);
   assert.equal(legacy.status, 200);
   assert.equal(legacy.body.length, 25);
   assert.ok(legacy.body.every(row => row.status === "PENDING_APPROVAL" && row.resourceId === id));
@@ -114,4 +114,24 @@ test("legacy booking filters validate canonical statuses and both read contracts
   }
   const owner = await get(`/bookings?requestedById=${fixture.users.otherStudent.id}`, "student");
   assert.ok(owner.body.every(row => row.requestedById === fixture.users.student.id));
+});
+
+test("historical queues follow current resource lab and fail closed for an unassigned resource", async () => {
+  const resourceId = fixture.resources.assigned.id;
+  try {
+    for (const laboratoryId of [fixture.labs.foreign.id, null]) {
+      await prisma.resource.update({ where: { id: resourceId }, data: { laboratoryId } });
+      for (const path of ["/bookings", "/incidents"]) {
+        const staff = await get(`${path}?page=1`);
+        assert.equal(staff.status, 200);
+        assert.equal(staff.body.summary.total, 0);
+        const admin = await get(`${path}?page=1`, "admin");
+        assert.equal(admin.body.summary.total, path === "/bookings" ? 160 : 86);
+        const receivingStaff = await get(`${path}?page=1`, "foreignStaff");
+        assert.equal(receivingStaff.body.summary.total, laboratoryId ? (path === "/bookings" ? 160 : 86) : 4);
+      }
+    }
+  } finally {
+    await prisma.resource.update({ where: { id: resourceId }, data: { laboratoryId: fixture.labs.assigned.id } });
+  }
 });

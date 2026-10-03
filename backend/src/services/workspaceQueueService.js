@@ -64,12 +64,13 @@ export async function listBookingPage(db, actor, query, include) {
   return db.$transaction(async tx => {
     const counts = statusCounts(await tx.booking.groupBy({ by: ["status"], where: scope, _count: { _all: true } }));
     const overdue = await tx.booking.count({ where: { ...scope, status: CHECKED_OUT, endAt: { lt: asOf } } });
-    const items = await tx.booking.findMany({
+    const total = sum(counts, statuses), skip = (query.page - 1) * query.pageSize;
+    const items = skip >= total ? [] : await tx.booking.findMany({
       where: { ...scope, status: { in: statuses } }, include, orderBy,
-      take: query.pageSize, skip: (query.page - 1) * query.pageSize
+      take: query.pageSize, skip
     });
     return {
-      items, pagination: pagination(query, sum(counts, statuses)),
+      items, pagination: pagination(query, total),
       summary: { total: sum(counts), byStatus: counts, history: sum(counts, TERMINAL_STATUSES), overdue, asOf: asOf.toISOString() }
     };
   }, { isolationLevel: "RepeatableRead" });
@@ -87,10 +88,11 @@ export async function listIncidentPage(db, actor, query, include) {
     const counts = statusCounts(await tx.incident.groupBy({ by: ["status"], where: scope, _count: { _all: true } }));
     const open = sum(counts, OPEN_INCIDENT_STATUSES), total = sum(counts);
     const filteredTotal = query.status ? counts[query.status] || 0 : query.filter === "OPEN" ? open : query.filter === "RESOLVED" ? total - open : total;
-    const items = await tx.incident.findMany({
+    const skip = (query.page - 1) * query.pageSize;
+    const items = skip >= filteredTotal ? [] : await tx.incident.findMany({
       where: { ...scope, ...(status ? { status } : {}) }, include,
       orderBy: [{ detectedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-      take: query.pageSize, skip: (query.page - 1) * query.pageSize
+      take: query.pageSize, skip
     });
     return { items, pagination: pagination(query, filteredTotal), summary: { total, open, resolved: total - open, byStatus: counts } };
   }, { isolationLevel: "RepeatableRead" });

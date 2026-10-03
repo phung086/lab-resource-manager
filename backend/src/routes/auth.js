@@ -148,7 +148,9 @@ router.post("/login", authRateLimit, async (req, res, next) => {
 
     // Real password verification — always required
     const isValid = await bcrypt.compare(data.password, user.passwordHash);
-    if (!isValid) {
+    // A guest's initial phone-based credential is usable only inside the
+    // email-verified setup session, never as proof of identity at login.
+    if (!isValid || (user.customerType === "EXTERNAL" && user.passwordResetRequired)) {
       throw new HttpError(401, "Email or password is incorrect", undefined, "AUTH_INVALID");
     }
 

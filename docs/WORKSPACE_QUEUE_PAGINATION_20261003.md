@@ -3,7 +3,9 @@
 Date: 2026-10-03. Branch: `codex/lab-workspace-ui-draft`.
 Starting revision: `66e744473c940515548048d448019beb3d311e9b`.
 Continuation of [draft PR #22](https://github.com/phung086/lab-resource-manager/pull/22),
-within the requested task; no new numbered Batch, commit, push, merge or deployment.
+within the requested task; no new numbered Batch, merge or deployment.
+The initial implementation was published in `7424957`; review corrections and
+their verification are recorded in [the review response](reviews/PR22_REVIEW_RESPONSE_20261003.md).
 
 ## Assessment and scope
 
@@ -108,7 +110,7 @@ order, preventing arbitrary tie order in an unchanged dataset.
 - Shared records remain reusable when opening notifications. The existing role
   request-budget assertion now distinguishes an explicit queue page from the
   shared bounded preview by its query string.
-- UI copy comes from the shared VI/EN catalogs: 2,121 matching keys. Existing
+- UI copy comes from the shared VI/EN catalogs: 2,122 matching keys. Existing
   visual tokens and 44 px controls are retained; no layout redesign is included.
 
 ## Verification
@@ -116,12 +118,12 @@ order, preventing arbitrary tie order in an unchanged dataset.
 | Check run locally | Result |
 | --- | --- |
 | Backend lint | Pass |
-| `backend: npm run test:required` | 60 pass: 38 core, 3 release security, 19 assistant |
-| `backend: npm run test:queue-pagination` | 4 PostgreSQL integration tests pass |
-| `frontend: npm run test:ui:queue-pagination` | 51 real-browser checks pass; no browser exceptions |
-| `frontend: npm run test:required` | Pass: 7 locale/network tests, catalog/source gates, lint, TypeScript, build |
-| VI/EN catalog/source checks | 2,121 keys; 79 active modules audited |
-| Frontend lint | Zero errors; 13 pre-existing warnings |
+| `backend: npm run test:required` | 63 pass: 38 core, 6 release security, 19 assistant |
+| `backend: npm run test:queue-pagination` | 6 PostgreSQL integration tests pass |
+| `frontend: npm run test:ui:queue-pagination` | 55 real-browser checks pass; no browser exceptions |
+| `frontend: npm run test:required` | Pass: 8 locale/network/sync tests, catalog/source gates, lint, TypeScript, build |
+| VI/EN catalog/source checks | 2,122 keys; 79 active modules audited |
+| Frontend lint | Zero errors; 9 pre-existing warnings |
 | Production build | Pass; main entry 355.71 kB / 105.83 kB gzip |
 | CI YAML parsing | Pass; dedicated PostgreSQL 16/browser job configured |
 | Diff whitespace check | Pass |
@@ -145,8 +147,11 @@ removed after verification. Existing project servers and databases were retained
 
 The new `queue-pagination` CI job creates its own PostgreSQL service, deploys
 canonical migrations, runs the integration fixture, starts the guarded test API
-and Vite, runs Chromium checks, and uploads browser evidence. It has not run on
-GitHub for this local change. Historical QA reports keep their original revision
+and Vite, runs Chromium checks, and uploads browser evidence. On `7424957`, GitHub
+frontend/browser checks failed because CRLF catalog hashes differed from the
+published LF files; the review correction normalizes files before hashing.
+Published revision CI must be checked separately from these local passes.
+Historical QA reports keep their original revision
 and test outcomes; the entire earlier business/browser matrix was not rerun here.
 
 ### Reproduction
@@ -180,5 +185,8 @@ CI contains the complete automated setup.
   the original booking/incident caps.
 - Counts are snapshots refreshed on home entry, explicit refresh or mutation;
   there is no live push. Booking and incident responses have separate snapshots.
-- The earlier maintenance rescheduling P2 and external-provider setup remain
-  outside this task. PR #22 remains draft; these changes are local and unpushed.
+- The earlier maintenance rescheduling P2 was fixed in `7424957`; the current
+  browser regression also verifies selecting and persisting another resource.
+  External-provider setup remains separate. PR #22 remains draft.
+- Beyond-last-page requests skip the item OFFSET query after scoped aggregation.
+  In-range deep pages and full counts still require production-volume measurement.

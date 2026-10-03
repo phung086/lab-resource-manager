@@ -16,7 +16,13 @@ for (const [key, vi] of Object.entries(catalogs[0].messages)) {
 assert.deepEqual(errors, [], errors.join('\n'));
 const manifest = {};
 for (const catalog of catalogs) {
-  const bytes = readFileSync(new URL(`src/locales/catalog/${catalog.locale}.json`, root));
+  const catalogPath = new URL(`src/locales/catalog/${catalog.locale}.json`, root);
+  const source = readFileSync(catalogPath, 'utf8');
+  const normalized = source.replace(/\r\n/g, '\n');
+  if (write) writeFileSync(catalogPath, normalized);
+  else assert.equal(source, normalized, `Catalog ${catalog.locale} must use LF line endings; run npm run i18n:sync`);
+  // Hash the exact bytes Git and Vite will serve on every platform.
+  const bytes = Buffer.from(normalized, 'utf8');
   manifest[catalog.locale] = { sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length };
   const projection = JSON.stringify({ locale: catalog.locale, messages: Object.fromEntries(Object.entries(catalog.messages).filter(([key]) => /^(?:api|assistant|enum|email|notification|calendar|profile)\./.test(key))) }, null, 2) + '\n';
   const output = new URL(`../backend/src/locales/${catalog.locale}.json`, root);

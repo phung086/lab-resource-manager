@@ -20,12 +20,13 @@ and approved contracts → verified reports → implementation.
 | Repeatable deployment and optional services | [Deployment](DEPLOYMENT.md) |
 | External provider setup and configuration limits | [Integration guide](INTEGRATION_SETUP_GUIDE_20261003.md) |
 | Official graduation demonstration | [Demo runbook](GRADUATION_DEMO_RUNBOOK.md) |
-| Review response and prioritized remaining work | [Backlog](backlogs/README.md) |
+| PR #22 review corrections and verification | [Review response](reviews/PR22_REVIEW_RESPONSE_20261003.md) |
+| Prioritized remaining work | [Backlog](backlogs/README.md) |
 
 ## Evidence and historical snapshots
 
 [Workflow QA](QA_WORKFLOW_REPORT_20261003.md) and [queue pagination](WORKSPACE_QUEUE_PAGINATION_20261003.md)
-record their own run scope. [Review follow-up](backlogs/review-followup-20261003.md)
+record their own run scope. [Historical review follow-up](reviews/GRADUATION_REVIEW_FOLLOWUP_20261003.md)
 records subsequent fixes and fresh checks. Always match evidence to its revision
 and environment; a prior GO verdict is not a fresh run of all workflows.
 

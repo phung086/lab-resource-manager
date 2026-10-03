@@ -172,6 +172,17 @@ try {
   await form.waitFor({ state: "hidden" });
   const saved = (await call("staff", "/maintenance")).find(row => row.id === job.id);
   check(saved.resource.id === resource.id && saved.startAt === new Date(`${date(31)}T09:00:00+07:00`).toISOString(), "maintenance reschedule persists the same resource and changed time without manual reselection");
+  const replacement = await call("staff", "/resources", { laboratoryId: assigned.laboratoryId, code: `MAINT-OTHER-${Date.now()}`, name: "Replacement maintenance equipment", category: "EQUIPMENT", subtype: "OTHER", location: "TEST" });
+  await maintenance.page.reload();
+  await locale(maintenance.page, "en");
+  await maintenance.page.locator(".lab-ledger-row").filter({ hasText: job.title }).getByRole("button", { name: catalogs.en["ui.reschedule_edit_job_125d619b"], exact: true }).click();
+  await form.locator('[name="resourceId"]').selectOption(replacement.id);
+  await form.locator('[name="changeReason"]').fill("Move scheduled work to the selected equipment");
+  await form.getByRole("button", { name: catalogs.en["ui.check_affected_bookings_f7d4f35b"], exact: true }).click();
+  await maintenance.page.waitForFunction(() => [...document.querySelectorAll('form.lab-form button')].some(button => button.textContent.includes("Save maintenance") && !button.disabled));
+  await form.getByRole("button", { name: catalogs.en["ui.save_maintenance_7bf4123f"], exact: true }).click();
+  await form.waitFor({ state: "hidden" });
+  check((await call("staff", "/maintenance")).find(row => row.id === job.id).resource.id === replacement.id, "maintenance edit persists the newly selected resource rather than the original resource");
   await maintenance.context.close();
   check(errors.length === 0, `no browser exceptions: ${errors.join("; ")}`);
   writeFileSync(`${output}/results.json`, JSON.stringify({ at: new Date().toISOString(), checks, errors, count: checks.length }, null, 2) + "\n");

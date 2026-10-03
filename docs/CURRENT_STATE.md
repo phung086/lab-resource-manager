@@ -1,13 +1,24 @@
 # Current Project State
 
-## Review publication request - 2026-10-03
+## Current review status - 2026-10-03
 
-The user authorized committing/pushing the verified queue and review follow-up
-to the existing draft PR #22 for Claude assessment. Source, tests and relevant
-project documentation are included; unrelated disk audits, local provider images
-and generated report packages remain local. No main merge, deployment or new
-Batch is authorized by this publication. The verification entries below record
-local runs; published-HEAD GitHub checks are a separate gate.
+Draft PR #22 continues from published revision `7424957`; no new Batch.
+That revision passed three backend workflows but failed six CI workflows.
+The frontend locale manifest hashed Windows CRLF bytes while Git published LF
+catalogs, blocking locale initialization on Linux. The sync script now normalizes
+the catalog files before hashing, and a regression test covers CRLF input.
+
+The review correction also rejects phone-based password login for external
+accounts awaiting password setup and avoids item OFFSET queries past the last
+queue page. Scope remains based on current persisted resource/lab assignments.
+See [review response and verification](reviews/PR22_REVIEW_RESPONSE_20261003.md)
+for the current checks, finding dispositions and remaining risks.
+
+## Historical checkpoints
+
+The entries below preserve verification at their original revisions. Their test
+counts, warning counts and CI state do not describe the current tree. In
+particular, QA-01 was fixed in `7424957`; its earlier open status is historical.
 
 ## Review follow-up - 2026-10-03
 
@@ -471,7 +482,7 @@ notifications and versioned resource/purpose pricing with automatic charges are
 implemented and tested. Fast booking/OTP/address and payment expiry remain pending.
 The closure statements below describe historical milestones, not this upgrade.
 
-Last synchronized: 2026-09-21
+Historical baseline synchronized: 2026-09-21
 
 ## Final Boundary
 
@@ -562,7 +573,7 @@ Batch 9 or Batch 10, and neither has been started.
 - Truthful `HEALTHY`, `WARNING`, `STALE`, `UNAVAILABLE`, and `NO_DATA` states;
   no synthetic production samples and no fake live camera stream.
 
-## Latest Verified Gates
+## Historical verified gates (2026-09-21 baseline)
 
 Backend, each on a fresh isolated PostgreSQL 16 database:
 
