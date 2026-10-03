@@ -30,6 +30,8 @@ import { BLOCKING_MAINTENANCE_STATUSES } from "../services/availabilityService.j
 import { getResourceHistory, projectResourceHistoryForActor } from "../services/resourceHistoryService.js";
 import { normalizeResourceCode, normalizeSpecs, normalizeText } from "../utils/dataContract.js";
 
+import { resourceSpecsSchema } from "../utils/resourceUsageGuide.js";
+
 const router = express.Router();
 const MAX_SCHEDULE_DAYS = 180;
 
@@ -69,7 +71,7 @@ const resourceCreateSchema = z.object({
   model: optionalText(255),
   purchaseDate: optionalDate,
   warrantyExpiry: optionalDate,
-  specs: z.record(z.unknown()).default({})
+  specs: resourceSpecsSchema.default({})
 }).strict();
 
 const resourceUpdateSchema = resourceCreateSchema

@@ -1,6 +1,8 @@
+import { translate } from "../i18n.js";
+import { LanguageToggle } from "./base/LanguageToggle";
 import React, { useState, useEffect, useRef } from "react";
 import { parseVietnamParts } from "../utils/timezone";
-import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, Shield } from "lucide-react";
+import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, Shield, UserRound } from "lucide-react";
 
 export interface HeaderProps {
   title: string;
@@ -18,6 +20,7 @@ export interface HeaderProps {
   onRefresh?: () => void;
   onOpenNotifications?: () => void;
   onOpenChangePassword?: () => void;
+  onOpenProfile?: () => void;
   onLogout?: () => void;
   onOpenAssistant?: () => void;
 }
@@ -25,17 +28,17 @@ export interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   title,
   user,
-  locale,
-  onLocaleChange,
   notificationsCount = 0,
   loading = false,
   onRefresh,
   onOpenNotifications,
   onOpenChangePassword,
+  onOpenProfile,
   onLogout,
   onOpenAssistant
 }) => {
-  // Real-time 2026 Clock State
+  const t = translate;
+  // Canonical laboratory clock
   const [currentDateTime, setCurrentDateTime] = useState<string>("");
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -90,37 +93,17 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right side: Language Segmented Control, Actions & User Profile */}
       <div className="header-right-2026">
-        {onOpenAssistant && <button className="secondary-button" onClick={onOpenAssistant}>Trợ lý AI</button>}
-        {/* Ultra-thin Segmented Control for VI / EN */}
-        <div className="segmented-control-2026" role="group" aria-label="Language Selector">
-          <button
-            type="button"
-            className={`segmented-btn-2026 ${locale === "vi" ? "is-active" : ""}`}
-            onClick={() => onLocaleChange("vi")}
-            title="Tiếng Việt"
-            aria-pressed={locale === "vi"}
-          >
-            VI
-          </button>
-          <button
-            type="button"
-            className={`segmented-btn-2026 ${locale === "en" ? "is-active" : ""}`}
-            onClick={() => onLocaleChange("en")}
-            title="English"
-            aria-pressed={locale === "en"}
-          >
-            EN
-          </button>
-        </div>
+        {onOpenAssistant && <button className="secondary-button" onClick={onOpenAssistant}>{t("ui.lab_assistant_0a8d5bc9")}</button>}
+        <LanguageToggle />
 
         {/* Refresh button */}
         {onRefresh && (
           <button
             type="button"
             className="header-icon-btn-2026"
-            title="Làm mới dữ liệu"
+            title={t("ui.refresh_data_167c5f3e")}
             disabled={loading}
-            aria-label="Làm mới dữ liệu"
+            aria-label={t("ui.refresh_data_167c5f3e")}
             onClick={onRefresh}
           >
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
@@ -131,11 +114,11 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           className={`header-notification-btn-2026 ${notificationsCount > 0 ? "has-unread" : ""}`}
-          title="Thông báo"
+          title={t("ui.notifications_a9b656f5")}
           aria-label={
             notificationsCount > 0
-              ? `Mở thông báo, ${notificationsCount} chưa đọc`
-              : "Mở thông báo"
+              ? t("ui.open_notifications_unread_4ca0dcba", { value0: notificationsCount })
+              : t("ui.open_notifications_1c7247bb")
           }
           onClick={onOpenNotifications}
         >
@@ -157,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="user-avatar-btn-2026"
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               aria-expanded={userMenuOpen}
-              aria-label="Mở menu tài khoản"
+              aria-label={t("ui.open_account_menu_2b4bd2c8")}
             >
               <div className="avatar-letter-circle">
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
@@ -175,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                   <div className="user-menu-details">
                     <strong className="user-menu-fullname">{user.fullName}</strong>
-                    <span className="user-menu-email">{user.email || "Chưa cập nhật email"}</span>
+                    <span className="user-menu-email">{user.email || translate("ui.email_not_provided_64af79ce")}</span>
                     <div className="user-menu-role-badge font-mono">
                       <Shield size={11} className="text-blue-400" />
                       <span>{user.role.toUpperCase()}</span>
@@ -186,10 +169,9 @@ export const Header: React.FC<HeaderProps> = ({
                 {/* Remaining Quota Telemetry */}
                 {hasQuota && <div className="user-menu-quota-box">
                   <div className="user-menu-quota-header">
-                    <span className="quota-label text-slate-400 text-xs">Hạn Ngạch Phân Bổ:</span>
+                    <span className="quota-label text-slate-400 text-xs">{translate("ui.allocated_quota_9106509a")}</span>
                     <span className="quota-numbers font-mono text-xs text-blue-300 font-semibold">
-                      {quotaUsed} / {quotaTotal} giờ
-                    </span>
+                      {quotaUsed} / {quotaTotal}  {translate("ui.hours_2491e993")} </span>
                   </div>
                   <div className="quota-progress-track">
                     <div
@@ -198,8 +180,8 @@ export const Header: React.FC<HeaderProps> = ({
                     />
                   </div>
                   <div className="quota-meta-footer">
-                    <span className="font-mono text-[10px] text-slate-400">Đã dùng {quotaPercent}%</span>
-                    <span className="font-mono text-[10px] text-emerald-400">Khả dụng</span>
+                    <span className="font-mono text-[10px] text-slate-400">{translate("ui.used_9db1bfce")} {quotaPercent}%</span>
+                    <span className="font-mono text-[10px] text-emerald-400">{translate("ui.available_73dc3284")}</span>
                   </div>
                 </div>}
 
@@ -207,6 +189,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* Actions */}
                 <div className="user-menu-actions">
+                  {onOpenProfile && <button type="button" className="user-menu-item-btn" onClick={() => { setUserMenuOpen(false); onOpenProfile(); }}><UserRound size={15} aria-hidden="true" /><span>{t("ui.my_profile_700b5272")}</span></button>}
                   <button
                     type="button"
                     className="user-menu-item-btn"
@@ -216,7 +199,7 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                   >
                     <KeyRound size={15} className="text-slate-400" />
-                    <span>Đổi Mật Khẩu</span>
+                    <span>{t("ui.change_password_4598a666")}</span>
                   </button>
 
                   <button
@@ -228,7 +211,7 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                   >
                     <LogOut size={15} className="text-rose-400" />
-                    <span>Đăng Xuất Khỏi Lab</span>
+                    <span>{t("ui.sign_out_c9e0facd")}</span>
                   </button>
                 </div>
               </div>

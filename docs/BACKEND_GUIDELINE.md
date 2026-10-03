@@ -36,6 +36,20 @@ Every sensitive route must verify:
 
 Do not rely on client-provided identity or lab fields.
 
+## Workspace queue reads
+
+`GET /api/bookings` and `GET /api/incidents` opt into the paginated contract when
+`page` is supplied. Validate all page/filter fields, cap `pageSize` at 100, and
+return `{ items, pagination, summary }`. Filter before applying `skip`/`take`;
+derive summary counts from the complete authorized scope. Queries without `page`
+retain their legacy array contracts and caps.
+
+Apply current `UserLabAssignment` scope inside every staff list and aggregate
+query. Admin reads remain global; lecturer/student reads retain ownership scope.
+Use deterministic ordering with an ID tie-breaker. Items and counts share one
+Repeatable Read transaction per response; successive pages are separate snapshots.
+See [queue contract and verification](WORKSPACE_QUEUE_PAGINATION_20261003.md).
+
 ## Persistence Rules
 
 - Use Prisma migrations for approved schema changes.
@@ -94,3 +108,30 @@ npm run test:batch3
 ```
 
 Use guarded isolated databases for integration tests that need PostgreSQL.
+
+
+## Locale and assistant boundary
+
+Shared server messages come from the generated `src/locales/{vi,en}.json`
+projection. Stable API `error.code`/status/details remain authoritative; the locale
+middleware renders messages from `X-LRM-Locale`/`Accept-Language` and declares
+`Content-Language`. Persist notification IDs/parameters alongside compatibility
+text. Never rewrite historical evidence to translate it.
+
+Assistant tools must remain read-only and use the existing authenticated actor,
+object access and `UserLabAssignment` scope. Use bounded work and cancellation;
+never turn a tool/provider outage into fabricated healthy data. Prefill actions
+return through the normal booking form/API. The guarded integration test requires
+`ASSISTANT_TEST_DATABASE_URL` pointing to local `lab_resources_assistant_test`.
+See `BILINGUAL_ASSISTANT_FOUNDATION_20260930.md` for current limits and deployment
+flags. Backend code must not import frontend runtime packages.
+
+MCP protocol ingress uses a separate bounded IP bucket; never exempt it from
+authentication, account rate limits or actor/object/lab scope. Transport aborts
+must reach tools, and pending non-cancellable reads retain admission until they
+settle. Assistant evidence errors/deferred hardware never start model generation.
+The complete question plus tool-results payload has a 24,000-byte UTF-8 model
+budget. Reuse eligibility only within one answer and one resource; never cache it
+across users or business submissions. Business dashboards can explicitly request
+`includeTelemetry=false`; omit monitoring counts and return `telemetrySummary=null`
+with `telemetryIncluded=false` rather than claiming healthy hardware.

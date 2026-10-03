@@ -1,8 +1,11 @@
+import { translate } from "../../../i18n.js";
+import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import { apiRequest } from "../../../api.js";
 
-const purposes = { STUDY: "Học tập / thực hành", TEACHING: "Giảng dạy", RESEARCH: "Nghiên cứu", SERVICE: "Dịch vụ / đơn vị bên ngoài" };
+const purposes = { STUDY: "ui.study_practice_4937f9c0", TEACHING: "ui.teaching_9f674f2f", RESEARCH: "ui.research_8b814571", SERVICE: "ui.external_service_bfa35139" };
 export function ResourcePricingEditor() {
+  const { tr } = useLocale();
   const [resources, setResources] = useState<any[]>([]);
   const [resourceId, setResourceId] = useState("");
   const [rules, setRules] = useState<any[]>([]);
@@ -23,18 +26,18 @@ export function ResourcePricingEditor() {
     try {
       await apiRequest(`/booking-pricing/${encodeURIComponent(resourceId)}`, { method: "PUT", body: JSON.stringify({ purposeCode, label: purposes[purposeCode as keyof typeof purposes], hourlyRateVnd: Number(rate) }) });
       setRules(await apiRequest(`/booking-pricing/${encodeURIComponent(resourceId)}`));
-      setNotice("Đã lưu bảng giá. Mức phí của booking đã tạo được giữ nguyên.");
+      setNotice("ui.pricing_saved_existing_booking_fee_977d17c3");
     } catch (e: any) { setError(e.message); } finally { setBusy(false); }
   }
-  return <details className="panel payment-charge"><summary>Bảng giá tài nguyên theo mục đích</summary>
-    <p>Áp dụng cho cả người dùng nội bộ và bên ngoài. Tính theo số phút sử dụng đã đặt, làm tròn lên 1 đồng. Giá 0 đồng là miễn phí. Khi có bảng giá, người đặt phải chọn một mục đích đã cấu hình.</p>
-    {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
+  return <details className="panel payment-charge"><summary>{translate("ui.resource_pricing_by_purpose_b8e96e61")}</summary>
+    <p>{translate("ui.applies_to_internal_and_external_3039230a")}</p>
+    {error && <p role="alert">{translate(error)}</p>}{notice && <p role="status">{translate(notice)}</p>}
     <form onSubmit={save} className="booking-form">
-      <label>Tài nguyên<select aria-label="Tài nguyên tính phí" required value={resourceId} onChange={e => setResourceId(e.target.value)}><option value="">Chọn tài nguyên</option>{resources.map(r => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
-      <label>Mục đích tính phí<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{Object.entries(purposes).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></label>
-      <label>Đơn giá VND / giờ<input required type="number" min="0" max="100000000" step="1" value={rate} onChange={e => setRate(e.target.value)} /></label>
-      <button className="btn btn-primary" disabled={busy || !resourceId}>{busy ? "Đang lưu…" : "Lưu mức phí"}</button>
+      <label>{tr("ui.resource_9a35ef53")}<select aria-label={translate("ui.chargeable_resource_4b757486")} required value={resourceId} onChange={e => setResourceId(e.target.value)}><option value="">{tr("ui.select_a_resource_8849f4e1")}</option>{resources.map(r => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
+      <label>{tr("ui.pricing_purpose_f1a0b490")}<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{Object.entries(purposes).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></label>
+      <label>{translate("ui.vnd_per_hour_dbe020c0")}<input required type="number" min="0" max="100000000" step="1" value={rate} onChange={e => setRate(e.target.value)} /></label>
+      <button className="btn btn-primary" disabled={busy || !resourceId}>{busy ? tr("ui.saving_18c4cf71") : translate("ui.save_rates_6acc633e")}</button>
     </form>
-    <ul>{rules.map(rule => <li key={rule.id}>{rule.label}: {rule.hourlyRateVnd.toLocaleString("vi-VN")} đ/giờ · phiên bản {rule.version}</li>)}</ul>
+    <ul>{rules.map(rule => <li key={rule.id}>{rule.label}: {rule.hourlyRateVnd.toLocaleString("vi-VN")}  {translate("ui.vnd_hour_version_44e8cdd0")} {rule.version}</li>)}</ul>
   </details>;
 }

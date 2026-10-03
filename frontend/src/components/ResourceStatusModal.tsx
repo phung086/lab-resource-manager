@@ -1,3 +1,5 @@
+import { translate } from "../i18n.js";
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Archive, Wrench } from "lucide-react";
 
@@ -14,13 +16,13 @@ export interface ResourceStatusModalProps {
 }
 
 const labels: Record<string, string> = {
-  AVAILABLE: "Sẵn sàng",
-  IN_USE: "Đang sử dụng",
-  MAINTENANCE: "Bảo trì",
-  CALIBRATION: "Hiệu chuẩn",
-  BROKEN: "Hỏng",
-  RETIRED: "Ngừng khai thác",
-  OFFLINE: "Ngoại tuyến"
+  AVAILABLE: "ui.available_d654065d",
+  IN_USE: "ui.in_use_a07a3647",
+  MAINTENANCE: "ui.maintenance_8ad424bd",
+  CALIBRATION: "ui.calibration_a71e17c8",
+  BROKEN: "ui.broken_fd69bba6",
+  RETIRED: "ui.retire_f9fe2615",
+  OFFLINE: "ui.offline_96a8bb03"
 };
 const reasonRequired = new Set(["MAINTENANCE", "CALIBRATION", "BROKEN", "RETIRED", "OFFLINE"]);
 
@@ -33,6 +35,7 @@ export const ResourceStatusModal: React.FC<ResourceStatusModalProps> = ({
   destructive = false,
   onConfirm
 }) => {
+  const { tr } = useLocale();
   const [targetStatus, setTargetStatus] = useState(initialStatus || statuses[0] || "AVAILABLE");
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
@@ -52,7 +55,7 @@ export const ResourceStatusModal: React.FC<ResourceStatusModalProps> = ({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (reasonRequired.has(targetStatus) && reason.trim().length < 3) {
-      setError("Vui lòng nhập lý do cụ thể, tối thiểu 3 ký tự.");
+      setError("ui.enter_a_specific_reason_of_42ccd191");
       window.setTimeout(() => errorRef.current?.focus(), 0);
       return;
     }
@@ -61,7 +64,7 @@ export const ResourceStatusModal: React.FC<ResourceStatusModalProps> = ({
     try {
       await onConfirm(targetStatus, reason.trim());
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể cập nhật trạng thái tài nguyên.");
+      setError(requestError?.message || "ui.could_not_update_resource_status_03bf3820");
       window.setTimeout(() => errorRef.current?.focus(), 0);
     } finally {
       setBusy(false);
@@ -72,30 +75,30 @@ export const ResourceStatusModal: React.FC<ResourceStatusModalProps> = ({
     <BaseModal2026
       isOpen={isOpen}
       onClose={busy ? () => {} : onClose}
-      title={destructive ? "Ngừng khai thác tài nguyên" : "Cập nhật trạng thái vận hành"}
+      title={destructive ? tr("ui.retire_resource_c9cb8b85") : tr("ui.update_physical_status_a7b4b46e")}
       subtitle={`${resource.code} · ${resource.name}`}
       icon={destructive ? Archive : Wrench}
       iconColor={destructive ? "text-rose-400" : "text-amber-400"}
       maxWidth="max-w-lg"
       footer={
         <>
-          <button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Hủy</button>
+          <button type="button" className="secondary-button" onClick={onClose} disabled={busy}>{tr("ui.cancel_74fcd352")}</button>
           <button type="submit" form="resource-status-form" className={destructive ? "danger-button" : "primary-button"} disabled={busy || targetStatus === resource.operationalStatus}>
-            {busy ? "Đang lưu..." : destructive ? "Xác nhận ngừng khai thác" : "Lưu trạng thái"}
+            {busy ? tr("ui.saving_2b5c2a46") : destructive ? tr("ui.confirm_retirement_01d36398") : tr("ui.save_status_6af430fc")}
           </button>
         </>
       }
     >
-      {error && <div ref={errorRef} tabIndex={-1} className="alert danger" role="alert"><AlertTriangle size={15} aria-hidden="true" /> {error}</div>}
+      {error && <div ref={errorRef} tabIndex={-1} className="alert danger" role="alert"><AlertTriangle size={15} aria-hidden="true" /> {translate(error)}</div>}
       <form id="resource-status-form" className="booking-form" onSubmit={submit}>
         <label htmlFor="resource-target-status">
-          <span>Trạng thái mới</span>
+          <span>{tr("ui.new_status_96c219fc")}</span>
           <select id="resource-target-status" value={targetStatus} onChange={(event) => setTargetStatus(event.target.value)} disabled={destructive}>
             {statuses.map((status) => <option key={status} value={status}>{labels[status] || status}</option>)}
           </select>
         </label>
         <label htmlFor="resource-status-reason">
-          <span>Lý do {reasonRequired.has(targetStatus) ? "*" : "(không bắt buộc)"}</span>
+          <span>{tr("ui.reason_1a51692b")}{reasonRequired.has(targetStatus) ? "*" : tr("ui.optional_45dc90f6")}</span>
           <textarea
             id="resource-status-reason"
             rows={4}
@@ -103,10 +106,10 @@ export const ResourceStatusModal: React.FC<ResourceStatusModalProps> = ({
             required={reasonRequired.has(targetStatus)}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder={destructive ? "Nêu căn cứ ngừng khai thác; dữ liệu lịch sử sẽ được giữ nguyên." : "Mô tả nguyên nhân hoặc quyết định vận hành."}
+            placeholder={destructive ? tr("ui.explain_why_the_resource_is_02754c76") : tr("ui.describe_the_reason_or_operational_4675e7ef")}
           />
         </label>
-        {destructive && <p className="resource-destructive-note">Tài nguyên sẽ không bị xóa. Booking, bảo trì, sự cố và nhật ký hiện có vẫn được bảo toàn.</p>}
+        {destructive && <p className="resource-destructive-note">{tr("ui.the_resource_is_retained_with_860d628b")}</p>}
       </form>
     </BaseModal2026>
   );

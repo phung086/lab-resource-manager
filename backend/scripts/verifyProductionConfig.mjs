@@ -11,7 +11,8 @@ const base = {
   ADMIN_EMAIL: "admin@lab.example.edu.vn",
   ADMIN_PASSWORD: "Batch7Admin!Passphrase",
   ADMIN_FULL_NAME: "Lab Administrator",
-  LOG_FORMAT: "combined"
+  LOG_FORMAT: "combined",
+  METRICS_TOKEN: ""
 };
 
 function runConfig(overrides = {}) {
@@ -72,6 +73,10 @@ expectFail(
   { LOG_FORMAT: "made-up-format" },
   /LOG_FORMAT/
 );
+expectFail("short metrics credential", { METRICS_TOKEN: "short" }, /METRICS_TOKEN/);
+expectFail("whitespace metrics credential", { METRICS_TOKEN: " ".repeat(32) }, /METRICS_TOKEN/);
+expectFail("oversized metrics credential", { METRICS_TOKEN: "x".repeat(257) }, /METRICS_TOKEN/);
+expectPass("authenticated metrics configured", { METRICS_TOKEN: "verification-only-metrics-credential-2026" });
 
 expectFail(
   "payments enabled without VNPAY merchant configuration",

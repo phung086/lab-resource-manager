@@ -1,3 +1,4 @@
+import { localize } from '../locales/index.js';
 import express from "express";
 import { z } from "zod";
 
@@ -39,7 +40,7 @@ function addressData(address) {
   };
 }
 
-async function buildProfileResponse(user) {
+async function buildProfileResponse(user, locale = "vi") {
   const [paymentStats, bookingStats, userCerts] = await Promise.all([
     prisma.paymentTransaction.aggregate({
       where: { userId: user.id, status: "success" },
@@ -101,7 +102,7 @@ async function buildProfileResponse(user) {
       earnedPoints,
       discountBps: user.loyaltyDiscountBps || 0,
       priorityBoost: user.priorityBoost || 0,
-      basis: "Tính từ thanh toán thành công và booking hoàn tất trong database"
+      basisKey: "profile.loyaltyBasis", basis: localize(locale, "profile.loyaltyBasis")
     }
   };
 }
@@ -114,7 +115,7 @@ router.get("/me", requireAuth, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) throw new HttpError(404, "User not found", undefined, "NOT_FOUND");
-    return res.json(await buildProfileResponse(user));
+    return res.json(await buildProfileResponse(user, req.locale));
   } catch (error) {
     next(error);
   }
@@ -132,7 +133,7 @@ router.patch("/me", requireAuth, async (req, res, next) => {
       ...addressData(verifiedAddress)
     };
     const user = await prisma.user.update({ where: { id: req.user.id }, data: update });
-    return res.json(await buildProfileResponse(user));
+    return res.json(await buildProfileResponse(user, req.locale));
   } catch (error) {
     next(error);
   }

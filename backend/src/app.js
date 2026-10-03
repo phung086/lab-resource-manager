@@ -1,3 +1,4 @@
+import { localeMiddleware, localizeError } from "./locales/index.js";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -8,6 +9,7 @@ import { config } from "./config.js";
 import { prisma } from "./db.js";
 import { errorHandler, HttpError, notFoundHandler } from "./middleware/errors.js";
 import { metricsMiddleware, metricsRouter } from "./metrics.js";
+import { metricsAccess } from "./middleware/metricsAccess.js";
 
 // Core Routers
 import authRouter from "./routes/auth.js";
@@ -22,13 +24,14 @@ import calendarRouter from "./routes/calendar.js";
 import bookingRouter from "./routes/bookings.js";
 import bookingPricingRouter from "./routes/bookingPricing.js";
 import maintenanceRouter from "./routes/maintenance.js";
+import labWorkspaceRouter from "./routes/labWorkspace.js";
 import dashboardRouter from "./routes/dashboard.js";
 import notificationRouter from "./routes/notifications.js";
 import incidentRouter from "./routes/incidents.js";
 import telemetryRouter from "./routes/telemetry.js";
 import paymentRouter from "./routes/payments.js";
 import assistantRouter from "./routes/assistant.js";
-import { handleMcp } from "./assistant/mcpServer.js";
+import { handleMcp, mcpRateLimit } from "./assistant/mcpServer.js";
 import { requireAuth } from "./middleware/auth.js";
 
 export function createApp() {
@@ -39,6 +42,7 @@ export function createApp() {
   }
 
   app.use(helmet());
+  app.use(localeMiddleware);
   app.use(
     cors({
       origin: (origin, callback) => {
@@ -56,7 +60,15 @@ export function createApp() {
     // the one-time secure hash and provider evidence.
     skip: (req) => /^\/api\/payments\/vnpay\/(?:ipn|return)(?:\?|$)/.test(req.originalUrl || req.url)
   }));
-  app.use(rateLimit({ windowMs: config.rateLimitWindowMs, limit: config.rateLimitMax }));
+  const ingressLimit = limit => rateLimit({
+    windowMs: config.rateLimitWindowMs, limit, standardHeaders: "draft-7", legacyHeaders: false,
+    handler: (req, res) => res.status(429).json({ error: { code: "RATE_LIMITED", message: localizeError(req.locale, "RATE_LIMITED") } })
+  });
+  // MCP initialization and tool reads share the loopback IP, but must not spend
+  // the ordinary API budget. Both ingress paths remain bounded before auth.
+  const apiIngress = ingressLimit(config.rateLimitMax);
+  const mcpIngress = ingressLimit(config.rateLimitMax * 10);
+  app.use((req, res, next) => (req.path.toLowerCase().replace(/\/$/, "") === "/mcp" ? mcpIngress : apiIngress)(req, res, next));
   app.use(metricsMiddleware);
 
   // Health check endpoints
@@ -92,7 +104,7 @@ export function createApp() {
   app.get("/api/health/ready", readinessHandler);
 
   // Prometheus Metrics
-  app.use("/metrics", metricsRouter);
+  app.use("/metrics", metricsAccess(), metricsRouter);
 
   // 1. Auth & Identity
   app.use("/api/auth", authRouter);
@@ -117,12 +129,13 @@ export function createApp() {
 
   // 6. Maintenance Windows & Calibration
   app.use("/api/maintenance", maintenanceRouter);
+  app.use("/api/lab-workspace", labWorkspaceRouter);
 
   // Optional integrations are independent of the retired research routes.
   if (config.paymentsEnabled) app.use("/api/payments", paymentRouter);
   if (config.mcpAssistantEnabled) {
     app.use("/api/assistant", assistantRouter);
-    app.post("/mcp", requireAuth, handleMcp);
+    app.post("/mcp", requireAuth, mcpRateLimit, handleMcp);
     app.all("/mcp", requireAuth, (_req, res) => res.sendStatus(405));
   }
 

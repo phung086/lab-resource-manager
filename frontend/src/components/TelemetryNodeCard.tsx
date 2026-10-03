@@ -1,3 +1,4 @@
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useState } from "react";
 import {
   Server,
@@ -29,6 +30,7 @@ export const TelemetryNodeCard: React.FC<TelemetryNodeCardProps> = ({
   onToggleMaintenance,
   onOpenDetails
 }) => {
+  const { tr } = useLocale();
   const percent = Math.min(100, Math.round((node.metricCurrent / node.metricMax) * 100));
 
   // Determine Gradient based on thresholds (<80%, 80-90%, >90%)
@@ -98,7 +100,7 @@ export const TelemetryNodeCard: React.FC<TelemetryNodeCardProps> = ({
         <div className="bento-metric-cell-2026">
           <div className="metric-cell-label-2026">
             <Thermometer size={13} className={getTempColor(node.temperature)} />
-            <span>Nhiệt độ</span>
+            <span>{tr("ui.temperature_d792b875")}</span>
           </div>
           <div className={`metric-cell-val-2026 font-mono ${getTempColor(node.temperature)}`}>
             {node.temperature.toFixed(1)}
@@ -223,6 +225,7 @@ export const TelemetryBentoGrid: React.FC<TelemetryBentoGridProps> = ({
   lastUpdated,
   onRefresh
 }) => {
+  const { tr } = useLocale();
   const [selectedNodeDetails, setSelectedNodeDetails] = useState<TelemetryNode | null>(null);
 
   return (
@@ -247,7 +250,7 @@ export const TelemetryBentoGrid: React.FC<TelemetryBentoGridProps> = ({
         {lastUpdated && (
           <div className="bento-header-actions-2026">
             <span className="font-mono text-xs text-slate-400">
-              Cập nhật: <strong className="text-cyan-400">{lastUpdated}</strong>
+              {tr("ui.updated_97c6e2ca")}<strong className="text-cyan-400">{lastUpdated}</strong>
             </span>
           </div>
         )}
@@ -356,8 +359,7 @@ export const TelemetryBentoGrid: React.FC<TelemetryBentoGridProps> = ({
                   className="btn btn-secondary"
                   onClick={() => setSelectedNodeDetails(null)}
                 >
-                  Đóng
-                </button>
+                  {tr("ui.close_5d54c2a1")}</button>
                 <button
                   type="button"
                   className="btn btn-primary"

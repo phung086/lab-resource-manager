@@ -26,7 +26,7 @@ test("HttpError formats custom status and code correctly", () => {
 
   assert.equal(res.statusCode, 403);
   assert.equal(res.body.error.code, "FORBIDDEN");
-  assert.equal(res.body.error.message, "Forbidden resource");
+  assert.match(res.body.error.message, /quyền/);
   assert.deepEqual(res.body.error.details, { reason: "scope" });
 });
 
@@ -38,7 +38,7 @@ test("PostgreSQL exclusion violation 23P01 is mapped to 409 BOOKING_CONFLICT", (
 
   assert.equal(res.statusCode, 409);
   assert.equal(res.body.error.code, "BOOKING_CONFLICT");
-  assert.equal(res.body.error.message, "Booking window conflicts with an existing reservation");
+  assert.match(res.body.error.message, /trùng/);
   // Never expose raw SQL internals in response
   assert.equal(JSON.stringify(res.body).includes("SQLSTATE"), false);
 });
@@ -61,4 +61,14 @@ test("Unrelated database error is not mapped to BOOKING_CONFLICT", () => {
 
   assert.equal(res.statusCode, 500);
   assert.equal(res.body.error.code, "INTERNAL_ERROR");
+});
+
+for (const locale of ["vi", "en"]) test(`API errors are localized in ${locale} without changing codes or exposing SQL`, () => {
+  const res = mockRes();
+  errorHandler(new HttpError(409, "SQLSTATE 23P01 private data", { field: "startAt" }, "BOOKING_CONFLICT"), { locale }, res, () => {});
+  assert.equal(res.statusCode, 409);
+  assert.equal(res.body.error.code, "BOOKING_CONFLICT");
+  assert.match(res.body.error.message, locale === "en" ? /conflict/i : /trùng/);
+  assert.equal(JSON.stringify(res.body).includes("SQLSTATE"), false);
+  assert.deepEqual(res.body.error.details, { field: "startAt" });
 });

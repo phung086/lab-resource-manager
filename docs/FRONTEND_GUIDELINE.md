@@ -59,9 +59,19 @@ large unrelated diff.
 ## Data Access
 
 - Use the live API for core workflows.
+- Reuse the loaded shared records when leaving home. Refresh on session change,
+  home entry or explicit user/mutation refresh; cancel superseded bulk reads and
+  ignore their results. Do not issue another bulk load for every navigation click.
 - Avoid importing `mockData.js` into production-core flows.
 - Preserve optional/research simulations behind explicit flags or isolated
   surfaces.
+- Booking and incident operation queues use server pagination through
+  `hooks/useQueuePage.ts`, with 20 rows per page; the staff home queue uses five.
+  Reset the page when actor/filter changes, cancel superseded requests, hide stale
+  actionable rows during loading/failure, and refresh after confirmed mutations.
+  Clamp an emptied last page after refresh. Read totals from the server summary,
+  never from the current page length. Use the shared accessible VI/EN
+  `QueuePagination` control and preserve keyboard focus after changing pages.
 
 ## Forms And Tables
 
@@ -100,3 +110,44 @@ When touching auth or resource workflows, also consider:
 npm run test:e2e:auth
 npm run test:e2e:resources
 ```
+
+
+## Shared locale contract
+
+Use `useLocale().t(key, params)` with canonical IDs in `src/locales/catalog`.
+Add matching VI/EN entries and run `npm run i18n:sync`; CI runs `test:i18n`.
+Do not resolve messages at module initialization or add inline bilingual pairs.
+Keep parameterized notices as `LocaleMessage` descriptors until render. Preserve
+form state during locale changes and original user/resource content. Use the shared
+`components/base/LanguageToggle.tsx` in headers and modal focus traps so language
+changes remain reachable while a form is open. Calendar
+labels and assistant tool summaries carry keys; business codes and Vietnam time
+remain unchanged. See `BILINGUAL_ASSISTANT_FOUNDATION_20260930.md` for the verified
+boundary and examples of recovery tests.
+
+
+## Role entry points
+
+`pages/WorkspaceHome.tsx` selects a lazily loaded view from
+`components/features/workspace/`. Keep student discovery, lecturer teaching,
+LAB staff operations and administrative coordination distinct in information
+hierarchy. Reuse shared primitives, catalogs and existing authenticated screens.
+Carry validated resource/group/booking/filter context into the destination; action
+links open confirmation forms and never perform mutations implicitly. Staff/admin
+booking and incident counts cover all authorized records; their previews show one
+page. Other bounded lists must continue disclosing their recent-record limits.
+See ADR-026, the role workspace refinement report, and
+[queue pagination](WORKSPACE_QUEUE_PAGINATION_20261003.md).
+
+
+## Request deadlines and assistant context
+
+Use the shared `apiRequest` cancellation and deadline boundary: normal requests
+wait at most 30 seconds, chat 65 seconds, including response-body reads. Preserve
+caller cancellation and catalog error IDs. Do not automatically retry mutations
+after a timeout; the backend may already have committed. Leave assistant duration
+blank until the user explicitly chooses minutes, so VI/EN question duration is
+not silently replaced by a UI default. Use the canonical Vietnam-time conversion.
+Render original document titles, versions and excerpts as text; never expose raw
+transport JSON or render source content as HTML. Hardware-off workspace reads
+request `/dashboard?includeTelemetry=false` without adding a second data loader.

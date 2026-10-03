@@ -1,3 +1,4 @@
+import { openWorkspace, selectWorkspaceTab } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -18,13 +19,11 @@ async function login(page, email) {
     page.waitForResponse((response) => response.url().endsWith("/api/auth/login") && response.status() === 200),
     page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click()
   ]);
+  await openWorkspace(page);
 }
 
 async function openOperations(page) {
-  if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const nav = page.locator(".sidebar-nav-item-2026", { hasText: /Vận Hành Booking|Lịch Đặt Của Tôi/i }).first();
-  await nav.waitFor({ timeout: 5000 });
-  await nav.click();
+  await selectWorkspaceTab(page, "bookings");
   await page.locator("[data-testid=\"operations-view\"]").waitFor({ timeout: 5000 });
 }
 
@@ -150,6 +149,7 @@ try {
   await login(adminPage, "b5.admin@lab.test");
   await openOperations(adminPage);
   await adminPage.getByRole("button", { name: "Tất cả" }).click();
+  await adminPage.getByText("Batch 5 foreign lab booking").first().waitFor({ state: "visible" });
   assert.ok(await adminPage.getByText("Batch 5 foreign lab booking").first().isVisible());
   await adminPage.screenshot({ path: path.join(screenshotDir, "admin_operations_desktop.png"), fullPage: true });
   await adminContext.close();
@@ -159,6 +159,7 @@ try {
   const mobilePage = await mobileContext.newPage();
   await login(mobilePage, "b5.student@lab.test");
   await openOperations(mobilePage);
+  await mobilePage.locator(".operation-card").first().waitFor({ state: "visible" });
   await mobilePage.screenshot({ path: path.join(screenshotDir, "student_operations_mobile.png"), fullPage: true });
   assert.equal(await mobilePage.locator(".operation-card").first().isVisible(), true);
   await mobileContext.close();

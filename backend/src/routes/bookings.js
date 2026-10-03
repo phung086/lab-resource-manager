@@ -13,6 +13,7 @@ import {
 } from "../services/bookingService.js";
 import { getResourceAvailability } from "../services/availabilityService.js";
 import { ADMIN, LAB_STAFF, STAFF_ROLES } from "../constants/roles.js";
+import { bookingListSchema, bookingPageSchema, listBookingPage, listLegacyBookings } from "../services/workspaceQueueService.js";
 
 const router = express.Router();
 
@@ -59,40 +60,18 @@ const bookingInclude = {
 // GET / - List bookings with optional filters
 router.get("/", requireAuth, async (req, res, next) => {
   try {
-    const { resourceId, status } = req.query;
-
-    let scopeWhere = {};
-    if (req.user.role === LAB_STAFF) {
-      if (resourceId) {
-        await assertLabStaffResourceAccess(req.user.id, String(resourceId));
+    if (req.query.page !== undefined) {
+      const query = bookingPageSchema.parse(req.query);
+      if (req.user.role === LAB_STAFF && query.resourceId) {
+        await assertLabStaffResourceAccess(req.user.id, query.resourceId);
       }
-      const assignments = await prisma.userLabAssignment.findMany({
-        where: { userId: req.user.id },
-        select: { laboratoryId: true }
-      });
-      scopeWhere = {
-        resource: {
-          laboratoryId: { in: assignments.map((assignment) => assignment.laboratoryId) }
-        }
-      };
-    } else if (!STAFF_ROLES.includes(req.user.role)) {
-      scopeWhere = { requestedById: req.user.id };
+      return res.json(await listBookingPage(prisma, req.user, query, bookingInclude));
     }
-
-    const where = {
-      ...(resourceId ? { resourceId: String(resourceId) } : {}),
-      ...(status ? { status: String(status).toUpperCase() } : {}),
-      ...scopeWhere
-    };
-
-    const bookings = await prisma.booking.findMany({
-      where,
-      include: bookingInclude,
-      orderBy: [{ startAt: "desc" }, { createdAt: "desc" }],
-      take: 100
-    });
-
-    res.json(bookings);
+    const query = bookingListSchema.parse(req.query);
+    if (req.user.role === LAB_STAFF && query.resourceId) {
+      await assertLabStaffResourceAccess(req.user.id, query.resourceId);
+    }
+    res.json(await listLegacyBookings(prisma, req.user, query, bookingInclude));
   } catch (error) {
     next(error);
   }

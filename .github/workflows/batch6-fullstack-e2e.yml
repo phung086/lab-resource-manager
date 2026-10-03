@@ -104,7 +104,7 @@ jobs:
           FRONTEND_LOG="$RUNNER_TEMP/frontend.log"
           BACKEND_LOG="$RUNNER_TEMP/backend.log"
 
-          VITE_API_BASE_URL=http://127.0.0.1:5002 npm --prefix frontend run dev -- --host 127.0.0.1 --port 5177 >"$FRONTEND_LOG" 2>&1 &
+          VITE_ENABLE_TELEMETRY_FEATURES=true VITE_API_BASE_URL=http://127.0.0.1:5002 npm --prefix frontend run dev -- --host 127.0.0.1 --port 5177 >"$FRONTEND_LOG" 2>&1 &
           FRONTEND_PID=$!
 
           cleanup() {

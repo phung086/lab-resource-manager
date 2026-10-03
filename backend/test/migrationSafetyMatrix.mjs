@@ -92,7 +92,15 @@ function fixtureCopy() {
   return root;
 }
 
-function addForwardMigrationFixture(root, name = "20260926000100_test_forward_probe") {
+function addForwardMigrationFixture(root, suffix = "test_forward_probe") {
+  // A forward fixture must sort after every real migration in this checkout.
+  const latest = listMigrationNames(path.join(root, "migrations")).at(-1).slice(0, 14);
+  const timestamp = new Date(Date.UTC(
+    Number(latest.slice(0, 4)), Number(latest.slice(4, 6)) - 1,
+    Number(latest.slice(6, 8)), Number(latest.slice(8, 10)),
+    Number(latest.slice(10, 12)), Number(latest.slice(12, 14)) + 1
+  )).toISOString().replace(/[-:T]/g, "").slice(0, 14);
+  const name = `${timestamp}_${suffix}`;
   const migrationRoot = path.join(root, "migrations", name);
   fs.mkdirSync(migrationRoot, { recursive: true });
   fs.writeFileSync(path.join(migrationRoot, "migration.sql"), [
@@ -166,7 +174,7 @@ try {
     const before = comparableRows(await migrationRows());
     const fixture = fixtureCopy();
     try {
-      const forwardName = addForwardMigrationFixture(fixture, "20260926000100_test_existing_lineage_forward");
+      const forwardName = addForwardMigrationFixture(fixture, "test_existing_lineage_forward");
       const output = deploy({ fixtureRoot: fixture });
       assert.match(output, /RECOGNIZED_PRISMA_LINEAGE/);
       assert.doesNotMatch(output, /marked as applied/);

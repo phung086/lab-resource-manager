@@ -262,6 +262,9 @@ model LabPolicy {
 }
 
 model User {
+  teachingGroups TeachingGroup[] @relation("GroupLecturer")
+  groupMemberships TeachingMembership[]
+  stockMovements StockMovement[]
   id                           String                @id
   email                        String                @unique
   fullName                     String
@@ -327,6 +330,7 @@ model EmailOtp {
 }
 
 model Resource {
+  stockItem StockItem?
   pricingRules         ResourcePricingRule[]
   media               ResourceMedia[]
   id                String            @id
@@ -478,6 +482,7 @@ model UserCertification {
 
 // PostgreSQL bookings_no_active_overlap is preserved externally; Prisma cannot model EXCLUDE.
 model Booking {
+  teachingActivity TeachingActivity?
   feeAmountVnd      Int                   @default(0)
   feeSnapshot       Json                  @default("{}")
   id                String                @id
@@ -523,6 +528,7 @@ model Booking {
 }
 
 model MaintenanceWindow {
+  stockMovements StockMovement[]
   id          String            @id
   resourceId  String
   createdById String?
@@ -1087,6 +1093,74 @@ model UserLabAssignment {
   @@index([laboratoryId])
   @@map("user_lab_assignments")
 }
+model StockItem {
+  resourceId String @id
+  unit String
+  balance Int @default(0)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  movements StockMovement[]
+  @@map("stock_items")
+}
+
+model StockMovement {
+  id String @id
+  resourceId String
+  actorId String
+  kind String
+  delta Int
+  balanceAfter Int
+  reason String
+  reference String
+  maintenanceId String?
+  createdAt DateTime @default(now())
+  item StockItem @relation(fields: [resourceId], references: [resourceId], onDelete: Restrict)
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  maintenance MaintenanceWindow? @relation(fields: [maintenanceId], references: [id], onDelete: Restrict)
+  @@index([resourceId, createdAt])
+  @@map("stock_movements")
+}
+
+model TeachingGroup {
+  id String @id
+  code String @unique
+  name String
+  term String
+  lecturerId String
+  archived Boolean @default(false)
+  createdAt DateTime @default(now())
+  lecturer User @relation("GroupLecturer", fields: [lecturerId], references: [id], onDelete: Restrict)
+  members TeachingMembership[]
+  activities TeachingActivity[]
+  @@index([lecturerId])
+  @@map("teaching_groups")
+}
+
+model TeachingMembership {
+  groupId String
+  userId String
+  joinedAt DateTime @default(now())
+  group TeachingGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("teaching_memberships")
+}
+
+model TeachingActivity {
+  id String @id
+  groupId String
+  bookingId String @unique
+  learningGoal String
+  decision String @default("SUBMITTED")
+  feedback String?
+  reviewedAt DateTime?
+  createdAt DateTime @default(now())
+  group TeachingGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  @@index([groupId, createdAt])
+  @@map("teaching_activities")
+}
+
 model ResourcePricingRule {
   id            String   @id
   resourceId    String

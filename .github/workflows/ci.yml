@@ -38,6 +38,14 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_fresh?schema=public
         run: npm run db:migrate
+      - name: Create and verify assistant integration database
+        env:
+          PGPASSWORD: postgres
+          ASSISTANT_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_assistant_test?schema=public
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE "lab_resources_assistant_test";'
+          DATABASE_URL="$ASSISTANT_TEST_DATABASE_URL" npm run db:migrate
+          npm run test:assistant:integration
       - name: Prove migration deployment is idempotent
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_fresh?schema=public
@@ -74,6 +82,69 @@ jobs:
         env:
           PHASE_F_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_phase_f_ci?schema=public
         run: npm run test:phase-f
+
+  queue-pagination:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lab_resources_queue_pagination_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_queue_pagination_test?schema=public
+      QUEUE_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_queue_pagination_test?schema=public
+      UI_SCREENSHOT_DIR: ../logs/queue-pagination-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install application and browser dependencies
+        run: |
+          (cd backend && npm ci && npm run db:generate && npm run db:migrate)
+          (cd frontend && npm ci && npx playwright-core install --with-deps chromium)
+      - name: Verify queues with PostgreSQL and a real browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd backend && npm run test:queue-pagination)
+          node backend/test/helpers/queuePaginationServer.mjs > "$RUNNER_TEMP/queue-api.log" 2>&1 &
+          api_pid=$!
+          (cd frontend && VITE_API_BASE_URL=http://127.0.0.1:15015/api node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 15185 --strictPort) > "$RUNNER_TEMP/queue-ui.log" 2>&1 &
+          ui_pid=$!
+          trap 'kill "$api_pid" "$ui_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:15015/health/ready >/dev/null && curl -fsS http://127.0.0.1:15185 >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat "$RUNNER_TEMP/queue-api.log" "$RUNNER_TEMP/queue-ui.log"
+            exit 1
+          fi
+          (cd frontend && npm run test:ui:queue-pagination)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: queue-pagination-browser
+          path: logs/queue-pagination-ci
 
   migration-safety:
     runs-on: ubuntu-latest
@@ -124,6 +195,8 @@ jobs:
       - run: npm run db:generate
       - name: Backend lint
         run: npm run lint
+      - name: Canonical ERD matches the generated Prisma model
+        run: npm run docs:erd:check
       - name: Production configuration contract
         run: npm run verify:prod-config
       - name: Required backend unit tests
@@ -142,12 +215,85 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - name: Shared locale catalog and source gate
+        run: npm run test:i18n
       - name: Frontend lint
         run: npm run lint
       - name: Incremental TypeScript check
         run: npm run typecheck
       - name: Production build
         run: npm run build
+
+  workspace-navigation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lab_resources_local_demo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_local_demo?schema=public
+      DEMO_MODE: "true"
+      LOCAL_DEMO_API_PORT: "15005"
+      LOCAL_DEMO_UI_PORT: "15181"
+      RATE_LIMIT_MAX: "10000"
+      UX_FRONTEND_URL: http://127.0.0.1:15181
+      UX_API_URL: http://127.0.0.1:15005/api
+      UX_DEMO_PASSWORD: LabDemo!2026Pass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install application and browser dependencies
+        run: |
+          (cd backend && npm ci && npm run db:generate)
+          (cd frontend && npm ci && npx playwright-core install --with-deps chromium)
+      - name: Verify role overview and menu against isolated PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          node backend/scripts/startLocalDemo.mjs > "$RUNNER_TEMP/workspace-demo.log" 2>&1 &
+          demo_pid=$!
+          trap 'kill "$demo_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in {1..60}; do
+            if curl -fsS "$UX_API_URL/health/ready" >/dev/null &&
+               curl -fsS "$UX_FRONTEND_URL" >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat "$RUNNER_TEMP/workspace-demo.log"
+            exit 1
+          fi
+          (cd frontend && npm run test:ui:workspace && npm run test:ui:bilingual && npm run test:ui:roles)
+      - name: Upload workspace evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-navigation
+          path: logs/workspace-navigation/
+          if-no-files-found: ignore
+      - name: Show demo logs on failure
+        if: failure()
+        run: cat "$RUNNER_TEMP/workspace-demo.log" || true
 
   docker:
     runs-on: ubuntu-latest

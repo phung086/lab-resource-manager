@@ -1,126 +1,334 @@
 # Software Requirements Specification
 
-## Product Summary
+## Lab Resource Manager
 
-Lab Resource Manager is an internal web application for university laboratory
-resource booking, approval, handover, monitoring, incident handling, analytics,
-and AI-assisted lookup.
+| Document field | Value |
+|---|---|
+| Document ID | LRM-SRS-001 |
+| Version | 1.2 |
+| Status | Working baseline for the current project checkpoint |
+| Prepared | 28 September 2026; clarified 3 October 2026 |
+| Product | Lab Resource Manager |
 
-The product purpose and priority order are defined in `PRODUCT.md`. This SRS is
-the working requirement baseline for implementation.
+## 1. Introduction
 
-## Actors
+### 1.1 Purpose
 
-- `ADMIN`: global system administration and cross-lab operation.
-- `LAB_STAFF`: assigned-laboratory operation, approval, handover, resource
-  updates, maintenance, and monitoring.
-- `LECTURER`: authenticated resource discovery and own booking workflow.
-- `STUDENT`: authenticated resource discovery and own booking workflow.
+This Software Requirements Specification (SRS) defines the users, system boundary, interfaces, functional behavior, quality requirements, and acceptance conditions for Lab Resource Manager. It provides a reviewable baseline for implementation and progress reporting. The presence of a requirement in this document does not by itself prove that the related feature is complete or deployed.
 
-## Core Functional Requirements
+### 1.2 Scope
 
-### Authentication And Account
+Lab Resource Manager is a web application for discovering and operating shared university laboratory resources. Its primary workflow covers resource discovery, availability review, booking, approval where required, handover, return, and operational history. Supporting capabilities include account and laboratory administration, maintenance, notifications, incident handling, monitoring, and reporting.
 
-- Users can register only as `STUDENT`.
-- Users can log in with real database-backed credentials.
-- Protected requests reload the current active database user.
-- Admins can manage users, roles, activation, and lab assignments.
-- Client-side visibility never replaces backend authorization.
+External quick booking, pricing/payment, and AI assistance are incremental or supporting capabilities. They must not override core authorization, booking rules, physical resource status, or human approval. Real payment-provider settlement and physical hardware verification require their own external configuration and evidence.
 
-### Resource Management
+### 1.3 Definitions and conventions
 
-- Users can view public safe resource catalog and schedule projections.
-- Admin and assigned lab staff can create/update resources according to lab
-  scope.
-- Resource retirement is non-destructive.
-- `Resource.operationalStatus` is the authoritative physical state.
-- Category and technical subtype are separate. Unresolved categories must not
-  be guessed.
+- **Shall** identifies a mandatory requirement; **should** identifies a recommended quality target.
+- A **booking owner** is the authenticated user who created a booking.
+- **Availability** is derived from operational status, bookings, maintenance windows, and policy; it is not a separate physical status.
+- Time intervals are half-open: `[startAt, endAt)`, so one booking may end when another begins.
+- `NO_SHOW` is an outcome/event, not a booking status.
+- Requirement identifiers: `FR` functional, `NFR` non-functional, `BR` business rule, and `AC` acceptance criterion.
 
-### Booking Workflow
+### 1.4 References
 
-- Authenticated users can request bookings.
-- Approval-required resources create `PENDING_APPROVAL` bookings.
-- Immediate resources create `CONFIRMED` bookings when policy allows.
-- Admin and assigned lab staff can approve, reject, check out, return, and
-  complete eligible bookings.
-- Owners can view and cancel their own eligible bookings.
-- Booking overlap protection must remain enforced at the database level.
+- `PRODUCT.md` — product purpose, users, principles, and priority.
+- `docs/convention.md` — naming, layering, API and validation conventions.
+- `docs/PROJECT_STRUCTURE.md` — repository layout and responsibilities.
+- `docs/CURRENT_STATE.md` and verified Batch reports — implementation and verification evidence.
+- `backend/prisma/schema.prisma` — persisted data model and canonical enums.
 
-### Scheduling And Availability
+## 2. Overall Description
 
-- Availability is derived from operational status, bookings, maintenance
-  windows, and policy.
-- Intervals use half-open semantics: `[startAt, endAt)`.
-- Public projections must not expose requester identity or private titles.
+### 2.1 Product perspective
 
-### Maintenance, Incident, Notification
+The system is a browser-based frontend backed by an HTTP API and PostgreSQL database. The frontend is implemented with React and Vite. The backend uses Node.js, Express, Prisma, and PostgreSQL 16. The API and database are authoritative for authentication, permissions, business rules, and persisted state.
 
-- Maintenance must be persisted and must affect availability when blocking.
-- Important booking/resource actions should create durable history where schema
-  supports it.
-- Notifications are user-scoped and database-backed.
-- Incident and advanced monitoring workflows are core only when backed by real
-  persistence and approved batch scope.
+### 2.2 Product functions
 
-### Monitoring And Telemetry
+At a high level, the system supports:
 
-- Telemetry must come from accepted real samples, agents, or exporters.
-- Absence of telemetry is `NO_DATA`; do not generate fake healthy states.
-- Monitoring UI must distinguish stale/unavailable/no-data states truthfully.
+1. Account registration, login, account administration, and laboratory assignment.
+2. Public and authenticated resource discovery, detail, and schedule views.
+3. Booking requests, policy checks, approval, cancellation, handover, return, and completion.
+4. Resource operation, maintenance windows, incident records, notifications, audit history, and dashboards.
+5. Persisted telemetry and alert workflows when a real configured source supplies data.
+6. Optional external-customer quick booking, purpose-based pricing, and payment-provider integration when configured.
+7. AI-assisted explanation and lookup as decision support only.
 
-### AI Assistance
+### 2.3 User classes
 
-- AI may explain, summarize, search, and recommend based on real project data.
-- AI must not override authorization, booking policy, resource state, or human
-  approval responsibility.
+| Actor | Main responsibilities | Authorization boundary |
+|---|---|---|
+| `ADMIN` | Manage users, roles, laboratory assignments, resources, policies, and cross-lab administration | Global administrative permission, enforced by backend |
+| `LAB_STAFF` | Operate resources, process bookings, maintenance, monitoring, and incidents | Limited to laboratories assigned through `UserLabAssignment` |
+| `LECTURER` | Manage own bookings and supervise assigned course groups | Own bookings/incidents; assigned group membership and academic review; no staff operations |
+| `STUDENT` | Manage own bookings and submit/revise own course activities | Own records and membership-scoped groups; external business identity may be separately marked `EXTERNAL` |
 
-## Non-Functional Requirements
+Public visitors may view explicitly public catalog and schedule projections. Public access does not grant booking mutation or account privileges.
 
-- Correctness and security take priority over showcase features.
-- Backend errors use the stable API error contract:
-  `{ "error": { "code", "message", "details" } }`.
-- Required workflows must avoid mock/fake success.
-- UI must be responsive, keyboard-usable, and accessible.
-- Build/test commands must be reproducible on a clean machine.
-- Production configuration must fail closed for missing critical secrets.
+### 2.4 Operating environment
 
-## Out Of Scope Unless Explicitly Approved
+- Modern desktop and mobile web browsers.
+- Frontend single-page application served by Vite during development and a web server/container in deployment.
+- Node.js/Express API, Prisma persistence, and PostgreSQL 16.
+- Docker Compose and GitHub Actions support local/release workflows where configured.
+- Scheduling and operational timestamps use `Asia/Ho_Chi_Minh` semantics.
 
-- Framework migration.
-- Payment as a required booking state.
-- Digital Twin, optimization, simulation, genetic scheduling, and research
-  modules as production-core features.
-- Fabricated telemetry, audit, usage history, or benchmark evidence.
-# Approved incremental extension — 2026-09-23
+### 2.5 Constraints and assumptions
 
-The user-approved Open LAB direction extends this historical graduation baseline.
-Track its implementation in `docs/OPEN_LAB_UPGRADE_REPORT.md`; this is not a final
-product release. External identity/fast booking remains pending. Resource-purpose pricing and
-automatic booking-linked charges are implemented at the 2026-09-23 checkpoint;
-payment deadlines and late-callback reconciliation remain pending.
-Canonical role and booking enums are unchanged in the current checkpoint.
+- Canonical roles are exactly `ADMIN`, `LAB_STAFF`, `LECTURER`, and `STUDENT`.
+- Canonical booking statuses are `PENDING_APPROVAL`, `CONFIRMED`, `CHECKED_OUT`, `RETURNED`, `COMPLETED`, `REJECTED`, and `CANCELLED`.
+- Canonical physical operational statuses are `AVAILABLE`, `IN_USE`, `MAINTENANCE`, `CALIBRATION`, `BROKEN`, `RETIRED`, and `OFFLINE`.
+- Resource categories are `ROOM`, `EQUIPMENT`, `MACHINE`, `EXPERIMENT_KIT`, and `MATERIAL`; technical subtype is a separate field.
+- PostgreSQL and tracked Prisma migrations are authoritative. Applied migration history is immutable.
+- External SMTP, payment credentials, telemetry sources, object storage, and physical devices are available only when separately configured and verified.
+- The instructor's example `code/frontend/` and `code/backend/` map logically to the repository's existing `frontend/` and `backend/`; the repository is not physically rearranged solely to imitate the diagram.
 
-Current implemented exception to staff-only return/completion: an authenticated
-owner may self-return a ROOM booking in CHECKED_OUT, supplying condition evidence.
-The server atomically records RETURN then COMPLETE history, completes the booking,
-preserves the planned interval, and records actual end time. It releases future
-availability without requiring staff approval, while preserving any existing hard
-unavailable physical state. EQUIPMENT/MACHINE/KIT/MATERIAL are excluded. Staff
-inspection is not claimed by an owner declaration. Existing staff APIs remain scoped.
+## 3. External Interface Requirements
 
-Booking creation and each operation notify active administrators and staff assigned
-to the resource's lab; the owner also receives operation outcomes. Delivery is
-persisted in-app; this does not imply email/push delivery or historical backfill.
+### 3.1 User interface
+
+The UI shall provide role-appropriate navigation, clear booking and operational states, validation feedback, and responsive layouts. Important status and warning information shall not rely on color alone. Public views shall show only safe resource and schedule information and shall not reveal requester identity or private booking titles.
+
+### 3.2 Software interfaces
+
+- The frontend communicates with the backend through HTTP API routes under `/api`.
+- API mutations shall use backend authentication, authorization, validation, and service logic.
+- The backend communicates with PostgreSQL through Prisma and tracked migrations.
+- Optional integrations include SMTP, VNPAY, S3-compatible storage, Prometheus/telemetry agents, and configured AI services. Missing required configuration shall be reported as unavailable or failed; it shall not be represented as success.
+
+### 3.3 API error interface
+
+Errors shall use the stable shape `{ "error": { "code", "message", "details" } }` when returned by the canonical API contract. Responses shall not disclose passwords, tokens, SQL, Prisma internals, or stack traces.
+
+## 4. Functional Requirements
+
+### 4.1 Authentication and accounts
+
+| ID | Requirement |
+|---|---|
+| FR-AUTH-01 | The system shall authenticate users using persisted account credentials. |
+| FR-AUTH-02 | Public self-registration shall create only the canonical `STUDENT` role. |
+| FR-AUTH-03 | For each protected request, the backend shall verify the current database user exists and is active before authorizing the operation. |
+| FR-AUTH-04 | An `ADMIN` shall be able to manage user roles, activation, and laboratory assignments. |
+| FR-AUTH-05 | The system shall not treat client-side route hiding or client-provided user/role/laboratory identifiers as authorization. |
+| FR-AUTH-06 | When external quick booking is enabled, the system shall verify the configured email OTP flow before creating/reusing an external account and proceeding with booking. The account shall retain role `STUDENT` and may carry `customerType=EXTERNAL`. |
+
+### 4.2 Resource catalogue and administration
+
+| ID | Requirement |
+|---|---|
+| FR-RES-01 | The system shall display public-safe resource catalogue information and a privacy-safe schedule projection. |
+| FR-RES-02 | `ADMIN` and correctly assigned `LAB_STAFF` shall be able to create and update resources within their authorization scope. |
+| FR-RES-03 | The system shall keep resource category separate from technical subtype and shall not infer unresolved categories. |
+| FR-RES-04 | `Resource.operationalStatus` shall be the authoritative physical state. Resource retirement shall preserve historical records. |
+| FR-RES-05 | The system shall record and display persisted resource history when supported by the relevant workflow. |
+
+### 4.3 Scheduling and booking
+
+| ID | Requirement |
+|---|---|
+| FR-BKG-01 | An authenticated user shall be able to request a booking for an eligible resource and time interval. |
+| FR-BKG-02 | The system shall evaluate resource policy, operational state, maintenance windows, eligibility, and existing bookings before accepting a request. |
+| FR-BKG-03 | A booking that requires approval shall enter `PENDING_APPROVAL`; a policy-approved immediate booking may enter `CONFIRMED`. |
+| FR-BKG-04 | Authorized staff shall be able to approve or reject eligible pending bookings. |
+| FR-BKG-05 | A booking owner shall be able to view and cancel only their own eligible bookings. |
+| FR-BKG-06 | The system shall prevent overlapping active bookings at the database level, including concurrent requests. |
+| FR-BKG-07 | Availability shall be derived from operational status, booking intervals, maintenance windows, and applicable policy. |
+| FR-BKG-08 | Public schedule data shall omit requester identity and private booking titles. |
+| FR-BKG-09 | Workspace booking and incident queues shall expose older authorized records through bounded server pages and complete scoped totals; recent list caps shall not define queue totals. |
+
+### 4.4 Handover and return
+
+| ID | Requirement |
+|---|---|
+| FR-OPS-01 | Authorized staff shall be able to check out eligible confirmed bookings and record the operational handover. |
+| FR-OPS-02 | A successful checkout shall synchronize eligible available resource state to `IN_USE` transactionally. |
+| FR-OPS-03 | Authorized staff shall be able to record return and completion evidence for eligible bookings. |
+| FR-OPS-04 | An authenticated owner may self-return a checked-out `ROOM` booking only through the approved owner-return workflow and with required condition evidence. This records the owner's declaration, not a staff inspection. |
+| FR-OPS-05 | A return shall not silently overwrite a hard physical state such as `BROKEN`, `MAINTENANCE`, `CALIBRATION`, `RETIRED`, or `OFFLINE`. |
+| FR-OPS-06 | The system shall retain booking event/history evidence for supported operational transitions. |
+
+### 4.5 Maintenance, notifications, incidents, and audit
+
+| ID | Requirement |
+|---|---|
+| FR-SUP-01 | Authorized staff shall be able to persist maintenance windows; blocking maintenance shall affect derived availability. |
+| FR-SUP-02 | Booking and operational events shall create user-scoped in-app notifications where the workflow defines recipients. In-app persistence shall not imply email or push delivery. |
+| FR-SUP-03 | The system shall allow authorized incident workflows to record, review, and resolve persisted incidents. |
+| FR-SUP-04 | Security-sensitive administrative and business mutations shall be recorded in append-only audit history where defined by the data model. |
+
+### 4.6 Monitoring and telemetry
+
+| ID | Requirement |
+|---|---|
+| FR-MON-01 | The system shall accept telemetry only from an authenticated, configured source associated with persisted laboratory/resource scope. |
+| FR-MON-02 | The system shall distinguish current, stale, unavailable, and no-data states. No sample shall be shown as a fabricated healthy state. |
+| FR-MON-03 | A monitoring alert may create a persisted incident only under approved policy and with source/sample provenance. |
+| FR-MON-04 | Automated monitoring shall not change authoritative physical resource state. |
+
+### 4.7 Pricing, payment, and AI assistance
+
+| ID | Requirement |
+|---|---|
+| FR-EXT-01 | When pricing is configured, the server shall calculate a quote from the persisted resource/purpose pricing rule and preserve the accepted booking price snapshot. |
+| FR-EXT-02 | A browser return from a payment provider shall not settle a transaction. Only a valid, verified server callback matching configured merchant and transaction data may update payment state. |
+| FR-EXT-03 | Payment unavailability shall remain visible; the system shall not fabricate a successful payment or require payment as a canonical booking status. |
+| FR-EXT-04 | AI assistance may search, explain, summarize, or recommend using available data but shall not override authorization, operational state, policy, booking rules, or human approval. |
+
+## 5. Data and Business Rules
+
+| ID | Rule |
+|---|---|
+| BR-01 | Booking intervals are half-open `[startAt, endAt)` and must have `startAt < endAt`. |
+| BR-02 | Active booking overlap protection must be enforced in the database; application pre-checks alone are insufficient. |
+| BR-03 | `NO_SHOW` is an event/outcome and shall never be added to `BookingStatus`. |
+| BR-04 | Availability is a derived scheduling result; `RESERVED` is not a physical resource state. |
+| BR-05 | `LAB_STAFF` scope comes from persisted `UserLabAssignment`; unassigned staff fail closed. |
+| BR-06 | Ownership, role, active state, and laboratory scope are verified by backend authorization for sensitive operations. |
+| BR-07 | Applied migration files and migration records are immutable; releases use the approved migration deployment workflow. |
+| BR-08 | Core runtime workflows shall not fall back to fake authentication, booking, notification, telemetry, or payment success. |
+| BR-09 | Operational time interpretation uses `Asia/Ho_Chi_Minh`. |
+
+## 6. Non-Functional Requirements
+
+| ID | Requirement |
+|---|---|
+| NFR-SEC-01 | Sensitive operations shall be protected by backend authentication, authorization, input validation, ownership checks, and laboratory-scope checks as applicable. |
+| NFR-SEC-02 | Production shall fail closed when critical secrets or security configuration are missing. Secrets shall not be committed to source control. |
+| NFR-DATA-01 | Persistent business state shall use PostgreSQL and Prisma migrations; destructive schema shortcuts shall not be used on shared/development databases. |
+| NFR-DATA-02 | Business mutations that require history/audit shall persist their evidence transactionally with the mutation where specified. |
+| NFR-API-01 | API errors shall follow the documented stable error shape and avoid leaking implementation details. |
+| NFR-UX-01 | Core screens shall work on supported desktop and mobile viewport sizes and expose keyboard-usable controls and clear focus states. |
+| NFR-UX-02 | The interface shall provide understandable validation, empty, stale, unavailable, and failure states. |
+| NFR-OPS-01 | A clean environment shall have documented, repeatable build, migration, and test commands. |
+| NFR-OPS-02 | Release checks shall distinguish required core failures from optional/research workflow failures. |
+
+## 7. Acceptance Criteria
+
+| ID | Criterion |
+|---|---|
+| AC-01 | Unauthenticated users cannot perform protected account, booking, resource-operation, or administration mutations. |
+| AC-02 | `LAB_STAFF` cannot operate outside assigned laboratories; an unassigned staff account is denied. |
+| AC-03 | A booking conflict is rejected even when competing requests arrive concurrently. |
+| AC-04 | A resource in a hard unavailable operational state is not shown as schedulable merely because no booking overlaps. |
+| AC-05 | Public schedule projections do not disclose requester identity or private titles. |
+| AC-06 | Booking handover and return preserve truthful operational state and event evidence. |
+| AC-07 | Missing SMTP, telemetry, payment, or storage configuration is reported as unavailable/failure where that integration is required. |
+| AC-08 | Automated checks and demo evidence are described with their environment, scope, and known limitations; they are not generalized into production certification. |
+
+## 8. Current Status and Traceability Notes
+
+This SRS defines the working product requirements. Current implementation evidence is maintained separately in `docs/CURRENT_STATE.md`, Batch reports, and release/demo runbooks. At the 28 September 2026 checkpoint, core booking, operations, administration, notifications, persisted monitoring, and product-experience work have implementation and automated verification evidence. External SMTP OTP and a live VNPAY merchant transaction remain environment-dependent; physical sensor/camera verification requires real hardware. Optional AI and research workflows are supporting/experimental and do not define the required graduation core.
+
+Requirement status shall be assessed against current code and verification artifacts before each progress report. A passing isolated test or demo does not alone establish production deployment or real-world use.
+
+## Appendix A. Out of Scope for Required Core
+
+- Framework migration or physical source-directory relocation solely to match a reference tree.
+- Payment as a booking status or mandatory condition for all bookings.
+- Digital Twin, simulation, optimization, genetic scheduling, or research modules as production-core behavior unless separately approved.
+- Fabricated telemetry, history, audit, hardware inspection, usage statistics, or benchmark results.
+- Production readiness claims that exceed the verified environment and evidence.
+
+## Appendix B. User-approved LAB workspace extension (2026-09-29)
+
+- LAB-UX-01: Provide global VI/EN controls and preserve current form data when
+  switching locale. Track residual untranslated interface text separately.
+- LAB-UX-02: Place private worklists and confirmed sessions in the signed-in
+  landing Check schedule section; keep public schedules privacy-safe.
+- LAB-STOCK-01: Persist material receipts/issues with quantity, unit, reason,
+  reference and actor. Staff are lab-scoped; admin has global access and records
+  inventory-count adjustments. Prevent negative/concurrently overspent stock.
+- LAB-STOCK-02: Repeated identical movement IDs have one ledger effect. Changed
+  retries fail. Maintenance-linked issues require an open job in the same lab.
+- LAB-MAINT-01: Preview affected bookings, reject overlaps, require reasons for
+  schedule/status changes, and preserve closed jobs. Resource physical state is
+  verified separately; completing maintenance does not certify safe operation.
+- LAB-TEACH-01: Admin assigns lecturer-owned course groups. Lecturers supervise
+  their groups; students submit/revise their own activities. Academic endorsement
+  does not replace staff resource approval, handover or return.
+- LAB-MEDIA-01: Show image/video details with truthful loading/unavailable states;
+  fail clearly when storage is unconfigured. Reference media is labeled.
+
+Implementation and verification boundaries are recorded in
+`LAB_WORKSPACE_EXPERIENCE_REPORT_20260929.md`.
 
 
-## Approved incremental extension — 2026-09-24 quick booking
+## Appendix C. User-approved bilingual assistant foundation (2026-10-01)
 
-External Open LAB users may start from the public catalog, enter personal/contact
-information, select a Vietnamese administrative address, verify email by OTP, and
-continue into booking/payment. The account remains a canonical `STUDENT` role for
-RBAC, with `customerType=EXTERNAL` for business identity. Registration and
-profile store a default address for future equipment lending/delivery workflows.
-Profile loyalty and spending summaries are derived from persisted bookings and
-payment transactions and must not override authorization, staff approval, or LAB
-policy.
+- LAB-I18N-01: Active UI and system feedback shall use matching VI/EN message
+  catalogs. Integrity/load failures shall preserve the last valid locale and
+  drafts, with explicit recovery; original user evidence shall remain unchanged.
+- LAB-AI-01: Global assistant lookups shall use authenticated read-only tools and
+  existing account/object/lab scope. Suggested actions shall return to normal
+  confirmation forms and never perform implicit business mutations.
+- LAB-AI-02: Assistant/MCP work shall have finite independent admission/rate
+  budgets, deadlines and cancellation. Model calls shall require usable evidence,
+  bounded input/output and failure recovery with truthful provenance.
+- LAB-LOAD-01: Shared requests shall preserve caller cancellation, have finite
+  response deadlines and avoid automatic mutation retries after uncertainty.
+- LAB-HW-01: Normal hardware-off business views shall omit camera/sensor reads
+  and disclose deferred monitoring without fabricated health data.
+
+See ADR-025 and `ASSISTANT_REQUEST_HARDENING_20261001.md` for the implemented
+boundary and verification evidence.
+
+## Appendix D. Actor permissions and operational use cases (2026-10-03)
+
+This clarification follows the existing contracts and the approved extension in
+Appendix B. It does not create another role or change resource approval authority.
+The required core is booking, resource operations, truthful monitoring and their
+supporting accounts/history. Stock, teaching groups, global VI/EN and media are
+approved product extensions. Payment, SMTP, object storage, AI and hardware need
+their own configuration/evidence. Research dashboards are disabled by default.
+
+### Permission matrix
+
+Every permission is enforced by the server; navigation visibility is only a UX aid.
+"Assigned labs" means current persisted `UserLabAssignment`, never a request field.
+
+| Operation | ADMIN | LAB_STAFF | LECTURER | STUDENT |
+|---|---|---|---|---|
+| Users, roles, lab assignments administration | Global | No | No | No |
+| Profile/password self-service | Own | Own | Own | Own |
+| Resources and operational state | Global | Assigned labs | Public/authenticated safe reads | Public/authenticated safe reads |
+| Read booking/incident queues | Global | Assigned labs | Own records | Own records |
+| Request/cancel booking | Canonical actor/owner rules | Canonical actor/owner rules | Own eligible booking | Own eligible booking |
+| Approve/reject, checkout, staff return/complete | Global | Assigned labs | No | No |
+| Owner ROOM self-return | Own checked-out ROOM | Own checked-out ROOM | Own checked-out ROOM | Own checked-out ROOM |
+| Maintenance/incident operational handling | Global | Assigned labs | Own incident reporting | Own incident reporting |
+| Material receipts/issues/history | Global | Assigned labs | No | No |
+| Inventory count adjustments | Global | No | No | No |
+| Create group/assign lecturer | Global | No | No | No |
+| Group membership and academic review | Global | No | Assigned groups | No |
+| Course activity submission/revision | No student impersonation | No | No | Own booking/activity in member group |
+| Read system audit events | Global | Assigned labs | No | No |
+| Manually edit/delete system audit events | No | No | No | No |
+
+Lecturers may see students' booking evidence through the assigned teaching group
+projection, not through a global booking queue. Students do not receive classmates'
+private activity records. Academic endorsement leaves booking status unchanged.
+
+### Use cases and acceptance paths
+
+| ID / actor | Preconditions and normal path | Failure or alternate path | Requirements / verification entry |
+|---|---|---|---|
+| UC-01 Account access / all | Persisted active account; login, retrieve current identity, use authorized workspace | Bad credentials, inactive user or unavailable DB deny access; public registration remains STUDENT | FR-AUTH-01–05 / `test:batch2`, `test:release-security` |
+| UC-02 Discover and request / lecturer, student | Inspect safe resource/schedule; select eligible interval; submit; persist pending or confirmed booking | Conflict, training/policy failure or hard operational state rejects request; no fake success | FR-RES-01, FR-BKG-01–03,06–08 / `test:batch4` |
+| UC-03 Process queue / admin, assigned staff | Page/filter complete scoped queue; open exact booking; approve/reject eligible pending request | Wrong lab/owner cannot widen read or mutate; invalid transition rejected; read failure has retry | FR-BKG-04,09, BR-05 / `test:queue-pagination`, frontend `test:ui:queue-pagination` |
+| UC-04 Handover and close / admin, assigned staff | Confirm booking and actual evidence; checkout; record return condition; review and complete | Preserve BROKEN/MAINTENANCE and other hard states; rejected transition keeps state/history intact | FR-OPS-01–06 / `test:batch5` |
+| UC-05 Owner room return / owner | Checked-out ROOM; declare condition through owner-return; staff review follows existing policy | Other owner's booking or non-ROOM self-return denied; declaration is not staff inspection | FR-OPS-04–05 / `test:batch5` |
+| UC-06 Reschedule maintenance / admin, assigned staff | Open scheduled job with its resource preserved; enter reason/time; preview impact; save allowed change | Conflict blocks saving; terminal job remains closed; missing resource is validation failure | FR-SUP-01, LAB-MAINT-01 / `test:lab-workspace`, maintenance regression in browser queue suite |
+| UC-07 Handle incident/notification / all, operators | Owner reports incident; assigned operator reviews/resolves with evidence; recipient reads own notification | Cross-lab operations denied; missing email configuration never means delivered email | FR-SUP-02–04 / `test:batch6`, `test:queue-pagination` |
+| UC-08 Material ledger / admin, assigned staff | Initialize verified receipt/unit; issue available quantity with reference; optional open same-lab maintenance link | Negative/overspent balance, changed retry, wrong unit/lab/job rejected; only admin adjusts count | LAB-STOCK-01–02 / `test:lab-workspace` |
+| UC-09 Course supervision / admin, lecturer, student | Admin assigns lecturer; authorized membership; student submits own booking goal; lecturer gives feedback; student revises | Non-member, other lecturer, archived group or other owner's booking denied; no resource approval implied | LAB-TEACH-01 / `test:lab-workspace` |
+| UC-10 Monitoring / configured source, operators | Authenticate persisted source; ingest valid sample; show freshness/provenance; inspect actual alert/incident | Missing/stale source remains NO_DATA/stale; replay/invalid scope denied; no automated physical-state change | FR-MON-01–04 / `test:batch8` |
+
+These are acceptance paths and test entry points, not a claim that every suite was
+rerun on this revision. Current run scope and remaining failures are recorded in
+[current state](CURRENT_STATE.md) and the dated [review follow-up](backlogs/review-followup-20261003.md).
+Use [core ERD](DB-erd/core-erd.md) for persisted relationships and the
+[graduation demo runbook](GRADUATION_DEMO_RUNBOOK.md) for the presentation sequence.

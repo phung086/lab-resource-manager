@@ -1,5 +1,175 @@
 # Current Project State
 
+## Current review status - 2026-10-03
+
+Draft PR #22 continues from published revision `7424957`; no new Batch.
+That revision passed three backend workflows but failed six CI workflows.
+The frontend locale manifest hashed Windows CRLF bytes while Git published LF
+catalogs, blocking locale initialization on Linux. The sync script now normalizes
+the catalog files before hashing, and a regression test covers CRLF input.
+
+The review correction also rejects phone-based password login for external
+accounts awaiting password setup and avoids item OFFSET queries past the last
+queue page. Scope remains based on current persisted resource/lab assignments.
+See [review response and verification](reviews/PR22_REVIEW_RESPONSE_20261003.md)
+for the current checks, finding dispositions and remaining risks.
+
+## Historical checkpoints
+
+The entries below preserve verification at their original revisions. Their test
+counts, warning counts and CI state do not describe the current tree. In
+particular, QA-01 was fixed in `7424957`; its earlier open status is historical.
+
+## Review follow-up - 2026-10-03
+
+Continuation of draft PR #22, without a new Batch. The supplied DOCX was read
+fully and assessed against current requirements/source. Removed 13 unreferenced
+duplicate JSX components and 2 unused mock/store files, preserving active
+implementations and earlier local changes. Legacy booking reads now use validated
+service queries with persisted lab/owner scope; bounded string IDs support older
+resources. Maintenance editing preserves the nested API resource ID (QA-01 fixed).
+
+SRS use cases/permissions, a schema-derived core ERD, documentation index,
+actual UI/UX guidance and current threat model replace gaps/outdated claims.
+Production metrics require a configured bearer; observability services are
+opt-in and the production API image runs as node.
+
+Fresh verification: 63 required backend tests, 5 isolated PostgreSQL integration
+tests, 54 real-browser checks including persisted maintenance rescheduling,
+backend lint/config/ERD, frontend required gate (7 locale/network tests, 2,122
+keys, 9 existing lint warnings, typecheck/build), Compose configuration and
+Docker build/UID/writable-data/Prisma initialization all pass. Full backend audit
+reports 4 high development-tool dependency findings; production-only audit
+reports zero. No dependency upgrade or full historical regression was performed.
+GitHub CI and live providers/hardware remain separate verification steps.
+
+See [review disposition, evidence and remaining work](backlogs/review-followup-20261003.md).
+Earlier QA and pagination entries below are their original snapshots.
+
+## Workspace queue pagination - 2026-10-03
+
+User-authorized continuation on `codex/lab-workspace-ui-draft`, draft PR #22;
+no new Batch. Booking and incident reads opt into server pagination with `page`.
+Status filtering and full totals run inside the authenticated owner/lab scope,
+with stable ordering and a consistent PostgreSQL snapshot per response. Legacy
+array reads keep their existing limits. Staff home, administrative priority counts,
+booking operations, incident operations and the incident navigation badge use the
+new contract. Confirmation forms still use the existing authorized mutations.
+
+Local verification passes: 60 required backend tests, 4 new PostgreSQL integration
+tests with 160 bookings/86 incidents, 51 real-browser checks, backend lint, frontend
+locale/network checks, lint (13 existing warnings), TypeScript and production build.
+The new isolated PostgreSQL/browser CI job is configured but has not run on GitHub
+for these local changes. See [queue report](WORKSPACE_QUEUE_PAGINATION_20261003.md)
+for contracts, reproduction and remaining limits. Earlier local QA/documents and
+artifacts are preserved. No schema migration, dependency change, push, merge or
+deployment is included.
+
+## Workflow QA checkpoint - 2026-10-03
+
+PR #22 at `66e744473c940515548048d448019beb3d311e9b` was checked through
+required tests, backend integrations, business browser suites and role/bilingual
+UI checks. [QA report](QA_WORKFLOW_REPORT_20261003.md) records evidence, setup
+corrections and external integration limits. A P2 issue remains open: the
+maintenance edit form reads `resourceId` while the API returns nested
+`resource.id`, clearing the selected resource during rescheduling. Selecting it
+again allows the tested workflow to finish; this does not close the issue.
+No application source was changed in this QA task; PR remains draft.
+
+## Assistant and request isolation — 2026-10-01
+
+Continuation stays on `codex/lab-workspace-ui-draft`, draft PR #22, preserving
+the accepted role views, shared catalogs and navigation read budgets. MCP ingress
+now has its own bounded IP allowance; internal protocol/tool calls cannot spend
+the ordinary business API allowance. Disconnects and deadlines reach active tools;
+admission remains occupied until an already-started database read settles.
+
+VI/EN duration questions support minutes, hours, decimal hours and combined
+hours/minutes. An untouched assistant field no longer overrides the question;
+explicit minutes take priority. Eligibility is read once per resource per answer.
+Missing/deferred evidence skips model generation; complete model input is capped
+at 24,000 UTF-8 bytes. API deadlines cover fetch and body reads, preserve caller
+cancellation and never automatically retry a mutation. Shared catalogs now contain
+2,115 keys, including localized deadline and deferred-hardware feedback.
+
+Normal workspace dashboards request `includeTelemetry=false`, avoiding camera,
+sample, threshold and hardware-alert reads. Deferred monitoring is explicit,
+not a healthy-zero measurement. Legacy authenticated hardware routes retain their
+contracts; assistant hardware reads additionally require
+`HARDWARE_TELEMETRY_ENABLED=true`. No schema or runtime dependency changes.
+
+Local verification: 60 required backend tests (38 core, 3 security, 19 assistant
+unit/HTTP transport), backend lint/configuration, 7 frontend locale/network tests,
+76-module source audit, typecheck and production build pass. Frontend lint has
+zero errors and 13 existing warnings. PostgreSQL and browser cases are included
+in the existing CI gates; exact current-head outcomes remain authoritative on
+PR #22. See `ASSISTANT_REQUEST_HARDENING_20261001.md`. Main is not merged or deployed.
+
+## Task-focused role entry points — 2026-09-30
+
+Draft PR #22 now separates student resource finding, lecturer practical groups,
+LAB staff work stages and administrative coordination into four layouts. Exact
+booking/group/category/role links reuse the existing authenticated screens and
+confirmation forms. Shared catalogs contain 2,107 VI/EN keys; role views load on
+demand. Core/group failures have explicit recovery and no fake zero work counts.
+Frontend gates, responsive visual QA and 523 PostgreSQL browser checks pass
+(104 navigation + 298 bilingual + 121 role entry). All nine workflows passed on
+code revision `e815fd82b184e6c7d94ad7b9be51177faaa8ea20`; current-head checks
+remain authoritative on the PR. Resource links resolve the exact selected record,
+and in-modal VI/EN controls preserve action drafts. Directory requests use at most
+four workers and cancel stale reads. Shared application loads also cancel stale
+requests and reuse records when leaving home; role checks assert the API request
+budget on session entry and notification navigation. See `docs/ROLE_WORKSPACE_REFINEMENT_20260930.md` for
+research, routing, list-count limits and verification. No main merge, schema or
+runtime dependency change is included.
+
+## Bilingual and assistant foundation — 2026-09-30
+
+The interrupted VI/EN + assistant work is continued in draft PR #22 on
+`codex/lab-workspace-ui-draft`. One 1,947-key catalog and verified backend
+projection replace parallel translation maps; failed/tampered language loads
+retry without discarding drafts. API errors, calendar/system labels, notifications
+and OTP mail use the shared boundary. Original user/resource evidence is retained.
+The authenticated assistant is read-only, reports local/model provenance, limits
+work and releases capacity after abort/deadline. Camera/sensor UI is deferred by
+a default-off flag. No runtime dependency or schema migration is added.
+Local PostgreSQL 16 integration/business regressions, 298 bilingual browser
+checks and 104 navigation checks passed. See
+`docs/BILINGUAL_ASSISTANT_FOUNDATION_20260930.md` for contracts, configuration,
+performance measurements and unverified external-provider boundaries. Current-head
+CI is authoritative on the PR; this is not a production deployment or main merge.
+
+
+## Workspace navigation and role overview — 2026-09-30
+
+Continuation of the interrupted UI task in draft PR #22 on
+`codex/lab-workspace-ui-draft`. Signed-in users enter a role-aware overview;
+the complete menu opens on click, with search, grouped links and keyboard focus
+management. Shared shell styling applies across authenticated screens.
+Local PostgreSQL 16 auth/calendar/handover E2E, 104 navigation checks and 78
+desktop/mobile screen checks passed. See
+`docs/WORKSPACE_NAVIGATION_REFINEMENT_20260930.md` for evidence and limits.
+The PR remains draft; this update does not merge into `main` or deploy a release.
+
+## Resource dossier refinement — 2026-09-30
+
+User-authorized continuation of draft PR #22: shared selective media gallery,
+public practical usage guides in existing resource JSON, guarded resource edits,
+restricted-booking feedback and workspace code splitting. See
+`docs/RESOURCE_DOSSIER_REFINEMENT_20260930.md` for usage, checks and limits.
+This does not advance PostgreSQL, live media/storage or production verification.
+
+
+## Local LAB experience continuation — 2026-09-29
+
+User-authorized working-tree continuation, not a new numbered Batch or release.
+Landing, VI/EN presentation, maintenance rescheduling, scoped material stock,
+and course-group supervision have been extended. See
+`docs/LAB_WORKSPACE_EXPERIENCE_REPORT_20260929.md` for scope, verification, and
+integration limits. The user requested publication as a draft PR for further
+revision; visual acceptance and merge remain pending. This is not a production
+deployment. The GitHub checkpoint below remains historical evidence.
+
 ## Repository integration checkpoint — 2026-09-28
 
 This section is the current GitHub authority for repository integration state. Older
@@ -312,7 +482,7 @@ notifications and versioned resource/purpose pricing with automatic charges are
 implemented and tested. Fast booking/OTP/address and payment expiry remain pending.
 The closure statements below describe historical milestones, not this upgrade.
 
-Last synchronized: 2026-09-21
+Historical baseline synchronized: 2026-09-21
 
 ## Final Boundary
 
@@ -403,7 +573,7 @@ Batch 9 or Batch 10, and neither has been started.
 - Truthful `HEALTHY`, `WARNING`, `STALE`, `UNAVAILABLE`, and `NO_DATA` states;
   no synthetic production samples and no fake live camera stream.
 
-## Latest Verified Gates
+## Historical verified gates (2026-09-21 baseline)
 
 Backend, each on a fresh isolated PostgreSQL 16 database:
 
