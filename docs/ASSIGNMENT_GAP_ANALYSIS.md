@@ -1,5 +1,10 @@
 # Assignment Gap Analysis
 
+> Historical pre-reconciliation analysis. Its findings describe the original
+> implementation, before the canonical repair and verified Batches. They are
+> preserved as evidence, not the current backlog. Consult [current state](CURRENT_STATE.md),
+> [SRS](srs.md) and [documentation index](README.md) for today's baseline.
+
 ## 1. Scope authority
 
 This analysis uses the following sources in descending order of authority:

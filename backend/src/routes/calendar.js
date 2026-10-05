@@ -1,3 +1,4 @@
+import { localize } from '../locales/index.js';
 import express from "express";
 import { prisma } from "../db.js";
 import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
@@ -76,6 +77,7 @@ router.get("/slots", async (req, res, next) => {
       dateObj.setDate(monday.getDate() + d.offset);
       return {
         ...d,
+        nameKey: `enum.weekday.${d.key}`, name: localize(req.locale, `enum.weekday.${d.key}`),
         dateStr: `${String(dateObj.getDate()).padStart(2, "0")}/${String(dateObj.getMonth() + 1).padStart(2, "0")}`,
         fullDate: `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}-${String(dateObj.getDate()).padStart(2, "0")}`,
         isToday: dateObj.toDateString() === now.toDateString()
@@ -133,16 +135,16 @@ router.get("/slots", async (req, res, next) => {
         if (opStatus === "MAINTENANCE" || opStatus === "CALIBRATION") {
           return {
             status: "maintenance",
-            label: "BẢO TRÌ ĐỊNH KỲ",
-            details: "Đang bảo dưỡng kỹ thuật"
+            labelKey: "calendar.maintenance", label: localize(req.locale, "calendar.maintenance"),
+            detailsKey: "calendar.maintenanceDetails", details: localize(req.locale, "calendar.maintenanceDetails")
           };
         }
 
         if (opStatus === "OFFLINE" || opStatus === "BROKEN" || opStatus === "RETIRED") {
           return {
             status: "offline",
-            label: "TẠM NGỪNG",
-            details: "Thiết bị không khả dụng"
+            labelKey: "calendar.offline", label: localize(req.locale, "calendar.offline"),
+            detailsKey: "calendar.offlineDetails", details: localize(req.locale, "calendar.offlineDetails")
           };
         }
 
@@ -154,7 +156,8 @@ router.get("/slots", async (req, res, next) => {
         if (maintenance) {
           return {
             status: "maintenance",
-            label: maintenance.kind === "calibration" ? "HIỆU CHUẨN" : "BẢO TRÌ",
+            labelKey: maintenance.kind === "calibration" ? "calendar.calibration" : "calendar.maintenance",
+            label: localize(req.locale, maintenance.kind === "calibration" ? "calendar.calibration" : "calendar.maintenance"),
             details: maintenance.title,
             maintenanceWindowId: maintenance.id
           };
@@ -171,8 +174,10 @@ router.get("/slots", async (req, res, next) => {
           const isMine = currentUserId && match.requestedById === currentUserId;
           return {
             status: "booked",
-            label: isMine ? "LỊCH CỦA BẠN" : "ĐÃ ĐẶT",
-            title: isMine || isStaff ? match.title : "Đã đặt",
+            labelKey: isMine ? "calendar.myBooking" : "calendar.booked",
+            label: localize(req.locale, isMine ? "calendar.myBooking" : "calendar.booked"),
+            title: isMine || isStaff ? match.title : localize(req.locale, "calendar.booked"),
+            ...(!isMine && !isStaff ? { titleKey: "calendar.booked" } : {}),
             resourceId: activeResourceId,
             bookingId: match.id,
             isMine: Boolean(isMine)
@@ -181,8 +186,8 @@ router.get("/slots", async (req, res, next) => {
 
         return {
           status: "available",
-          label: "Trống",
-          action: "+ Đặt ngay",
+          labelKey: "calendar.available", label: localize(req.locale, "calendar.available"),
+          actionKey: "calendar.bookNow", action: localize(req.locale, "calendar.bookNow"),
           resourceId: activeResourceId,
           date: day.fullDate,
           time: timeLabel
@@ -264,6 +269,8 @@ router.get("/events", async (req, res, next) => {
       return res.status(400).json({
         error: {
           code: "VALIDATION_ERROR",
+          messageKey: "api.CALENDAR_RANGE_TOO_LONG",
+          details: { maxDays: MAX_RANGE_DAYS },
           message: `Requested calendar range (${Math.round(diffDays)} days) exceeds maximum allowed limit of ${MAX_RANGE_DAYS} days`
         }
       });
@@ -355,7 +362,7 @@ router.get("/events", async (req, res, next) => {
           resourceId: b.resourceId,
           resourceName: b.resource?.name,
           resourceCode: b.resource?.code,
-          title: "Đã đặt",
+          title: localize(req.locale, "calendar.booked"), titleKey: "calendar.booked",
           start: b.startAt.toISOString(),
           end: b.endAt.toISOString(),
           occupancy: "BOOKED",
@@ -372,7 +379,9 @@ router.get("/events", async (req, res, next) => {
         resourceId: m.resourceId,
         resourceName: m.resource?.name,
         resourceCode: m.resource?.code,
-        title: m.kind === "calibration" ? `Hiệu chuẩn: ${m.title}` : `Bảo trì: ${m.title}`,
+        titleKey: m.kind === "calibration" ? "calendar.calibrationTitle" : "calendar.maintenanceTitle",
+        titleParams: { title: m.title },
+        title: localize(req.locale, m.kind === "calibration" ? "calendar.calibrationTitle" : "calendar.maintenanceTitle", { title: m.title }),
         start: m.startAt.toISOString(),
         end: m.endAt.toISOString(),
         status: m.status,

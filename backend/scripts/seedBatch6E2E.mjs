@@ -11,6 +11,8 @@ assert.ok(["localhost", "127.0.0.1"].includes(databaseUrl.hostname), "Only local
 const prisma = new PrismaClient();
 const passwordHash = await bcrypt.hash("Batch6E2E!Pass", 4);
 const now = new Date();
+const startAt = new Date(now.getTime() + 2 * 24 * 60 * 60_000);
+const endAt = new Date(startAt.getTime() + 90 * 60_000);
 
 const ids = {
   campus: "b6000000-0000-4000-8000-000000000001",
@@ -237,6 +239,9 @@ try {
         type: "BOOKING_UPCOMING",
         title: "Batch 6 lịch sắp bắt đầu",
         message: "Thông báo E2E đã đến hạn và phải hiển thị cho đúng người dùng.",
+        titleKey: "booking.upcoming.title",
+        messageKey: "booking.upcoming.message",
+        messageParams: { bookingId: ids.booking, title: "Batch 6 dashboard booking", resourceCode: "B6-E2E-HEALTHY", startAt: startAt.toISOString() },
         severity: "info",
         channel: "in_app",
         scheduledAt: new Date(now.getTime() - 60_000),
@@ -249,6 +254,9 @@ try {
         type: "RETURN_REMINDER",
         title: "Batch 6 nhắc trả trong tương lai",
         message: "Thông báo này chưa đến hạn và không được hiển thị.",
+        titleKey: "booking.return_reminder.title",
+        messageKey: "booking.return_reminder.message",
+        messageParams: { bookingId: ids.booking, title: "Batch 6 dashboard booking", resourceCode: "B6-E2E-HEALTHY", endAt: endAt.toISOString() },
         severity: "warning",
         channel: "in_app",
         scheduledAt: new Date(now.getTime() + 24 * 60 * 60_000),
@@ -258,8 +266,6 @@ try {
     ]
   });
 
-  const startAt = new Date(now.getTime() + 2 * 24 * 60 * 60_000);
-  const endAt = new Date(startAt.getTime() + 90 * 60_000);
   await prisma.booking.deleteMany({ where: { id: ids.booking } });
   await prisma.booking.create({
     data: {

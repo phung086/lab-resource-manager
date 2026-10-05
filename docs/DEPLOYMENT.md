@@ -5,8 +5,7 @@ The canonical production stack is:
 - React/Vite static frontend served by Nginx;
 - Node.js/Express API;
 - PostgreSQL 16;
-- Prometheus;
-- Node Exporter.
+- optional Prometheus and Node Exporter under the `observability` profile.
 
 REQUIRED CORE production behavior must remain database-backed and must not fall back to demo/mock data.
 
@@ -223,6 +222,43 @@ remains disabled by default and becomes available only when both payment flags
 and the validated merchant configuration described in section 1 are present.
 
 ## 8. Telemetry
+
+### Protected metrics and optional observability
+
+The production API runs as `node` (UID 1000), with a writable `/app/data` created
+in the image. Bind mounts must grant this user appropriate permissions. The
+canonical migration/first-admin startup remains mandatory; do not use
+`prisma db push` to work around permissions or migration errors.
+
+Production `/metrics` returns 503 unless `METRICS_TOKEN` is configured. When
+configured it requires `Authorization: Bearer <token>`; missing/wrong values
+return 401. Query parameters never authorize scraping. Keep tokens out of URLs,
+screenshots and logs. Development retains public local scraping unless the same
+token is explicitly configured.
+
+To enable observability on the deployment host:
+
+1. Generate a cryptographically random token of 32–256 non-whitespace characters
+   (for example 32 random bytes encoded as hex). Set `METRICS_TOKEN` in private
+   `.env.production`; do not reuse JWT/provider credentials.
+2. Save exactly that token in a protected file, e.g. `.secrets/metrics-token`.
+   This directory is Git-ignored. Set `METRICS_TOKEN_FILE` to its path. Avoid a
+   BOM or extra whitespace; restrict host access while allowing the Prometheus
+   container user to read the file. Compose's file-backed secret does not itself
+   encrypt the host file.
+3. Verify configuration, then activate the optional services explicitly:
+
+   ```bash
+   docker compose --env-file .env.production -f docker-compose.prod.yml --profile observability config --quiet
+   docker compose --env-file .env.production -f docker-compose.prod.yml --profile observability up -d --build
+   ```
+
+Prometheus reads `/run/secrets/metrics_token` and scrapes `backend:8000`. Its host
+UI binds `127.0.0.1:${PROMETHEUS_PORT:-9090}`; use the host or an approved secure
+tunnel. Node Exporter uses Linux host mounts; native Windows host coverage is not
+certified. Without the profile, ordinary production startup runs application/DB
+only. Rotate file and backend environment together, recreate backend and
+reload/recreate Prometheus, then confirm the target is UP without exposing secrets.
 
 Batch 6 accepts authenticated telemetry only.
 

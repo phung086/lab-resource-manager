@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
+    "test:ui:dossier": "node test_resource_dossier_ui.mjs",
     "test:e2e:auth": "node test_batch2_auth_e2e.mjs",
     "test:e2e:resources": "node test_batch3_resources_e2e.mjs",
     "test:e2e:calendar": "node test_batch4_calendar_e2e.mjs",
@@ -14,11 +15,17 @@
     "test:e2e:monitoring": "node test_batch6_monitoring_e2e.mjs",
     "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
     "typecheck": "tsc -p tsconfig.check.json",
-    "test:required": "npm run lint && npm run typecheck && npm run build",
+    "test:required": "npm run test:i18n && npm run lint && npm run typecheck && npm run build",
     "test:phase-g": "node --experimental-strip-types test_timezone_vietnam.mjs && node --experimental-strip-types test_guest_booking_wizard.mjs && node test_eligibility_and_temp_account.mjs",
     "test:e2e:phase-h": "node test_phase_h_payment_e2e.mjs",
     "test:e2e:demo": "node test_batch7_graduation_demo_e2e.mjs",
-    "test:e2e:smart-monitoring": "node test_batch8_smart_monitoring_e2e.mjs"
+    "test:e2e:smart-monitoring": "node test_batch8_smart_monitoring_e2e.mjs",
+    "test:ui:workspace": "node test_workspace_navigation_ui.mjs",
+    "i18n:sync": "node scripts/syncLocales.mjs --write",
+    "test:i18n": "node scripts/syncLocales.mjs && node scripts/auditLocaleSource.mjs && node --test test_locale_loader.mjs test_api_request.mjs test_locale_sync.mjs",
+    "test:ui:bilingual": "node test_bilingual_workspace_ui.mjs",
+    "test:ui:roles": "node test_role_workspaces_ui.mjs",
+    "test:ui:queue-pagination": "node test_queue_pagination_ui.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",

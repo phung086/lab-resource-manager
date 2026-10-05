@@ -1,0 +1,22 @@
+import express from "express";
+import { z } from "zod";
+import { requireAuth } from "../middleware/auth.js";
+import * as workspace from "../services/labWorkspaceService.js";
+
+const router = express.Router();
+router.use(requireAuth);
+const route = fn => async (req, res, next) => { try { await fn(req, res); } catch (error) { next(error); } };
+const id = z.string().uuid();
+const text = (min, max) => z.string().trim().min(min).max(max);
+const stock = z.object({ id, resourceId: id, unit: text(1, 30), kind: z.enum(["RECEIPT", "ISSUE", "ADJUSTMENT"]), quantity: z.number().int().min(-1000000).max(1000000), reason: text(5, 500), reference: text(2, 120), maintenanceId: id.optional() }).strict().refine(d => d.quantity !== 0 && (d.kind === "ADJUSTMENT" || d.quantity > 0), { message: "Receipt and issue quantities must be positive; adjustments cannot be zero." });
+router.get("/stock", route(async (req, res) => res.json(await workspace.listStock(req.user))));
+router.get("/stock/:resourceId", route(async (req, res) => res.json(await workspace.stockHistory(req.user, id.parse(req.params.resourceId)))));
+router.post("/stock", route(async (req, res) => res.status(201).json(await workspace.recordStock(req.user, stock.parse(req.body)))));
+router.get("/groups", route(async (req, res) => res.json(await workspace.listTeachingGroups(req.user))));
+router.post("/groups", route(async (req, res) => res.status(201).json(await workspace.createTeachingGroup(req.user, z.object({ code: text(2, 40), name: text(3, 160), term: text(2, 80), lecturerEmail: z.string().trim().email() }).strict().parse(req.body)))));
+router.get("/groups/:id", route(async (req, res) => res.json(await workspace.teachingGroupDetail(req.user, id.parse(req.params.id)))));
+router.post("/groups/:id/members", route(async (req, res) => res.status(201).json(await workspace.changeGroupMember(req.user, id.parse(req.params.id), z.object({ email: z.string().trim().email() }).strict().parse(req.body)))));
+router.post("/groups/:id/activities", route(async (req, res) => res.status(201).json(await workspace.submitTeachingActivity(req.user, id.parse(req.params.id), z.object({ bookingId: id, learningGoal: text(10, 1000) }).strict().parse(req.body)))));
+router.patch("/groups/:id/activities/:activityId", route(async (req, res) => res.json(await workspace.reviewTeachingActivity(req.user, id.parse(req.params.id), id.parse(req.params.activityId), z.object({ decision: z.enum(["ENDORSED", "CHANGES_REQUESTED"]), feedback: text(5, 1000) }).strict().parse(req.body)))));
+router.patch("/groups/:id/activities/:activityId/revision", route(async (req, res) => res.json(await workspace.reviseTeachingActivity(req.user, id.parse(req.params.id), id.parse(req.params.activityId), z.object({ learningGoal: text(10, 1000) }).strict().parse(req.body)))));
+export default router;

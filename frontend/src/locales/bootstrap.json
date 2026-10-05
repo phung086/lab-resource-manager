@@ -1,0 +1,4 @@
+{
+  "vi": {"loading":"Đang tải ngôn ngữ…","failed":"Không tải được ngôn ngữ. Dữ liệu đang nhập được giữ nguyên.","retry":"Thử lại"},
+  "en": {"loading":"Loading language…","failed":"Unable to load this language. Your input has been preserved.","retry":"Retry"}
+}

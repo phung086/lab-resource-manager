@@ -22,7 +22,7 @@ async function once(args) {
   const child = run(args, backend);
   await new Promise((resolve, reject) => { child.once("error", reject); child.once("exit", code => code === 0 ? resolve() : reject(new Error(`Demo setup exited with code ${code}`))); });
 }
-await once(["node_modules/prisma/build/index.js", "migrate", "deploy"]);
+await once(["scripts/deployCanonicalMigrations.mjs"]);
 await once(["scripts/seedLocalDemo.mjs"]);
 const children = [run(["src/server.js"], backend), run(["node_modules/vite/bin/vite.js", "--host", "127.0.0.1", "--port", uiPort, "--strictPort"], frontend)];
 let stopping = false;

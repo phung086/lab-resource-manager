@@ -210,6 +210,12 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
     assert.equal(user.passwordResetRequired, true);
     assert.equal(await bcrypt.compare(phone, user.passwordHash), true);
     assert.equal(await isolated.booking.count({ where: { requestedById: user.id } }), 1);
+    const phoneLogin = await request(app).post("/api/auth/login").send({ email: target, password: phone });
+    assert.equal(phoneLogin.status, 401);
+    assert.equal(phoneLogin.body.error.code, "AUTH_INVALID");
+    assert.equal(phoneLogin.body.accessToken, undefined);
+    assert.equal((await request(app).post("/api/auth/change-password")
+      .send({ currentPassword: phone, newPassword: "AttackerPassword!123" })).status, 401);
     const bearer = { Authorization: `Bearer ${response.body.accessToken}` };
     assert.equal((await request(app).get("/api/auth/me").set(bearer)).status, 200);
     const blocked = await request(app).get("/api/bookings/my-bookings").set(bearer);
@@ -218,6 +224,9 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
     assert.equal((await request(app).post("/api/auth/change-password").set(bearer)
       .send({ currentPassword: phone, newPassword: password })).status, 204);
     assert.equal((await request(app).get("/api/bookings/my-bookings").set(bearer)).status, 200);
+    const normalLogin = await request(app).post("/api/auth/login").send({ email: target, password });
+    assert.equal(normalLogin.status, 200, JSON.stringify(normalLogin.body));
+    assert.ok(normalLogin.body.accessToken);
   });
 
   await t.test("existing EXTERNAL is reused without profile or password overwrite", async () => {

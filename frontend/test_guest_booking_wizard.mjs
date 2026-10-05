@@ -1,24 +1,22 @@
-import assert from "node:assert/strict";
-import { mapOtpErrorCode } from "./src/utils/otpErrors.ts";
-import { getVietnamTodayDateString } from "./src/utils/timezone.ts";
-
-console.log("=== RUNNING GUEST BOOKING WIZARD UNIT TESTS ===");
-
-// 1. Error mapping tests
-{
-  assert.match(mapOtpErrorCode("OTP_INVALID"), /Mã OTP không chính xác/);
-  assert.match(mapOtpErrorCode("OTP_EXPIRED"), /Mã OTP đã hết hạn/);
-  assert.match(mapOtpErrorCode("OTP_ATTEMPTS_EXCEEDED"), /nhập sai OTP quá 5 lần/);
-  assert.match(mapOtpErrorCode("OTP_ALREADY_USED"), /đã được sử dụng/);
-  assert.match(mapOtpErrorCode("OTP_RESEND_TOO_SOON"), /chờ hết thời gian đếm ngược/);
-  assert.match(mapOtpErrorCode("EMAIL_DELIVERY_FAILED"), /Không thể gửi email OTP/);
-  assert.equal(mapOtpErrorCode("UNKNOWN_ERROR", "Lỗi bất định"), "Lỗi bất định");
-}
-
-// 2. Vietnam today string for date picker min
-{
-  const today = getVietnamTodayDateString();
-  assert.match(today, /^\d{4}-\d{2}-\d{2}$/);
-}
-
-console.log("Guest Booking Wizard Unit Tests PASS!");
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { mapOtpErrorCode } from './src/utils/otpErrors.ts';
+import { getVietnamTodayDateString } from './src/utils/timezone.ts';
+import { loadLocale, activateLocale, translate } from './src/i18n.js';
+const originalFetch = globalThis.fetch;
+try {
+  for (const locale of ['vi', 'en']) {
+    globalThis.fetch = async () => new Response(readFileSync(new URL(`./src/locales/catalog/${locale}.json`, import.meta.url)));
+    await loadLocale(locale); activateLocale(locale);
+    const key = mapOtpErrorCode('OTP_INVALID');
+    assert.equal(key, 'api.OTP_INVALID', 'State keeps a stable error key across locales');
+    assert.match(translate(key), locale === 'vi' ? /Mã OTP không chính xác/ : /OTP is incorrect/);
+    for (const code of ['OTP_EXPIRED','OTP_ATTEMPTS_EXCEEDED','OTP_ALREADY_USED','OTP_RESEND_TOO_SOON','EMAIL_DELIVERY_FAILED']) {
+      assert.equal(mapOtpErrorCode(code), `api.${code}`);
+      assert.ok(translate(mapOtpErrorCode(code)).length);
+    }
+    assert.equal(mapOtpErrorCode('UNKNOWN_ERROR', 'Original diagnostic'), 'Original diagnostic');
+  }
+  assert.match(getVietnamTodayDateString(), /^\d{4}-\d{2}-\d{2}$/);
+  console.log('PASS: OTP keys and VI/EN rendering use the loaded catalog; Vietnam date picker remains canonical.');
+} finally { globalThis.fetch = originalFetch; }

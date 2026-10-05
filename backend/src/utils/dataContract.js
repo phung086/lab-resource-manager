@@ -1,3 +1,5 @@
+import { resourceUsageGuideSchema } from "./resourceUsageGuide.js";
+
 export const resourceTypes = ["room", "gpu_server", "raspberry_pi", "uav", "camera", "kit", "material"];
 export const resourceStatuses = ["available", "reserved", "in_use", "maintenance", "offline"];
 export const operationalStatuses = ["AVAILABLE", "IN_USE", "MAINTENANCE", "CALIBRATION", "BROKEN", "RETIRED", "OFFLINE"];
@@ -63,7 +65,13 @@ export function normalizeSpecs(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return Object.fromEntries(
     Object.entries(value)
-      .map(([key, rawValue]) => [normalizeSpecKey(key), normalizeSpecValue(rawValue)])
+      .map(([key, rawValue]) => {
+        if (key === "usageGuide") {
+          const guide = resourceUsageGuideSchema.safeParse(rawValue);
+          return [key, guide.success ? guide.data : undefined];
+        }
+        return [normalizeSpecKey(key), normalizeSpecValue(rawValue)];
+      })
       .filter(([key, normalizedValue]) => key && normalizedValue !== undefined)
   );
 }

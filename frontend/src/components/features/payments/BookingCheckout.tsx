@@ -1,3 +1,5 @@
+import { translate } from "../../../i18n.js";
+import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, RefreshCw, ShieldCheck } from "lucide-react";
 import { apiRequest } from "../../../api.js";
@@ -9,6 +11,7 @@ type Charge = { id: string; amount: number; currency: string; status: string; pr
 const money = (amount: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
 export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: string; onClearBooking?: () => void }) {
+  const { tr } = useLocale();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [charge, setCharge] = useState<Charge | null>(null);
   const [vnpayReady, setVnpayReady] = useState(false);
@@ -27,7 +30,7 @@ export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: stri
       setBooking(bookingRow);
       setCharge(charges.find((row: Charge) => row.status === "success") || charges.find((row: Charge) => row.status === "pending") || charges.find((row: Charge) => ["failed", "expired"].includes(row.status)) || charges[0] || null);
       setVnpayReady(Boolean(paymentList.providers?.vnpay));
-    } catch (cause: any) { setError(cause.message || "Không thể tải lịch đặt LAB."); }
+    } catch (cause: any) { setError(cause.message || "ui.unable_to_load_the_lab_0799c568"); }
     finally { setLoading(false); }
   }, [bookingId]);
 
@@ -41,42 +44,42 @@ export function BookingCheckout({ bookingId, onClearBooking }: { bookingId: stri
       setCharge(result.transaction);
       const target = new URL(result.paymentUrl);
       if (target.protocol !== "https:" || !/(^|\.)vnpay(?:ment)?\.vn$/i.test(target.hostname) || target.searchParams.get("vnp_BankCode") !== "VNPAYQR") {
-        throw new Error("Địa chỉ thanh toán VNPAY không hợp lệ. Vui lòng liên hệ cán bộ lab.");
+        throw new Error(translate("ui.invalid_vnpay_payment_address_please_bed3b506"));
       }
       window.location.assign(target.toString());
-    } catch (cause: any) { setError(cause.message || "Không thể mở cổng thanh toán VNPAY."); setRedirecting(false); }
+    } catch (cause: any) { setError(cause.message || "ui.unable_to_open_the_vnpay_b0ce765e"); setRedirecting(false); }
   }
 
   return <section className="content-stack payment-page booking-checkout" aria-labelledby="booking-checkout-heading">
     <header className="page-section-header">
-      <div><h1 id="booking-checkout-heading">Thanh toán lịch đặt LAB</h1><p className="section-description">Xem lại lịch đặt LAB và thanh toán bằng QR tại cổng VNPAY.</p></div>
-      <button type="button" className="secondary-button" onClick={load} disabled={loading || redirecting}><RefreshCw size={16} /> Làm mới</button>
+      <div><h1 id="booking-checkout-heading">{translate("ui.lab_booking_payment_5e2f0fb9")}</h1><p className="section-description">{translate("ui.review_your_lab_booking_and_bcc8d74b")}</p></div>
+      <button type="button" className="secondary-button" onClick={load} disabled={loading || redirecting}><RefreshCw size={16} /> {tr("ui.refresh_b4c61340")}</button>
     </header>
-    {error && <p className="alert danger" role="alert">{error}</p>}
-    {loading ? <p role="status">Đang tải thông tin thanh toán…</p> : booking && <div className="panel booking-checkout-order">
+    {error && <p className="alert danger" role="alert">{translate(error)}</p>}
+    {loading ? <p role="status">{translate("ui.loading_payment_details_1be4a89c")}</p> : booking && <div className="panel booking-checkout-order">
       <h2>{booking.title}</h2>
       <p>{booking.resource.code} · {booking.resource.name}</p>
       <dl>
-        <dt>Thời gian</dt><dd>{formatVietnamDateTime(booking.startAt)} – {formatVietnamDateTime(booking.endAt)}</dd>
-        <dt>Mã booking</dt><dd className="payment-ref">{booking.id}</dd>
-        <dt>Phí sử dụng</dt><dd><strong className="payment-amount">{money(booking.feeAmountVnd)}</strong></dd>
-        {charge && <><dt>Mã thanh toán</dt><dd className="payment-ref">{charge.txnRef}</dd></>}
+        <dt>{tr("ui.time_b295fd62")}</dt><dd>{formatVietnamDateTime(booking.startAt)} – {formatVietnamDateTime(booking.endAt)}</dd>
+        <dt>{tr("ui.booking_reference_e80792a6")}</dt><dd className="payment-ref">{booking.id}</dd>
+        <dt>{tr("ui.usage_fee_cdf18099")}</dt><dd><strong className="payment-amount">{money(booking.feeAmountVnd)}</strong></dd>
+        {charge && <><dt>{translate("ui.payment_reference_3749e1af")}</dt><dd className="payment-ref">{charge.txnRef}</dd></>}
       </dl>
-      {booking.feeAmountVnd === 0 ? <div className="alert" role="status">Lịch đặt này không có phí sử dụng, nên không có QR thanh toán. Nếu tài nguyên có bảng giá mới, mức giá đó chỉ áp dụng cho booking tạo sau khi bảng giá được lưu.</div>
-        : booking.status === "PENDING_APPROVAL" ? <div className="alert" role="status">Yêu cầu đang chờ cán bộ lab duyệt. Sau khi được duyệt, hệ thống tạo khoản thu và bạn có thể thanh toán tại đây.</div>
-        : ["REJECTED", "CANCELLED"].includes(booking.status) && charge?.status === "success" && charge.reconciliationStatus === "manual_review" ? <div className="alert warning" role="status">Khoản thanh toán đã được VNPAY xác minh sau khi booking kết thúc. Booking vẫn {booking.status === "REJECTED" ? "bị từ chối" : "đã hủy"}; giao dịch đang chờ quản trị viên đối soát và xử lý hoàn tiền thủ công.</div>
-        : ["REJECTED", "CANCELLED"].includes(booking.status) ? <div className="alert" role="status">Lịch đặt đã {booking.status === "REJECTED" ? "bị từ chối" : "hủy"}. Không thể thanh toán booking này.</div>
-        : charge?.status === "success" ? <div className="alert success" role="status"><ShieldCheck size={18} /> Đã xác minh thanh toán {money(charge.amount)} lúc {charge.paidAt ? formatVietnamDateTime(charge.paidAt) : "—"}.</div>
+      {booking.feeAmountVnd === 0 ? <div className="alert" role="status">{translate("ui.this_booking_is_free_and_a79ab8e0")}</div>
+        : booking.status === "PENDING_APPROVAL" ? <div className="alert" role="status">{translate("ui.awaiting_lab_staff_approval_a_7acf2a8a")}</div>
+        : ["REJECTED", "CANCELLED"].includes(booking.status) && charge?.status === "success" && charge.reconciliationStatus === "manual_review" ? <div className="alert warning" role="status">{translate("ui.vnpay_verified_this_payment_after_b54cfde0")} {booking.status === "REJECTED" ? tr("ui.rejected_cb6ec8af") : tr("ui.cancelled_2cdb07af")}{translate("ui.an_administrator_must_reconcile_the_682abc88")}</div>
+        : ["REJECTED", "CANCELLED"].includes(booking.status) ? <div className="alert" role="status">{translate("ui.the_booking_has_been_09264f80")} {booking.status === "REJECTED" ? tr("ui.rejected_cb6ec8af") : translate("ui.cancelled_a37e2797")}{translate("ui.this_booking_cannot_be_paid_ed942f5f")}</div>
+        : charge?.status === "success" ? <div className="alert success" role="status"><ShieldCheck size={18} />  {translate("ui.payment_verified_c37ae36e")} {money(charge.amount)}  {translate("ui.at_0febedcf")} {charge.paidAt ? formatVietnamDateTime(charge.paidAt) : "—"}.</div>
         : charge && ["pending", "failed", "expired"].includes(charge.status) ? <div className="booking-checkout-payment">
-          <h3>Thanh toán bằng VNPAY-QR</h3>
-          {charge.status !== "pending" && <p className="alert warning" role="status">Phiên trước {charge.status === "expired" ? "đã hết hạn" : "không thành công"}. Hệ thống sẽ tạo một phiên mới có mã giao dịch riêng.</p>}
-          <p>Chọn thanh toán để mở trang bảo mật của VNPAY. Mã QR sẽ được VNPAY hiển thị tại đó; bạn quét bằng ứng dụng ngân hàng hỗ trợ VNPAY-QR. Thông tin thẻ hoặc tài khoản ngân hàng được nhập trên trang VNPAY.</p>
-          <button type="button" className="primary-button" disabled={!vnpayReady || redirecting || charge.provider === "vietqr"} onClick={pay}><ExternalLink size={17} /> {redirecting ? "Đang chuyển sang VNPAY…" : `Thanh toán ${money(charge.amount)} qua VNPAY-QR`}</button>
-          {!vnpayReady && <p className="alert warning" role="status">Cổng VNPAY chưa được cấu hình trên máy chủ. Khoản thu đã lưu nhưng chưa thể tạo QR thanh toán; vui lòng liên hệ cán bộ lab.</p>}
-          {charge.provider === "vietqr" && <p className="alert warning">Giao dịch này đã chọn VietQR và đang chờ đối soát. Không thể đổi sang VNPAY cho cùng giao dịch.</p>}
-          <small>Trạng thái “đã thanh toán” chỉ xuất hiện khi máy chủ nhận và kiểm tra thông báo xác thực từ VNPAY.</small>
-        </div> : <div className="alert warning">Chưa có khoản thu hợp lệ cho booking này. Vui lòng làm mới hoặc liên hệ cán bộ lab.</div>}
+          <h3>{translate("ui.pay_with_vnpay_qr_5c622fc2")}</h3>
+          {charge.status !== "pending" && <p className="alert warning" role="status">{translate("ui.the_previous_session_c6eb4190")} {charge.status === "expired" ? translate("ui.expired_afc8709a") : translate("ui.failed_6de1e4a1")}{translate("ui.a_new_session_with_a_fc0856ca")}</p>}
+          <p>{translate("ui.continue_to_vnpay_s_secure_8b37c032")}</p>
+          <button type="button" className="primary-button" disabled={!vnpayReady || redirecting || charge.provider === "vietqr"} onClick={pay}><ExternalLink size={17} /> {redirecting ? translate("ui.redirecting_to_vnpay_4032989c") : translate("ui.pay_using_vnpay_qr_8b6b9bbd", { value0: money(charge.amount) })}</button>
+          {!vnpayReady && <p className="alert warning" role="status">{translate("ui.vnpay_is_not_configured_on_4832ddeb")}</p>}
+          {charge.provider === "vietqr" && <p className="alert warning">{translate("ui.this_transaction_uses_vietqr_and_0585cf77")}</p>}
+          <small>{translate("ui.paid_status_appears_only_after_72e741ba")}</small>
+        </div> : <div className="alert warning">{translate("ui.no_valid_charge_exists_for_44e6869a")}</div>}
     </div>}
-    <button type="button" className="secondary-button" onClick={onClearBooking}><ArrowLeft size={16} /> Xem các giao dịch</button>
+    <button type="button" className="secondary-button" onClick={onClearBooking}><ArrowLeft size={16} />  {translate("ui.view_transactions_c48a4c6f")}</button>
   </section>;
 }

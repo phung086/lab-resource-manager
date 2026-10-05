@@ -193,6 +193,7 @@ jobs:
           REMINDER_SCHEDULER_ENABLED: "false"
           NODE_ENV: test
           VITE_API_BASE_URL: http://127.0.0.1:8000
+          VITE_ENABLE_TELEMETRY_FEATURES: "true"
           BATCH8_FRONTEND_URL: http://127.0.0.1:5177
         run: |
           set -euo pipefail

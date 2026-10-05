@@ -24,7 +24,15 @@ export const config = {
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   openaiModel: process.env.OPENAI_MODEL || "",
   paymentsEnabled: process.env.PAYMENTS_ENABLED === "true",
+  metricsToken: process.env.METRICS_TOKEN || "",
+  assistantConcurrency: Math.min(parsePositiveInteger(process.env.ASSISTANT_MAX_CONCURRENT, 4), 16),
+  assistantTimeoutMs: Math.min(Math.max(parsePositiveInteger(process.env.ASSISTANT_TIMEOUT_MS, 30000), 1000), 60000),
+  assistantToolTimeoutMs: Math.min(Math.max(parsePositiveInteger(process.env.ASSISTANT_TOOL_TIMEOUT_MS, 10000), 500), 15000),
+  assistantRateLimit: Math.min(parsePositiveInteger(process.env.ASSISTANT_RATE_LIMIT_PER_MINUTE, 6), 60),
+  assistantModelFailureThreshold: Math.min(parsePositiveInteger(process.env.ASSISTANT_MODEL_FAILURE_THRESHOLD, 3), 10),
+  assistantModelCooldownMs: Math.min(Math.max(parsePositiveInteger(process.env.ASSISTANT_MODEL_COOLDOWN_MS, 30000), 1000), 300000),
   mcpAssistantEnabled: process.env.MCP_ASSISTANT_ENABLED === "true",
+  hardwareTelemetryEnabled: process.env.HARDWARE_TELEMETRY_ENABLED === "true",
   trustProxy: process.env.TRUST_PROXY === "true",
   logFormat,
   jsonBodyLimit,
@@ -64,6 +72,9 @@ function validateRuntimeConfig() {
     }
     if (adminPassword.length < 12 || isPlaceholder(adminPassword)) {
       failures.push("ADMIN_PASSWORD must be at least 12 characters and not use an example value.");
+    }
+    if (process.env.METRICS_TOKEN && (process.env.METRICS_TOKEN.length < 32 || process.env.METRICS_TOKEN.length > 256 || /\s/.test(process.env.METRICS_TOKEN) || isPlaceholder(process.env.METRICS_TOKEN))) {
+      failures.push("METRICS_TOKEN must contain 32–256 non-whitespace characters and not use an example value.");
     }
     if (process.env.PAYMENTS_ENABLED === "true") {
       const tmnCode = String(process.env.VNPAY_TMN_CODE || "");

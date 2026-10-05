@@ -337,3 +337,89 @@ transaction-coupled audit event. Internal resolution records that the exception
 was reviewed; it neither changes the booking/payment settlement nor claims a
 provider refund. QueryDr and refund remain external integrations pending real
 merchant credentials and verified provider evidence.
+
+## ADR-024 - LAB workspace and course-group responsibilities
+
+Status: Accepted in user-authorized local continuation, 2026-09-29.
+
+- VI/EN is an application-wide presentation preference, not a course attribute.
+- The landing retains the signed-in worklist and confirmed schedule in Check
+  schedule. Public projections preserve booking privacy.
+- MATERIAL inventory uses transactional receipts, issues and adjustments with
+  immutable movement history, fixed units, nonnegative balance and retry IDs.
+  LAB_STAFF is limited by UserLabAssignment; ADMIN alone records adjustments.
+- A material issue linked to maintenance requires an open job in the same lab.
+- Maintenance changes require reasons and conflict revalidation. They do not
+  silently relocate bookings or certify the resource's physical safety.
+- Course groups represent academic supervision. ADMIN assigns the lecturer;
+  lecturers manage assigned groups, students submit their own learning goals.
+  Academic review is separate from resource approval and operational handover.
+- Original user content and historical evidence are not rewritten by translation.
+
+
+## ADR-025 — Shared locale messages and bounded read-only assistance
+
+Status: Accepted in user-authorized continuation, 2026-09-30.
+
+- Canonical VI/EN catalogs author UI and shared server messages; the backend
+  consumes a checked projection, never imports frontend runtime code.
+- A language is activated only after catalog integrity/schema checks. Failed
+  loads leave mounted form state and the last valid language intact.
+- System feedback stores message IDs and parameters; user content and historical
+  evidence remain original. Canonical codes, dates, roles and state transitions
+  are independent of presentation language.
+- Assistant facts come from authenticated read-only MCP tools with existing
+  account/object/lab scope. Model prose, local summaries and failure states are
+  distinguishable. Only form-prefill suggestions are allowed.
+- Active work, per-account request rate, deadlines, search scans and provider
+  retries are bounded. Abort/close paths release capacity; repeated provider
+  failures pause model calls. These gates are per backend process.
+- Camera/sensor navigation is opt-in and deferred in normal use. Existing
+  persistence/access rules remain available for later verified hardware work.
+- Subsequent screen/workflow refinement must use this same contract; do not
+  add another raw-text fallback or fake service success path.
+
+Clarification, 2026-10-01: MCP ingress and business API ingress have separate
+bounded IP budgets; authenticated account, object and lab checks stay mandatory.
+Socket/deadline cancellation reaches tool work, and non-cancellable pending reads
+retain admission until they settle. Model generation requires usable evidence and
+a complete input no larger than 24,000 UTF-8 bytes. Hardware-off workspace reads
+explicitly omit telemetry queries and label monitoring as deferred. Shared client
+deadlines never automatically retry business mutations.
+
+
+## ADR-026: Task-focused role entry points share one workflow boundary
+
+Status: Accepted in user-authorized continuation, 2026-09-30.
+
+- Student, lecturer, LAB staff and administrative home layouts prioritise their
+  actual next task, rather than reusing a generic dashboard with different labels.
+- Role views load on demand and reuse shared VI/EN components and authenticated
+  reads. UI visibility never grants permission or performs a business action.
+- Home links carry validated destination context into existing catalogue,
+  calendar, teaching, directory and booking screens. Booking actions open the
+  ordinary evidence/confirmation form; backend scope and state checks remain final.
+- Displayed work counts disclose the bounded recent-record scope. Do not present
+  capped arrays as complete institution totals or infer pending academic reviews.
+- A resource calendar link resolves the requested authenticated record even beyond
+  the initial list cap. Missing or forbidden records produce an explicit error;
+  never substitute another resource. Shared language controls remain reachable
+  inside modal focus traps without discarding action drafts.
+- Shared application reads refresh on session change, home entry and explicit
+  refresh/completed mutations. Leaving home reuses loaded records; replacement
+  groups abort previous reads and cannot accept stale results.
+- Later screen refinements extend the same shell, catalogs and canonical workflow
+  rather than adding a parallel routing, translation or role-permission system.
+
+Clarification, 2026-10-03: booking/incident workspace queues now use bounded
+server pages with complete scoped totals. Staff/admin queue figures use these
+totals; remaining capped previews must still disclose their own limits. Every
+page, count and old-record shortcut retains current persisted owner/lab scope.
+See `WORKSPACE_QUEUE_PAGINATION_20261003.md` and the review follow-up for evidence.
+
+Security clarification, 2026-10-03: a new external guest's phone-based temporary
+credential is not an authentication factor. Password login rejects EXTERNAL
+accounts with `passwordResetRequired`; the email-verified booking session may
+complete password setup, after which normal login works. Recovery after loss of
+that setup session and revocation of existing tokens remain separate unresolved
+work. See `reviews/PR22_REVIEW_RESPONSE_20261003.md` for tests and limits.

@@ -1,3 +1,4 @@
+import { openWorkspace, openNavigation, selectWorkspaceTab } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -19,13 +20,11 @@ async function login(page, email) {
     page.waitForResponse((response) => response.url().endsWith("/api/auth/login") && response.status() === 200),
     page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click()
   ]);
+  await openWorkspace(page);
 }
 
 async function openMonitoring(page) {
-  if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const nav = page.locator(".sidebar-nav-item-2026", { hasText: /Giám Sát Telemetry/i }).first();
-  await nav.waitFor({ timeout: 8000 });
-  await nav.click();
+  await selectWorkspaceTab(page, "monitoring");
   await page.locator("main").getByRole("heading", { name: "Giám sát telemetry" }).waitFor();
 }
 
@@ -60,9 +59,12 @@ try {
   const alertRow = main.locator(".dashboard-booking-row", { hasText: "TEMPERATURE_CRITICAL" }).first();
   await Promise.all([
     staffPage.waitForResponse((response) => response.url().includes("/api/telemetry/alerts/") && response.url().endsWith("/acknowledge") && response.status() === 200),
+    staffPage.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/dashboard" && url.searchParams.get("includeTelemetry") === "true" && response.status() === 200;
+    }),
     alertRow.getByRole("button", { name: "Xác nhận" }).click()
   ]);
-  await staffPage.waitForResponse((response) => response.url().endsWith("/api/dashboard") && response.status() === 200);
   await staffPage.getByText("ACKNOWLEDGED", { exact: true }).first().waitFor();
   await staffPage.screenshot({ path: path.join(screenshotDir, "staff_smart_monitoring_desktop.png"), fullPage: true });
   await staffContext.close();
@@ -82,7 +84,9 @@ try {
   const studentContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const studentPage = await studentContext.newPage();
   await login(studentPage, "b8.student@lab.test");
-  assert.equal(await studentPage.locator(".sidebar-nav-item-2026", { hasText: /Giám Sát Telemetry/i }).count(), 0);
+  await openNavigation(studentPage);
+  assert.equal(await studentPage.locator('[data-nav-id="monitoring"]').count(), 0);
+  await studentPage.getByRole("button", { name: "Đóng menu", exact: true }).click();
   const ordinaryDashboard = await studentPage.evaluate(async (backendUrl) => {
     const response = await fetch(`${backendUrl}/api/dashboard`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("lrm_token")}` }

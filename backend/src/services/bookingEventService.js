@@ -1,11 +1,5 @@
+import { localize } from '../locales/index.js';
 import crypto from "node:crypto";
-
-const TITLES = {
-  REQUEST: "Có yêu cầu đặt lịch mới", CONFIRMED: "Lịch đặt đã được duyệt",
-  REJECTED: "Lịch đặt bị từ chối", CHECKED_OUT: "Đã bàn giao tài nguyên",
-  RETURNED: "Đã nhận hoàn trả", COMPLETED: "Lịch đặt đã hoàn tất",
-  CANCELLED: "Lịch đặt đã hủy", SELF_RETURN: "Người đặt đã tự trả phòng"
-};
 
 // Run inside the booking transaction: the event and business mutation commit together.
 export async function notifyBookingEvent(tx, booking, event, { includeOwner = false, now = new Date() } = {}) {
@@ -27,8 +21,9 @@ export async function notifyBookingEvent(tx, booking, event, { includeOwner = fa
       where: { dedupeKey }, update: {},
       create: {
         id: crypto.randomUUID(), userId: recipient.id, dedupeKey,
-        title: TITLES[event], message: `${booking.title} · ${booking.resource.code}`,
-        messageParams: { bookingId: booking.id, event, resourceCode: booking.resource.code },
+        title: localize("vi", `notification.booking.event.${event}.title`), message: localize("vi", `notification.booking.event.${event}.message`, { title: booking.title, resourceCode: booking.resource.code }),
+        titleKey: `booking.event.${event}.title`, messageKey: `booking.event.${event}.message`,
+        messageParams: { bookingId: booking.id, event, title: booking.title, resourceCode: booking.resource.code },
         severity: "info", channel: "in_app", sentAt: now
       }
     });

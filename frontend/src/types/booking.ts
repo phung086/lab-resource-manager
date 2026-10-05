@@ -51,6 +51,8 @@ export interface BookingRecord {
   returnedAt?: string | null;
   completedAt?: string | null;
   physicalStateWarning?: string | null;
+  physicalStateWarningKey?: string;
+  physicalStateWarningParams?: { status: string };
   resource: BookingResourceSummary;
   requestedBy: BookingUserSummary;
   approvedBy?: BookingUserSummary | null;

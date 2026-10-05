@@ -22,6 +22,12 @@ router.get("/:resourceId/media", route(async (req, res) => {
   res.json(await prisma.resourceMedia.findMany({ where: { resourceId: resource.id }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }));
 }));
 const canManageMedia = [requireAuth, requireRole(ADMIN, LAB_STAFF)];
+router.get('/:resourceId/media/config', ...canManageMedia, route(async (req, res) => {
+  await assertMediaAccess(req);
+  const fields = ['MEDIA_S3_ENDPOINT', 'MEDIA_S3_BUCKET', 'MEDIA_S3_ACCESS_KEY_ID', 'MEDIA_S3_SECRET_ACCESS_KEY', 'MEDIA_PUBLIC_BASE_URL'];
+  const missing = fields.filter(key => !process.env[key]);
+  res.json({ uploadConfigured: missing.length === 0, missing, externalHosts: (process.env.MEDIA_EXTERNAL_HOSTS || 'upload.wikimedia.org,commons.wikimedia.org').split(',').map(host => host.trim()).filter(Boolean) });
+}));
 
 router.post("/:resourceId/media/upload", ...canManageMedia, route(async (req, res) => {
   await assertMediaAccess(req);

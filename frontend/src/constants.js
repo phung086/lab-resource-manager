@@ -66,17 +66,17 @@ export const emptyResourceForm = {
 };
 
 export const CANONICAL_BOOKING_STATUS_LABELS = {
-  PENDING_APPROVAL: "Chờ phê duyệt",
-  CONFIRMED: "Đã xác nhận",
-  CHECKED_OUT: "Đang sử dụng",
-  RETURNED: "Đã hoàn trả",
-  COMPLETED: "Hoàn tất",
-  REJECTED: "Từ chối",
-  CANCELLED: "Đã hủy"
+  PENDING_APPROVAL: "ui.pending_approval_9aa55303",
+  CONFIRMED: "ui.confirmed_e72d13e3",
+  CHECKED_OUT: "ui.in_use_a07a3647",
+  RETURNED: "ui.returned_fd3eb4fb",
+  COMPLETED: "ui.completed_b0484236",
+  REJECTED: "ui.reject_b61a0ebc",
+  CANCELLED: "ui.cancelled_2f777a90"
 };
 
 export const CANONICAL_CUSTOMER_TYPE_LABELS = {
-  INTERNAL: "Nội bộ trường (tự khai)",
-  EXTERNAL: "Khách ngoài / đối tác (tự khai)"
+  INTERNAL: "ui.institution_member_self_declared_8250710f",
+  EXTERNAL: "ui.external_customer_partner_self_declared_75407cc4"
 };
 

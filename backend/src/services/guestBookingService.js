@@ -1,3 +1,4 @@
+import { localize, normalizeLocale } from "../locales/index.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
@@ -6,7 +7,7 @@ import { config } from "../config.js";
 import { prisma } from "../db.js";
 import { STUDENT } from "../constants/roles.js";
 import { HttpError } from "../middleware/errors.js";
-import { sendRequiredEmail } from "./emailService.js";
+import { sendRequiredEmail, escapeHtml } from "./emailService.js";
 import { validateVietnamAddress } from "./addressService.js";
 import { createBookingWithTransaction } from "./bookingService.js";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "./systemAuditService.js";
@@ -97,7 +98,7 @@ export function publicCustomerUser(user) {
   };
 }
 
-export async function sendGuestBookingOtp({ email, fullName }) {
+export async function sendGuestBookingOtp({ email, fullName, locale = "vi" }) {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
     throw new HttpError(400, "Email không hợp lệ.", { field: "email" }, "VALIDATION_ERROR");
@@ -138,12 +139,14 @@ export async function sendGuestBookingOtp({ email, fullName }) {
     });
   });
 
-  const name = String(fullName || "bạn").trim() || "bạn";
+  const language = normalizeLocale(locale), name = String(fullName || "").trim();
+  const greeting = localize(language, "email.otp.greeting", { name });
+  const label = localize(language, "email.otp.label"), notice = localize(language, "email.otp.notice");
   const message = {
     to: normalizedEmail,
-    subject: "[Lab Resource Manager] Mã xác thực đặt nhanh",
-    text: `Mã OTP đặt nhanh LAB của ${name}: ${code}. Mã hết hạn sau 10 phút.`,
-    html: `<p>Xin chào <strong>${name}</strong>,</p><p>Mã OTP đặt nhanh LAB của bạn là:</p><p style="font-size:24px;font-weight:700;letter-spacing:4px">${code}</p><p>Mã hết hạn sau 10 phút. Không chia sẻ mã này cho người khác.</p>`
+    subject: localize(language, "email.otp.subject"),
+    text: `${greeting}\n${label} ${code}\n${notice}`,
+    html: `<div lang="${language}"><p>${escapeHtml(greeting)}</p><p>${escapeHtml(label)}</p><p style="font-size:24px;font-weight:700;letter-spacing:4px">${code}</p><p>${escapeHtml(notice)}</p></div>`
   };
   const result = testOtpDelivery
     ? await testOtpDelivery({ ...message, code })

@@ -22,7 +22,7 @@ function overlapMinutes(startAt, endAt, windowStart, windowEnd) {
   return Math.max(0, (end - start) / 60_000);
 }
 
-export async function buildDashboard(client, user, now = new Date()) {
+export async function buildDashboard(client, user, now = new Date(), { includeTelemetry = true } = {}) {
   const resourceWhere = dashboardResourceScope(user);
   const windowStart = new Date(now.getTime() - 30 * 24 * 60 * 60_000);
   const windowEnd = now;
@@ -30,7 +30,7 @@ export async function buildDashboard(client, user, now = new Date()) {
   const [resources, upcomingBookings, periodBookings, incidents, unreadNotifications, cameras] = await Promise.all([
     client.resource.findMany({
       where: resourceWhere,
-      include: {
+      include: includeTelemetry ? {
         monitoringThreshold: true,
         laboratory: { include: { monitoringThreshold: true } },
         telemetrySamples: {
@@ -48,7 +48,7 @@ export async function buildDashboard(client, user, now = new Date()) {
           },
           orderBy: { openedAt: "desc" }
         }
-      },
+      } : { laboratory: true },
       orderBy: { code: "asc" }
     }),
     client.booking.findMany({
@@ -78,12 +78,12 @@ export async function buildDashboard(client, user, now = new Date()) {
       select: { id: true, severity: true, status: true, detectedAt: true, resolvedAt: true }
     }),
     client.notification.count({ where: { userId: user.id, sentAt: { not: null }, readAt: null } }),
-    client.camera.findMany({
+    includeTelemetry ? client.camera.findMany({
       where: user.role === ADMIN
         ? {}
         : { laboratory: { staffAssignments: { some: { userId: user.id } } } },
       orderBy: { code: "asc" }
-    })
+    }) : Promise.resolve([])
   ]);
 
   const statusCounts = Object.fromEntries(
@@ -107,7 +107,7 @@ export async function buildDashboard(client, user, now = new Date()) {
   const openStatuses = new Set(["reported", "triaged", "assigned", "investigating"]);
   const openIncidents = incidents.filter((incident) => openStatuses.has(incident.status));
 
-  const telemetry = resources.map((resource) => ({
+  const telemetry = includeTelemetry ? resources.map((resource) => ({
     ...serializeTelemetry(resource, resource.telemetrySamples[0] || null, now),
     history: resource.telemetrySamples.map((sample) => ({
       id: sample.id,
@@ -124,15 +124,15 @@ export async function buildDashboard(client, user, now = new Date()) {
       diskPercent: sample.diskPercent,
       signals: sample.verifiedSignals || []
     }))
-  }));
-  const monitoringAlerts = resources
+  })) : [];
+  const monitoringAlerts = includeTelemetry ? resources
     .flatMap((resource) => resource.monitoringAlerts)
     .sort((left, right) => new Date(right.lastObservedAt) - new Date(left.lastObservedAt))
-    .map(serializeMonitoringAlert);
-  const telemetrySummary = telemetry.reduce((acc, item) => {
+    .map(serializeMonitoringAlert) : [];
+  const telemetrySummary = includeTelemetry ? telemetry.reduce((acc, item) => {
     acc[item.monitoring.state] = (acc[item.monitoring.state] || 0) + 1;
     return acc;
-  }, { HEALTHY: 0, WARNING: 0, STALE: 0, UNAVAILABLE: 0, NO_DATA: 0 });
+  }, { HEALTHY: 0, WARNING: 0, STALE: 0, UNAVAILABLE: 0, NO_DATA: 0 }) : null;
 
   return {
     generatedAt: now.toISOString(),
@@ -145,8 +145,10 @@ export async function buildDashboard(client, user, now = new Date()) {
       openIncidentCount: openIncidents.length,
       criticalIncidentCount: openIncidents.filter((incident) => incident.severity === "critical").length,
       unreadNotifications,
-      activeMonitoringAlertCount: monitoringAlerts.filter((alert) => alert.status === "OPEN").length,
-      acknowledgedMonitoringAlertCount: monitoringAlerts.filter((alert) => alert.status === "ACKNOWLEDGED").length
+      ...(includeTelemetry ? {
+        activeMonitoringAlertCount: monitoringAlerts.filter((alert) => alert.status === "OPEN").length,
+        acknowledgedMonitoringAlertCount: monitoringAlerts.filter((alert) => alert.status === "ACKNOWLEDGED").length
+      } : {})
     },
     utilization: {
       windowDays: 30,
@@ -168,6 +170,7 @@ export async function buildDashboard(client, user, now = new Date()) {
         return acc;
       }, { low: 0, medium: 0, high: 0, critical: 0 })
     },
+    telemetryIncluded: includeTelemetry,
     telemetrySummary,
     telemetry,
     monitoringAlerts,

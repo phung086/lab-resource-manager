@@ -174,3 +174,8 @@
   cursor: not-allowed;
   opacity: .6;
 }
+
+.catalog-media-gallery { align-content: start; }
+.catalog-guest-booking { margin-top: 20px; border: 1px solid var(--public-line, #d5dfe5); border-radius: 8px; padding: 0 16px; background: #fff; }
+.catalog-guest-booking > summary { min-height: 48px; padding: 12px 0; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--public-ink, #162f43); }
+.catalog-guest-booking > p { font-size: 13px; line-height: 1.6; color: var(--text-secondary, #475569); }

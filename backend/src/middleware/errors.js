@@ -1,3 +1,4 @@
+import { localizeError } from "../locales/index.js";
 /**
  * Centralized error handling middleware.
  *
@@ -15,7 +16,7 @@ export class HttpError extends Error {
 }
 
 export function notFoundHandler(req, res) {
-  res.status(404).json({ error: { code: "NOT_FOUND", message: `Route not found: ${req.method} ${req.originalUrl}` } });
+  res.status(404).json({ error: { code: "NOT_FOUND", message: localizeError(req.locale, "NOT_FOUND") } });
 }
 
 /**
@@ -57,7 +58,13 @@ function isExclusionViolation(error) {
   return false;
 }
 
-export function errorHandler(error, _req, res, _next) {
+export function errorHandler(error, req, res, _next) {
+  const originalJson = res.json.bind(res);
+  res.json = body => {
+    if (body?.error?.code) body.error.message = localizeError(req.locale, body.error.code);
+    return originalJson(body);
+  };
+  if (error.details?.retryAfterSeconds) res.set?.("Retry-After", String(error.details.retryAfterSeconds));
   // Zod validation errors
   if (error.name === "ZodError") {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid request data", details: error.flatten() } });
@@ -65,7 +72,7 @@ export function errorHandler(error, _req, res, _next) {
 
   // Application-level HttpError
   if (error instanceof HttpError) {
-    return res.status(error.status).json({ error: { code: error.code, message: error.message, details: error.details } });
+    return res.status(error.status).json({ error: { code: error.code || "API_REQUEST_FAILED", message: error.message, details: error.details } });
   }
 
   // PostgreSQL exclusion violation → BOOKING_CONFLICT

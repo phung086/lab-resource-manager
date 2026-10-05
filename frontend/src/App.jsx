@@ -1,3 +1,5 @@
+
+import { translate, localizeNotification } from "./i18n.js";
 import {
   Activity,
   AlertTriangle,
@@ -36,33 +38,25 @@ import {
 import React, { useEffect, useMemo, useState } from "react";
 
 import { ApiError, apiRequest, getCurrentUser, hasStoredSession, login, logout, register, storeAuthResult } from "./api.js";
-import { SmartCalendarView } from "./components/SmartCalendarView.tsx";
-import { AdminResourceManagementView } from "./components/AdminResourceManagementView.tsx";
-import { ResourceManagementView } from "./components/ResourceManagementView.tsx";
-import { BookingOperationsPage } from "./pages/operations/BookingOperationsPage.tsx";
 import { QuickBookingModal } from "./components/QuickBookingModal.tsx";
 import { AuthLoginView } from "./components/AuthLoginView.tsx";
 import { AuthRegisterView } from "./components/AuthRegisterView.tsx";
 import { PublicLanding } from "./components/PublicLanding.tsx";
+import { LocaleProvider, useLocale } from "./providers/LocaleProvider.tsx";
 import { WorkspaceHome } from "./pages/WorkspaceHome";
-import { ProfilePage } from "./pages/ProfilePage.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
-import { AccessUserManagement } from "./components/AccessUserManagement.tsx";
 import { NotificationCenter } from "./components/NotificationCenter.jsx";
-import { IncidentsPage } from "./pages/incidents/IncidentsPage.tsx";
-import { MonitoringDashboardPage } from "./pages/monitoring/MonitoringDashboardPage.tsx";
 import { hashForTab, tabFromHash } from "./workspaceRoutes.js";
 import {
   emptyBookingForm,
-  emptyMaintenanceForm,
   emptyUserForm,
   resourceGlyphLabels
 } from "./constants.js";
-import { defaultLocale, getDictionary, interpolate, localeOptions, localeStorageKey, normalizeLocale } from "./i18n.js";
+import { getDictionary, interpolate, localeOptions } from "./i18n.js";
 import { buildMonitoringRows, getMonitoringSummary, toBarWidth } from "./monitoring.js";
 import { classNames, formatDateTime, formatPercent } from "./utils.js";
 import { formatVietnamDateTime, vietnamTimeToIso } from "./utils/timezone.js";
-import { RESEARCH_FEATURES_ENABLED, PAYMENT_FEATURES_ENABLED, isTabEnabled } from "./config/featureFlags";
+import { RESEARCH_FEATURES_ENABLED, PAYMENT_FEATURES_ENABLED, TELEMETRY_FEATURES_ENABLED, isTabEnabled } from "./config/featureFlags";
 const PaymentsPage = React.lazy(() => import("./components/features/payments/PaymentsPage"));
 import {
   AiDiagnosticStudio,
@@ -87,16 +81,26 @@ import {
   WhatIfSimulationStudio
 } from "./research/ResearchFeatureRegistry";
 
-let copy = getDictionary(defaultLocale);
+const SmartCalendarView = React.lazy(() => import("./components/SmartCalendarView.tsx").then(module => ({ default: module.SmartCalendarView })));
+const AdminResourceManagementView = React.lazy(() => import("./components/AdminResourceManagementView.tsx").then(module => ({ default: module.AdminResourceManagementView })));
+const ResourceManagementView = React.lazy(() => import("./components/ResourceManagementView.tsx").then(module => ({ default: module.ResourceManagementView })));
+const BookingOperationsPage = React.lazy(() => import("./pages/operations/BookingOperationsPage.tsx").then(module => ({ default: module.BookingOperationsPage })));
+const ProfilePage = React.lazy(() => import("./pages/ProfilePage.tsx").then(module => ({ default: module.ProfilePage })));
+const AccessUserManagement = React.lazy(() => import("./components/AccessUserManagement.tsx").then(module => ({ default: module.AccessUserManagement })));
+const IncidentsPage = React.lazy(() => import("./pages/incidents/IncidentsPage.tsx").then(module => ({ default: module.IncidentsPage })));
+const MonitoringDashboardPage = React.lazy(() => import("./pages/monitoring/MonitoringDashboardPage.tsx").then(module => ({ default: module.MonitoringDashboardPage })));
+const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage").then(module => ({ default: module.MaintenancePage })));
+const StockPage = React.lazy(() => import("./pages/LabWorkspace").then(module => ({ default: module.StockPage })));
+const TeachingPage = React.lazy(() => import("./pages/LabWorkspace").then(module => ({ default: module.TeachingPage })));
 
-function getInitialLocale() {
-  return normalizeLocale(localStorage.getItem(localeStorageKey) || defaultLocale);
-}
+let copy;
 
 const ADMIN_ONLY_TABS = new Set(["users", "quota_fairness", "chargeback", "policy_config", "logs"]);
 const STAFF_ONLY_TABS = new Set(["admin_management", "conflict_queue", "allocations", "dashboard", "maintenance", "monitoring"]);
 
 function canAccessTab(role, tabId) {
+  if (tabId === 'stock') return ['ADMIN', 'LAB_STAFF'].includes(role);
+  if (tabId === 'teaching') return ['ADMIN', 'LECTURER', 'STUDENT'].includes(role);
   if (!isTabEnabled(tabId)) return false;
   if (ADMIN_ONLY_TABS.has(tabId)) return role === "ADMIN";
   if (STAFF_ONLY_TABS.has(tabId)) return role === "ADMIN" || role === "LAB_STAFF";
@@ -104,14 +108,21 @@ function canAccessTab(role, tabId) {
 }
 
 function App() {
-  const [locale, setLocale] = useState(getInitialLocale);
+  return <LocaleProvider><Application /></LocaleProvider>;
+}
+
+function Application() {
+  const { locale, changeLocale } = useLocale();
   const [user, setUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [activeTab, updateActiveTab] = useState(() => tabFromHash(window.location.hash));
   const [routeHash, setRouteHash] = useState(window.location.hash);
-  function setActiveTab(tab) {
+  function setActiveTab(tab, params = {}) {
+    const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value));
+    const hash = `${hashForTab(tab)}${query.size ? `?${query}` : ""}`;
     updateActiveTab(tab);
-    if (window.location.hash !== hashForTab(tab)) window.location.hash = hashForTab(tab);
+    setRouteHash(hash);
+    if (window.location.hash !== hash) window.location.hash = hash;
   }
   const [paymentBookingId, setPaymentBookingId] = useState(() => new URLSearchParams(window.location.hash.split("?")[1] || "").get("booking") || "");
   const openBookingPayment = booking => {
@@ -138,8 +149,7 @@ function App() {
       window.history.replaceState(null, "", hashForTab("bookings"));
     }
   };
-  const [resourceSearch, setResourceSearch] = useState("");
-  const [calendarResourceId, setCalendarResourceId] = useState("");
+  const [calendarResourceId, setCalendarResourceId] = useState(() => new URLSearchParams(window.location.hash.split("?")[1] || "").get("resource") || "");
   useEffect(() => {
     if (!user) return;
     const pending = sessionStorage.getItem("lrm_pending_resource");
@@ -152,16 +162,21 @@ function App() {
   const [dashboard, setDashboard] = useState(null);
   const [resources, setResources] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [bookingSummary, setBookingSummary] = useState(null);
+  const [incidentSummary, setIncidentSummary] = useState(null);
   const [maintenance, setMaintenance] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [trainings, setTrainings] = useState({ courses: [], certifications: [] });
   const [logs, setLogs] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [authMode, setAuthMode] = useState("login");
   const [activeGlobalModal, setActiveGlobalModal] = useState(null);
+
+  const routeParams = new URLSearchParams(routeHash.split("?")[1] || "");
+  const openCalendar = (resourceId = "") => { setCalendarResourceId(resourceId); setActiveTab("smart_calendar", { resource: resourceId }); };
 
   const activeCopy = useMemo(() => getDictionary(locale), [locale]);
   copy = activeCopy;
@@ -171,6 +186,9 @@ function App() {
   }, [locale]);
 
   const routeUserId = user?.id;
+  const routeUserRole = user?.role;
+  const appDataController = React.useRef(null);
+  const previousTab = React.useRef(activeTab);
   const isPasswordResetRequired = Boolean(user?.passwordResetRequired);
   useEffect(() => {
     if (!routeUserId) return;
@@ -207,7 +225,7 @@ function App() {
         if (active) setUser(currentUser);
       } catch (requestError) {
         if (active && requestError?.status !== 401) {
-          setError(requestError?.message || "Không thể xác minh phiên đăng nhập.");
+          setError(requestError?.message || "ui.unable_to_verify_your_sign_7e3493f9");
         }
       } finally {
         if (active) setAuthChecking(false);
@@ -222,65 +240,79 @@ function App() {
     };
   }, []);
 
-  function changeLocale(nextLocale) {
-    const normalized = normalizeLocale(nextLocale);
-    localStorage.setItem(localeStorageKey, normalized);
-    setLocale(normalized);
-  }
-
   const isStaff = user && ["ADMIN", "LAB_STAFF"].includes(user.role);
   const researchFeaturesEnabled = RESEARCH_FEATURES_ENABLED;
 
-  async function loadData() {
-    if (!user) return;
+  const loadData = React.useCallback(async () => {
+    if (!routeUserId) return;
+    appDataController.current?.abort();
+    const controller = new AbortController();
+    appDataController.current = controller;
     setLoading(true);
     setError("");
     try {
+      const read = path => apiRequest(path, { signal: controller.signal });
       const requests = {
-        resources: apiRequest("/resources"),
-        bookings: apiRequest("/bookings"),
-        maintenance: apiRequest("/maintenance"),
-        notifications: apiRequest("/notifications"),
-        incidents: apiRequest("/incidents"),
-        ...(["ADMIN", "LAB_STAFF"].includes(user.role) ? { dashboard: apiRequest("/dashboard") } : {}),
-        ...(user.role === "ADMIN" ? { users: apiRequest("/users") } : {})
+        resources: read("/resources"),
+        bookings: read("/bookings?page=1&pageSize=100"),
+        maintenance: read("/maintenance"),
+        notifications: read("/notifications"),
+        incidents: read("/incidents?page=1&pageSize=50&filter=OPEN"),
+        ...(["ADMIN", "LAB_STAFF"].includes(routeUserRole) ? { dashboard: read(`/dashboard?includeTelemetry=${TELEMETRY_FEATURES_ENABLED}`) } : {}),
+        ...(routeUserRole === "ADMIN" ? { users: read("/users") } : {})
       };
       const entries = Object.entries(requests);
       const results = await Promise.allSettled(entries.map(([, promise]) => promise));
+      if (controller.signal.aborted || appDataController.current !== controller) return;
       const data = Object.fromEntries(entries.map(([key], index) => [key, results[index]]));
       const value = (key, fallback) => data[key]?.status === "fulfilled" ? data[key].value : fallback;
 
       setDashboard(value("dashboard", null));
       setResources(value("resources", []));
-      setBookings(value("bookings", []));
+      setBookings(value("bookings", null)?.items || []);
+      setBookingSummary(value("bookings", null)?.summary || null);
+      setIncidentSummary(value("incidents", null)?.summary || null);
       setMaintenance(value("maintenance", []));
       setNotifications(value("notifications", []));
       setUsers(value("users", []));
       setLogs([]);
-      setIncidents(value("incidents", []));
+      setIncidents(value("incidents", null)?.items || []);
       setTrainings({ courses: [], certifications: [] });
 
       const failed = entries
         .map(([key], index) => results[index].status === "rejected" ? key : null)
         .filter(Boolean);
       if (failed.length) {
-        setError(`Không thể tải dữ liệu thật: ${failed.join(", ")}.`);
+        setError({ key: "ui.could_not_load_application_data_07ebdf44", params: { value0: failed.join(", ") } });
       }
     } catch (requestError) {
-      setError(requestError?.message || "Không thể tải dữ liệu hệ thống.");
+      if (!controller.signal.aborted && appDataController.current === controller) {
+        setError(requestError?.message || "ui.unable_to_load_system_data_e9df8dd1");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted && appDataController.current === controller) {
+        appDataController.current = null;
+        setLoading(false);
+      }
     }
-  }
+  }, [routeUserId, routeUserRole]);
 
   useEffect(() => {
-    if (user) loadData();
-  }, [routeUserId, activeTab]);
+    if (!routeUserId) return;
+    loadData();
+    return () => appDataController.current?.abort();
+  }, [routeUserId, loadData]);
+
+  useEffect(() => {
+    const wasHome = previousTab.current === "home";
+    previousTab.current = activeTab;
+    if (routeUserId && activeTab === "home" && !wasHome) loadData();
+  }, [activeTab, routeUserId, loadData]);
 
   useEffect(() => {
     if (user && !canAccessTab(user.role, activeTab)) {
       setActiveTab("smart_calendar");
-      setError("Bạn không có quyền truy cập khu vực này.");
+      setError("ui.you_do_not_have_permission_e6eeee92");
     }
   }, [user?.role, activeTab]);
 
@@ -289,13 +321,13 @@ function App() {
   }, [user, activeTab]);
 
   if (authChecking) {
-    return <main className="login-screen"><p className="empty-state">Đang xác minh phiên đăng nhập...</p></main>;
+    return <main className="login-screen"><p className="empty-state">{translate("ui.verifying_your_sign_in_session_90f206ba")}</p></main>;
   }
 
   if (!user) {
     if (authMode === "register") {
       return (
-        <div className="public-auth-page"><a className="public-auth-back" href="#dau-trang" onClick={() => setAuthMode("login")}>← Về trang giới thiệu</a><AuthRegisterView
+        <div className="public-auth-page"><a className="public-auth-back" href="#dau-trang" onClick={() => setAuthMode("login")}>{translate("ui.back_to_introduction_7876ebe9")}</a><AuthRegisterView
           onRegisterSuccess={(u) => {
             setUser(u);
             setAuthMode("login");
@@ -307,7 +339,7 @@ function App() {
       );
     }
     return (
-      <PublicLanding onRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }} onViewSchedule={(id) => { sessionStorage.setItem("lrm_pending_resource", id); document.getElementById("dang-nhap")?.scrollIntoView({ behavior: "smooth" }); }} onGuestBookingComplete={handleGuestBookingComplete}><AuthLoginView
+      <PublicLanding onLocaleChange={changeLocale} onRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }} onViewSchedule={(id) => { sessionStorage.setItem("lrm_pending_resource", id); document.getElementById("dang-nhap")?.scrollIntoView({ behavior: "smooth" }); }} onGuestBookingComplete={handleGuestBookingComplete}><AuthLoginView
         onLogin={setUser}
         onSwitchToRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }}
         locale={locale}
@@ -324,7 +356,7 @@ function App() {
           setError("");
           setActiveTab(tabId);
         } else {
-          setError("Bạn không có quyền truy cập khu vực này.");
+          setError("ui.you_do_not_have_permission_e6eeee92");
         }
       }}
       user={user}
@@ -332,6 +364,7 @@ function App() {
       onLocaleChange={changeLocale}
       notifications={notifications}
       incidents={incidents}
+      incidentOpenCount={loading || error ? undefined : incidentSummary?.open}
       conflictsCount={0}
       loading={loading}
       onRefresh={loadData}
@@ -354,18 +387,16 @@ function App() {
         }
       }}
     >
-      {error && <div className="alert danger" role="alert">{error}</div>}
+      {error && activeTab !== "home" && <div className="alert danger" role="alert">{translate(error)}</div>}
       {user.passwordResetRequired && (
         <div className="card temporary-password-card" style={{ maxWidth: 680, margin: "1.5rem auto", padding: "1.75rem", border: "1px solid #fde68a", background: "#fffdf5", borderRadius: 16 }}>
           <div className="alert warning" style={{ marginBottom: "1.25rem", display: "flex", gap: "0.85rem", alignItems: "flex-start" }}>
             <span style={{ fontSize: "1.5rem" }} aria-hidden="true">🔒</span>
             <div>
               <strong style={{ fontSize: "1.05rem", display: "block", marginBottom: "0.35rem", color: "#92400e" }}>
-                Yêu cầu thiết lập mật khẩu cho tài khoản đặt nhanh
-              </strong>
+                 {translate("ui.set_a_password_for_your_9d173b3e")} </strong>
               <p style={{ margin: 0, fontSize: "0.92rem", color: "#78350f", lineHeight: 1.5 }}>
-                Tài khoản vừa tạo qua luồng Đặt lịch nhanh đang dùng mật khẩu tạm thời. Để bảo mật tài khoản và dữ liệu phòng LAB, bạn bắt buộc phải thiết lập mật khẩu mới trước khi có thể truy cập lịch đặt, thanh toán hoặc các tài nguyên khác.
-              </p>
+                 {translate("ui.your_quick_booking_account_uses_f9eb9651")} </p>
             </div>
           </div>
           <button
@@ -374,52 +405,64 @@ function App() {
             style={{ width: "100%", justifyContent: "center", padding: "0.75rem", fontSize: "0.95rem" }}
             onClick={() => window.dispatchEvent(new CustomEvent("lrm:open-password-setup"))}
           >
-            Đổi mật khẩu ngay
-          </button>
+             {translate("ui.change_password_now_837a566b")} </button>
         </div>
       )}
 
+      <React.Suspense fallback={<p className="empty-state" role="status">{translate("ui.loading_workspace_959fb711")}</p>}>
       {/* REQUIRED CORE — Gated when passwordResetRequired */}
       {!user.passwordResetRequired && activeTab === "home" && (
         <WorkspaceHome
+          bookingSummary={bookingSummary}
+          incidentSummary={incidentSummary}
           user={user}
           bookings={bookings}
+          locale={locale}
           notifications={notifications}
           incidents={incidents}
-          trainings={trainings}
+          resources={resources}
+          maintenance={maintenance}
+          users={users}
+          dashboard={dashboard}
           loading={loading}
-          error={error}
+          error={translate(error)}
           onRetry={loadData}
           onNavigate={setActiveTab}
-          onSearch={(query) => { setResourceSearch(query); setActiveTab("resources"); }}
+          onSearch={(search, category) => setActiveTab("resources", { search, category })}
+          onCalendar={openCalendar}
         />
       )}
       {activeTab === "profile" && <ProfilePage user={user} onUserUpdated={setUser} />}
+      {!user.passwordResetRequired && activeTab === 'stock' && canAccessTab(user.role, 'stock') && <StockPage locale={locale} user={user} maintenance={maintenance} />}
+      {!user.passwordResetRequired && activeTab === 'teaching' && canAccessTab(user.role, 'teaching') && <TeachingPage key={routeHash} locale={locale} user={user} bookings={bookings} />}
       {!user.passwordResetRequired && PAYMENT_FEATURES_ENABLED && activeTab === "payments" && (
-        <React.Suspense fallback={<p role="status">Đang tải thanh toán…</p>}>
+        <React.Suspense fallback={<p role="status">{translate("ui.loading_payments_b1f91304")}</p>}>
           <PaymentsPage user={user} bookingId={paymentBookingId} onClearBooking={() => { setPaymentBookingId(""); setActiveTab("payments"); }} />
         </React.Suspense>
       )}
       {!user.passwordResetRequired && activeTab === "smart_calendar" && (
         <SmartCalendarView
+          key={routeHash}
           user={user}
-          initialResourceId={calendarResourceId}
+          initialResourceId={routeParams.get("resource") || calendarResourceId}
           refreshKey={calendarRevision}
           onOpenBooking={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
         />
       )}
-      {!user.passwordResetRequired && activeTab === "admin_management" && <AdminResourceManagementView user={user} />}
-      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter notifications={notifications} loading={loading} loadError={error} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
+      {!user.passwordResetRequired && activeTab === "admin_management" && <AdminResourceManagementView key={routeHash} user={user} initialClassification={routeParams.get("classification") || "ALL"} />}
+      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter notifications={notifications} loading={loading} loadError={translate(error)} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
       {!user.passwordResetRequired && activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {!user.passwordResetRequired && activeTab === "resources" && <ResourceManagementView user={user} initialSearch={resourceSearch} onViewCalendar={(id) => { setCalendarResourceId(id); setActiveTab("smart_calendar"); }} />}
+      {!user.passwordResetRequired && activeTab === "resources" && <ResourceManagementView key={routeHash} user={user} initialSearch={routeParams.get("search") || ""} initialCategory={routeParams.get("category") || ""} onViewCalendar={openCalendar} />}
       {!user.passwordResetRequired && activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={loadData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
-      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenanceView resources={resources} maintenance={maintenance} isStaff={isStaff} onChanged={loadData} />}
+      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage locale={locale} resources={resources} maintenance={maintenance} onChanged={loadData} onBookings={() => setActiveTab('bookings')} />}
       {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {activeTab === "users" && <AccessUserManagement />}
+      {activeTab === "users" && <AccessUserManagement key={routeHash} />}
+
+      </React.Suspense>
 
       {researchFeaturesEnabled && (
-        <React.Suspense fallback={<p className="empty-state">Đang tải khu vực nghiên cứu...</p>}>
+        <React.Suspense fallback={<p className="empty-state">{translate("ui.loading_research_area_6307330d")}</p>}>
           {activeTab === "ai_analytics" && <EfficiencyAnalyticsView />}
           {activeTab === "ai_advisor" && (
             <SmartAdvisoryView onApplyRecommendation={() => setActiveTab("smart_calendar")} />
@@ -556,40 +599,37 @@ function LoginView({ locale, onLocaleChange, onLogin }) {
             <LanguageSwitch locale={locale} onLocaleChange={onLocaleChange} />
           </div>
           <div className="login-copy">
-            <h2>{isRegister ? "Đăng ký tài khoản mới" : copy.login.title}</h2>
-            <p>{isRegister ? "Tạo tài khoản sinh viên / nghiên cứu viên để đặt lịch thiết bị" : copy.login.subtitle}</p>
+            <h2>{isRegister ? translate("ui.create_a_new_account_0a74930a") : copy.login.title}</h2>
+            <p>{isRegister ? translate("ui.create_a_student_account_to_6271d2f3") : copy.login.subtitle}</p>
           </div>
-          {error && <div className="alert danger">{error}</div>}
+          {error && <div className="alert danger">{translate(error)}</div>}
 
           {isRegister && (
             <>
               <label>
-                Họ và tên
-                <input
+                 {translate("ui.full_name_03de764f")} <input
                   type="text"
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
-                  placeholder="Ví dụ: Nguyễn Văn A"
+                  placeholder={translate("ui.example_jane_nguyen_a52e39e4")}
                   required
                 />
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                 <label>
-                  Mã SV / GV
-                  <input
+                   {translate("ui.student_lecturer_id_a78950c7")} <input
                     type="text"
                     value={studentId}
                     onChange={(event) => setStudentId(event.target.value)}
-                    placeholder="SV2026-001"
+                    placeholder={translate("ui.sv2026_001_444da05c")}
                   />
                 </label>
                 <label>
-                  Khoa / Viện
-                  <input
+                   {translate("ui.faculty_institute_981a1987")} <input
                     type="text"
                     value={department}
                     onChange={(event) => setDepartment(event.target.value)}
-                    placeholder="CNTT & AI"
+                    placeholder={translate("ui.cntt_ai_ae184d18")}
                   />
                 </label>
               </div>
@@ -621,31 +661,29 @@ function LoginView({ locale, onLocaleChange, onLogin }) {
 
           <button className="primary-button" type="submit" disabled={loading} style={{ marginTop: "0.5rem" }}>
             <ShieldCheck size={18} />
-            <span>{loading ? (isRegister ? "Đang tạo tài khoản..." : copy.actions.signingIn) : (isRegister ? "Đăng ký ngay" : copy.actions.signIn)}</span>
+            <span>{loading ? (isRegister ? translate("ui.creating_account_e188bae5") : copy.actions.signingIn) : (isRegister ? translate("ui.register_now_48bcf799") : copy.actions.signIn)}</span>
           </button>
 
           <div style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.9rem" }}>
             {isRegister ? (
               <span>
-                Đã có tài khoản?{" "}
+                 {translate("ui.already_have_an_account_c2b43137")}{" "}
                 <button
                   type="button"
                   onClick={() => { setIsRegister(false); setError(""); }}
                   style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontWeight: "600", textDecoration: "underline" }}
                 >
-                  Đăng nhập
-                </button>
+                   {translate("ui.sign_in_9a402bdf")} </button>
               </span>
             ) : (
               <span>
-                Chưa có tài khoản?{" "}
+                 {translate("ui.do_not_have_an_account_4b5c6e81")}{" "}
                 <button
                   type="button"
                   onClick={() => { setIsRegister(true); setError(""); }}
                   style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontWeight: "600", textDecoration: "underline" }}
                 >
-                  Đăng ký tài khoản mới
-                </button>
+                   {translate("ui.create_a_new_account_0a74930a")} </button>
               </span>
             )}
           </div>
@@ -759,7 +797,7 @@ function AssistantView({ locale }) {
             <span>{loading ? copy.actions.sending : copy.actions.askAssistant}</span>
           </button>
         </form>
-        {error && <div className="alert danger">{error}</div>}
+        {error && <div className="alert danger">{translate(error)}</div>}
         <div className="assistant-suggestions">
           <h3>{copy.sections.assistantSuggestions}</h3>
           <div className="prompt-list">
@@ -819,197 +857,6 @@ function MonitoringView({ telemetry }) {
   );
 }
 
-// ─── MaintenanceView ──────────────────────────────────────────────────────────
-
-function MaintenanceView({ resources, maintenance, isStaff, onChanged }) {
-  const [form, setForm] = useState({ ...emptyMaintenanceForm });
-  const [showForm, setShowForm] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const statusLabels = {
-    scheduled: "Đã lên lịch",
-    in_progress: "Đang thực hiện",
-    completed: "Hoàn thành",
-    cancelled: "Đã huỷ"
-  };
-
-  const kindLabels = {
-    maintenance: "Bảo trì định kỳ",
-    repair: "Sửa chữa",
-    calibration: "Hiệu chuẩn",
-    inspection: "Kiểm tra"
-  };
-
-  const statusColors = {
-    scheduled: "info",
-    in_progress: "warning",
-    completed: "success",
-    cancelled: "danger"
-  };
-
-  async function createMaintenance(e) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await apiRequest("/maintenance", {
-        method: "POST",
-        body: JSON.stringify({
-          resourceId: form.resourceId,
-          title: form.title.trim(),
-          kind: form.kind || "maintenance",
-          status: "scheduled",
-          startAt: vietnamTimeToIso(...form.scheduledStart.split("T")),
-          endAt: vietnamTimeToIso(...form.scheduledEnd.split("T")),
-          notes: form.notes.trim() || undefined
-        })
-      });
-      setForm({ ...emptyMaintenanceForm });
-      setShowForm(false);
-      onChanged();
-    } catch (err) {
-      handleError(err, setError);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function updateMaintenanceStatus(id, newStatus) {
-    setError("");
-    setLoading(true);
-    try {
-      await apiRequest(`/maintenance/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: newStatus, changeReason: `Chuyển trạng thái sang ${statusLabels[newStatus]}` })
-      });
-      onChanged();
-    } catch (err) {
-      handleError(err, setError);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="view-root">
-      <div className="view-header">
-        <div>
-          <h2>{copy.nav.maintenance}</h2>
-          <p className="view-subtitle">Quản lý lịch bảo trì và sửa chữa thiết bị</p>
-        </div>
-        {isStaff && (
-          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-            <Plus size={16} /> Tạo lịch bảo trì
-          </button>
-        )}
-      </div>
-
-      {error && <div className="alert danger" role="alert">{error}</div>}
-
-      {showForm && isStaff && (
-        <form className="card form-card" onSubmit={createMaintenance}>
-          <h3>Tạo lịch bảo trì mới</h3>
-          <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="maintenance-resource">Tài nguyên *</label>
-              <select id="maintenance-resource" required value={form.resourceId} onChange={e => setForm({ ...form, resourceId: e.target.value })}>
-                <option value="">-- Chọn thiết bị --</option>
-                {resources.map(r => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="maintenance-kind">Loại công việc</label>
-              <select id="maintenance-kind" value={form.kind || "maintenance"} onChange={e => setForm({ ...form, kind: e.target.value })}>
-                {Object.entries(kindLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </div>
-            <div className="form-group full-width">
-              <label htmlFor="maintenance-title">Tiêu đề *</label>
-              <input id="maintenance-title" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Ví dụ: Kiểm tra quạt làm mát thiết bị" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="maintenance-start">Bắt đầu (giờ Việt Nam) *</label>
-              <input id="maintenance-start" type="datetime-local" required value={form.scheduledStart} onChange={e => setForm({ ...form, scheduledStart: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="maintenance-end">Kết thúc (giờ Việt Nam) *</label>
-              <input id="maintenance-end" type="datetime-local" required value={form.scheduledEnd} onChange={e => setForm({ ...form, scheduledEnd: e.target.value })} />
-            </div>
-            <div className="form-group full-width">
-              <label htmlFor="maintenance-notes">Ghi chú</label>
-              <textarea id="maintenance-notes" rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Mô tả công việc hoặc điều kiện thực tế" />
-            </div>
-          </div>
-          <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? "Đang lưu..." : "Tạo lịch bảo trì"}</button>
-            <button type="button" className="btn" onClick={() => setShowForm(false)}>Huỷ</button>
-          </div>
-        </form>
-      )}
-
-      <div className="card-list">
-        {maintenance.length === 0 && (
-          <div className="empty-state">
-            <Wrench size={40} />
-            <p>Chưa có lịch bảo trì nào</p>
-          </div>
-        )}
-        {maintenance.map(item => (
-          <div key={item.id} className="card">
-            <div className="card-header">
-              <div>
-                <span className={`badge ${statusColors[item.status] || "info"}`}>{statusLabels[item.status] || item.status}</span>
-                <span className="badge info" style={{ marginLeft: 8 }}>{kindLabels[item.kind] || item.kind}</span>
-                <strong style={{ marginLeft: 8 }}>{item.title}</strong>
-              </div>
-              <span className="badge info">{item.resource?.code}</span>
-            </div>
-            <p className="card-text">{item.resource?.name} — {item.resource?.location}</p>
-            <div className="card-meta">
-              <span>Bắt đầu: {formatVietnamDateTime(item.startAt)}</span>
-              <span>Kết thúc: {formatVietnamDateTime(item.endAt)}</span>
-              {item.notes && <span>Ghi chú: {item.notes}</span>}
-            </div>
-            {isStaff && !["completed", "cancelled"].includes(item.status) && (
-              <div className="card-actions" style={{ marginTop: 10 }}>
-                {item.status === "scheduled" && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    disabled={loading}
-                    onClick={() => updateMaintenanceStatus(item.id, "in_progress")}
-                  >
-                    <Activity size={13} /> Bắt đầu thực hiện
-                  </button>
-                )}
-                {item.status === "in_progress" && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    disabled={loading}
-                    onClick={() => updateMaintenanceStatus(item.id, "completed")}
-                  >
-                    <Check size={13} /> Đánh dấu hoàn thành
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  disabled={loading}
-                  onClick={() => updateMaintenanceStatus(item.id, "cancelled")}
-                >
-                  <X size={13} /> Hủy lịch bảo trì
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function LogsView({ logs, notifications, onChanged }) {
   const [error, setError] = useState("");
   const unreadNotifications = notifications.filter((item) => !item.readAt);
@@ -1048,7 +895,7 @@ function LogsView({ logs, notifications, onChanged }) {
             <span>{copy.actions.markAllRead}</span>
           </button>
         </div>
-        {error && <div className="alert danger">{error}</div>}
+        {error && <div className="alert danger">{translate(error)}</div>}
         {!notifications.length ? (
           <p className="empty-state">{copy.empty.notifications}</p>
         ) : (
@@ -1120,7 +967,7 @@ function UsersView({ users, onChanged }) {
     <div className="split-layout">
       <section className="panel">
         <PanelTitle icon={Users} title={copy.sections.createUser} />
-        {error && <div className="alert danger">{error}</div>}
+        {error && <div className="alert danger">{translate(error)}</div>}
         <form className="booking-form" onSubmit={createUser}>
           <label>
             {copy.fields.fullName}
@@ -1282,13 +1129,13 @@ function BookingList({ bookings, compact = false }) {
 
 function BookingWorkflow({ status }) {
   const steps = [
-    { key: "PENDING_APPROVAL", label: "Yêu cầu" },
-    { key: "CONFIRMED", label: "Đã duyệt" },
-    { key: "CHECKED_OUT", label: "Đã bàn giao" },
-    { key: "RETURNED", label: "Đã hoàn trả" },
-    { key: "COMPLETED", label: "Hoàn tất" }
+    { key: "PENDING_APPROVAL", label: translate("ui.requested_2ff978a2") },
+    { key: "CONFIRMED", label: translate("ui.approved_e7881844") },
+    { key: "CHECKED_OUT", label: translate("ui.handed_over_216b5cbb") },
+    { key: "RETURNED", label: translate("ui.returned_fd3eb4fb") },
+    { key: "COMPLETED", label: translate("ui.completed_b0484236") }
   ];
-  const terminalLabels = { REJECTED: "Từ chối", CANCELLED: "Đã hủy" };
+  const terminalLabels = { REJECTED: translate("ui.reject_b61a0ebc"), CANCELLED: translate("ui.cancelled_2f777a90") };
   if (terminalLabels[status]) {
     return <div className="booking-workflow terminal"><span>{terminalLabels[status]}</span></div>;
   }
@@ -1478,16 +1325,7 @@ function translateUsageLog(log) {
   return template ? interpolate(template, params) : log.message || copy.empty.value;
 }
 
-function translateNotification(notification) {
-  const params = readMessageParams(notification.messageParams);
-  const titleTemplate = notification.titleKey ? copy.notifications.titles[notification.titleKey] : "";
-  const messageTemplate = notification.messageKey ? copy.notifications.messages[notification.messageKey] : "";
-
-  return {
-    title: titleTemplate ? interpolate(titleTemplate, params) : notification.title || copy.empty.value,
-    message: messageTemplate ? interpolate(messageTemplate, params) : notification.message || copy.empty.value
-  };
-}
+function translateNotification(notification) { return localizeNotification(notification); }
 
 function readMessageParams(value) {
   if (!value) return {};
@@ -1520,7 +1358,7 @@ function IncidentView({ incidents, resources, user, isStaff, onChanged }) {
   const [resolveForm, setResolveForm] = useState({ resolution: "" });
 
   const severityColors = { low: "info", medium: "warning", high: "danger", critical: "danger" };
-  const statusLabels = { reported: "Đã báo cáo", triaged: "Đã phân loại", assigned: "Đã phân công", investigating: "Đang điều tra", resolved: "Đã giải quyết", verified: "Đã xác nhận", closed: "Đã đóng" };
+  const statusLabels = { reported: translate("ui.reported_977c15d8"), triaged: translate("ui.triaged_4652a509"), assigned: translate("ui.assigned_5dd582ca"), investigating: translate("ui.investigating_8723e350"), resolved: translate("ui.resolved_1c5b11f2"), verified: translate("ui.confirmed_e72d13e3"), closed: translate("ui.closed_6b919498") };
 
   async function submitIncident(e) {
     e.preventDefault();
@@ -1550,54 +1388,53 @@ function IncidentView({ incidents, resources, user, isStaff, onChanged }) {
     <div className="view-root">
       <div className="view-header">
         <div>
-          <h2>Quản lý Sự cố</h2>
-          <p className="view-subtitle">Báo cáo và theo dõi sự cố thiết bị</p>
+          <h2>{translate("ui.incident_management_f0a0ff67")}</h2>
+          <p className="view-subtitle">{translate("ui.report_and_track_equipment_incidents_df6e8ec0")}</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-          <Plus size={16} /> Báo cáo sự cố
-        </button>
+          <Plus size={16} />  {translate("ui.report_an_incident_0527866e")} </button>
       </div>
 
-      {error && <div className="alert danger">{error}</div>}
+      {error && <div className="alert danger">{translate(error)}</div>}
 
       {showForm && (
         <form className="card form-card" onSubmit={submitIncident}>
-          <h3>Báo cáo sự cố mới</h3>
+          <h3>{translate("ui.report_a_new_incident_20b7d078")}</h3>
           <div className="form-grid">
             <div className="form-group">
-              <label>Thiết bị *</label>
+              <label>{translate("ui.equipment_94baa594")}</label>
               <select required value={form.resourceId} onChange={e => setForm({ ...form, resourceId: e.target.value })}>
-                <option value="">-- Chọn thiết bị --</option>
+                <option value="">{translate("ui.select_equipment_1e4a8c33")}</option>
                 {resources.map(r => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
               </select>
             </div>
             <div className="form-group">
-              <label>Mức độ nghiêm trọng</label>
+              <label>{translate("ui.severity_7b8b12cb")}</label>
               <select value={form.severity} onChange={e => setForm({ ...form, severity: e.target.value })}>
-                <option value="low">Thấp</option>
-                <option value="medium">Trung bình</option>
-                <option value="high">Cao</option>
-                <option value="critical">Nghiêm trọng</option>
+                <option value="low">{translate("ui.low_4e45ab86")}</option>
+                <option value="medium">{translate("ui.medium_928d4573")}</option>
+                <option value="high">{translate("ui.high_e1595bd0")}</option>
+                <option value="critical">{translate("ui.critical_9559e09a")}</option>
               </select>
             </div>
             <div className="form-group full-width">
-              <label>Tiêu đề *</label>
-              <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Mô tả ngắn về sự cố..." />
+              <label>{translate("ui.title_fd0e6d82")}</label>
+              <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={translate("ui.briefly_describe_the_incident_f7fcd317")} />
             </div>
             <div className="form-group full-width">
-              <label>Mô tả chi tiết *</label>
-              <textarea required rows={4} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Mô tả chi tiết sự cố..." />
+              <label>{translate("ui.detailed_description_dcb89d43")}</label>
+              <textarea required rows={4} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder={translate("ui.describe_the_incident_in_detail_28a80c4a")} />
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={loading}>Gửi báo cáo</button>
-            <button type="button" className="btn" onClick={() => setShowForm(false)}>Huỷ</button>
+            <button type="submit" className="btn btn-primary" disabled={loading}>{translate("ui.submit_report_2c993a8a")}</button>
+            <button type="button" className="btn" onClick={() => setShowForm(false)}>{translate("ui.cancel_96732485")}</button>
           </div>
         </form>
       )}
 
       <div className="card-list">
-        {incidents.length === 0 && <div className="empty-state"><AlertTriangle size={40} /><p>Chưa có sự cố nào</p></div>}
+        {incidents.length === 0 && <div className="empty-state"><AlertTriangle size={40} /><p>{translate("ui.no_incidents_recorded_1111e4e9")}</p></div>}
         {incidents.map(incident => (
           <div key={incident.id} className="card incident-card">
             <div className="card-header">
@@ -1609,20 +1446,20 @@ function IncidentView({ incidents, resources, user, isStaff, onChanged }) {
             </div>
             <p className="card-text">{incident.description}</p>
             <div className="card-meta">
-              <span>Thiết bị: {incident.resource?.name}</span>
-              <span>Báo cáo bởi: {incident.reportedBy?.fullName}</span>
+              <span>{translate("ui.equipment_393f30b5")} {incident.resource?.name}</span>
+              <span>{translate("ui.reported_by_f6cb3b69")} {incident.reportedBy?.fullName}</span>
               <span>{new Date(incident.createdAt).toLocaleString("vi-VN")}</span>
             </div>
             {isStaff && !["resolved", "verified", "closed"].includes(incident.status) && (
               <div className="card-actions">
                 {selected?.id === incident.id ? (
                   <div className="inline-resolve">
-                    <textarea rows={2} placeholder="Mô tả cách giải quyết..." value={resolveForm.resolution} onChange={e => setResolveForm({ resolution: e.target.value })} />
-                    <button className="btn btn-primary" onClick={() => resolveIncident(incident.id)} disabled={loading}>Xác nhận giải quyết</button>
-                    <button className="btn" onClick={() => setSelected(null)}>Huỷ</button>
+                    <textarea rows={2} placeholder={translate("ui.describe_how_the_issue_was_e85ec61b")} value={resolveForm.resolution} onChange={e => setResolveForm({ resolution: e.target.value })} />
+                    <button className="btn btn-primary" onClick={() => resolveIncident(incident.id)} disabled={loading}>{translate("ui.confirm_resolution_e2cd632a")}</button>
+                    <button className="btn" onClick={() => setSelected(null)}>{translate("ui.cancel_96732485")}</button>
                   </div>
                 ) : (
-                  <button className="btn" onClick={() => setSelected(incident)}><Check size={14} /> Đánh dấu giải quyết</button>
+                  <button className="btn" onClick={() => setSelected(incident)}><Check size={14} />  {translate("ui.mark_as_resolved_d2d3f7a6")}</button>
                 )}
               </div>
             )}
@@ -1668,17 +1505,16 @@ function TrainingView({ courses, certifications, resources, user, isStaff, onCha
     <div className="view-root">
       <div className="view-header">
         <div>
-          <h2>Đào tạo & Chứng chỉ An toàn</h2>
-          <p className="view-subtitle">Làm bài thi trực tuyến và quản lý chứng chỉ thiết bị</p>
+          <h2>{translate("ui.training_and_safety_certificates_e54db635")}</h2>
+          <p className="view-subtitle">{translate("ui.take_online_assessments_and_manage_81542a72")}</p>
         </div>
       </div>
 
-      {error && <div className="alert danger">{error}</div>}
+      {error && <div className="alert danger">{translate(error)}</div>}
 
       {expiringSoon.length > 0 && (
         <div className="alert warning">
-          ⚠️ Bạn có {expiringSoon.length} chứng chỉ sắp hết hạn trong 14 ngày tới.
-        </div>
+           {translate("ui.you_have_46939516")} {expiringSoon.length}  {translate("ui.certificates_expiring_within_14_days_cc3c10fa")} </div>
       )}
 
       <div className="stats-row">
@@ -1686,21 +1522,21 @@ function TrainingView({ courses, certifications, resources, user, isStaff, onCha
           <GraduationCap size={24} />
           <div>
             <span className="stat-value">{activeCerts.length}</span>
-            <span className="stat-label">Chứng chỉ hợp lệ</span>
+            <span className="stat-label">{translate("ui.valid_certificates_119eafa8")}</span>
           </div>
         </div>
         <div className="stat-card">
           <ShieldCheck size={24} />
           <div>
             <span className="stat-value">{courses.length}</span>
-            <span className="stat-label">Khoá đào tạo</span>
+            <span className="stat-label">{translate("ui.training_courses_93f212a3")}</span>
           </div>
         </div>
       </div>
 
-      <div className="section-title">Chứng chỉ của tôi</div>
+      <div className="section-title">{translate("ui.my_certificates_b231e61f")}</div>
       <div className="card-list">
-        {certifications.length === 0 && <div className="empty-state"><GraduationCap size={40} /><p>Chưa có chứng chỉ nào. Chọn khóa học bên dưới để làm bài thi cấp chứng chỉ!</p></div>}
+        {certifications.length === 0 && <div className="empty-state"><GraduationCap size={40} /><p>{translate("ui.no_certificates_yet_choose_a_78d49065")}</p></div>}
         {certifications.map(cert => (
           <div key={cert.id} className="card cert-card">
             <div className="card-header">
@@ -1708,30 +1544,30 @@ function TrainingView({ courses, certifications, resources, user, isStaff, onCha
               <span className={`badge ${cert.status === "active" ? "success" : "warning"}`}>{cert.status}</span>
             </div>
             <div className="card-meta">
-              <span>Cấp ngày: {new Date(cert.issuedAt).toLocaleDateString("vi-VN")}</span>
-              {cert.expiresAt && <span>Hết hạn: {new Date(cert.expiresAt).toLocaleDateString("vi-VN")}</span>}
-              {cert.notes && <span className="text-muted">Ghi chú: {cert.notes}</span>}
+              <span>{translate("ui.issued_on_3f839bae")} {new Date(cert.issuedAt).toLocaleDateString("vi-VN")}</span>
+              {cert.expiresAt && <span>{translate("ui.expires_on_0e710514")} {new Date(cert.expiresAt).toLocaleDateString("vi-VN")}</span>}
+              {cert.notes && <span className="text-muted">{translate("ui.notes_9b223cea")} {cert.notes}</span>}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="section-title">Các khoá đào tạo & Trắc nghiệm Cấp chứng chỉ</div>
+      <div className="section-title">{translate("ui.training_courses_and_certification_assessments_85e67464")}</div>
       <div className="card-list">
         {(courses && courses.length > 0 ? courses : [
           {
             id: "course-h100-safe",
             code: "SAFE-AI-2026",
-            name: "Khóa Huấn Luyện An Toàn Cụm Máy Chủ GPU & Thiết Bị Bay 2026",
-            description: "Tiêu chuẩn vận hành phần cứng phòng lab, kiểm soát nhiệt độ buồng máy NVIDIA H100, quy tắc xả điện áp và thao tác sạc trạm UAV Matrice 300.",
+            name: translate("ui.gpu_server_and_uav_safety_9bac3dc3"),
+            description: translate("ui.lab_hardware_operating_standards_nvidia_3bc39151"),
             durationHours: 2,
             isRequired: true
           },
           {
             id: "course-cloud-cuda",
             code: "CUDA-OPT-2026",
-            name: "Tối Ưu Hóa Bộ Nhớ CUDA & Quy Chuẩn Khóa GiST Exclusion",
-            description: "Quy trình lập lịch huấn luyện phân tán, quản trị quota công bằng và phòng ngừa tràn bộ nhớ OOM trên cụm DGX A100.",
+            name: translate("ui.cuda_memory_optimization_and_gist_cce5d121"),
+            description: translate("ui.distributed_training_scheduling_fair_quota_5efb3666"),
             durationHours: 3,
             isRequired: false
           }
@@ -1745,17 +1581,16 @@ function TrainingView({ courses, certifications, resources, user, isStaff, onCha
                   <span className="font-mono text-[10.5px] text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">{course.code}</span>
                 </div>
                 {hasCert ? (
-                  <span className="font-mono text-xs text-emerald-300 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">✓ Đã có chứng chỉ</span>
+                  <span className="font-mono text-xs text-emerald-300 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">{translate("ui.already_certified_87a60a2e")}</span>
                 ) : (
                   <button className="btn-cyan-gradient text-xs px-4 py-2 rounded-lg flex items-center gap-1.5 cursor-pointer font-mono" onClick={() => setSelectedCourseForQuiz(course)}>
-                    <GraduationCap size={15} /> ⚡ Làm Bài Thi Trắc Nghiệm
-                  </button>
+                    <GraduationCap size={15} />  {translate("ui.take_assessment_51fea0dc")} </button>
                 )}
               </div>
               {course.description && <p className="text-xs text-slate-300 font-sans leading-relaxed">{course.description}</p>}
               <div className="flex items-center gap-3 font-mono text-xs text-slate-400 pt-1 border-t border-white/5">
-                {course.durationHours && <span>Thời lượng: <strong className="text-white">{course.durationHours} giờ</strong></span>}
-                {course.isRequired && <span className="text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-500/30">Bắt buộc đối với SV</span>}
+                {course.durationHours && <span>{translate("ui.duration_c7c9fc5a")} <strong className="text-white">{course.durationHours}  {translate("ui.hours_2491e993")}</strong></span>}
+                {course.isRequired && <span className="text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-500/30">{translate("ui.required_for_students_7657362a")}</span>}
               </div>
             </div>
           );

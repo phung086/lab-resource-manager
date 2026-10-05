@@ -707,6 +707,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     // 13a: > 180 days
     const resOver = await request(app)
       .get(`/api/calendar/events?start=${validStart}&end=${beyond180}`)
+      .set("Accept-Language", "en")
       .set(bearer(tokens.studentA));
     assert.equal(resOver.status, 400);
     assert.equal(resOver.body.error?.code, "VALIDATION_ERROR");

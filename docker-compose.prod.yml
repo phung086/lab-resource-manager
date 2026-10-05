@@ -22,9 +22,18 @@ services:
       PORT: 8000
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
       CORS_ORIGINS: ${CORS_ORIGINS}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-}
+      MCP_ASSISTANT_ENABLED: ${MCP_ASSISTANT_ENABLED:-false}
+      HARDWARE_TELEMETRY_ENABLED: ${HARDWARE_TELEMETRY_ENABLED:-false}
+      ASSISTANT_MAX_CONCURRENT: ${ASSISTANT_MAX_CONCURRENT:-4}
+      ASSISTANT_TIMEOUT_MS: ${ASSISTANT_TIMEOUT_MS:-30000}
+      ASSISTANT_TOOL_TIMEOUT_MS: ${ASSISTANT_TOOL_TIMEOUT_MS:-10000}
+      ASSISTANT_RATE_LIMIT_PER_MINUTE: ${ASSISTANT_RATE_LIMIT_PER_MINUTE:-6}
+      ASSISTANT_MODEL_FAILURE_THRESHOLD: ${ASSISTANT_MODEL_FAILURE_THRESHOLD:-3}
+      ASSISTANT_MODEL_COOLDOWN_MS: ${ASSISTANT_MODEL_COOLDOWN_MS:-30000}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -77,6 +86,9 @@ services:
         VITE_APP_NAME: ${VITE_APP_NAME}
         VITE_APP_SUBTITLE: ${VITE_APP_SUBTITLE}
         VITE_ENABLE_RESEARCH_FEATURES: ${VITE_ENABLE_RESEARCH_FEATURES:-false}
+        VITE_ENABLE_AI_ASSISTANT: ${VITE_ENABLE_AI_ASSISTANT:-false}
+        VITE_ENABLE_TELEMETRY_FEATURES: ${VITE_ENABLE_TELEMETRY_FEATURES:-false}
+        VITE_ENABLE_PAYMENT_FEATURES: ${VITE_ENABLE_PAYMENT_FEATURES:-false}
     restart: unless-stopped
     ports:
       - "${APP_PORT:-80}:80"
@@ -92,17 +104,21 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.0.1
+    profiles: [observability]
     restart: unless-stopped
     volumes:
       - ./infra/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    secrets:
+      - metrics_token
     depends_on:
       - backend
 
   node-exporter:
     image: prom/node-exporter:v1.8.2
+    profiles: [observability]
     restart: unless-stopped
     pid: host
     volumes:
@@ -115,3 +131,7 @@ services:
 volumes:
   postgres-data:
   prometheus-data:
+
+secrets:
+  metrics_token:
+    file: ${METRICS_TOKEN_FILE:-./.secrets/metrics-token}

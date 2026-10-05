@@ -1,3 +1,5 @@
+import { translate } from "../i18n.js";
+import { useLocale } from '../providers/LocaleProvider';
 import React, { useState, useRef, useEffect } from "react";
 import { Server, ShieldCheck, Lock, Mail, ArrowRight, Layers } from "lucide-react";
 import { AuthIdentity } from "./AuthIdentity";
@@ -17,6 +19,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   locale = "vi",
   onLocaleChange
 }) => {
+  const { tr } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,11 +29,11 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
 
   const resourceCategories = [
-    { name: "Phòng thực hành", code: "ROOM" },
-    { name: "Thiết bị đo kiểm", code: "EQUIPMENT" },
-    { name: "Máy móc chuyên dụng", code: "MACHINE" },
-    { name: "Bộ kit thí nghiệm", code: "EXPERIMENT_KIT" },
-    { name: "Vật tư tiêu hao", code: "MATERIAL" }
+    { name: tr("ui.practical_classroom_eaa0e133"), code: "ROOM" },
+    { name: tr("ui.measurement_equipment_cd72960e"), code: "EQUIPMENT" },
+    { name: tr("ui.specialist_machines_aeca1d7c"), code: "MACHINE" },
+    { name: tr("ui.experiment_kits_dbba45a1"), code: "EXPERIMENT_KIT" },
+    { name: tr("ui.consumables_48d8a486"), code: "MATERIAL" }
   ];
 
   async function handleSubmit(e: React.FormEvent) {
@@ -43,7 +46,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
       const result = await login(email, password);
       onLogin(result.user);
     } catch (requestError: any) {
-      setError(requestError?.message || "Không thể đăng nhập. Vui lòng kiểm tra thông tin tài khoản.");
+      setError(requestError?.message || "ui.could_not_sign_in_check_e387b97e");
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +60,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
         <div className="auth-panel auth-panel-form flex flex-col justify-between">
           {/* Header & Language Switch */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-medium">Cổng xác thực người dùng</span>
+            <span className="text-xs text-slate-400 font-medium">{tr("ui.account_access_34b777ad")}</span>
 
             <div className="auth-language flex items-center gap-2">
               <button
@@ -70,8 +73,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
                     : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
                 }`}
               >
-                VI
-              </button>
+                 {translate("ui.vi_dc7b94e1")} </button>
               <button
                 type="button"
                 onClick={() => onLocaleChange && onLocaleChange("en")}
@@ -82,8 +84,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
                     : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
                 }`}
               >
-                EN
-              </button>
+                 {translate("ui.en_69374b09")} </button>
             </div>
           </div>
 
@@ -91,23 +92,21 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
           <div className="auth-form-content my-auto w-full mx-auto">
             <div className="mb-6">
               <h3 className="text-2xl font-bold font-heading text-white tracking-tight">
-                Đăng nhập hệ thống
-              </h3>
+                {tr("ui.sign_in_70d8f8fd")}</h3>
               <p className="text-xs text-slate-400 mt-1.5">
-                Nhập tài khoản đơn vị nghiên cứu hoặc trường đại học để tiếp tục
-              </p>
+                {tr("ui.use_your_laboratory_account_to_02c1b4ab")}</p>
             </div>
 
             {error && (
               <div className="mb-4 p-3.5 bg-rose-950/70 border border-rose-500/40 rounded-xl text-xs text-rose-200" role="alert" tabIndex={-1} ref={errorRef}>
-                {error}
+                {translate(error)}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="login-email" className="text-xs font-medium text-slate-300 flex items-center justify-between">
-                  <span>Email tài khoản *</span>
+                  <span>{tr("ui.account_email_8b7609c7")}</span>
                 </label>
                 <div className="relative">
                   <Mail size={16} className="auth-input-icon text-slate-400" aria-hidden="true" />
@@ -118,7 +117,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="email@domain.edu.vn"
+                    placeholder={translate("ui.email_domain_edu_vn_41f1371a")}
                     className="auth-form-input has-icon w-full text-xs"
                   />
                 </div>
@@ -126,7 +125,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="login-password" className="text-xs font-medium text-slate-300 flex items-center justify-between">
-                  <span>Mật khẩu *</span>
+                  <span>{tr("ui.password_98128fff")}</span>
                 </label>
                 <div className="relative">
                   <Lock size={16} className="auth-input-icon text-slate-400" aria-hidden="true" />
@@ -139,10 +138,10 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
                     onChange={(e) => setPassword(e.target.value)}
                     minLength={8}
                     maxLength={128}
-                    placeholder="••••••••••••"
+                    placeholder={translate("ui._b36c6545")}
                     className="auth-form-input has-icon password-input w-full text-xs"
                   />
-                  <button className="password-toggle" type="button" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <button className="password-toggle" type="button" aria-label={showPassword ? tr("ui.hide_password_edd2eb31") : tr("ui.show_password_acfb0b77")} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
               </div>
 
@@ -151,7 +150,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
                 disabled={isLoading}
                 className="auth-submit-button mt-2 text-xs btn-cyan-gradient flex items-center justify-center gap-2 cursor-pointer font-semibold"
               >
-                <span>{isLoading ? "Đang xác thực tài khoản..." : "ĐĂNG NHẬP VÀO HỆ THỐNG"}</span>
+                <span>{isLoading ? tr("ui.signing_in_9707ffe4") : tr("ui.sign_in_0c2debdf")}</span>
                 <ArrowRight size={15} aria-hidden="true" />
               </button>
             </form>
@@ -159,14 +158,13 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
 
           {/* Switch to Register */}
           <div className="text-center pt-4 border-t border-white/10 text-xs text-slate-400">
-            <span>Chưa có tài khoản sinh viên? </span>
+            <span>{tr("ui.need_a_student_account_e21eee22")}</span>
             <button
               type="button"
               onClick={onSwitchToRegister}
               className="auth-switch-link text-blue-400 font-semibold cursor-pointer ml-1"
             >
-              Đăng ký tài khoản mới ➔
-            </button>
+              {tr("ui.create_an_account_c260e2f4")}</button>
           </div>
         </div>
       </div>

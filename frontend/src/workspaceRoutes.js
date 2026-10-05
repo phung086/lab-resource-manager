@@ -1,4 +1,5 @@
 export const WORKSPACE_ROUTES = Object.freeze({
+  stock: 'kho-vat-tu', teaching: 'lop-hoc-phan',
   home: 'tong-quan', smart_calendar: 'lich-dat', bookings: 'booking',
   resources: 'tai-nguyen', dashboard: 'van-hanh', monitoring: 'telemetry',
   incidents: 'su-co', escalations: 'thong-bao', maintenance: 'bao-tri',

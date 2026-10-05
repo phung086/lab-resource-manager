@@ -48,7 +48,7 @@ const completeSchema = z.object({
 
 router.post("/otp", limiter, route(async (req, res) => {
   const data = otpSchema.parse(req.body);
-  res.status(202).json(await sendGuestBookingOtp(data));
+  res.status(202).json(await sendGuestBookingOtp({ ...data, locale: req.locale }));
 }));
 
 router.post("/book", limiter, route(async (req, res) => {

@@ -1,10 +1,8 @@
 import { monitoringDefaults } from "./constants.js";
-import { defaultLocale, getDictionary } from "./i18n.js";
+import { getActiveLocale, getDictionary } from "./i18n.js";
 import { clampPercent, formatDateTime, formatPercent } from "./utils.js";
 
-const defaultDictionary = getDictionary(defaultLocale);
-
-function getMetricDefinitions(copy = defaultDictionary) {
+function getMetricDefinitions(copy = getDictionary(getActiveLocale())) {
   return [
     {
       key: "cpuPercent",
@@ -69,7 +67,7 @@ function getMetricDefinitions(copy = defaultDictionary) {
   ];
 }
 
-export function buildMonitoringRows(resource, sample, copy = defaultDictionary) {
+export function buildMonitoringRows(resource, sample, copy = getDictionary(getActiveLocale())) {
   return getMetricDefinitions(copy).map((definition) => {
     const warning = readThreshold(resource?.specs, definition.warningSpec, definition.warningDefault);
     const critical = readThreshold(resource?.specs, definition.criticalSpec, definition.criticalDefault);
@@ -87,7 +85,7 @@ export function buildMonitoringRows(resource, sample, copy = defaultDictionary) 
   });
 }
 
-export function getMonitoringSummary(resource, sample, copy = defaultDictionary) {
+export function getMonitoringSummary(resource, sample, copy = getDictionary(getActiveLocale())) {
   if (!sample) {
     return {
       state: "unknown",

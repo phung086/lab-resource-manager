@@ -1,3 +1,4 @@
+import { localize } from '../locales/index.js';
 import crypto from "crypto";
 
 import { prisma } from "../db.js";
@@ -12,7 +13,7 @@ function reminderSchedule(booking) {
     {
       type: "BOOKING_UPCOMING",
       minutesBefore: BOOKING_UPCOMING_REMINDER_MINUTES,
-      title: "Lịch đặt sắp bắt đầu",
+      title: localize("vi", "notification.booking.upcoming.title"),
       titleKey: "booking.upcoming.title",
       messageKey: "booking.upcoming.message",
       severity: "info"
@@ -20,7 +21,7 @@ function reminderSchedule(booking) {
     {
       type: "RETURN_REMINDER",
       minutesBefore: RETURN_REMINDER_MINUTES,
-      title: "Sắp đến giờ hoàn trả tài nguyên",
+      title: localize("vi", "notification.booking.return_reminder.title"),
       titleKey: "booking.return_reminder.title",
       messageKey: "booking.return_reminder.message",
       severity: "warning"
@@ -46,9 +47,7 @@ export async function scheduleBookingReminders(tx, booking, now = new Date()) {
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString()
     };
-    const message = definition.type === "BOOKING_UPCOMING"
-      ? `Lịch ${booking.title} sẽ bắt đầu lúc ${booking.startAt.toISOString()}.`
-      : `Lịch ${booking.title} dự kiến kết thúc lúc ${booking.endAt.toISOString()}.`;
+    const message = localize("vi", `notification.${definition.messageKey}`, messageParams);
 
     await tx.notification.upsert({
       where: { dedupeKey: `booking:${booking.id}:${definition.type}` },

@@ -1,3 +1,4 @@
+import { openWorkspace, selectWorkspaceTab } from "./test-utils/openWorkspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -27,13 +28,11 @@ async function login(page, email) {
     page.waitForResponse((response) => response.url().endsWith("/api/auth/login") && response.status() === 200),
     page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click()
   ]);
+  await openWorkspace(page);
 }
 
 async function openCalendar(page) {
-  if (page.viewportSize()?.width <= 900) await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const calendarNav = page.locator(".sidebar-nav-item-2026", { hasText: "Lịch Đặt Khung Giờ" });
-  await calendarNav.waitFor({ timeout: 5000 });
-  await calendarNav.click();
+  await selectWorkspaceTab(page, "smart_calendar");
   await page.getByRole("button", { name: "Tuần", exact: true }).waitFor();
 }
 
@@ -50,9 +49,7 @@ try {
     });
   });
   await login(zeroResPage, "b4.student@lab.test");
-  const zeroNav = zeroResPage.locator(".sidebar-nav-item-2026", { hasText: "Lịch Đặt Khung Giờ" });
-  await zeroNav.waitFor({ timeout: 5000 });
-  await zeroNav.click();
+  await selectWorkspaceTab(zeroResPage, "smart_calendar");
 
   // Verify truthful empty state
   await zeroResPage.locator(".calendar-empty-resources-card").waitFor({ timeout: 5000 });
@@ -247,8 +244,7 @@ try {
 
   // 1d. Inspect My Bookings section
   console.log("  Verifying own booking in My Bookings list...");
-  const myBookingsNav = studentPage.locator(".sidebar-nav-item-2026", { hasText: "Lịch Đặt Của Tôi" });
-  await myBookingsNav.click();
+  await selectWorkspaceTab(studentPage, "bookings");
   await studentPage.getByText(bookingTitle).first().waitFor({ timeout: 5000 });
 
   // Screenshot desktop

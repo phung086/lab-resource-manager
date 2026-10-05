@@ -8,7 +8,7 @@ const database = validateLocalDemoEnvironment(process.env);
 const prisma = new PrismaClient();
 
 function commonsFile(fileName, width = 1200) {
-  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}?width=${width}`;
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}${width ? `?width=${width}` : ""}`;
 }
 
 function commonsSource(fileName) {
@@ -83,7 +83,7 @@ try {
           id: randomUUID(),
           resourceId: resource.id,
           kind,
-          url: commonsFile(fileName, kind === "VIDEO" ? 1280 : 1400),
+          url: commonsFile(fileName, kind === "VIDEO" ? null : 1400),
           title,
           altText,
           sourceUrl,
