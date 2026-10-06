@@ -75,11 +75,30 @@ try {
           await page.locator('.resource-card').first().getByRole('button').last().click(); await page.getByRole('dialog').waitFor();
           await audit(page, locale, `${role}/${locale}/resource-details`);
           for (const section of ['specifications','schedule','history']) {
+            const historyRead = section === 'history' ? page.waitForResponse(response => response.url().startsWith(`${api}/resources/`) && new URL(response.url()).pathname.endsWith('/history') && response.request().method() === 'GET') : null;
             await page.locator(`[aria-controls="dossier-${section}"]`).click();
+            if (historyRead) {
+              const response = await historyRead;
+              check(response.ok() || response.status() === 403, `${role}/${locale}: history read has a valid access outcome`);
+              await page.locator('#dossier-history [role="status"]').waitFor({ state:'hidden' });
+              if (response.status() === 403) check(await page.locator('#dossier-history [role="alert"]').isVisible(), `${role}/${locale}: actual history denial remains inside resource details`);
+              else check(await page.locator('#dossier-history [role="alert"]').count() === 0, `${role}/${locale}: accessible history is not shown as forbidden`);
+              if (role === 'staff') {
+                // Fresh demo staff are assigned to both labs. Test denial rendering
+                // explicitly, without assuming that the first resource is unassigned.
+                const denyHistory = route => route.fulfill({ status:403, contentType:'application/json', body:JSON.stringify({ error:{code:'FORBIDDEN',message:'Isolated history permission failure'} }) });
+                await page.route(response.url(), denyHistory);
+                await page.locator('[aria-controls="dossier-overview"]').click();
+                await page.locator('[aria-controls="dossier-history"]').click();
+                await page.locator('#dossier-history [role="alert"]').waitFor();
+                check((await page.locator('#dossier-history [role="alert"]').innerText()).includes(catalogs[locale]['refine.historyScope']), `${role}/${locale}: denied history explains scope in the selected language`);
+                check(await page.getByRole('dialog').isVisible(), `${role}/${locale}: denied history keeps resource details open`);
+                await page.unroute(response.url(), denyHistory);
+              }
+            }
             await page.waitForLoadState('networkidle');
             await audit(page, locale, `${role}/${locale}/resource-${section}`);
           }
-          if (role === 'staff') check(await page.locator('#dossier-history [role="alert"]').isVisible(), 'unassigned staff: restricted history is explained without closing resource details');
           await page.keyboard.press('Escape');
         }
         if (tab === 'smart_calendar') {
@@ -137,7 +156,8 @@ try {
     await page.keyboard.press('Escape');
     await context.close();
   }
-  // Catalog faults are the only intercepted requests. Business data remains real PostgreSQL.
+  // Catalog faults and staff history denial are explicitly intercepted UI failures.
+  // Successful business reads remain backed by real PostgreSQL.
   const publicDelay = Number(process.env.UX_ROLE_DELAY_MS || 0);
   if (Number.isFinite(publicDelay) && publicDelay > 0) await new Promise(resolve => setTimeout(resolve, Math.min(publicDelay, 60_000)));
   const context = await browser.newContext(), page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
@@ -165,7 +185,7 @@ try {
   failure = ''; await page.locator('.locale-startup').getByRole('button').click(); await page.locator('#login-email').waitFor();
   check(await page.locator('html').getAttribute('lang') === 'en', 'Saved EN startup recovers without requiring a Vietnamese catalog');
   await context.close(); assert.deepEqual(errors, []);
-  writeFileSync(`${output}/bilingual-results.json`, JSON.stringify({ checks:results.length, results, errors, environment:'Real PostgreSQL 16 local demo, four roles, VI/EN. Catalog-only fault injection. No external model/SMTP/payment/hardware claim.' },null,2));
+  writeFileSync(`${output}/bilingual-results.json`, JSON.stringify({ checks:results.length, results, errors, environment:'Real PostgreSQL 16 local demo, four roles, VI/EN. Catalog and history-denial UI fault injection. No external model/SMTP/payment/hardware claim.' },null,2));
   console.log(`PASS: ${results.length} bilingual UI, accessibility, form continuity and recovery checks; no browser exceptions.`);
 } catch (error) {
   writeFileSync(`${output}/failure.json`, JSON.stringify({ checks:results, error:error.message, url:activePage?.url(), text:activePage && !activePage.isClosed() ? await activePage.locator('body').innerText().catch(() => '') : '', errors, failedReads },null,2));

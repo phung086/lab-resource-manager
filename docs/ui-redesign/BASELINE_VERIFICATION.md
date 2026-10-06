@@ -21,6 +21,31 @@ Full database integration, all runtime flows and redesigned-screen visual
 acceptance were not rerun by this preparation. GitHub checks must be evaluated
 at the published head; earlier PR #22 checks do not certify this local baseline.
 
+## Publication follow-up
+At first published head 614a8e2, remote fresh-database, backend, frontend,
+migration-safety, Docker, queue pagination, Batch 7 regression/demo and Batch 8
+smart-monitoring E2E jobs passed. Two gates exposed specific problems:
+- Backend production audit flagged proxy-addr 2.0.7 (GHSA-jqcg-44mw-7w3h).
+  The coordinator updated only that transitive lock entry to compatible 2.0.8.
+  Production audit now reports zero vulnerabilities; the 86-test required
+  backend suite, lint and production-config verifier passed after reinstall and
+  Prisma client generation. Schema/migrations were not changed.
+- Workspace navigation itself passed 129 assertions. The following bilingual
+  test assumed every demo staff member was unassigned, despite the fresh seed
+  assigning both labs. The test now checks the real history read outcome and
+  explicitly injects a 403 to verify translated denial and retained modal.
+  This does not weaken backend permissions or replace a required runtime flow.
+  The local bilingual rerun verified the staff/VI denial assertions before
+  hitting the shared API's real 429 ingress limit during staff/EN. It is not a
+  full passing E2E run; the final CI rerun uses its existing isolated high-limit
+  test environment. The local rate-limit policy was not weakened for testing.
+
+Frontend required checks also passed from the clean Antigravity checkout.
+Frontend production audit reports zero vulnerabilities. Full dependency audits
+still report development dependency findings (frontend 10 high, backend 4 high);
+these were not broadly upgraded as part of this bounded publication fix.
+Inspect GitHub Actions for the final follow-up head before claiming all CI green.
+
 External backup: C:/Users/Admin/.codex/backups/lrm-publication-20261006-220119.
 Private settings, historical screenshot/log folders and backup archives are
 retained locally rather than uploaded. Source, required assets, portable rules,
