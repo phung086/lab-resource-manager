@@ -5,9 +5,20 @@ import { prisma } from "../db.js";
 import { ADMIN, LAB_STAFF } from "../constants/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { buildDashboard } from "../services/dashboardService.js";
+import { buildOperationsReport } from "../services/operationsReportService.js";
 import { dispatchDueNotifications } from "../services/notificationService.js";
 
 const router = express.Router();
+
+router.get("/report", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
+  try {
+    const { days } = z.object({ days: z.enum(["7", "30"]).default("30") }).strict().parse(req.query);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.json(await buildOperationsReport(prisma, req.user, { days: Number(days) }));
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get("/", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {

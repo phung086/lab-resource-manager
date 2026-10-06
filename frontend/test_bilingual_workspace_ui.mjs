@@ -9,6 +9,8 @@ const catalogs = Object.fromEntries(['vi','en'].map(locale => [locale, JSON.pars
 const output = process.env.UI_SCREENSHOT_DIR || '../logs/workspace-navigation'; mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined, args: ['--no-sandbox'], headless: true });
 const results = [], errors = [];
+let activePage;
+const failedReads = [];
 const check = (condition, label) => { assert.ok(condition, label); results.push(label); };
 const original = new Set();
 function collectOriginal(value) {
@@ -42,7 +44,12 @@ async function audit(page, locale, label) {
 }
 try {
   for (const role of ['student','lecturer','staff','admin']) {
+    // Space live-demo runs without changing the application's ingress protection.
+    const roleDelay = Number(process.env.UX_ROLE_DELAY_MS || 0);
+    if (Number.isFinite(roleDelay) && roleDelay > 0) await new Promise(resolve => setTimeout(resolve, Math.min(roleDelay, 60_000)));
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 } }), page = await context.newPage();
+    activePage = page;
+    page.on('response', response => { if (response.url().startsWith(api) && response.status() >= 400) failedReads.push({ status:response.status(), path:new URL(response.url()).pathname }); });
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base); await page.locator('#login-email').fill(`${role}@lrm.local`); await page.locator('#login-password').fill(process.env.UX_DEMO_PASSWORD);
     await page.getByRole('button', { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click(); await page.locator('.home-attention-grid').waitFor();
@@ -66,23 +73,39 @@ try {
         check(await page.locator('.header-title-group').count() === 0 || await page.locator('.header-2026 h1').count() > 0, `${role}/${locale}/${tab}: shell remains mounted`);
         if (tab === 'resources') {
           await page.locator('.resource-card').first().getByRole('button').last().click(); await page.getByRole('dialog').waitFor();
-          await audit(page, locale, `${role}/${locale}/resource-details`); await page.keyboard.press('Escape');
+          await audit(page, locale, `${role}/${locale}/resource-details`);
+          for (const section of ['specifications','schedule','history']) {
+            await page.locator(`[aria-controls="dossier-${section}"]`).click();
+            await page.waitForLoadState('networkidle');
+            await audit(page, locale, `${role}/${locale}/resource-${section}`);
+          }
+          if (role === 'staff') check(await page.locator('#dossier-history [role="alert"]').isVisible(), 'unassigned staff: restricted history is explained without closing resource details');
+          await page.keyboard.press('Escape');
         }
         if (tab === 'smart_calendar') {
           for (const mode of ['week','month','day']) {
             const label = catalogs[locale][{ week:'ui.week_a10b97df', month:'ui.month_10276db1', day:'ui.day_c4c3ca76' }[mode]];
             await page.locator('.calendar-view-switcher').getByRole('button', { name: label, exact:true }).click(); await page.waitForLoadState('networkidle');
             await audit(page, locale, `${role}/${locale}/calendar-${mode}`);
+            if (role === 'student' && locale === 'vi' && mode === 'week') {
+              for (const width of [1440,1280,375]) {
+                await page.setViewportSize({width,height:960});
+                check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `calendar: ${width}px document does not overflow`);
+                await page.screenshot({path:`${output}/calendar-${width}.png`});
+              }
+              await page.setViewportSize({width:1440,height:960});
+            }
           }
         }
       }
     }
     await selectWorkspaceTab(page, 'profile');
-    const field = page.locator('input:not([readonly]):not([disabled])').first();
+    const field = page.locator('input:visible:not([readonly]):not([disabled])').first();
     if (await field.count()) { const previous = await field.inputValue(); await field.fill('Bilingual form continuity'); await switchLocale(page, 'vi'); check(await field.inputValue() === 'Bilingual form continuity', `${role}: profile draft survives language switch`); await field.fill(previous); }
     await selectWorkspaceTab(page, 'home'); await switchLocale(page, 'en');
     await page.screenshot({ path: `${output}/${role}-overview-en.png`, fullPage:true });
-    await page.locator('.header-2026').getByRole('button', { name: 'LAB assistant', exact:true }).click();
+    await page.locator('.header-2026').getByRole('button', { name: 'Open account menu', exact:true }).click();
+    await page.getByRole('button', { name: 'LAB assistant', exact:true }).click();
     await page.locator('#assistant-question').fill('Find equipment');
     await page.locator('.assistant-compose').getByRole('button').click(); await page.locator('.assistant-turn').waitFor();
     await audit(page, 'en', `${role}/assistant-en`);
@@ -115,7 +138,10 @@ try {
     await context.close();
   }
   // Catalog faults are the only intercepted requests. Business data remains real PostgreSQL.
+  const publicDelay = Number(process.env.UX_ROLE_DELAY_MS || 0);
+  if (Number.isFinite(publicDelay) && publicDelay > 0) await new Promise(resolve => setTimeout(resolve, Math.min(publicDelay, 60_000)));
   const context = await browser.newContext(), page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
+  activePage = page;
   let attempts = 0, failure = 'network';
   await page.route('**/locales/catalog/en.json*', async route => {
     attempts += 1;
@@ -125,7 +151,7 @@ try {
   });
   await page.goto(base); await page.getByRole('button', { name: /Xem chi tiết:/ }).first().click();
   await page.locator('.catalog-guest-booking > summary').click(); await page.locator('#guest-booking-purpose').fill('Nội dung gốc giữ nguyên');
-  await page.locator('.public-language').getByRole('button', { name:'EN',exact:true }).click(); await page.locator('.locale-feedback[role=alert]').waitFor();
+  await page.locator('.public-header').getByRole('button', { name:'EN',exact:true }).click(); await page.locator('.locale-feedback[role=alert]').waitFor();
   check(await page.locator('html').getAttribute('lang') === 'vi', 'Failed load retains the previous locale');
   check(await page.locator('#guest-booking-purpose').inputValue() === 'Nội dung gốc giữ nguyên', 'Failed locale load preserves the guest draft');
   failure = 'corrupt'; await page.locator('.locale-feedback').getByRole('button').click(); await page.locator('.locale-feedback[role=alert]').waitFor();
@@ -141,4 +167,8 @@ try {
   await context.close(); assert.deepEqual(errors, []);
   writeFileSync(`${output}/bilingual-results.json`, JSON.stringify({ checks:results.length, results, errors, environment:'Real PostgreSQL 16 local demo, four roles, VI/EN. Catalog-only fault injection. No external model/SMTP/payment/hardware claim.' },null,2));
   console.log(`PASS: ${results.length} bilingual UI, accessibility, form continuity and recovery checks; no browser exceptions.`);
+} catch (error) {
+  writeFileSync(`${output}/failure.json`, JSON.stringify({ checks:results, error:error.message, url:activePage?.url(), text:activePage && !activePage.isClosed() ? await activePage.locator('body').innerText().catch(() => '') : '', errors, failedReads },null,2));
+  if (activePage && !activePage.isClosed()) await activePage.screenshot({ path:`${output}/failure.png`, fullPage:true }).catch(() => {});
+  throw error;
 } finally { await browser.close(); }

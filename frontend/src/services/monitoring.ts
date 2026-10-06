@@ -1,5 +1,9 @@
 import { apiRequest } from "../api.js";
-import type { DashboardPayload, TelemetryResourceView } from "../types/telemetry";
+import type { DashboardPayload, TelemetryResourceView, OperationsReportPayload } from "../types/telemetry";
+
+export async function getOperationsReport(days: 7 | 30, signal?: AbortSignal): Promise<OperationsReportPayload> {
+  return apiRequest(`/dashboard/report?days=${days}`, { signal });
+}
 
 export async function getDashboard(): Promise<DashboardPayload> {
   return apiRequest("/dashboard");

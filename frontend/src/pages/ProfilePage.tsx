@@ -2,19 +2,13 @@ import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import {
-  Award,
   BadgePercent,
-  CalendarCheck,
   CheckCircle2,
   KeyRound,
   Loader2,
-  MapPinned,
   Save,
-  Shield,
   ShieldAlert,
-  ShieldCheck,
   TrendingUp,
-  User,
   WalletCards
 } from "lucide-react";
 import { apiRequest } from "../api.js";
@@ -42,6 +36,7 @@ const CANONICAL_ROLE_LABELS: Record<string, string> = {
 
 export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated: (user: any) => void }) {
   const { tr } = useLocale();
+  const [section, setSection] = useState("contact");
   const [profile, setProfile] = useState<any>(null);
   const [fullName, setFullName] = useState(user?.fullName || "");
   const [phone, setPhone] = useState(user?.phone || "");
@@ -162,55 +157,24 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
     <section className="profile-page" aria-labelledby="profile-title">
       <div className="profile-hero">
         <div>
-          <span className="profile-kicker">{tr("ui.account_profile_6fe53df4")}</span>
-          <h1 id="profile-title">{tr("ui.profile_lab_access_258f772e")}</h1>
-          <p>
-            {tr("ui.manage_your_identity_account_security_4ef0a46e")}</p>
+          <h1 id="profile-title">{tr("refine.account")}</h1>
         </div>
       </div>
 
       {error && <div className="profile-alert danger" role="alert">{tr(error)}</div>}
       {success && <div className="profile-alert success" role="status"><CheckCircle2 size={16} />{translate(success)}</div>}
 
-      {/* 1. IDENTITY */}
-      <article className="profile-card profile-section-identity" aria-labelledby="section-identity-title">
-        <div className="profile-card-title">
-          <User size={20} />
-          <div>
-            <h2 id="section-identity-title">{tr("ui.1_identity_f9782d52")}</h2>
-            <p>{tr("ui.your_account_identity_in_open_a32f046c")}</p>
-          </div>
-        </div>
-        <div className="profile-identity-grid">
-          <div className="identity-item">
-            <span className="profile-label">{tr("ui.full_name_03de764f")}</span>
-            <strong>{profile?.fullName || "—"}</strong>
-          </div>
-          <div className="identity-item">
-            <span className="profile-label">{tr("ui.account_email_f78e1851")}</span>
-            <strong>{profile?.email || "—"}</strong>
-          </div>
-          <div className="identity-item">
-            <span className="profile-label">{tr("ui.system_role_rbac_35f59705")}</span>
-            <span className="role-badge">{roleName}</span>
-          </div>
-          <div className="identity-item">
-            <span className="profile-label">{tr("ui.account_id_8283358a")}</span>
-            <code>{profile?.id}</code>
-          </div>
-          {profile?.createdAt && (
-            <div className="identity-item">
-              <span className="profile-label">{tr("ui.created_on_ed06d9e5")}</span>
-              <span>{formatVietnamDateTime(profile.createdAt)}</span>
-            </div>
-          )}
-        </div>
-      </article>
-
+      <div className="profile-identity-summary">
+        <span className="profile-initial" aria-hidden="true">{(profile?.fullName || profile?.email || "").trim().slice(0, 1).toUpperCase()}</span>
+        <div><h2>{profile?.fullName}</h2><p>{profile?.email}</p></div><span className="role-badge">{roleName}</span>
+      </div>
+      {isTemporaryPassword && section !== "security" && <button className="secondary-button" onClick={() => setSection("security")}>{tr("ui.password_change_required_e4691737")}</button>}
+      <nav className="refine-section-nav" aria-label={tr("refine.accountSections")}>
+        {["contact", "security", "access", "activity"].map(value => <button key={value} type="button" aria-pressed={section === value} onClick={() => setSection(value)}>{tr(`refine.${value}`)}</button>)}
+      </nav>
       {/* 2. ACCOUNT / SECURITY */}
-      <article className="profile-card profile-section-security" aria-labelledby="section-security-title">
+      <article hidden={section !== "security"} className="profile-card profile-section-security" aria-labelledby="section-security-title">
         <div className="profile-card-title">
-          <Shield size={20} />
           <div>
             <h2 id="section-security-title">{tr("ui.2_account_security_8c130463")}</h2>
             <p>{tr("ui.account_status_and_password_settings_56c3576f")}</p>
@@ -294,9 +258,8 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
       </article>
 
       {/* 3. ACCESS / CUSTOMER CLASSIFICATION */}
-      <article className="profile-card profile-section-access" aria-labelledby="section-access-title">
+      <article hidden={section !== "access"} className="profile-card profile-section-access" aria-labelledby="section-access-title">
         <div className="profile-card-title">
-          <ShieldCheck size={20} />
           <div>
             <h2 id="section-access-title">{tr("ui.3_user_classification_access_rules_88c093ba")}</h2>
             <p>{tr("ui.self_declared_classification_and_access_29a705f2")}</p>
@@ -309,23 +272,16 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
               <span className="profile-label">{tr("ui.self_declared_user_classification_ebebf177")}</span>
               <strong>{customerType === "INTERNAL" ? tr("ui.institution_member_internal_24446cca") : tr("ui.external_visitor_partner_external_cc813018")}</strong>
             </div>
-            <div className="semantics-tag">
-              <code>{translate("ui.customertypesemantics_self_declared_unverified_209a3e15")}</code>
-            </div>
           </div>
-
-          <div className="disclaimer-box">
-            <strong>{tr("ui.open_lab_access_rules_4ce4fd97")}</strong>
-            <p>
-              {tr("ui.user_classification_is_2f207bc9")}<strong>{tr("ui.self_declared_self_declared_unverified_5c40272e")}</strong> {tr("ui.and_supports_contact_records_this_c85e3f85")}<strong>{tr("ui.not_cc80ff68")}</strong> {tr("ui.grant_verified_institutional_authority_6b61b924")}<strong>{tr("ui.not_cc80ff68")}</strong> {tr("ui.replace_the_system_role_8cca235c")}<strong>{tr("ui.not_cc80ff68")}</strong> {tr("ui.automatically_change_prices_or_cc819d0c")}<strong>{tr("ui.not_cc80ff68")}</strong> {tr("ui.waive_mandatory_safety_training_77deccc5")}</p>
-          </div>
+          <p className="profile-access-note">{tr("refine.accessNote")}</p>
+          <details><summary>{tr("refine.accessMore")}</summary><p>{tr("refine.accessExplanation")}</p>
+          </details>
         </div>
       </article>
 
       {/* 4. TRAINING / CERTIFICATIONS */}
-      <article className="profile-card profile-section-training" aria-labelledby="section-training-title">
+      <article hidden={section !== "access"} className="profile-card profile-section-training" aria-labelledby="section-training-title">
         <div className="profile-card-title">
-          <Award size={20} />
           <div>
             <h2 id="section-training-title">{tr("ui.4_training_safety_certification_ab2b8bab")}</h2>
             <p>{tr("ui.certifications_required_to_use_specialist_8a51f0ef")}</p>
@@ -370,9 +326,8 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
       </article>
 
       {/* 5. CONTACT & ADDRESS */}
-      <form className="profile-card profile-section-contact" onSubmit={saveContactInfo} aria-labelledby="section-contact-title">
+      <form hidden={section !== "contact"} className="profile-card profile-section-contact" onSubmit={saveContactInfo} aria-labelledby="section-contact-title">
         <div className="profile-card-title">
-          <MapPinned size={20} />
           <div>
             <h2 id="section-contact-title">{tr("ui.5_contact_information_address_1cb1b94e")}</h2>
             <p>{tr("ui.contact_details_for_handover_coordination_aaf95d98")}</p>
@@ -435,9 +390,8 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
       </form>
 
       {/* 6. BOOKING SUMMARY */}
-      <article className="profile-card profile-section-booking" aria-labelledby="section-booking-title">
+      <article hidden={section !== "activity"} className="profile-card profile-section-booking" aria-labelledby="section-booking-title">
         <div className="profile-card-title">
-          <CalendarCheck size={20} />
           <div>
             <h2 id="section-booking-title">{tr("ui.6_booking_summary_b37a89e1")}</h2>
             <p>{tr("ui.overview_of_your_resource_bookings_f59eaa62")}</p>
@@ -474,9 +428,8 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
       </article>
 
       {/* 7. LOYALTY & COMMERCIAL INFORMATION (LAST) */}
-      <article className="profile-card profile-section-loyalty" aria-labelledby="section-loyalty-title">
+      <article hidden={section !== "activity"} className="profile-card profile-section-loyalty" aria-labelledby="section-loyalty-title">
         <div className="profile-card-title">
-          <WalletCards size={20} />
           <div>
             <h2 id="section-loyalty-title">{tr("ui.7_lab_priority_points_reference_b6cf06b0")}</h2>
             <p>{tr("ui.tiers_and_points_support_administration_38bfe6cc")}</p>

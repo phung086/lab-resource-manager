@@ -2,7 +2,8 @@ import { TELEMETRY_FEATURES_ENABLED } from "../../config/featureFlags";
 import { translate } from "../../i18n.js";
 import { useLocale } from '../../providers/LocaleProvider';
 import React, { useState } from "react";
-import { Activity, AlertTriangle, Bell, CalendarClock, Camera, Gauge, Server, ShieldAlert } from "lucide-react";
+import { Activity, AlertTriangle, Bell, CalendarClock, Camera, Server, ShieldAlert } from "lucide-react";
+import { OperationsReport } from "../../components/features/monitoring/OperationsReport";
 import { TelemetryStatusGrid } from "../../components/features/monitoring/TelemetryStatusGrid";
 import { acknowledgeMonitoringAlert } from "../../services/monitoring";
 import type { DashboardPayload } from "../../types/telemetry";
@@ -76,34 +77,7 @@ export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = 
 
       {actionError && <div className="alert danger" role="alert">{translate(actionError)}</div>}
 
-      {operations && <div className="dashboard-data-grid">
-        <article className="card dashboard-data-panel">
-          <div className="panel-heading">
-            <Gauge size={17} />
-            <h2>{tr("ui.30_day_utilization_b9f84182")}</h2>
-          </div>
-          <dl className="operational-evidence-grid">
-            <div><dt>{tr("ui.scheduled_usage_6b04915f")}</dt><dd>{dashboard.utilization.scheduledUtilizationRate.toFixed(2)}%</dd></div>
-            <div><dt>{tr("ui.actual_usage_c7e4c2f8")}</dt><dd>{dashboard.utilization.actualUtilizationRate.toFixed(2)}%</dd></div>
-            <div><dt>{tr("ui.scheduled_minutes_cbc3f780")}</dt><dd>{dashboard.utilization.scheduledMinutes}</dd></div>
-            <div><dt>{tr("ui.actual_minutes_8f20eef8")}</dt><dd>{dashboard.utilization.actualUsageMinutes}</dd></div>
-          </dl>
-          <p className="data-source-note">{tr("ui.source_dcfd8415")}{dashboard.utilization.source}{tr("ui.window_3f23504e")}{dashboard.utilization.windowDays} {tr("ui.days_8071ee3b")}</p>
-        </article>
-
-        <article className="card dashboard-data-panel">
-          <div className="panel-heading">
-            <AlertTriangle size={17} />
-            <h2>{tr("ui.incident_36824380")}</h2>
-          </div>
-          <dl className="operational-evidence-grid">
-            <div><dt>{tr("ui.total_13fdbadf")}</dt><dd>{dashboard.incidents.total}</dd></div>
-            <div><dt>{tr("ui.open_98235c77")}</dt><dd>{dashboard.incidents.open}</dd></div>
-            <div><dt>{tr("ui.critical_9559e09a")}</dt><dd>{dashboard.incidents.bySeverity.critical || 0}</dd></div>
-            <div><dt>{tr("ui.high_f87c2db7")}</dt><dd>{dashboard.incidents.bySeverity.high || 0}</dd></div>
-          </dl>
-        </article>
-      </div>}
+      {operations && <OperationsReport refreshKey={dashboard.generatedAt} />}
 
       {!operations && TELEMETRY_FEATURES_ENABLED && <>
       <div className="card dashboard-data-panel">

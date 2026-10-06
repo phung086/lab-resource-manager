@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "autoVerify": true,
+  "configurations": [{
+    "name": "lab-frontend",
+    "runtimeExecutable": "node",
+    "runtimeArgs": ["scripts/dev-local.mjs"],
+    "cwd": "frontend",
+    "port": 5173,
+    "autoPort": false
+  }]
+}

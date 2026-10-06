@@ -237,7 +237,8 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
   const blocked = selectedResource && (!["AVAILABLE", "IN_USE"].includes(selectedResource.operationalStatus) || selectedResource.bookingState !== "bookable");
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="calendar-page flex flex-col gap-4 w-full">
+      <header className="calendar-page-heading"><h1>{tr('ui.room_and_equipment_calendar_cce9c071')}</h1><p>{tr('ui.final.calendarIntro')}</p></header>
       {/* Calendar Toolbar */}
       <CalendarToolbar
         viewMode={viewMode}

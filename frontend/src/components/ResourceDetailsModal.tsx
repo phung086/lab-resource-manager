@@ -1,7 +1,8 @@
 import { translate } from "../i18n.js";
 import { ResourceUsageGuide } from "./ResourceUsageGuide";
 import { useLocale } from '../providers/LocaleProvider';
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { apiRequest } from "../api.js";
 import { ResourceGallery } from './ResourceGallery';
 import { CalendarClock, History, Server } from "lucide-react";
 
@@ -40,10 +41,26 @@ const maintenanceLabels: Record<string, string> = {
 
 export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOpen, onClose, resource, onViewCalendar }) => {
   const { tr } = useLocale();
+  const [section, setSection] = useState("overview");
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    if (!isOpen || !resource?.id || section !== "history") return;
+    const controller = new AbortController();
+    setHistoryLoading(true);
+    setHistoryError("");
+    apiRequest(`/resources/${resource.id}/history`, { signal: controller.signal })
+      .then(payload => { if (!controller.signal.aborted) setHistory(payload.timeline || []); })
+      .catch(error => { if (!controller.signal.aborted) setHistoryError(error.status === 403 ? "refine.historyScope" : error.message || "api.API_REQUEST_FAILED"); })
+      .finally(() => { if (!controller.signal.aborted) setHistoryLoading(false); });
+    return () => controller.abort();
+  }, [isOpen, resource?.id, section, retry]);
   if (!isOpen || !resource) return null;
   const bookings = resource.schedule?.bookings || resource.upcomingSchedule?.bookings || [];
   const maintenance = resource.schedule?.maintenanceWindows || resource.upcomingSchedule?.maintenanceWindows || [];
-  const history = resource.history || [];
+
 
   return (
     <BaseModal2026
@@ -55,6 +72,11 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
       maxWidth="max-w-4xl"
       footer={<><button type="button" className="secondary-button" onClick={onClose}>{tr("ui.close_5d54c2a1")}</button>{onViewCalendar && <button className="primary-button" onClick={() => { onClose(); onViewCalendar(resource.id); }}>{tr("ui.view_resource_calendar_a11d4b1d")}</button>}</>}
     >
+      <div className="resource-dossier">
+      <nav className="refine-section-nav" aria-label={tr("refine.detailSections")}>
+        {["overview", "specifications", "schedule", "history"].map(value => <button key={value} type="button" aria-pressed={section === value} aria-controls={`dossier-${value}`} onClick={() => setSection(value)}>{tr(`refine.${value}`)}</button>)}
+      </nav>
+      <section id="dossier-overview" hidden={section !== "overview"}>
       <ResourceGallery key={resource.id} resourceId={resource.id} initialItems={resource.media} />
       <div className="resource-detail-status-line">
         <span className={`resource-status-pill status-${String(resource.operationalStatus).toLowerCase()}`}>{tr(operationalLabels[resource.operationalStatus]) || resource.operationalStatus}</span>
@@ -62,6 +84,18 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
         {!resource.category && <span className="resource-status-pill status-unresolved">{tr("ui.unclassified_10fe63fa")}</span>}
       </div>
 
+      <section className="resource-detail-section">
+        <h4>{tr("ui.description_9eca256d")}</h4>
+        <p>{resource.description || tr("ui.no_description_provided_7ca49080")}</p>
+        <dl className="resource-overview-facts">
+          <Detail label={tr("ui.laboratory_eb85976f")} value={resource.laboratory?.name || resource.location || tr("ui.not_assigned_ebe3cb5d")} />
+          <Detail label={tr("ui.approval_required_cc220dc0")} value={resource.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : tr("ui.confirm_automatically_when_eligible_e47b0eb4")} />
+          <Detail label={tr("ui.safety_training_d48b0cef")} value={resource.trainingRequirements?.length ? resource.trainingRequirements.map((course: any) => course.name || course.code).join(", ") : tr("ui.not_required_ae94c3a4")} />
+        </dl>
+      </section>
+
+      </section>
+      <section id="dossier-specifications" hidden={section !== "specifications"}>
       <p className="section-description">{tr("ui.availability_describes_the_current_time_2913c3cd")}</p>
       <dl className="resource-detail-grid">
         <Detail label={tr("ui.resource_category_5fc170bb")} value={resource.category ? tr(categoryLabels[resource.category]) || resource.category : tr("ui.unclassified_10fe63fa")} />
@@ -76,11 +110,6 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
 
       <LabPolicySummary policy={resource.labPolicy || resource.laboratory?.labPolicy} requiresApproval={resource.effectiveRequiresApproval} />
 
-      <section className="resource-detail-section">
-        <h4>{tr("ui.description_9eca256d")}</h4>
-        <p>{resource.description || tr("ui.no_description_provided_7ca49080")}</p>
-      </section>
-
       <ResourceUsageGuide guide={resource.specs?.usageGuide} />
 
       {resource.specs && Object.keys(resource.specs).some(key => key !== "usageGuide") && (
@@ -90,6 +119,8 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
         </section>
       )}
 
+      </section>
+      <section id="dossier-schedule" hidden={section !== "schedule"}>
       <section className="resource-detail-section" aria-labelledby="resource-schedule-heading">
         <h4 id="resource-schedule-heading"><CalendarClock size={16} aria-hidden="true" /> {tr("ui.bookings_and_maintenance_7a542896")}</h4>
         {bookings.length === 0 && maintenance.length === 0 ? <p className="resource-detail-empty">{tr("ui.no_saved_schedules_in_this_74dea0aa")}</p> : (
@@ -100,9 +131,11 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
         )}
       </section>
 
+      </section>
+      <section id="dossier-history" hidden={section !== "history"}>
       <section className="resource-detail-section" aria-labelledby="resource-history-heading">
         <h4 id="resource-history-heading"><History size={16} aria-hidden="true" /> {tr("ui.recorded_resource_history_e8b75ec5")}</h4>
-        {history.length === 0 ? <p className="resource-detail-empty">{tr("ui.no_history_events_recorded_8a049a1a")}</p> : (
+        {historyLoading ? <p role="status">{tr("ui.loading_148ded83")}</p> : historyError ? <div role="alert"><p>{tr(historyError)}</p>{historyError !== "refine.historyScope" && <button className="secondary-button" onClick={() => setRetry(value => value + 1)}>{tr("ui.retry_c58d068c")}</button>}</div> : history.length === 0 ? <p className="resource-detail-empty">{tr("ui.no_history_events_recorded_8a049a1a")}</p> : (
           <div className="resource-event-list resource-history-list">
             {history.slice(0, 20).map((event: any) => <div key={`${event.source}-${event.id}`}>
               <strong>{historyLabel(event)}</strong>
@@ -112,7 +145,9 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
         )}
       </section>
 
+      </section>
       <p className="resource-detail-timestamps">{tr("ui.created_e6ef0fb9")}{formatDate(resource.createdAt)} {tr("ui.updated_ff4540e4")}{formatDate(resource.updatedAt)}</p>
+      </div>
     </BaseModal2026>
   );
 };

@@ -1,0 +1,25 @@
+{
+  "contractVersion": "lrm-ui-v1",
+  "tasks": {
+    "ag-landing": {
+      "branch": "codex/lrm-ui-ag-landing",
+      "scopeClass": "lrm-public-redesign",
+      "allowed": ["frontend/src/components/PublicLanding.tsx", "frontend/src/styles/redesign/public-landing.css", "docs/ui-redesign/tasks/ag-landing/REPORT.md"]
+    },
+    "web-calendar": {
+      "branch": "codex/lrm-ui-web-calendar",
+      "scopeClass": "lrm-calendar-redesign",
+      "allowed": ["frontend/src/components/SmartCalendarView.tsx", "frontend/src/components/calendar/CalendarToolbar.tsx", "frontend/src/components/calendar/CalendarEventCard.tsx", "frontend/src/styles/redesign/calendar.css", "docs/ui-redesign/tasks/web-calendar/REPORT.md"]
+    },
+    "web-operations": {
+      "branch": "codex/lrm-ui-web-operations",
+      "scopeClass": "lrm-operation-redesign",
+      "allowed": ["frontend/src/components/features/operations/BookingOperationCard.tsx", "frontend/src/components/features/operations/BookingWorkflowTimeline.tsx", "frontend/src/styles/redesign/operations.css", "docs/ui-redesign/tasks/web-operations/REPORT.md"]
+    },
+    "web-profile": {
+      "branch": "codex/lrm-ui-web-profile",
+      "scopeClass": "lrm-profile-redesign",
+      "allowed": ["frontend/src/pages/ProfilePage.tsx", "frontend/src/styles/redesign/profile.css", "docs/ui-redesign/tasks/web-profile/REPORT.md"]
+    }
+  }
+}

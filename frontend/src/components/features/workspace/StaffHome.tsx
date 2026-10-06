@@ -24,7 +24,7 @@ export function StaffHome({ user, bookingSummary, incidentSummary, maintenance, 
   const active = queues.find(item => item.status === queue)!;
   const jobs = maintenance.filter(job => ["scheduled", "in_progress"].includes(job.status));
   return <>
-    <section className="home-operations-heading"><div><span className="workspace-overline">{t("ui.home.staff.eyebrow")}</span><h2>{t("ui.home.staff.title")}</h2><p>{t("ui.home.staff.description")}</p></div><span className="home-scope-pill"><ShieldAlert size={17} aria-hidden="true" />{t("ui.home.staff.scope")}</span></section>
+    <section className="home-operations-heading"><div><h2>{t("ui.home.staff.title")}</h2><p>{t("ui.home.staff.description")}</p></div><span className="home-scope-pill"><ShieldAlert size={17} aria-hidden="true" />{t("ui.home.staff.scope")}</span></section>
     <PriorityTiles scopeKey="ui.queue.countScope" items={[
       { count: summary?.overdue ?? 0, label: "ui.home.staff.overdue", hint: "ui.home.staff.overdueHint", icon: Clock3, urgent: true, onClick: () => setQueue("CHECKED_OUT") },
       { count: incidentSummary?.open ?? 0, label: "ui.home.staff.incidents", hint: "ui.home.staff.incidentHint", icon: ShieldAlert, urgent: true, onClick: () => onNavigate("incidents") },

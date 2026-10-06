@@ -89,6 +89,69 @@ test('guidance without a read plan neither connects MCP nor invokes the model', 
   const response = await service.answer({ message: 'Confirm payment for booking', locale: 'en' }, context('a'));
   assert.equal(response.source, 'local_guidance'); assert.equal(response.modelStatus, 'LOCAL_ONLY'); assert.deepEqual(response.toolsUsed, []); assert.equal(service.gate.active.size, 0);
 });
+test('identity, greetings and capabilities answer the user without operational reads or model calls', async () => {
+  const service = createAssistantService({ settings: { ...settings, openaiApiKey: 'unit-fixture', openaiModel: 'unit-fixture' }, clientFactory: () => assert.fail('Introduction must not read unrelated operational data'), modelCall: () => assert.fail('Introduction has no grounded model input') });
+  for (const [message, locale] of [['ban la ai', 'vi'], ['Bạn là ai?', 'vi'], ['Bạn là ai trong ứng dụng này?', 'vi'], ['Xin chào!', 'vi'], ['BẠN CÓ THỂ LÀM GÌ?', 'vi'], ['Who are you?', 'en'], ['Hello!', 'en'], ['What can you do?', 'en']]) {
+    assert.deepEqual(planAssistantQuestion({ message }), []);
+    const response = await service.answer({ message, locale }, context('intro'));
+    assert.equal(response.summary[0].key, 'assistant.introduction');
+    assert.match(response.answer, /LAB Resource Manager/);
+    assert.equal(response.source, 'local_guidance'); assert.equal(response.modelStatus, 'LOCAL_ONLY');
+    assert.deepEqual(response.toolsUsed, []); assert.deepEqual(response.toolResults, []); assert.deepEqual(response.actions, []);
+    assert.ok(!response.answer.includes('assistant.introduction'));
+  }
+  assert.equal(service.gate.active.size, 0);
+});
+test('unknown questions ask for clarification instead of silently selecting operational summary', async () => {
+  const service = createAssistantService({ settings, clientFactory: () => assert.fail('Unknown intent must not read database'), modelCall: () => assert.fail('Unknown intent has no evidence') });
+  for (const [message, locale] of [['abcxyz', 'vi'], ['Nghĩa là sao nhỉ?', 'vi'], ['Bạn có thể tư vấn trong chuyện này không?', 'vi'], ['What does this mean?', 'en']]) {
+    assert.deepEqual(planAssistantQuestion({ message }), []);
+    const response = await service.answer({ message, locale }, context('unknown'));
+    assert.equal(response.summary[0].key, 'assistant.clarifyRequest');
+    assert.equal(response.source, 'local_guidance'); assert.deepEqual(response.toolsUsed, []);
+  }
+  for (const message of ['Tổng quan hệ thống', 'Show operational summary', 'Lab overview'])
+    assert.equal(planAssistantQuestion({ message })[0].name, 'get_operational_summary');
+  // Ordinary Vietnamese "trong" means "in"; it is not an availability request.
+  assert.equal(planAssistantQuestion({ message: 'Tìm thiết bị trong phòng lab' })[0].name, 'search_resources');
+  assert.equal(planAssistantQuestion({ message: 'Tìm lịch còn trống trong 60 phút' })[0].name, 'find_available_slots');
+  assert.equal(service.gate.active.size, 0);
+});
+test('booking assistance searches real read-only slots in VI/EN and retains explicit inputs', () => {
+  for (const message of ['Giúp tôi đặt lịch trong 90 phút', 'Help me book a resource for 90 minutes', 'Reserve equipment for 1.5 hours', 'Hướng dẫn đặt lịch trong 90 phút']) {
+    const step = planAssistantQuestion({ message, resourceId: 'chosen', startAt: '2026-10-10T01:00:00Z', endAt: '2026-10-10T09:00:00Z' })[0];
+    assert.equal(step.name, 'find_available_slots');
+    assert.deepEqual(step.input, { resourceId: 'chosen', from: '2026-10-10T01:00:00Z', to: '2026-10-10T09:00:00Z', durationMinutes: 90, limit: 5, ...(/equipment/.test(message) ? { category: 'EQUIPMENT' } : {}) });
+  }
+});
+test('unparsed dates ask for an explicit window without inventing availability or contacting a model', async () => {
+  const service = createAssistantService({ settings, clientFactory: () => assert.fail('Date needs clarification'), modelCall: () => assert.fail('No evidence') });
+  for (const message of ['Đặt lịch ngày mai', 'Book tomorrow at 09:00', 'Find slots on Monday', 'Tìm khung giờ ngày 10/10/2026']) {
+    assert.deepEqual(planAssistantQuestion({ message }), []);
+    const answer = await service.answer({ message, locale: 'en' }, context('dates'));
+    assert.equal(answer.summary[0].key, 'assistant.chooseTimeWindow');
+    assert.deepEqual(answer.actions, [{ type: 'CHOOSE_CONTEXT', labelKey: 'assistant.chooseContext' }]);
+    assert.deepEqual(answer.toolsUsed, []);
+    assert.equal(planAssistantQuestion({ message, startAt: '2026-10-10T01:00:00Z', endAt: '2026-10-10T09:00:00Z' })[0].name, 'find_available_slots');
+  }
+});
+test('payment guidance follows enabled/provider readiness and only offers navigation', async () => {
+  for (const [enabled, providers, expected] of [[false, { vnpay: true }, 'disabled'], [true, { vnpay: false, vietqr: false }, 'unconfigured'], [true, { vnpay: true }, 'ready']]) {
+    let readinessReads = 0;
+    const service = createAssistantService({ settings: { ...settings, paymentsEnabled: enabled }, paymentAvailability: () => { readinessReads++; return providers; }, clientFactory: () => assert.fail('Payment guidance must not read or write bookings'), modelCall: () => assert.fail('No grounded model input') });
+    for (const [locale, message] of [['vi', 'Hướng dẫn thanh toán'], ['en', 'Pay for my booking']]) {
+      const answer = await service.answer({ message, locale }, context(locale));
+      assert.equal(answer.summary[0].key, `assistant.payment.${expected}`);
+      assert.equal(answer.summary[1].key, 'assistant.payment.conditions');
+      assert.deepEqual(answer.actions, [{ type: 'OPEN_BOOKINGS', labelKey: 'assistant.viewBookings' }]);
+      assert.equal(answer.provider, 'local'); assert.equal(answer.source, 'local_guidance');
+      assert.deepEqual(answer.toolsUsed, []); assert.deepEqual(answer.toolResults, []);
+      assert.ok(!answer.answer.includes('assistant.payment.'));
+    }
+    assert.equal(readinessReads, enabled ? 2 : 0);
+    assert.equal(service.gate.active.size, 0);
+  }
+});
 test('eligibility is read once per resource for repeated slot suggestions and never grants a denied action', async () => {
   const slots = [0, 1, 2, 3, 4].map(i => ({ resourceId: i < 4 ? 'allowed' : 'denied', resourceCode: 'EQ', startAt: new Date(1800000000000 + i * 3600000).toISOString(), endAt: new Date(1800003600000 + i * 3600000).toISOString() }));
   const calls = [];
@@ -119,11 +182,15 @@ test('business-only dashboard preserves counts and scope without requesting hard
   let resourceQuery, cameraReads = 0;
   const client = {
     resource: { findMany: async query => { resourceQuery = query; return [{ id: 'equipment', operationalStatus: 'AVAILABLE' }]; } },
-    booking: { findMany: async () => [] }, incident: { findMany: async () => [{ status: 'reported', severity: 'high' }] },
+    booking: { findMany: async () => [], groupBy: async query => {
+      assert.deepEqual(query.where.resource, { laboratory: { staffAssignments: { some: { userId: 'staff' } } } });
+      return [{ status: 'CHECKED_OUT', _count: { _all: 25 } }];
+    } }, incident: { findMany: async () => [{ status: 'reported', severity: 'high' }] },
     notification: { count: async () => 3 }, camera: { findMany: async () => { cameraReads += 1; throw new Error('Hardware must not be read'); } }
   };
   const result = await buildDashboard(client, { id: 'staff', role: 'LAB_STAFF' }, new Date(), { includeTelemetry: false });
   assert.equal(result.summary.totalResources, 1); assert.equal(result.summary.openIncidentCount, 1); assert.equal(result.summary.unreadNotifications, 3);
+  assert.equal(result.summary.activeBookingsCount, 25); assert.equal(result.summary.checkedOutCount, 25);
   assert.deepEqual(resourceQuery.where, { laboratory: { staffAssignments: { some: { userId: 'staff' } } } });
   assert.deepEqual(resourceQuery.include, { laboratory: true }); assert.equal(cameraReads, 0);
   assert.equal(result.telemetryIncluded, false); assert.equal(result.telemetrySummary, null); assert.deepEqual(result.telemetry, []); assert.deepEqual(result.cameras, []);

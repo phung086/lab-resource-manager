@@ -382,10 +382,29 @@ Status: Accepted in user-authorized continuation, 2026-09-30.
 Clarification, 2026-10-01: MCP ingress and business API ingress have separate
 bounded IP budgets; authenticated account, object and lab checks stay mandatory.
 Socket/deadline cancellation reaches tool work, and non-cancellable pending reads
-retain admission until they settle. Model generation requires usable evidence and
-a complete input no larger than 24,000 UTF-8 bytes. Hardware-off workspace reads
-explicitly omit telemetry queries and label monitoring as deferred. Shared client
+retain admission until they settle. Model synthesis of LAB facts requires usable
+evidence and its serialized data payload is at most 24,000 UTF-8 bytes.
+Hardware-off workspace reads explicitly omit telemetry queries and label monitoring
+as deferred. Shared client
 deadlines never automatically retry business mutations.
+
+Clarification, 2026-10-05: the user authorized preparing contextual conversation
+before supplying an API key. Responses API planning uses a strict allowlist of
+existing read tools; the backend executes validated arguments through actual
+authenticated MCP. General conversation/clarification may run without LAB data;
+operational facts still require fresh authorized evidence. No writes or remote
+MCP access are introduced. All provider data payloads include bounded history
+within the same 24,000-byte budget; fixed instructions/schema and outputs are
+separately finite. Responses use `store:false`, which is not a provider retention
+guarantee.
+
+Conversation memory is process-local, capped and expires after 30 idle minutes.
+Ownership binds account, hashed bearer session and current role. Business tool
+prose is omitted from history, old choices are re-read, reset deletes the current
+conversation and logout cancels/clears session context. Reload starts a new
+conversation; old server memory expires separately. This does not add JWT
+revocation. Key/model presence is `CONFIGURED_UNVERIFIED` until real provider
+behavior is checked. See `AI_ASSISTANT_MCP.md` and `AI_ASSISTANT_SETUP.md`.
 
 
 ## ADR-026: Task-focused role entry points share one workflow boundary

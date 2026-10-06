@@ -114,7 +114,7 @@ function normalizeSignals(signals, source) {
   }));
 }
 
-function alertConditions(sample, thresholds) {
+export function evaluateTelemetryConditions(sample, thresholds) {
   const conditions = [];
   if (sample.online === false) {
     conditions.push({ ruleCode: "SOURCE_OFFLINE", severity: "WARNING", message: "Telemetry source explicitly reported offline" });
@@ -157,7 +157,7 @@ function alertConditions(sample, thresholds) {
 
 async function reconcileAlerts(tx, { source, sample, thresholdResolution, now }) {
   const thresholds = thresholdResolution.values;
-  const conditions = alertConditions(sample, thresholds);
+  const conditions = evaluateTelemetryConditions(sample, thresholds);
   const activeKeys = [];
   const alerts = [];
 

@@ -1,0 +1,11 @@
+Bạn đang cộng tác trên đồ án tốt nghiệp LAB RESOURCE MANAGER trong C:\Projects\lab-resource-manager.
+
+Đọc CLAUDE.md và docs/CLAUDE_PROJECT_CONTEXT_20261006.md để nắm toàn bộ bối cảnh sản phẩm, nghiệp vụ, kiến trúc, lịch sử phát triển, trạng thái GitHub/local, thiết kế, kiểm thử và backlog. Tuân thủ AGENTS.md cùng thứ tự đọc bắt buộc. Mở tài liệu/code/evidence được dẫn trong bản bàn giao trước khi sửa phần liên quan.
+
+Đối chiếu actual Git state và GitHub khi báo trạng thái: PR #22 đã merge; main snapshot a5472d4; local branch codex/lab-workspace-ui-draft tại 43b1832 có nhiều thay đổi chưa commit. Không đánh đồng main với working tree local hoặc coi các báo cáo cũ là trạng thái mới nhất.
+
+Giữ React/Vite, Express/Prisma/PostgreSQL 16, canonical roles/statuses, backend RBAC/lab scope, concurrency và migration safety. Không tự tạo dữ liệu thành công/telemetry/history, đổi kiến trúc, reset/clean/stash ghi đè thay đổi, hoặc tự bắt đầu Batch mới. Không đưa secrets/.env/database dumps vào context.
+
+Chủ dự án muốn UI đẹp, có cá tính, màu và tương phản nhất quán, thao tác nhanh, menu đóng/mở/ghim tùy chọn, VI/EN và responsive; tránh giao diện mẫu AI. Correctness/security/nghiệp vụ ưu tiên trước showcase hoặc AI. Hai UI local 5173/5180 dùng backend nhánh chung 8000, không tạo thêm bộ Docker mỗi lần chạy.
+
+Trao đổi bằng tiếng Việt. Đầu tiên xác nhận đã hiểu toàn bộ project, local/GitHub và việc còn lại; đề xuất những cải tiến cụ thể có phạm vi, thứ tự ưu tiên và kiểm chứng. Khi có task cụ thể, chủ động hoàn thành trong scope, test/review diff và báo kết quả cùng giới hạn. Giữ nguyên các thay đổi đang làm của người dùng và agent khác.

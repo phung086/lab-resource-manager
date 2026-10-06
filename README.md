@@ -43,6 +43,51 @@ Không coi một tính năng là verified chỉ vì UI hiển thị hoặc build
 
 ## Chạy local
 
+### Backend Docker chung, hai frontend chạy bằng npm
+
+1. Mở Docker Desktop, chờ Engine running.
+2. Trong Docker Desktop, bật nhóm `lrm-local-review` (cả backend và postgres), hoặc:
+
+```powershell
+cd C:\Projects\lab-resource-manager\frontend
+npm run dev:backend
+```
+
+3. Mở frontend cần sử dụng:
+
+```powershell
+# Nhánh đang sửa — http://localhost:5173
+cd C:\Projects\lab-resource-manager\frontend
+npm run dev
+```
+
+```powershell
+# Main — http://localhost:5180, terminal riêng
+cd C:\Projects\lab-resource-manager-main\frontend
+npm run dev
+```
+
+Hai frontend dùng chung API `http://localhost:8000/api` và database
+`lrm-local-review_review-data`. Thay đổi dữ liệu ở một giao diện sẽ xuất hiện ở
+cả hai. Đây là so sánh frontend; backend dùng source nhánh hiện tại.
+
+`npm run dev` chỉ kiểm tra API rồi chạy Vite: không build, tạo hoặc bật Docker.
+`npm run dev:backend` tái sử dụng image/container có sẵn (`--no-build`). Chỉ khi
+đổi dependencies, Prisma schema hoặc Dockerfile mới chạy `npm run dev:backend:rebuild`
+ở frontend nhánh hiện tại. Trên máy mới cũng cần lệnh rebuild lần đầu.
+Sửa backend/src thông thường được nodemon nạp lại qua bind mount.
+
+Ctrl+C chỉ dừng frontend. `npm run dev:stop` tại nhánh dừng backend/database CHUNG,
+không xóa dữ liệu. Có thể dừng/bật nhóm trong Docker Desktop. Restart policy
+`unless-stopped` và log rotation 10 MB x 3 được cấu hình cho cả hai container.
+
+Tài khoản demo: `admin@lrm.local`, `staff@lrm.local`, `lecturer@lrm.local`,
+`student@lrm.local`; mật khẩu `LabDemo!2026Pass`. Migration và seed local có bảo vệ,
+không reset bản ghi nghiệp vụ khi bật lại. AI cần provider riêng; payment/research tắt.
+Nếu cổng đang dùng, dừng frontend cũ trước; launcher không tự diệt tiến trình khác.
+
+### Compose đầy đủ / database phát triển cũ
+
 Tạo môi trường:
 
 ```bash
@@ -186,3 +231,24 @@ Không:
 - sửa tay `_prisma_migrations`;
 - biến mock/research UI thành REQUIRED CORE;
 - khai báo fake telemetry/audit/runtime evidence là dữ liệu thật.
+
+## So sánh song song với main trên GitHub
+
+Thiết lập ngày 2026-10-06 dùng worktree `C:/Projects/lab-resource-manager-main`
+tại commit `a5472d4` của origin/main. Không tự pull khi chạy. Chỉ sửa scripts khởi
+chạy trong package.json của worktree để `npm run dev` gọi launcher chung; source UI
+main giữ nguyên. Có thể chạy `npm run dev:main` từ frontend nhánh thay thế.
+
+| Bản | Frontend | Backend chung |
+|---|---|---|
+| Nhánh | http://localhost:5173 | http://localhost:8000 |
+| Main | http://localhost:5180 | http://localhost:8000 |
+
+Hai phiên trình duyệt tách theo cổng, dữ liệu dùng chung. Không dùng backend riêng
+8010 nữa. `dev:main:stop` là alias dừng backend chung, không phải dừng riêng main.
+Khi cập nhật main, giữ thay đổi scripts local và kiểm tra tương thích API/schema
+trước khi tiếp tục dùng chung backend. Không reset/force checkout.
+
+Docker cũ, image không dùng, cache build và volume cũ đã được dọn theo xác nhận
+người dùng. Chỉ volume `lrm-local-review_review-data` được giữ. Không dùng Compose
+cũ để chạy thêm một bộ môi trường khi kiểm thử giao diện; dùng nhóm local nêu trên.

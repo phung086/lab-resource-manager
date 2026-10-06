@@ -1,6 +1,6 @@
 import { useLocale } from '../../../providers/LocaleProvider';
 import React from "react";
-import { CalendarClock, ClipboardCheck, History, Loader2, PackageCheck, RotateCcw, ShieldCheck, XCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { BookingStatusBadge } from "../../BookingStatusBadge.js";
 import type { BookingAction, BookingRecord } from "../../../types/booking.js";
 import { formatVietnamDateTime } from "../../../utils/timezone.js";
@@ -21,18 +21,18 @@ export const BookingOperationCard: React.FC<BookingOperationCardProps> = ({
 }) => {
   const { tr } = useLocale();
   return (
-  <article className="operation-card">
+  <article className="operation-card" data-booking-id={booking.id}>
     <header className="operation-card-header">
       <div className="operation-card-title-group">
-        <span className="operation-resource-code">{booking.resource?.code || "RESOURCE"}</span>
-        <h3>{booking.title}</h3>
-        <p>{booking.resource?.name}</p>
+        <h3>{booking.resource?.name || booking.title}</h3>
+        <p>{booking.title}</p>
+        {booking.resource?.code && <span className="operation-resource-code">{booking.resource.code}</span>}
       </div>
       <BookingStatusBadge status={booking.status} />
     </header>
 
     <div className="operation-card-grid">
-      <div><span className="operation-label">{tr("ui.booked_by_0600af3f")}</span><strong>{booking.requestedBy?.fullName || "—"}</strong><small>{booking.requestedBy?.role || ""}</small></div>
+      <div><span className="operation-label">{tr("ui.booked_by_0600af3f")}</span><strong>{booking.requestedBy?.fullName || "—"}</strong></div>
       <div><span className="operation-label">{tr("ui.scheduled_time_a5418be4")}</span><strong>{formatVietnamDateTime(booking.startAt)}</strong><small>{tr("ui.to_80b69c87")}{formatVietnamDateTime(booking.endAt)}</small></div>
       <div><span className="operation-label">{tr("ui.lab_room_34bf22b1")}</span><strong>{booking.resource?.laboratory?.name || tr("ui.not_assigned_ebe3cb5d")}</strong><small>{booking.resource?.laboratory?.code || ""}</small></div>
     </div>
@@ -49,21 +49,21 @@ export const BookingOperationCard: React.FC<BookingOperationCardProps> = ({
 
     <footer className="operation-card-actions">
       {onPayment && Boolean(booking.feeAmountVnd) && <button type="button" className="btn btn-secondary" onClick={() => onPayment(booking)} disabled={busy}>{tr("ui.pay_for_booking_317a349c")}</button>}
-      <button type="button" className="btn btn-secondary" onClick={() => onOpenHistory(booking)} disabled={busy}><History size={15} /> {tr("ui.history_0a235708")}</button>
+      <button type="button" className="btn btn-secondary" onClick={() => onOpenHistory(booking)} disabled={busy}>{tr("ui.history_0a235708")}</button>
       <span className="operation-actions-spacer" aria-hidden="true" />
       {isStaff && booking.status === "PENDING_APPROVAL" && <>
         <button type="button" className="btn btn-primary" onClick={() => onAction("APPROVE", booking)} disabled={busy}>
-          {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} {tr("ui.approved_272ec77c")}</button>
+          {busy && <Loader2 size={15} className="animate-spin" />} {tr("ui.final.approve")}</button>
         <button type="button" className="btn btn-danger" onClick={() => onAction("REJECT", booking)} disabled={busy}>
-          {busy ? <Loader2 size={15} className="animate-spin" /> : <XCircle size={15} />} {tr("ui.reject_b61a0ebc")}</button>
+          {busy && <Loader2 size={15} className="animate-spin" />} {tr("ui.reject_b61a0ebc")}</button>
       </>}
       {isStaff && booking.status === "CONFIRMED" && <button type="button" className="btn btn-primary" onClick={() => onAction("CHECK_OUT", booking)} disabled={busy}>
-        {busy ? <Loader2 size={15} className="animate-spin" /> : <ClipboardCheck size={15} />} {tr("ui.checked_out_f1abd0bf")}</button>}
+        {busy && <Loader2 size={15} className="animate-spin" />} {tr("ui.final.handover")}</button>}
       {isStaff && booking.status === "CHECKED_OUT" && <button type="button" className="btn btn-primary" onClick={() => onAction("RETURN", booking)} disabled={busy}>
-        {busy ? <Loader2 size={15} className="animate-spin" /> : <RotateCcw size={15} />} {tr("ui.receive_return_e099755c")}</button>}
-      {isOwner && booking.resource?.category === "ROOM" && booking.status === "CHECKED_OUT" && <button type="button" className="btn btn-primary" onClick={() => onAction("SELF_RETURN", booking)} disabled={busy}><RotateCcw size={15} /> {tr("ui.return_room_complete_8e8c6af6")}</button>}
+        {busy && <Loader2 size={15} className="animate-spin" />} {tr("ui.receive_return_e099755c")}</button>}
+      {isOwner && booking.resource?.category === "ROOM" && booking.status === "CHECKED_OUT" && <button type="button" className="btn btn-primary" onClick={() => onAction("SELF_RETURN", booking)} disabled={busy}>{tr("ui.return_room_complete_8e8c6af6")}</button>}
       {isStaff && booking.status === "RETURNED" && <button type="button" className="btn btn-primary" onClick={() => onAction("COMPLETE", booking)} disabled={busy}>
-        {busy ? <Loader2 size={15} className="animate-spin" /> : <PackageCheck size={15} />} {tr("ui.completed_b0484236")}</button>}
+        {busy && <Loader2 size={15} className="animate-spin" />} {tr("ui.final.complete")}</button>}
       {!isStaff && onCancel && ["PENDING_APPROVAL", "CONFIRMED"].includes(booking.status) && (
         <button
           type="button"
@@ -71,9 +71,7 @@ export const BookingOperationCard: React.FC<BookingOperationCardProps> = ({
           onClick={() => onCancel(booking)}
           disabled={busy}
         >
-          {busy
-            ? <Loader2 size={15} className="animate-spin" />
-            : <CalendarClock size={15} />}
+          {busy && <Loader2 size={15} className="animate-spin" />}
           {tr("ui.cancel_booking_c68ed93d")}</button>
       )}
     </footer>

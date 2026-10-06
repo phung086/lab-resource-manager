@@ -42,6 +42,7 @@ import { QuickBookingModal } from "./components/QuickBookingModal.tsx";
 import { AuthLoginView } from "./components/AuthLoginView.tsx";
 import { AuthRegisterView } from "./components/AuthRegisterView.tsx";
 import { PublicLanding } from "./components/PublicLanding.tsx";
+import { PublicShell } from "./components/PublicShell.tsx";
 import { LocaleProvider, useLocale } from "./providers/LocaleProvider.tsx";
 import { WorkspaceHome } from "./pages/WorkspaceHome";
 import { AppLayout } from "./components/AppLayout.tsx";
@@ -173,6 +174,13 @@ function Application() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [authMode, setAuthMode] = useState("login");
+  const [publicSection, setPublicSection] = useState(() => window.location.hash.slice(1));
+  function openPublicSection(section) {
+    setPublicSection(section);
+    setAuthMode("login");
+    window.history.replaceState(null, "", `#${section}`);
+    window.scrollTo(0, 0);
+  }
   const [activeGlobalModal, setActiveGlobalModal] = useState(null);
 
   const routeParams = new URLSearchParams(routeHash.split("?")[1] || "");
@@ -327,19 +335,19 @@ function Application() {
   if (!user) {
     if (authMode === "register") {
       return (
-        <div className="public-auth-page"><a className="public-auth-back" href="#dau-trang" onClick={() => setAuthMode("login")}>{translate("ui.back_to_introduction_7876ebe9")}</a><AuthRegisterView
+        <PublicShell onRegister={() => setAuthMode("register")} onNavigate={openPublicSection}><div className="public-auth-page"><a className="public-auth-back" href="#dau-trang" onClick={event => { event.preventDefault(); openPublicSection("dau-trang"); }}>{translate("ui.back_to_introduction_7876ebe9")}</a><AuthRegisterView
           onRegisterSuccess={(u) => {
             setUser(u);
             setAuthMode("login");
           }}
-          onSwitchToLogin={() => { setAuthMode("login"); setTimeout(() => document.getElementById("dang-nhap")?.scrollIntoView(), 0); }}
+          onSwitchToLogin={() => openPublicSection("dang-nhap")}
           locale={locale}
           onLocaleChange={changeLocale}
-        /></div>
+        /></div></PublicShell>
       );
     }
     return (
-      <PublicLanding onLocaleChange={changeLocale} onRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }} onViewSchedule={(id) => { sessionStorage.setItem("lrm_pending_resource", id); document.getElementById("dang-nhap")?.scrollIntoView({ behavior: "smooth" }); }} onGuestBookingComplete={handleGuestBookingComplete}><AuthLoginView
+      <PublicLanding initialSection={publicSection} onLocaleChange={changeLocale} onRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }} onViewSchedule={(id) => { sessionStorage.setItem("lrm_pending_resource", id); document.getElementById("dang-nhap")?.scrollIntoView({ behavior: "smooth" }); }} onGuestBookingComplete={handleGuestBookingComplete}><AuthLoginView
         onLogin={setUser}
         onSwitchToRegister={() => { setAuthMode("register"); window.scrollTo(0, 0); }}
         locale={locale}
@@ -370,10 +378,16 @@ function Application() {
       onRefresh={loadData}
       onAssistantPrefill={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
       onLogout={async () => {
-        await logout();
-        setUser(null);
-        updateActiveTab("home");
-        window.history.replaceState(null, "", "#dang-nhap");
+        try {
+          await logout();
+        } catch (requestError) {
+          // logout already clears local credentials, even if server revocation fails.
+          console.warn('Server sign-out could not be confirmed', requestError?.status);
+        } finally {
+          setUser(null);
+          updateActiveTab("home");
+          window.history.replaceState(null, "", "#dang-nhap");
+        }
       }}
       onPasswordChanged={async () => {
         try {

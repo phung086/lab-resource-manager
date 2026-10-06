@@ -1,5 +1,21 @@
 export type TelemetryState = "HEALTHY" | "WARNING" | "STALE" | "UNAVAILABLE" | "NO_DATA";
 
+export interface OperationsReportPayload {
+  source: "database";
+  generatedAt: string;
+  window: { days: 7 | 30; startAt: string; endAt: string; timezone: string; interval: string };
+  basis: { usage: string; scheduled: string; maintenance: string; bookings: string; openIncidents: string };
+  summary: {
+    resourceCount: number; usedResourceCount: number; bookingCount: number; cancelledCount: number;
+    noShowCount: number; endedSessionCount: number; scheduledMinutes: number; actualUsageMinutes: number;
+    incidentCount: number; openIncidentCount: number; plannedMaintenanceMinutes: number;
+  };
+  resources: Array<{
+    id: string; code: string; name: string; laboratoryName: string | null; category: string | null;
+    operationalStatus: string; actualUsageMinutes: number; scheduledMinutes: number;
+  }>;
+}
+
 export interface TelemetrySampleView {
   id: string;
   sourceId?: string | null;

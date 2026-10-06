@@ -45,11 +45,23 @@ try {
     const expected = await call(role, "/bookings?page=1&pageSize=20");
     check(await page.locator(".operation-card").count() === expected.items.length, `${role}: booking page size and permissions`);
     check((await page.locator(".queue-pagination p").textContent()).includes(String(expected.pagination.total)), `${role}: complete scoped total`);
+    if (role === 'staff') {
+      await page.locator('.operations-filter-row').getByRole('button', {name:/Chờ duyệt/i}).click();
+      await waitPage(page);
+      for (const width of [1440,1280,375]) {
+        await page.setViewportSize({width,height:960});
+        check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `staff: ${width}px booking queue does not overflow`);
+        await page.screenshot({path:`${output}/bookings-${width}.png`});
+      }
+      await page.setViewportSize({width:1440,height:960});
+      await page.locator('.operations-filter-row').getByRole('button', {name:/Tất cả/i}).click();
+      await waitPage(page);
+    }
     if (expected.pagination.totalPages > 1) {
-      const first = await page.locator(".operation-card h3").allTextContents();
+      const first = await page.locator(".operation-card").evaluateAll(nodes => nodes.map(node => node.dataset.bookingId));
       await page.locator(".queue-pagination").getByRole("button", { name: catalogs.vi["ui.queue.next"], exact: true }).click();
       await page.locator(".queue-pagination").getByText("Trang 2 /", { exact: false }).waitFor();
-      const second = await page.locator(".operation-card h3").allTextContents();
+      const second = await page.locator(".operation-card").evaluateAll(nodes => nodes.map(node => node.dataset.bookingId));
       check(!second.some(title => first.includes(title)), `${role}: next page changes records`);
       await locale(page, "en");
       check((await page.locator(".queue-pagination").textContent()).includes("Page 2 of"), `${role}: language preserves page`);
@@ -74,9 +86,9 @@ try {
   const linkedAction = page.locator(".home-operation-row .primary-button").first();
   await linkedAction.click(); await page.getByRole("dialog").waitFor();
   check(await page.locator(".operation-card").count() === 1, "old booking shortcut loads exact authorized record beyond first page");
-  const originalTitle = await page.locator(".operation-card h3").textContent();
+  const originalTitle = await page.locator(".operation-card").getAttribute('data-booking-id');
   await page.keyboard.press("Escape"); await page.getByRole("dialog").waitFor({ state: "hidden" });
-  check(await page.locator(".operation-card h3").textContent() === originalTitle, "closing action keeps old booking detail accessible");
+  check(await page.locator(".operation-card").getAttribute('data-booking-id') === originalTitle, "closing action keeps old booking detail accessible");
   check(mutations.length === 0, "opening and closing an old booking action never performs a mutation");
   await page.goto(`${base}/#/workspace/booking?filter=PENDING_APPROVAL`); await waitPage(page);
   check(await page.locator(".operation-card").count() === 20, "server status filter returns old pending records on page one");
@@ -108,7 +120,7 @@ try {
   await page.locator(".operations-filter-row").getByRole("button", { name: /Chờ bàn giao/i }).click(); await waitPage(page);
   release(); await page.unroute("**/api/bookings?**");
   await page.waitForLoadState("networkidle");
-  check(await page.locator(".operation-card").count() === 7 && (await page.locator(".operation-card h3").allTextContents()).every(title => title.startsWith("CONFIRMED")), "superseded delayed response cannot overwrite the selected queue");
+  check(await page.locator(".operation-card").count() === 7 && (await page.locator(".operation-card-title-group p").allTextContents()).every(title => title.startsWith("CONFIRMED")), "superseded delayed response cannot overwrite the selected queue");
 
   await page.locator(".operations-filter-row").getByRole("button", { name: /Chờ duyệt/i }).click(); await waitPage(page);
   check((await page.locator(".queue-pagination").textContent()).includes("Trang 1 / 2"), "returning to a previous filter also resets its stored page");
@@ -155,7 +167,7 @@ try {
   const resource = await call("staff", "/resources", { laboratoryId: assigned.laboratoryId, code: `MAINT-TEST-${Date.now()}`, name: "Maintenance regression equipment", category: "EQUIPMENT", subtype: "OTHER", location: "TEST" });
   const date = days => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
   const startAt = `${date(30)}T09:00:00+07:00`, endAt = `${date(30)}T11:00:00+07:00`;
-  const job = await call("staff", "/maintenance", { resourceId: resource.id, title: "Feedback maintenance regression", kind: "maintenance", status: "scheduled", startAt, endAt, notes: "Isolated maintenance form verification" });
+  const job = await call("staff", "/maintenance", { resourceId: resource.id, title: `Feedback maintenance regression ${resource.code}`, kind: "maintenance", status: "scheduled", startAt, endAt, notes: "Isolated maintenance form verification" });
   const maintenance = await open("staff", "#/workspace/bao-tri");
   const form = maintenance.page.locator("form.lab-form").first();
   await maintenance.page.locator(".lab-ledger-row").filter({ hasText: job.title }).getByRole("button", { name: catalogs.vi["ui.reschedule_edit_job_125d619b"], exact: true }).click();

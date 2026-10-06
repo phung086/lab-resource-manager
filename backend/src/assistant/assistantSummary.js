@@ -12,6 +12,8 @@ export function buildAssistantSummary(results) {
     if (r.notifications) return r.notifications.length ? [message('assistant.notificationsHeading'), ...r.notifications.map(n => message(n.titleKey ? `notification.${n.titleKey}` : n.messageParams?.event ? `notification.booking.event.${n.messageParams.event}.title` : 'notification.generic.title', n.messageParams || {}))] : [message('assistant.noNotifications')];
     if (r.incidents) return r.incidents.length ? r.incidents.map(n => message('assistant.incidentLine', { title: n.title }, { status: stateKey('incident', n.status.toLowerCase()) })) : [message('assistant.noIncidents')];
     if (r.sources) return r.sources.length ? r.sources.map(s => ({ text: `${s.document.title}${s.document.version ? ` (${s.document.version})` : ''}: ${s.excerpt}` })) : [message('assistant.noSources')];
+    if (r.resource) return [message('assistant.resourceLine', { code: r.resource.code, name: r.resource.name }, { status: stateKey('operational', r.resource.operationalStatus) }), message('assistant.resourceLocation', { location: r.resource.location || '' }), message('assistant.detailBoundary')];
+    if (r.booking) return [message('assistant.bookingLine', { title: r.booking.title || '' }, { status: stateKey('booking', r.booking.status) }, { time: r.booking.startAt })];
     if ('available' in r) return [message(r.available ? 'assistant.available' : 'assistant.conflict')];
     if ('bookable' in r) return [message('assistant.eligibility', { training: r.missingTraining?.map(t => t.name).join(', ') || '' }, { bookable: r.bookable ? 'enum.boolean.true' : 'enum.boolean.false', approval: r.requiresApproval ? 'enum.boolean.true' : 'enum.boolean.false' })];
     return [message('assistant.guidance')];

@@ -1,0 +1,204 @@
+{
+  "checked_date": "2026-10-06",
+  "timezone": "Asia/Saigon",
+  "repo": "https://github.com/phung086/lab-resource-manager",
+  "verified_pr": {
+    "number": 22,
+    "title": "Draft: Scoped LAB workspaces, queue pagination and graduation review follow-up",
+    "url": "https://github.com/phung086/lab-resource-manager/pull/22",
+    "state": "closed",
+    "merged": true,
+    "draft": false,
+    "head": "codex/lab-workspace-ui-draft",
+    "head_sha": "43b18328f80a1297c236b69e5496cc8afce86d72",
+    "base": "main",
+    "base_sha": "790727c2a52751b03b12bbcd9015bf019428085c",
+    "merge_commit_sha": "a5472d480971293394c79a91eb142ef27c69fc6e",
+    "created_at": "2026-09-29T14:42:31Z",
+    "merged_at": "2026-10-05T15:45:16Z",
+    "updated_at": "2026-10-05T15:45:18Z"
+  },
+  "pr_inventory": [
+    {
+      "number": 22,
+      "title": "Draft: Scoped LAB workspaces, queue pagination and graduation review follow-up",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/22"
+    },
+    {
+      "number": 21,
+      "title": "Finalize product experience sync status",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/21"
+    },
+    {
+      "number": 20,
+      "title": "Refine product experience guest booking flow",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/20"
+    },
+    {
+      "number": 19,
+      "title": "docs: clarify live-main checkpoint wording",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/19"
+    },
+    {
+      "number": 18,
+      "title": "docs: synchronize current GitHub integration state",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/18"
+    },
+    {
+      "number": 7,
+      "title": "docs(review): add full system business and UX audit",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/7"
+    },
+    {
+      "number": 5,
+      "title": "docs: external business and UX audit",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/5"
+    },
+    {
+      "number": 10,
+      "title": "fix(guest): make OTP and quick booking transactionally consistent",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/10"
+    },
+    {
+      "number": 16,
+      "title": "fix(payment): harden VNPAY lifecycle and reconciliation",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/16"
+    },
+    {
+      "number": 15,
+      "title": "feat(ux): refine Open LAB booking and access workflows",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/15"
+    },
+    {
+      "number": 14,
+      "title": "feat(audit): add transactional administrative accountability",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/14"
+    },
+    {
+      "number": 13,
+      "title": "fix(security): harden privacy and identity governance",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/13"
+    },
+    {
+      "number": 12,
+      "title": "fix(guest): harden OTP and booking transaction integrity",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/12"
+    },
+    {
+      "number": 11,
+      "title": "fix(e2e): restore full-stack release gate reliability",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/11"
+    },
+    {
+      "number": 9,
+      "title": "feat(booking): enforce mandatory training eligibility",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/9"
+    },
+    {
+      "number": 8,
+      "title": "fix(db): verify existing migration lineage provenance",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/8"
+    },
+    {
+      "number": 6,
+      "title": "fix(db): harden clean baseline lineage and future migrations",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/6"
+    },
+    {
+      "number": 17,
+      "title": "release: integrate hardened LAB Resource Manager into main",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/17"
+    },
+    {
+      "number": 4,
+      "title": "Final graduation hardening and verified frontend baseline",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/4"
+    },
+    {
+      "number": 3,
+      "title": "Batch 7: production demo hardening",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/3"
+    },
+    {
+      "number": 2,
+      "title": "Batch 6: notifications incidents dashboard and real telemetry",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/2"
+    },
+    {
+      "number": 1,
+      "title": "feat: complete canonical operational workflow batch 5",
+      "url": "https://github.com/phung086/lab-resource-manager/pull/1"
+    }
+  ],
+  "open_prs": [],
+  "open_issues": [],
+  "pr_head_actions": {
+    "sha": "43b18328f80a1297c236b69e5496cc8afce86d72",
+    "limitations": "Connector returns pull_request-triggered runs for the first page; not a fresh local run or proof of push runs on merge commit.",
+    "runs": [
+      {
+        "id": 37136435642,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/phung086/lab-resource-manager/actions/runs/37136435642"
+      },
+      {
+        "id": 37136435609,
+        "name": "Batch 6 Full-stack E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/phung086/lab-resource-manager/actions/runs/37136435609"
+      },
+      {
+        "id": 37136435622,
+        "name": "Batch 5 Full-stack E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/phung086/lab-resource-manager/actions/runs/37136435622"
+      },
+      {
+        "id": 37136435619,
+        "name": "Batch 8 Smart Monitoring Release Gate",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/phung086/lab-resource-manager/actions/runs/37136435619"
+      },
+      {
+        "id": 37136435629,
+        "name": "Batch 5 Backend Regression",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/phung086/lab-resource-manager/actions/runs/37136435629"
+      },
+      {
+        "id": 37136435618,
+        "name": "Phase H Payment Reconciliation",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/phung086/lab-resource-manager/actions/runs/37136435618"
+      },
+      {
+        "id": 37136435631,
+        "name": "Batch 7 Backend Regression",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/phung086/lab-resource-manager/actions/runs/37136435631"
+      },
+      {
+        "id": 37136435606,
+        "name": "Batch 6 Backend Regression",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/phung086/lab-resource-manager/actions/runs/37136435606"
+      },
+      {
+        "id": 37136435610,
+        "name": "Batch 7 Graduation Demo",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/phung086/lab-resource-manager/actions/runs/37136435610"
+      }
+    ]
+  }
+}

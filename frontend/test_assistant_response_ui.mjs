@@ -1,0 +1,72 @@
+import assert from 'node:assert/strict';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { chromium } from 'playwright-core';
+const base = process.env.UX_FRONTEND_URL || 'http://127.0.0.1:15181';
+const api = process.env.UX_API_URL || 'http://127.0.0.1:15005/api';
+for (const url of [base, api]) assert.ok(['localhost', '127.0.0.1'].includes(new URL(url).hostname));
+assert.ok(process.env.UX_DEMO_PASSWORD);
+const output = process.env.UI_SCREENSHOT_DIR || '../artifacts/assistant-response-fix-20261005/verification';
+mkdirSync(output, { recursive: true });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH, headless: true });
+const checks = [], answers = [], errors = [];
+const check = (value, label) => { assert.ok(value, label); checks.push(label); };
+const context = await browser.newContext({ viewport: { width: 1080, height: 819 } });
+const page = await context.newPage();
+page.on('pageerror', error => errors.push(error.message));
+let mutations = 0;
+page.on('request', request => { if (request.method() === 'POST' && /\/api\/(bookings|payments)(\/|$)/.test(request.url())) mutations++; });
+try {
+  const auth = await fetch(`${api}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@lrm.local', password: process.env.UX_DEMO_PASSWORD }) });
+  assert.equal(auth.status, 200);
+  const session = await auth.json();
+  await page.addInitScript(({ accessToken, user }) => { localStorage.setItem('lrm_token', accessToken); localStorage.setItem('lrm_user', JSON.stringify(user)); }, session);
+  await page.goto(`${base}/#/workspace/tai-nguyen`);
+  await page.locator('.assistant-launcher').click();
+  const dock = page.locator('#lab-assistant-panel'); await dock.waitFor();
+  const ask = async (message, expectedKey, expectsData = false) => {
+    const pending = page.waitForResponse(response => response.url().endsWith('/assistant/chat') && response.request().method() === 'POST');
+    await page.locator('#assistant-question').fill(message);
+    await dock.locator('.assistant-compose button').click();
+    const response = await pending; assert.equal(response.status(), 200);
+    const body = await response.json();
+    await page.waitForFunction(() => !document.querySelector('.assistant-busy'));
+    const text = await dock.locator('.assistant-answer').last().innerText();
+    check(body.summary.some(segment => segment.key === expectedKey), `${message}: correct response intent`);
+    check(body.source === (expectsData ? 'authenticated_mcp' : 'local_guidance'), `${message}: truthful source`);
+    check(!/\b(?:api|assistant|enum)\.[a-zA-Z_]+/.test(text), `${message}: no translation keys`);
+    if (!expectsData) {
+      check(body.toolsUsed.length === 0 && body.toolResults.length === 0, `${message}: no unrelated reads`);
+      check(!body.summary.some(segment => segment.key === 'assistant.operational'), `${message}: no default metrics`);
+    }
+    answers.push({ message, locale: body.locale, keys: body.summary.map(segment => segment.key), source: body.source, toolsUsed: body.toolsUsed });
+    return { body, text };
+  };
+  await dock.locator('.assistant-language').getByRole('button', { name: 'VI', exact: true }).click();
+  await page.locator('html[lang=vi]').waitFor();
+  const identity = await ask('ban la ai', 'assistant.introduction');
+  check(identity.text.includes('Tôi là trợ lý của LAB Resource Manager'), 'exact screenshot question receives Vietnamese introduction');
+  await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(250);
+  await page.screenshot({ path: `${output}/identity-vi.png` });
+  const unknownVi = await ask('Nghĩa là sao nhỉ?', 'assistant.clarifyRequest');
+  check(unknownVi.text.includes('Tôi chưa hiểu rõ yêu cầu'), 'unknown VI question asks for clarification');
+  await page.screenshot({ path: `${output}/clarify-vi.png` });
+  await dock.locator('.assistant-language').getByRole('button', { name: 'EN', exact: true }).click();
+  await page.locator('html[lang=en]').waitFor();
+  const identityEn = await ask('Who are you?', 'assistant.introduction');
+  check(identityEn.text.includes('LAB Resource Manager assistant'), 'English introduction is translated');
+  await page.screenshot({ path: `${output}/identity-en.png` });
+  const unknownEn = await ask('What does this mean?', 'assistant.clarifyRequest');
+  check(unknownEn.text.includes('I’m not sure what you need yet'), 'unknown EN question asks for clarification');
+  const slots = await ask('Find a free 60-minute slot', 'assistant.defaultWindow', true);
+  check(slots.body.toolsUsed.includes('find_available_slots'), 'supported slot request still reads authenticated MCP');
+  const overview = await ask('Show operational summary', 'assistant.operational', true);
+  check(overview.body.toolsUsed.includes('get_operational_summary'), 'only explicit overview invokes operational summary');
+  check(mutations === 0, 'no booking or payment creation');
+  check(errors.length === 0, 'no browser errors');
+  writeFileSync(`${output}/result.json`, JSON.stringify({ pass: true, assertions: checks.length, checks, answers, errors }, null, 2));
+  console.log(JSON.stringify({ pass: true, assertions: checks.length, errors }));
+} catch (error) {
+  await page.screenshot({ path: `${output}/failure.png` }).catch(() => {});
+  writeFileSync(`${output}/result.json`, JSON.stringify({ pass: false, checks, answers, errors, failure: error.stack }, null, 2));
+  throw error;
+} finally { await browser.close(); }

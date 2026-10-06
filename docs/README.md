@@ -8,6 +8,7 @@ and approved contracts → verified reports → implementation.
 
 | Need | Document |
 |---|---|
+| Full Claude handoff: local/GitHub, business, source map, history, UX, verification and backlog | [Full context](CLAUDE_PROJECT_CONTEXT_20261006.md), [project instructions](CLAUDE_PROJECT_INSTRUCTIONS.txt), [Claude entry point](../CLAUDE.md) |
 | Requirements, actors, permission matrix and use cases | [SRS](srs.md) |
 | Product boundary | [Product](../PRODUCT.md) |
 | Latest local implementation and verification | [Current state](CURRENT_STATE.md) |
@@ -19,6 +20,8 @@ and approved contracts → verified reports → implementation.
 | Security controls and remaining risks | [Threat model](security/threat-model.md) |
 | Repeatable deployment and optional services | [Deployment](DEPLOYMENT.md) |
 | External provider setup and configuration limits | [Integration guide](INTEGRATION_SETUP_GUIDE_20261003.md) |
+| Contextual AI assistant before adding a key | [Setup guide](AI_ASSISTANT_SETUP.md), [MCP contract](AI_ASSISTANT_MCP.md) |
+| Word direction comparison, operational reports and simulation boundary | [Implementation direction](IMPLEMENTATION_DIRECTION_20261005.md) |
 | Official graduation demonstration | [Demo runbook](GRADUATION_DEMO_RUNBOOK.md) |
 | PR #22 review corrections and verification | [Review response](reviews/PR22_REVIEW_RESPONSE_20261003.md) |
 | Prioritized remaining work | [Backlog](backlogs/README.md) |

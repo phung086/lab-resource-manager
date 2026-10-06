@@ -27,7 +27,7 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
   const windowStart = new Date(now.getTime() - 30 * 24 * 60 * 60_000);
   const windowEnd = now;
 
-  const [resources, upcomingBookings, periodBookings, incidents, unreadNotifications, cameras] = await Promise.all([
+  const [resources, upcomingBookings, periodBookings, incidents, unreadNotifications, cameras, activeBookingCounts] = await Promise.all([
     client.resource.findMany({
       where: resourceWhere,
       include: includeTelemetry ? {
@@ -83,7 +83,12 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
         ? {}
         : { laboratory: { staffAssignments: { some: { userId: user.id } } } },
       orderBy: { code: "asc" }
-    }) : Promise.resolve([])
+    }) : Promise.resolve([]),
+    client.booking.groupBy({
+      by: ["status"],
+      where: { status: { in: ACTIVE_BOOKING_STATUSES }, resource: resourceWhere },
+      _count: { _all: true }
+    })
   ]);
 
   const statusCounts = Object.fromEntries(
@@ -139,9 +144,9 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
     summary: {
       totalResources: resources.length,
       resourcesByOperationalStatus: statusCounts,
-      activeBookingsCount: upcomingBookings.length,
-      pendingApprovalCount: upcomingBookings.filter((booking) => booking.status === "PENDING_APPROVAL").length,
-      checkedOutCount: upcomingBookings.filter((booking) => booking.status === "CHECKED_OUT").length,
+      activeBookingsCount: activeBookingCounts.reduce((sum, row) => sum + row._count._all, 0),
+      pendingApprovalCount: activeBookingCounts.find(row => row.status === "PENDING_APPROVAL")?._count._all || 0,
+      checkedOutCount: activeBookingCounts.find(row => row.status === "CHECKED_OUT")?._count._all || 0,
       openIncidentCount: openIncidents.length,
       criticalIncidentCount: openIncidents.filter((incident) => incident.severity === "critical").length,
       unreadNotifications,

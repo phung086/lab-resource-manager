@@ -1,5 +1,166 @@
 # Current Project State
 
+## Five-agent redesign preparation — 2026-10-06 (supersedes older handoff Git state)
+
+The user authorized publishing the existing local baseline to main and preparing
+bounded assignments for Codex, Antigravity and three web Git agents. See
+[team plan](ui-redesign/TEAM_PLAN.md), [spec](ui-redesign/REDESIGN_SPEC.md) and
+[baseline checks](ui-redesign/BASELINE_VERIFICATION.md). Setup is not completed
+application redesign and does not start another numbered Batch. Earlier runtime,
+Git and UI claims below remain dated evidence; inspect current HEAD and services.
+
+## Latest handoff and live GitHub reconciliation — 2026-10-06
+
+Current full-project entry point: [Claude context](CLAUDE_PROJECT_CONTEXT_20261006.md).
+Git fetch and GitHub metadata confirm PR #22 merged into main at `a5472d4`;
+its source branch is deleted remotely. Local `codex/lab-workspace-ui-draft` HEAD
+`43b1832` and main have identical committed trees, but numerous modified/untracked
+local UI, assistant, report and startup files are not published. Nine PR-triggered
+workflows succeeded at exact PR head `43b1832`; this is not CI for the dirty tree.
+No open PRs/issues were returned at this check. Evidence and exact local inventory
+are under `artifacts/claude-context-20261006/`.
+
+The latest runtime is the shared Docker configuration near the end of this file:
+frontends 5173/5180, one branch API 8000 and one retained database volume. It
+supersedes the earlier two-stack and FE-auto-start instructions below. Both Docker
+containers were stopped at this documentation check; prior runtime smoke remains
+dated evidence. Historical entries are preserved and are not fresh verification.
+
+This handoff changes documentation only; it does not start improvement work,
+a new Batch, commit/push, deployment, or a fresh full regression run.
+
+## One-command local startup — 2026-10-06
+
+Parallel comparison follow-up: `npm run dev:main` uses the clean detached
+`../lab-resource-manager-main` worktree (origin/main a5472d4 at setup), frontend
+5180, API 8010 and Docker project/volume `lrm-main-compare`. Default dev remains
+5173/8000 and `lrm-local-review`. Main is not auto-pulled; source and commit are
+printed at launch. Both API readiness endpoints, both frontends, all four role
+logins and corresponding CORS origins passed concurrently. Docker inspection
+confirmed separate database volumes and main checkout remained clean.
+Repeated Compose up reused running containers with no build. Routine startup no
+longer forces --build; use --rebuild for dependency/schema/Dockerfile changes.
+This is runtime smoke verification, not a new full feature/regression verdict.
+
+User-authorized local tooling continuation: `frontend/npm run dev` now starts
+the isolated `docker-compose.local.yml` PostgreSQL/backend stack, waits for
+readiness, then runs Vite on 5173 against API 8000. The guarded demo database
+uses its own persistent volume; the old development database and its unresolved
+payment migration checksum mismatch remain untouched. Ctrl+C stops Vite;
+`npm run dev:stop` stops the Docker services without deleting data.
+`dev:frontend` retains standalone Vite for CI and frontend containers.
+
+Verified on Windows/Docker Desktop: fresh canonical initialization and local seed,
+healthy API, frontend HTTP 200, four role logins and localhost CORS, unauthenticated
+booking rejection (401), 11 catalog records, occupied frontend-port rejection,
+stop/restart retaining the same four user and eleven resource records, Ctrl+C
+releasing 5173, and frontend production build. No provider/hardware integration
+or complete business E2E rerun is claimed. Payments remain disabled in this local
+review profile. No numbered Batch or business/schema contract changed.
+See README's one-command local instructions.
+
+## Implementation direction integration — local continuation, 2026-10-05
+
+Compared the user-provided `Hướng triển khai.docx` with the assignment/SRS,
+canonical workflow and current code. The approved stack, roles, handover/return
+timestamps, source provenance and lab authorization remain. The
+[comparison](IMPLEMENTATION_DIRECTION_20261005.md) maps the proposal to existing
+modules and separates the implemented scope from future integrations.
+
+Added `GET /api/dashboard/report?days=7|30`, a single-snapshot PostgreSQL
+aggregate of approved schedules, actual handover/return usage, cancellations,
+no-shows, incidents and planned maintenance. Current staff assignments are
+enforced within the query; unassigned staff receive an empty result. The VI/EN
+desktop report has period controls, usage ranking, optional calculation details,
+loading/error/retry and cancellation of superseded reads. Dashboard work totals
+now count all active records separately from the 20-item upcoming preview,
+including overdue handovers. No hardware runtime or repair-duration claim is
+derived from booking/maintenance timestamps.
+
+Added an isolated `demo:monitoring-scenario` CLI with optional five-second
+playback. Its explicitly labelled synthetic frames reuse the existing threshold
+rules. This is a rule preview, not an integrated simulator: no API ingestion,
+DB writes, persisted alerts/incidents or physical-state mutations. Connecting it
+requires a separately labelled demo environment and verification.
+
+Verified: 86 required backend tests, three real PostgreSQL report integration
+tests, 38 browser assertions covering all four roles/VI/EN/recovery and populated
+isolated-fixture rendering; frontend required checks with 2,213 matching keys,
+eight locale/network tests, 84 audited active modules, zero lint errors and nine
+existing warnings. Backend lint, frontend typecheck/build and scenario playback pass.
+See [run evidence](../artifacts/implementation-direction-20261005/REPORT.md).
+No schema/migration/reset, provider activation, new Batch or Git push. Existing
+local changes preserved. Hardware, LLM quality, forecasting and large-history
+performance remain outside this verification.
+
+## Contextual assistant preparation — 2026-10-05
+
+User-authorized local continuation before adding an API key. The backend now
+supports bounded server-owned conversation IDs and strict Responses intent
+planning for general chat, clarification, payment guidance and existing read-only
+MCP tools. Tool arguments retain canonical validation and actor/object/lab scope.
+Referenced choices are re-read; old business prose is excluded from history.
+Selected historical slots are checked again and labelled accordingly. Form
+prefill remains a suggestion, with canonical backend checks at submission.
+
+The lower-right dock passes conversation/workspace context, preserves VI/EN
+drafts, offers New conversation and handles expired sessions explicitly. Memory
+is process-local: ten turns, 12 KB history, 200 sessions, 30 idle minutes. Logout
+cancels/clears that session's assistant work; reload starts a fresh browser chat.
+The provider adapter uses finite SDK calls and `store:false`. `assistant:check`
+reports configuration without exposing secrets, billing or querying the DB.
+
+Verified: 82 required backend tests (38 core, 6 security, 38 assistant/transport),
+10 isolated PostgreSQL/MCP integration tests, 122 real-browser checks across
+all four roles and 37 student dock/canonical form regression assertions.
+Frontend required checks/typecheck/build pass with 2,189 matching
+locale keys, zero lint errors and nine existing warnings. No provider key or
+model was added; actual OpenAI access, schema acceptance and response quality
+remain unverified. No migration/reset, new Batch or Git push. Earlier local UI
+work is preserved. See [setup](AI_ASSISTANT_SETUP.md) and
+[verification](../artifacts/assistant-api-preparation-20261005/REPORT.md).
+
+## Assistant response correction — follow-up, 2026-10-05
+
+The user's screenshot exposed an incorrect fallback: `ban la ai` selected the
+operational summary and returned resource counts. Introductions, greetings and
+capability questions now return localized guidance without unrelated reads.
+Unknown intent asks for clarification; operational summary requires an explicit
+request. Slot detection no longer interprets Vietnamese `trong` (in) alone as
+availability. Existing booking/payment/scope rules and dock layout remain.
+
+Verified on the running local API and browser: the exact screenshot question,
+VI/EN unknown questions, real slot reads and explicit overview, 34 checks pass.
+Required backend tests now total 68 (38 core, 6 security, 24 assistant/transport);
+9 isolated real-MCP tests and frontend required checks also pass. Catalogs contain
+2,178 matching keys, with zero frontend lint errors and nine existing warnings.
+This is a local bug fix, not a new Batch or external-model activation. No push.
+See [response correction evidence](../artifacts/assistant-response-fix-20261005/REPORT.md).
+
+## Assistant dock — local continuation, 2026-10-05
+
+The signed-in workspace now has a compact lower-right assistant launcher and a
+nonmodal chat window. Three short suggestions cover availability, booking help
+and payment guidance. Resource/time context and provider/source information remain
+available through disclosures. Minimize keeps ten turns, the draft and context in
+memory; reload/logout clears them. VI/EN and cancellation/deadline contracts remain.
+
+Booking intent now reads real MCP slot availability and offers the canonical form
+prefill only after existing eligibility checks. The user reviews/submits that form;
+the assistant does not create/approve bookings or initiate/confirm payments. Dates
+the local planner cannot resolve ask for explicit Vietnam-time window fields.
+Payment guidance distinguishes disabled, unconfigured and ready backend states.
+Local demo payments remain disabled; external-model readiness is reported in the
+assistant's About disclosure. No provider configuration, migration or new Batch.
+
+Verification: 66 required backend tests, 9 isolated real-MCP integration tests,
+98 four-role browser checks and 37 additional student keyboard/fault checks pass.
+Frontend catalogs contain 2,176 matching keys; required checks/typecheck/build pass
+with zero lint errors and nine existing warnings. The bounded assistant design
+review returned `ship`. Local changes are preserved and have not been pushed.
+See [assistant implementation and verification](../artifacts/assistant-widget-20261005/REPORT.md)
+for the limitations and reproducible commands.
+
 ## Current review status - 2026-10-03
 
 Draft PR #22 continues from published revision `7424957`; no new Batch.
@@ -695,3 +856,132 @@ session to password setup/me/logout until a real password is established.
 Verification: guest PostgreSQL suite 13/13, migration safety 14/14, core 33/33,
 Batch 4 32/32, all backend batches green, frontend lint/typecheck/build green,
 and browser Batch 2/3/4/5/6/8 green. No schema or migration changed.
+
+## Shared project shell — local continuation, 2026-10-04–05
+
+User-authorized local work on `codex/lab-workspace-ui-draft`, starting from HEAD
+`43b18328f80a1297c236b69e5496cc8afce86d72`; no new numbered Batch. Landing,
+registration and authenticated pages now share LAB identity and useful footer
+destinations. The workspace header presents the current localized canonical role.
+VI/EN uses the existing catalogs and preserves registration/booking drafts.
+The incumbent `PRODUCT.md`, `DESIGN.md` and `.impeccable/design.json` are unchanged.
+The checks below were recorded on 4 October; documentation completed on 5 October.
+
+Local frontend required gate passes: 2,131 matching VI/EN keys, eight locale/network
+tests, lint with zero errors/nine existing warnings, TypeScript and production build.
+Live checks at `http://127.0.0.1:15181/` with API `http://127.0.0.1:15005/api`
+and the existing demo database confirm all four role identities, real footer
+destinations and draft continuity. Twelve reviewed viewport captures cover public,
+registration, workspace, footer and VI/EN presentation; narrow checks found no
+horizontal overflow in the inspected views. Desktop web remains the priority.
+
+Initial finish review requested three P2 focus corrections. The same reviewer
+scored all three resolved: active input survives an eight-second real catalog read,
+mobile assistant/refresh returns to the persistent account trigger, and same-tab
+footer navigation focuses main before continuing through content. Its `ship`
+disposition covers those fixes only. Backup SHA256 checks match all 11 preserved
+files. See [scope, checks and limits](../artifacts/local-project-shell-20261004/REPORT.md)
+and [fix verdict](../artifacts/local-project-shell-20261004/FIX_VERDICT.md).
+
+No commit, push, deployment, backend/RBAC/schema/migration change or database setup
+is included. No full business mutation regression was rerun. SMTP, live payment,
+image/video upload and shipping remain unverified. The later requested sequence
+is desktop UI completion, then media, paid booking/quote/payment, then mail; it is future intent
+and does not start another task or outrank the required graduation workflow.
+
+## Approved desktop LAB UI — local continuation, 2026-10-05
+
+The user confirmed the researched direction: desktop text navigation, one LAB
+image on landing, and calendar/queues as the main workspace tasks. Implemented
+locally on the existing `codex/lab-workspace-ui-draft` branch with no commit/push
+or new numbered Batch. Existing local changes are preserved in hashed backups.
+
+The persistent sidebar starts at 1100px; narrower layouts retain the accessible
+menu. Landing now uses a labelled AI illustration. Calendar controls and booking
+cards have a clearer hierarchy and fewer repeated labels/icons. Shared styling
+carries the existing navy/IBM Plex identity and header/footer into role homes.
+Backend, RBAC, schema, migrations and canonical statuses are unchanged.
+
+Observed recovery issues are fixed: failed API logout still clears the local
+workspace; denied private resource details leave the authorized catalogue visible.
+This does not assert server revocation after failed logout or grant staff new LABs.
+
+Frontend required gates pass with 2,138 matching VI/EN keys, eight locale/API tests,
+zero lint errors/nine existing warnings, typecheck and build. Four-role navigation
+passes 121 checks; bilingual browser verification passes 315 checks. Isolated
+PostgreSQL queue regression passes six backend tests and 58 browser checks.
+Temporary test listeners/database were removed after testing.
+The main demo UI remains at `http://127.0.0.1:15181/` with API port 15005.
+
+The fresh finish reviewer returned `ship` for landing, calendar, booking queue and
+shared role-home styling. Broader legacy card/metric drift remains recorded. This
+does not mean all 50 proposed screen frames were redesigned or every business
+mutation was rerun. Approved structural changes are documented in `DESIGN.md`
+and its sidecar with the existing token frontmatter preserved. Evidence is recorded
+in the [local build report](../artifacts/local-final-ui-20261005/REPORT.md) and
+[finish review](../artifacts/local-final-ui-20261005/FINISH_REVIEW.md).
+
+
+## Catalogue, resource dossier and profile — local refinement, 2026-10-05
+
+Continuation on `codex/lab-workspace-ui-draft`; no new Batch or Git publication.
+The user rejected permanent filter forms, repetitive tall resource cards and
+internal classification codes in account screens. Desktop catalogue now uses
+aligned records with attributed thumbnail, resource name, LAB, current
+availability and detail/calendar actions. Search and filters open on demand and
+retain values when closed. Resource name opens the dossier directly.
+
+Resource information/schedule no longer wait for private activity history. The
+dossier requests history only in its selected section; outside-scope staff receive
+403 feedback there while allowed detail/calendar access remains available.
+Backend LAB authorization, canonical roles/statuses and persistence are unchanged.
+Profile separates personal information, security, access requirements and activity,
+preserving mounted form drafts across sections and languages. Classification copy
+uses plain language without granting verified institutional authority.
+
+Required frontend gates pass with 2,155 matching locale keys, eight unit tests,
+zero lint errors/nine existing warnings, typecheck and production build. Targeted
+four-role browser verification passed 133 checks; after the catalogue composition
+fix, the staff path passed 38 checks. These cover disclosure, public details versus
+restricted history, history retry, exact resource calendar navigation, account
+sections and draft continuity. Seven keyboard checks additionally verify native
+activation, modal focus wrap and Escape restoration; the detail opener is now
+remembered before loading disables it. These checks do not retest every business mutation.
+
+Main local listeners were found stopped and restarted against the existing demo
+database, without migration, reset or seed. UI remains on port 15181, API on 15005.
+Existing sessions need a fresh login after the runtime restart. External reference
+media may load slowly or fail; it is not verified institutional photography.
+See [the refinement report](../artifacts/catalog-profile-refinement-20261005/REPORT.md).
+
+
+### Collapsible navigation — 2026-10-06
+
+Implemented in C:/Projects/lab-resource-manager (codex/lab-workspace-ui-draft), preview 5173. Comparison main at 5180 is unchanged. Desktop defaults to compact shortcuts with searchable modal menu; optional persistent pin keeps navigation beside interactive content. Close clears pin. Narrow layouts use horizontal shortcuts and the same drawer. Existing role/feature gating remains intact.
+
+Validation: typecheck, production build and i18n tests passed; lint has 0 errors and 9 existing warnings. Browser suite passed 129 checks across all four roles, VI/EN, 375/768/1024/1440px, keyboard, routing and API failure states. Evidence: artifacts/navigation-20261006/results.json and screenshots. Earlier failure.json records superseded attempts: initial API host mismatch in test configuration, then API 429 caused by burst test traffic; successful run used the actual localhost API and 25-second spacing between roles. No rate limits were weakened.
+
+
+### Shared local Docker runtime — 2026-10-06
+
+Supersedes the isolated main-comparison runtime above, at the user's request.
+Both frontends (branch 5173, main 5180) now use the branch backend on 8000 and
+existing lrm-local-review_review-data. Schema/migration files and frontend API
+wrapper match main a5472d4; this setup compares frontend versions, not backend
+versions. Main checkout has only local package scripts changed to call the shared
+launcher. npm run dev has no Docker commands on its normal path; it checks API
+readiness and starts Vite. npm run dev:backend starts the fixed Compose project
+with --no-build. Explicit dev:backend:rebuild is available when required.
+
+User explicitly approved deletion of old databases/unused volumes while retaining
+the active LAB database. Removed three obsolete containers, six old volumes
+(including legacy LAB, movie-ticket, anonymous volumes and comparison DB), two old
+networks, three unused images and all builder cache. Kept two healthy containers,
+two required images, one data volume. No filesystem cleanup or migration edits.
+Only startup configuration/scripts and corresponding documentation were edited.
+
+Verified repeated up and stop/start preserve both container IDs and keep image
+count at two/cache at zero. Both actual npm run dev commands started their expected
+ports. Browser login/overview/resource page passed for both versions against only
+API 8000 with no browser exceptions; staff/lecturer/student API logins also passed.
+Full business mutation suite and external AI/payment integrations were not rerun.

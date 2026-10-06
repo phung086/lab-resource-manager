@@ -1,0 +1,35 @@
+name: LRM Redesign File Scope
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contributor-scope:
+    if: startsWith(github.head_ref, 'codex/lrm-ui-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check contributor paths using trusted base tooling
+        env:
+          TASK_BRANCH: ${{ github.head_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git show "$BASE_SHA:scripts/check-redesign-scope.mjs" > scripts/check-redesign-scope.mjs
+          git show "$BASE_SHA:docs/ui-redesign/assignments.json" > docs/ui-redesign/assignments.json
+          case "$TASK_BRANCH" in
+            codex/lrm-ui-ag-landing) task=ag-landing ;;
+            codex/lrm-ui-web-calendar) task=web-calendar ;;
+            codex/lrm-ui-web-operations) task=web-operations ;;
+            codex/lrm-ui-web-profile) task=web-profile ;;
+            *) echo 'Unregistered redesign contributor branch'; exit 1 ;;
+          esac
+          node scripts/check-redesign-scope.mjs --task "$task" --base "$BASE_SHA"

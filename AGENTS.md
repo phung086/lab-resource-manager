@@ -1,5 +1,16 @@
 # LAB RESOURCE MANAGER - AGENT INSTRUCTIONS
 
+## Multi-agent UI redesign coordination (2026-10-06)
+
+For an assigned redesign task, also read `docs/ui-redesign/TEAM_PLAN.md`,
+`UI_CONTRACT.md`, `assignments.json` and that task's BRIEF.md after the mandatory
+project documents below. Contributors edit only their manifest allowlist and
+own task REPORT.md, use independent branches/checkouts, and never merge/push
+main. Codex alone owns shared tokens, shell, translations and integration.
+Reuse unchanged documents within a session; checkpoints do not replace required
+reading at the start of a fresh session. Do not repeat a whole-project audit
+when an assigned bounded task and current checkpoint are sufficient.
+
 This repository is an existing graduation project. These instructions apply to
 Codex, Antigravity, Claude Code, Cursor, and any other coding agent working on
 this repository.

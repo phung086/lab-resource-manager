@@ -6,8 +6,8 @@ import { formatVietnamDateTime } from "../../../utils/timezone";
 import type { BookingRecord } from "../../../types/booking";
 import type { HomeNavigate, HomeNotice, RoleHomeProps } from "./homeTypes";
 
-export function SectionTitle({ eyebrow, titleKey, action, onAction }: { eyebrow?: string; titleKey: string; action?: string; onAction?: () => void }) {
-  return <div className="home-section-heading"><div>{eyebrow && <span className="workspace-overline">{t(eyebrow)}</span>}<h2>{t(titleKey)}</h2></div>{action && <button className="home-text-button" onClick={onAction}>{t(action)}<ArrowRight size={16} aria-hidden="true" /></button>}</div>;
+export function SectionTitle({ titleKey, action, onAction }: { eyebrow?: string; titleKey: string; action?: string; onAction?: () => void }) {
+  return <div className="home-section-heading"><div><h2>{t(titleKey)}</h2></div>{action && <button className="home-text-button" onClick={onAction}>{t(action)}<ArrowRight size={16} aria-hidden="true" /></button>}</div>;
 }
 export function QuickLink({ icon: Icon, titleKey, detail, onClick }: { icon: LucideIcon; titleKey: string; detail: string; onClick: () => void }) {
   return <button className="home-quick-link" onClick={onClick}><span className="home-icon-box"><Icon size={21} aria-hidden="true" /></span><span><strong>{t(titleKey)}</strong><small>{t(detail)}</small></span><ArrowRight size={17} aria-hidden="true" /></button>;

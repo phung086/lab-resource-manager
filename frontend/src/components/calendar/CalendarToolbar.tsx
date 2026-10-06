@@ -1,6 +1,6 @@
 import { useLocale } from '../../providers/LocaleProvider';
 import React from "react";
-import { ChevronLeft, ChevronRight, RefreshCw, Plus, Filter } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw, Plus } from "lucide-react";
 
 export interface CalendarToolbarProps {
   viewMode: "day" | "week" | "month";
@@ -32,7 +32,6 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
   onResourceChange
 }) => {
   const { tr } = useLocale();
-  const selectedResource = resources.find((r) => r.id === selectedResourceId) || null;
 
   return (
     <div className="calendar-toolbar">
@@ -40,7 +39,6 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
       <div className="calendar-toolbar-row">
         {/* 1. Resource Selector (FIRST obvious control in workflow) */}
         <div className="calendar-resource-filter">
-          <Filter size={13} className="calendar-filter-icon" aria-hidden="true" />
           <label htmlFor="calendar-resource-select" className="calendar-filter-label font-semibold">
             {tr("ui.resource_8315fccb")}</label>
           <select
@@ -55,7 +53,7 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
             ) : (
               resources.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {r.code} — {r.name}
+                  {r.name} ({r.code})
                 </option>
               ))
             )}
@@ -145,17 +143,6 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
 
       {/* Filter & Legend bar */}
       <div className="calendar-filter-bar">
-        <div className="calendar-active-resource-badge text-xs">
-          {selectedResource ? (
-            <span>
-              {tr("ui.calendar_for_31b82581")}<strong className="text-blue-700">{selectedResource.name}</strong> ({selectedResource.code})
-            </span>
-          ) : (
-            <span className="text-amber-700 font-medium">
-              {tr("ui.no_resource_selected_628ecc2c")}</span>
-          )}
-        </div>
-
         {/* Legend */}
         <div className="calendar-legend" aria-label={tr("ui.calendar_legend_1a59e6ae")}>
           <span className="calendar-legend-item">

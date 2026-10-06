@@ -1,8 +1,9 @@
 import { translate } from "../i18n.js";
 import { LanguageToggle } from "./base/LanguageToggle";
+import { ProjectBrand } from "./base/ProjectBrand";
 import React, { useState, useEffect, useRef } from "react";
 import { parseVietnamParts } from "../utils/timezone";
-import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, Shield, UserRound } from "lucide-react";
+import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, UserRound } from "lucide-react";
 
 export interface HeaderProps {
   title: string;
@@ -23,6 +24,7 @@ export interface HeaderProps {
   onOpenProfile?: () => void;
   onLogout?: () => void;
   onOpenAssistant?: () => void;
+  onOpenHome?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,7 +37,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenChangePassword,
   onOpenProfile,
   onLogout,
-  onOpenAssistant
+  onOpenAssistant,
+  onOpenHome
 }) => {
   const t = translate;
   // Canonical laboratory clock
@@ -75,38 +78,40 @@ export const Header: React.FC<HeaderProps> = ({
   const quotaUsed = user?.quotaUsed || 0;
   const quotaTotal = user?.quotaTotal || 0;
   const quotaPercent = hasQuota ? Math.min(100, Math.round((quotaUsed / quotaTotal) * 100)) : 0;
+  const roleKeys: Record<string, string> = { ADMIN: 'core.roles.admin', LAB_STAFF: 'core.roles.lab_staff', LECTURER: 'core.roles.lecturer', STUDENT: 'core.roles.student' };
+  const roleKey = roleKeys[user?.role || ''];
+
+  function closeUserMenu() {
+    setUserMenuOpen(false);
+    dropdownRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+  }
 
   return (
     <header className="header-2026">
-      {/* Left side: page identity and local clock. */}
       <div className="header-left-2026">
-        <div className="header-title-row-2026">
-          <div className="header-title-2026">{title}</div>
-        </div>
-
-        <div className="header-telemetry-row-2026">
-          <span className="font-mono text-xs text-slate-400 tracking-wide">
-            {currentDateTime}
-          </span>
+        <ProjectBrand onNavigate={onOpenHome} />
+        <div className="project-header-location">
+          <div className="header-title-row-2026"><div className="header-title-2026">{title}</div></div>
+          <div className="header-telemetry-row-2026">{roleKey ? t(roleKey) : t('ui.workspace_970a97e3')}</div>
         </div>
       </div>
 
       {/* Right side: Language Segmented Control, Actions & User Profile */}
       <div className="header-right-2026">
-        {onOpenAssistant && <button className="secondary-button" onClick={onOpenAssistant}>{t("ui.lab_assistant_0a8d5bc9")}</button>}
+        {onOpenAssistant && <button type="button" className="secondary-button project-header-assistant" onClick={onOpenAssistant}>{t("ui.lab_assistant_0a8d5bc9")}</button>}
         <LanguageToggle />
 
         {/* Refresh button */}
         {onRefresh && (
           <button
             type="button"
-            className="header-icon-btn-2026"
+            className="header-icon-btn-2026 project-header-refresh"
             title={t("ui.refresh_data_167c5f3e")}
             disabled={loading}
             aria-label={t("ui.refresh_data_167c5f3e")}
             onClick={onRefresh}
           >
-            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={16} aria-hidden="true" className={loading ? "animate-spin" : ""} />
           </button>
         )}
 
@@ -123,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onOpenNotifications}
         >
           <div className="bell-icon-wrapper">
-            <Bell size={16} />
+            <Bell size={16} aria-hidden="true" />
           </div>
           {notificationsCount > 0 && (
             <span className="notification-counter-pill font-mono">
@@ -145,6 +150,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="avatar-letter-circle">
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
               </div>
+              <div className="project-account-label"><span>{user.fullName}</span></div>
               <ChevronDown size={14} className={`dropdown-arrow ${userMenuOpen ? "rotated" : ""}`} />
             </button>
 
@@ -159,10 +165,8 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="user-menu-details">
                     <strong className="user-menu-fullname">{user.fullName}</strong>
                     <span className="user-menu-email">{user.email || translate("ui.email_not_provided_64af79ce")}</span>
-                    <div className="user-menu-role-badge font-mono">
-                      <Shield size={11} className="text-blue-400" />
-                      <span>{user.role.toUpperCase()}</span>
-                    </div>
+                    <div className="user-menu-role-badge">{roleKey && t(roleKey)}</div>
+                    <div className="project-account-clock">{currentDateTime}</div>
                   </div>
                 </div>
 
@@ -189,6 +193,8 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* Actions */}
                 <div className="user-menu-actions">
+                  {onOpenAssistant && <button type="button" className="user-menu-item-btn project-menu-assistant" onClick={() => { closeUserMenu(); onOpenAssistant(); }}>{t('ui.lab_assistant_0a8d5bc9')}</button>}
+                  {onRefresh && <button type="button" className="user-menu-item-btn project-menu-refresh" disabled={loading} onClick={() => { closeUserMenu(); onRefresh(); }}><RefreshCw size={15} aria-hidden="true" /><span>{t('ui.refresh_data_167c5f3e')}</span></button>}
                   {onOpenProfile && <button type="button" className="user-menu-item-btn" onClick={() => { setUserMenuOpen(false); onOpenProfile(); }}><UserRound size={15} aria-hidden="true" /><span>{t("ui.my_profile_700b5272")}</span></button>}
                   <button
                     type="button"

@@ -123,15 +123,39 @@ object access and `UserLabAssignment` scope. Use bounded work and cancellation;
 never turn a tool/provider outage into fabricated healthy data. Prefill actions
 return through the normal booking form/API. The guarded integration test requires
 `ASSISTANT_TEST_DATABASE_URL` pointing to local `lab_resources_assistant_test`.
-See `BILINGUAL_ASSISTANT_FOUNDATION_20260930.md` for current limits and deployment
-flags. Backend code must not import frontend runtime packages.
+See `AI_ASSISTANT_MCP.md` for the current contract and `AI_ASSISTANT_SETUP.md`
+for configuration; earlier foundation reports describe their original runs.
+Backend code must not import frontend runtime packages.
 
 MCP protocol ingress uses a separate bounded IP bucket; never exempt it from
 authentication, account rate limits or actor/object/lab scope. Transport aborts
 must reach tools, and pending non-cancellable reads retain admission until they
-settle. Assistant evidence errors/deferred hardware never start model generation.
-The complete question plus tool-results payload has a 24,000-byte UTF-8 model
-budget. Reuse eligibility only within one answer and one resource; never cache it
+settle. Assistant evidence errors/deferred hardware never start factual model
+synthesis. All serialized model data payloads, including history, have a
+24,000-byte UTF-8 budget; fixed instructions/schema are separately finite.
+Reuse eligibility only within one answer and one resource; never cache it
 across users or business submissions. Business dashboards can explicitly request
 `includeTelemetry=false`; omit monitoring counts and return `telemetrySummary=null`
 with `telemetryIncluded=false` rather than claiming healthy hardware.
+
+Local assistant intents must match the question being answered. Identity, greetings and
+capability questions return localized application guidance without MCP/model
+calls. Unknown questions ask for clarification; never substitute operational
+counts as a catch-all answer. `get_operational_summary` requires an explicit
+overview/summary intent. Vietnamese `trong` (in) alone must not select slot search.
+Keep local guidance marked `source=local_guidance` and the existing finite gates.
+
+Configured contextual routing may plan read-only lookups or converse on general
+topics using strict Responses JSON output. Validate against the original MCP
+schema before executing; reject unknown/duplicate tools and identity overrides.
+Planning/general conversation is separate from synthesis of current LAB facts.
+Keep `model_conversation`, `model_guidance` and `authenticated_mcp` provenance
+distinct. Do not claim external search, business writes or live model readiness.
+
+Use `AssistantConversationStore` for bounded temporary server history. Bind the
+ID to the current account, hashed bearer session and role; never accept browser
+history or keep tool prose as current evidence. Re-read stored choice IDs through
+MCP before exposing refreshed names to a model. Reset/logout clear context; logout
+also aborts active session work. Do not imply JWT revocation or shared multi-replica
+memory. Cancellation must not commit a late reply. Key/model presence checks
+must not echo secrets or send a provider request.

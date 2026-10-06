@@ -100,10 +100,12 @@ function formatRange(startAt: string, endAt: string) {
 
 export function PublicResourceCatalog({
   onViewSchedule,
-  onGuestBookingComplete
+  onGuestBookingComplete,
+  onReady
 }: {
   onViewSchedule: (id: string) => void;
   onGuestBookingComplete?: (result: any) => void;
+  onReady?: () => void;
 }) {
   const { tr, t } = useLocale();
   const [resources, setResources] = useState<Resource[]>([]);
@@ -123,6 +125,10 @@ export function PublicResourceCatalog({
   const detailRequest = useRef(0);
   const detailOpener = useRef<HTMLElement | null>(null);
   const detailHeading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (!loading) onReady?.();
+  }, [loading, onReady]);
 
   useEffect(() => () => { detailRequest.current += 1; }, []);
 

@@ -1,0 +1,455 @@
+/* ============================================================
+   LAB RESOURCE MANAGER - UNIFIED DESIGN SYSTEM
+   Modern Academic Aesthetic: Professional, Focused, Accessible
+   ============================================================ */
+
+/* ── DESIGN TOKENS ── */
+:root {
+  /* Color Palette - Navy Core with Semantic System */
+  --lab-navy-900: #0f2942;
+  --lab-navy-800: #123552;
+  --lab-navy-700: #174d70;
+  --lab-navy-600: #1d5c85;
+  --lab-navy-100: #e8f1f6;
+  --lab-navy-50: #f4f8fb;
+
+  /* Canvas & Surfaces */
+  --lab-canvas: #f8fafb;
+  --lab-surface: #ffffff;
+  --lab-surface-raised: #ffffff;
+  --lab-surface-muted: #f4f7f9;
+  --lab-surface-hover: #eef3f6;
+
+  /* Text Hierarchy */
+  --lab-text-primary: #0f2942;
+  --lab-text-secondary: #4a6080;
+  --lab-text-muted: #7a8fa8;
+  --lab-text-inverse: #ffffff;
+
+  /* Semantic Colors - Status & Feedback */
+  --lab-success: #047857;
+  --lab-success-bg: #ecfdf5;
+  --lab-success-border: #a7f3d0;
+  --lab-warning: #b45309;
+  --lab-warning-bg: #fffbeb;
+  --lab-warning-border: #fde68a;
+  --lab-danger: #be123c;
+  --lab-danger-bg: #fff1f2;
+  --lab-danger-border: #fecdd3;
+  --lab-info: #0369a1;
+  --lab-info-bg: #f0f9ff;
+  --lab-info-border: #bae6fd;
+
+  /* Borders & Dividers */
+  --lab-border: #dde4eb;
+  --lab-border-strong: #c4cdd6;
+  --lab-border-focus: var(--lab-navy-700);
+
+  /* Typography */
+  --lab-font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lab-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Spacing Scale (4px base) */
+  --lab-space-1: 4px;
+  --lab-space-2: 8px;
+  --lab-space-3: 12px;
+  --lab-space-4: 16px;
+  --lab-space-5: 20px;
+  --lab-space-6: 24px;
+  --lab-space-8: 32px;
+  --lab-space-10: 40px;
+  --lab-space-12: 48px;
+  --lab-space-16: 64px;
+
+  /* Border Radius */
+  --lab-radius-sm: 4px;
+  --lab-radius: 6px;
+  --lab-radius-md: 8px;
+  --lab-radius-lg: 12px;
+  --lab-radius-full: 9999px;
+
+  /* Shadows */
+  --lab-shadow-sm: 0 1px 2px rgba(15, 41, 66, 0.05);
+  --lab-shadow: 0 1px 3px rgba(15, 41, 66, 0.08), 0 1px 2px rgba(15, 41, 66, 0.04);
+  --lab-shadow-md: 0 4px 6px -1px rgba(15, 41, 66, 0.08), 0 2px 4px -1px rgba(15, 41, 66, 0.04);
+  --lab-shadow-lg: 0 10px 15px -3px rgba(15, 41, 66, 0.08), 0 4px 6px -2px rgba(15, 41, 66, 0.04);
+
+  /* Transitions */
+  --lab-ease: cubic-bezier(0.2, 0, 0, 1);
+  --lab-duration-fast: 120ms;
+  --lab-duration: 200ms;
+  --lab-duration-slow: 300ms;
+}
+
+/* ── BASE RESET ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--lab-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--lab-text-primary);
+  background: var(--lab-canvas);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ── TYPOGRAPHY SCALE ── */
+h1 {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+h3 {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+
+h4 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+small {
+  font-size: 12px;
+  color: var(--lab-text-muted);
+}
+
+strong {
+  font-weight: 600;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lab-space-2);
+  padding: var(--lab-space-2) var(--lab-space-4);
+  min-height: 40px;
+  font-family: var(--lab-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  border-radius: var(--lab-radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--lab-duration) var(--lab-ease);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--lab-navy-700);
+  color: var(--lab-text-inverse);
+  border-color: var(--lab-navy-700);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--lab-navy-800);
+  border-color: var(--lab-navy-800);
+}
+
+.btn-secondary {
+  background: var(--lab-surface);
+  color: var(--lab-text-primary);
+  border-color: var(--lab-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--lab-surface-hover);
+  border-color: var(--lab-border-strong);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--lab-text-secondary);
+  border-color: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--lab-surface-hover);
+  color: var(--lab-text-primary);
+}
+
+.btn-danger {
+  background: var(--lab-danger-bg);
+  color: var(--lab-danger);
+  border-color: var(--lab-danger-border);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #ffe4e6;
+  border-color: var(--lab-danger);
+}
+
+.btn-sm {
+  min-height: 32px;
+  padding: var(--lab-space-1) var(--lab-space-3);
+  font-size: 12px;
+}
+
+.btn-lg {
+  min-height: 48px;
+  padding: var(--lab-space-3) var(--lab-space-6);
+  font-size: 14px;
+}
+
+/* ── FORM CONTROLS ── */
+input, select, textarea {
+  width: 100%;
+  padding: var(--lab-space-2) var(--lab-space-3);
+  min-height: 40px;
+  font-family: var(--lab-font-sans);
+  font-size: 14px;
+  color: var(--lab-text-primary);
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--lab-radius);
+  transition: all var(--lab-duration-fast) var(--lab-ease);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--lab-border-focus);
+  box-shadow: 0 0 0 3px rgba(23, 77, 112, 0.12);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--lab-text-muted);
+}
+
+input:disabled, select:disabled, textarea:disabled {
+  background: var(--lab-surface-muted);
+  color: var(--lab-text-muted);
+  cursor: not-allowed;
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234a6080' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 40px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lab-text-secondary);
+  margin-bottom: var(--lab-space-1);
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--lab-radius-md);
+  padding: var(--lab-space-5);
+  transition: all var(--lab-duration-fast) var(--lab-ease);
+}
+
+.card:hover {
+  border-color: var(--lab-border-strong);
+  box-shadow: var(--lab-shadow);
+}
+
+/* ── BADGES & STATUS ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lab-space-1);
+  padding: 2px var(--lab-space-2);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: var(--lab-radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badge-success {
+  background: var(--lab-success-bg);
+  color: var(--lab-success);
+  border: 1px solid var(--lab-success-border);
+}
+
+.badge-warning {
+  background: var(--lab-warning-bg);
+  color: var(--lab-warning);
+  border: 1px solid var(--lab-warning-border);
+}
+
+.badge-danger {
+  background: var(--lab-danger-bg);
+  color: var(--lab-danger);
+  border: 1px solid var(--lab-danger-border);
+}
+
+.badge-info {
+  background: var(--lab-info-bg);
+  color: var(--lab-info);
+  border: 1px solid var(--lab-info-border);
+}
+
+.badge-neutral {
+  background: var(--lab-surface-muted);
+  color: var(--lab-text-secondary);
+  border: 1px solid var(--lab-border);
+}
+
+/* ── ALERTS ── */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--lab-space-3);
+  padding: var(--lab-space-4);
+  border-radius: var(--lab-radius);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.alert-success {
+  background: var(--lab-success-bg);
+  color: var(--lab-success);
+  border: 1px solid var(--lab-success-border);
+}
+
+.alert-warning {
+  background: var(--lab-warning-bg);
+  color: var(--lab-warning);
+  border: 1px solid var(--lab-warning-border);
+}
+
+.alert-danger {
+  background: var(--lab-danger-bg);
+  color: var(--lab-danger);
+  border: 1px solid var(--lab-danger-border);
+}
+
+.alert-info {
+  background: var(--lab-info-bg);
+  color: var(--lab-info);
+  border: 1px solid var(--lab-info-border);
+}
+
+/* ── FOCUS STATES ── */
+:focus-visible {
+  outline: 2px solid var(--lab-navy-700);
+  outline-offset: 2px;
+}
+
+/* ── TABLES ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  text-align: left;
+  padding: var(--lab-space-3) var(--lab-space-4);
+  font-weight: 600;
+  color: var(--lab-text-secondary);
+  background: var(--lab-surface-muted);
+  border-bottom: 1px solid var(--lab-border);
+}
+
+td {
+  padding: var(--lab-space-3) var(--lab-space-4);
+  border-bottom: 1px solid var(--lab-border);
+  color: var(--lab-text-primary);
+}
+
+tr:hover td {
+  background: var(--lab-surface-hover);
+}
+
+/* ── UTILITY CLASSES ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-muted { color: var(--lab-text-muted); }
+.text-secondary { color: var(--lab-text-secondary); }
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: var(--lab-space-2); }
+.gap-3 { gap: var(--lab-space-3); }
+.gap-4 { gap: var(--lab-space-4); }
+.gap-6 { gap: var(--lab-space-6); }
+
+.w-full { width: 100%; }
+.mt-4 { margin-top: var(--lab-space-4); }
+.mb-4 { margin-bottom: var(--lab-space-4); }
+.p-4 { padding: var(--lab-space-4); }
+.p-6 { padding: var(--lab-space-6); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--lab-surface-muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--lab-border-strong);
+  border-radius: var(--lab-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--lab-text-muted);
+}

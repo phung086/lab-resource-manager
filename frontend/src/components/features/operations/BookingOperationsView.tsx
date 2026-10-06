@@ -144,9 +144,9 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     <div className="operations-view" data-testid="operations-view">
       <header className="operations-header">
         <div>
-          <h2>{isStaff ? tr("ui.bookings_resource_handover_824d4680") : tr("ui.my_bookings_usage_448d20e9")}</h2>
+          <h1>{isStaff ? tr("ui.bookings_and_handover_3e0e5754") : tr("ui.my_bookings_094ca2d9")}</h1>
           <p>{isStaff
-            ? tr("ui.review_requests_record_handover_receive_957f896f")
+            ? tr("ui.final.queueIntro")
             : tr("ui.track_approval_usage_times_and_8a2a3e05")}</p>
         </div>
         <button type="button" className="btn btn-secondary" onClick={loadBookings} disabled={loading}>

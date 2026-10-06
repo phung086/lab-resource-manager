@@ -23,6 +23,7 @@ export const config = {
   tokenExpiresIn: process.env.TOKEN_EXPIRES_IN || "8h",
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   openaiModel: process.env.OPENAI_MODEL || "",
+  assistantConversationEnabled: process.env.ASSISTANT_CONVERSATION_ENABLED !== "false",
   paymentsEnabled: process.env.PAYMENTS_ENABLED === "true",
   metricsToken: process.env.METRICS_TOKEN || "",
   assistantConcurrency: Math.min(parsePositiveInteger(process.env.ASSISTANT_MAX_CONCURRENT, 4), 16),

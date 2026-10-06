@@ -3,10 +3,12 @@ import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
 import { Header } from "./Header.tsx";
+import { ProjectFooter } from "./features/ProjectFooter";
 import { KeyRound, Check, ShieldAlert } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.tsx";
 import { apiRequest } from "../api.js";
 import { RESEARCH_FEATURES_ENABLED, AI_ASSISTANT_ENABLED } from "../config/featureFlags";
+import { AssistantLauncher } from './features/assistant/AssistantLauncher';
 const LaboratoryAssistant = React.lazy(() => import("./features/assistant/LaboratoryAssistant"));
 import { AiCopilotDrawer, FloatingCopilotFab } from "../research/ResearchFeatureRegistry";
 
@@ -53,9 +55,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   children
 }) => {
   const { tr } = useLocale();
+  const [navigationPinned, setNavigationPinned] = useState(() => {
+    try { return localStorage.getItem('lrm.navigation.pinned') === 'true' && window.innerWidth >= 1100; } catch { return false; }
+  });
+  function pinNavigation(pinned: boolean) {
+    setNavigationPinned(pinned);
+    try { localStorage.setItem('lrm.navigation.pinned', String(pinned)); } catch { /* Storage can be unavailable. */ }
+  }
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1100px)');
+    const resize = () => { if (!media.matches) setNavigationPinned(false); };
+    media.addEventListener('change', resize);
+    return () => media.removeEventListener('change', resize);
+  }, []);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantMounted, setAssistantMounted] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -88,6 +104,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     onSelectTab(tab);
   }
 
+  function openAssistant() {
+    if (user?.passwordResetRequired && !passwordSuccess) { setChangePasswordOpen(true); return; }
+    setAssistantMounted(true);
+    setAssistantOpen(true);
+  }
+
+  function navigateFromShell(tab: string) {
+    handleSelectTab(tab);
+    if (!user?.passwordResetRequired || passwordSuccess) {
+      window.scrollTo(0, 0);
+      document.getElementById('workspace-main')?.focus({ preventScroll: true });
+    }
+  }
+
   function closePasswordModal() {
     if (passwordBusy) return;
     if (user?.passwordResetRequired && !passwordSuccess) return;
@@ -102,7 +132,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     home: tr("ui.workspace_970a97e3"),
     profile: translate("ui.profile_and_lab_preferences_ab1e68a1"),
     payments: translate("ui.payments_d4b946cc"),
-    smart_calendar: translate("ui.resource_calendar_ad1e4c6d"),
+    smart_calendar: tr("ui.room_and_equipment_calendar_cce9c071"),
     ai_analytics: translate("ui.ai_efficiency_analysis_2d29dbaa"),
     ai_advisor: translate("ui.ai_scheduling_advisor_c75d577c"),
     admin_management: translate("ui.laboratory_resource_management_3b4ed242"),
@@ -116,7 +146,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     digital_twin: translate("ui.lab_digital_twin_and_floor_4d1ee395"),
     what_if: translate("ui.scenario_simulation_b0012576"),
     resources: tr("ui.laboratory_resource_catalogue_84d37caf"),
-    bookings: translate("ui.bookings_and_resource_handover_2ada6d5a"),
+    bookings: tr(["ADMIN", "LAB_STAFF"].includes(user?.role || "") ? "ui.bookings_and_handover_3e0e5754" : "ui.my_bookings_094ca2d9"),
     maintenance: translate("ui.maintenance_and_calibration_schedule_ed6489ac"),
     monitoring: translate("ui.operational_monitoring_and_telemetry_296bd9d7"),
     pareto: translate("ui.optimization_explorer_8e8c6b09"),
@@ -182,6 +212,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         incidentOpenCount={incidentOpenCount}
         conflictsCount={conflictsCount}
         locale={locale}
+        pinned={navigationPinned}
+        onPinnedChange={pinNavigation}
         expanded={navigationOpen}
         onExpandedChange={setNavigationOpen}
       />
@@ -199,17 +231,21 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           onOpenNotifications={() => handleSelectTab("escalations")}
           onOpenChangePassword={() => setChangePasswordOpen(true)}
           onOpenProfile={() => handleSelectTab("profile")}
+          onOpenHome={() => navigateFromShell("home")}
           onLogout={onLogout}
-          onOpenAssistant={AI_ASSISTANT_ENABLED ? () => setAssistantOpen(true) : undefined}
+          onOpenAssistant={AI_ASSISTANT_ENABLED ? openAssistant : undefined}
         />
 
         <main id="workspace-main" tabIndex={-1} className="main-body-container-2026">
           {children}
         </main>
-        <footer className="workspace-footer"><span>{translate("ui.lab_resource_manager_ec7709de")}</span><span>{tr("ui.book_handover_track_a5b85bae")}</span><span>{tr("ui.vietnam_time_utc_07_00_1f741bd1")}</span></footer>
+        <ProjectFooter variant="workspace" role={user?.role} onNavigate={navigateFromShell} />
       </div>
 
-      {AI_ASSISTANT_ENABLED && assistantOpen && <React.Suspense fallback={<p role="status">{translate("ui.opening_assistant_9a8f8008")}</p>}><LaboratoryAssistant onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} /></React.Suspense>}
+      {AI_ASSISTANT_ENABLED && !navigationOpen && !changePasswordOpen && <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} />}
+      {AI_ASSISTANT_ENABLED && assistantMounted && <React.Suspense fallback={assistantOpen ? <p className="assistant-loading" role="status">{translate("ui.opening_assistant_9a8f8008")}</p> : null}>
+        <LaboratoryAssistant isOpen={assistantOpen && !navigationOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />
+      </React.Suspense>}
       {RESEARCH_FEATURES_ENABLED && (
         <React.Suspense fallback={null}>
           <FloatingCopilotFab

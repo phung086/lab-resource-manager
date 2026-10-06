@@ -12,6 +12,9 @@ export async function openNavigation(page) {
 
 export async function selectWorkspaceTab(page, id) {
   await openNavigation(page);
+  const overlay = await page.locator('#workspace-navigation-panel').getAttribute('role') === 'dialog';
   await page.locator(`[data-nav-id="${id}"]`).click();
-  await page.locator('#workspace-navigation-panel').waitFor({ state: 'hidden' });
+  if (overlay) {
+    await page.locator('#workspace-navigation-panel').waitFor({ state: 'hidden' });
+  }
 }

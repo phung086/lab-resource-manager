@@ -12,6 +12,7 @@ import { HttpError } from "../middleware/errors.js";
 import { STUDENT, isCanonicalRole } from "../constants/roles.js";
 import { validateVietnamAddress } from "../services/addressService.js";
 import { publicCustomerUser } from "../services/guestBookingService.js";
+import { forgetAssistantSession } from "../assistant/assistantService.js";
 
 const router = express.Router();
 
@@ -184,7 +185,8 @@ router.get("/me", requireAuth, (req, res) => {
 
 // Bearer tokens are stateless. Logout acknowledges a valid session; the client
 // remains responsible for discarding its token.
-router.post("/logout", requireAuth, (_req, res) => {
+router.post("/logout", requireAuth, (req, res) => {
+  forgetAssistantSession({ actorId: req.user.id, authorization: req.headers.authorization });
   res.status(204).end();
 });
 

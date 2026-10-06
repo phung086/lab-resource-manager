@@ -266,15 +266,24 @@ Implementation and verification boundaries are recorded in
   existing account/object/lab scope. Suggested actions shall return to normal
   confirmation forms and never perform implicit business mutations.
 - LAB-AI-02: Assistant/MCP work shall have finite independent admission/rate
-  budgets, deadlines and cancellation. Model calls shall require usable evidence,
-  bounded input/output and failure recovery with truthful provenance.
+  budgets, deadlines and cancellation. Model synthesis of LAB facts shall require
+  fresh usable authorized evidence. All model calls shall have bounded input/output
+  and failure recovery with truthful provenance.
+- LAB-AI-03 (user-authorized preparation, 2026-10-05): A bounded model may plan
+  read-only tool intent, ask for clarification or converse on general topics
+  without LAB evidence. Such responses shall not claim current LAB facts or
+  business mutations. Server-owned temporary history shall be bound to the
+  account/session/current role; historical choices require fresh authorization
+  and availability checks. No real provider activation is implied by preparation.
 - LAB-LOAD-01: Shared requests shall preserve caller cancellation, have finite
   response deadlines and avoid automatic mutation retries after uncertainty.
 - LAB-HW-01: Normal hardware-off business views shall omit camera/sensor reads
   and disclose deferred monitoring without fabricated health data.
 
 See ADR-025 and `ASSISTANT_REQUEST_HARDENING_20261001.md` for the implemented
-boundary and verification evidence.
+boundary and verification evidence. The 2026-10-05 conversation extension and
+remaining provider checks are recorded in `AI_ASSISTANT_MCP.md` and
+`artifacts/assistant-api-preparation-20261005/REPORT.md` at the repository root.
 
 ## Appendix D. Actor permissions and operational use cases (2026-10-03)
 
@@ -332,3 +341,24 @@ rerun on this revision. Current run scope and remaining failures are recorded in
 [current state](CURRENT_STATE.md) and the dated [review follow-up](backlogs/review-followup-20261003.md).
 Use [core ERD](DB-erd/core-erd.md) for persisted relationships and the
 [graduation demo runbook](GRADUATION_DEMO_RUNBOOK.md) for the presentation sequence.
+
+## Appendix E. Implementation direction integration (2026-10-05)
+
+The user-provided `Hướng triển khai.docx` is a proposal for the resource lifecycle,
+simulation and data-linked AI. The existing stack and canonical roles, states,
+scope and monitoring provenance remain authoritative. See the
+[comparison and graduation scope](IMPLEMENTATION_DIRECTION_20261005.md).
+
+- LAB-REPORT-01: ADMIN and currently assigned LAB_STAFF may read 7/30-day
+  operational reports. Aggregate complete authorized evidence on the server;
+  never use a queue page or upcoming-booking preview to determine totals.
+- LAB-REPORT-02: Separate approved schedules, actual handover/return intervals,
+  planned maintenance and current open incidents. Disclose the period/basis and
+  do not represent planned time as measured hardware runtime or repair duration.
+- LAB-SIM-01: A synthetic preview must be explicit and isolated. The new CLI
+  scenario does not ingest data or create persisted alerts/incidents. A simulator
+  connected to ingestion requires a separate labelled demo environment and
+  verification before it is presented as an integrated capability.
+
+This local continuation adds the operational report and isolated rule preview.
+It does not activate predictive ML, hardware, provider AI or another numbered Batch.

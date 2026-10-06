@@ -12,11 +12,15 @@ const output = process.env.UI_SCREENSHOT_DIR || '../logs/workspace-navigation';
 mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined, args: ['--no-sandbox'], headless: true });
 const results = [], errors = [];
+let activePage;
 const verify = (ok, name) => { assert.ok(ok, name); results.push(name); };
 try {
   for (const role of ['student', 'lecturer', 'staff', 'admin']) {
+    const roleDelay = Number(process.env.UX_ROLE_DELAY_MS || 0);
+    if (Number.isFinite(roleDelay) && roleDelay > 0) await new Promise(resolve => setTimeout(resolve, Math.min(roleDelay, 60_000)));
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
     const page = await context.newPage();
+    activePage = page;
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base);
     await page.locator('#login-email').fill(`${role}@lrm.local`);
@@ -25,8 +29,23 @@ try {
     await page.locator('.home-attention-grid').waitFor();
     verify(new URL(page.url()).hash === '#/workspace/tong-quan', `${role}: login enters overview`);
     verify(await page.locator('.public-hero').count() === 0, `${role}: signed-in overview uses application shell`);
-    verify(await page.locator('#workspace-navigation-panel').count() === 0, `${role}: menu starts closed`);
+    verify(await page.locator('#workspace-navigation-panel').count() === 0, `${role}: menu defaults to collapsed`);
+    await openNavigation(page);
+    verify(await page.locator('#workspace-navigation-panel').getAttribute('role') === 'dialog', `${role}: desktop drawer is modal`);
+    await page.screenshot({ path: `${output}/${role}-menu-desktop.png` });
+    await page.locator('.nav-pin').click();
+    verify(await page.locator('.workspace-nav-desktop').count() === 1, `${role}: menu can be pinned`);
+    verify(await page.locator('.main-content-column-2026').getAttribute('inert') === null, `${role}: pinned content remains interactive`);
+    await page.reload(); await page.locator('.workspace-nav-desktop').waitFor();
+    verify(await page.locator('.nav-pin').getAttribute('aria-pressed') === 'true', `${role}: pin persists after reload`);
+    await page.locator('.home-attention-grid').waitFor();
+    await page.screenshot({ path: `${output}/${role}-menu-pinned.png` });
+    await page.locator('.nav-close:not(.nav-pin)').click();
+    await page.locator('#workspace-navigation-panel').waitFor({state:'hidden'});
+    await page.locator('.home-attention-grid').waitFor();
     await page.screenshot({ path: `${output}/${role}-overview-desktop.png`, fullPage: true });
+    await page.setViewportSize({ width: 1024, height: 960 });
+    await page.locator('.rail-menu').waitFor();
     await openNavigation(page);
     verify(await page.locator('.main-content-column-2026').getAttribute('inert') !== null, `${role}: background inert while menu is open`);
     verify(await page.getByRole('textbox', { name: 'Tìm chức năng', exact: true }).evaluate(node => node === document.activeElement), `${role}: focus enters menu search`);
@@ -48,9 +67,11 @@ try {
     verify(await first.evaluate(node => node === document.activeElement), `${role}: forward focus stays inside menu`);
     await page.keyboard.press('Escape');
     await openNavigation(page);
-    await page.screenshot({ path: `${output}/${role}-menu-desktop.png` });
+    await page.screenshot({ path: `${output}/${role}-menu-narrow.png` });
     await page.keyboard.press('Escape');
     verify(await page.getByRole('button', { name: 'Menu', exact: true }).evaluate(node => node === document.activeElement), `${role}: Escape restores menu trigger focus`);
+    await page.setViewportSize({ width: 1440, height: 960 });
+    await page.locator('.rail-menu').waitFor();
     await selectWorkspaceTab(page, 'resources');
     verify(await page.locator('#workspace-main').evaluate(node => node === document.activeElement), `${role}: navigation focuses destination`);
     await page.goBack(); await page.locator('.home-attention-grid').waitFor();
@@ -82,9 +103,26 @@ try {
     await page.reload(); await page.locator('.home-error').waitFor();
     verify(failedBookingReads > 0, `${role}: failure injection reaches the current booking read contract`);
     verify(await page.locator('.home-attention-card').count() === 0, `${role}: data failure does not masquerade as zero pending work`);
+    await page.route(`${api}/auth/logout`, route => route.fulfill({ status:429, contentType:'application/json', body:JSON.stringify({error:{code:'RATE_LIMITED',message:'Intentional sign-out failure'}}) }));
+    await page.getByRole('button',{name:'Mở menu tài khoản',exact:true}).click();
+    await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();
+    await page.locator('#login-email').waitFor();
+    verify(await page.locator('.workspace-shell').count() === 0, `${role}: failed server sign-out still clears local workspace`);
+    if (role === 'student') {
+      await page.locator('.lab-hero-image img').waitFor();
+      await page.waitForFunction(() => document.querySelector('.lab-hero-image img')?.naturalWidth > 0);
+      verify(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'public: narrow landing does not overflow');
+      await page.screenshot({ path:`${output}/landing-narrow.png` });
+      await page.setViewportSize({width:1440,height:960});
+      await page.screenshot({ path:`${output}/landing-desktop.png` });
+    }
     await context.close();
   }
   assert.deepEqual(errors, []);
   writeFileSync(`${output}/results.json`, JSON.stringify({ checks: results.length, results, errors, environment: 'Fresh PostgreSQL 16 local demo; authentication/reads plus one intercepted API failure per role. No provider/hardware verification.' }, null, 2));
   console.log(`PASS: ${results.length} navigation, role, keyboard, history, locale, failure and viewport checks; no browser exceptions.`);
+} catch (error) {
+  writeFileSync(`${output}/failure.json`, JSON.stringify({ checks: results, error: error.message, url: activePage?.url(), text: activePage ? await activePage.locator('body').innerText() : '', errors }, null, 2));
+  if (activePage) await activePage.screenshot({ path: `${output}/failure.png`, fullPage: true });
+  throw error;
 } finally { await browser.close(); }
