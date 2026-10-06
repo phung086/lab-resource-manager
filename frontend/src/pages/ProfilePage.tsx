@@ -3,9 +3,12 @@ import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import {
   BadgePercent,
+  Building2,
   CheckCircle2,
   KeyRound,
   Loader2,
+  Mail,
+  Phone,
   Save,
   ShieldAlert,
   TrendingUp,
@@ -16,6 +19,7 @@ import { VietnamAddressSelector } from "../components/VietnamAddressSelector";
 import { formatVietnamDateTime } from "../utils/timezone";
 import { CANONICAL_BOOKING_STATUS_LABELS } from "../constants.js";
 import "../styles/profile.css";
+import "../styles/redesign/profile.css";
 
 type AddressValue = { addressLine: string; provinceCode: string; wardCode: string };
 
@@ -144,7 +148,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
 
   if (loading) {
     return (
-      <div className="profile-page">
+      <div className="profile-page lrm-profile-redesign">
         <p role="status"><Loader2 className="spin" size={18} /> {tr("ui.loading_profile_6e226af8")}</p>
       </div>
     );
@@ -154,7 +158,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
   const isTemporaryPassword = Boolean(profile?.passwordResetRequired);
 
   return (
-    <section className="profile-page" aria-labelledby="profile-title">
+    <section className="profile-page lrm-profile-redesign" aria-labelledby="profile-title">
       <div className="profile-hero">
         <div>
           <h1 id="profile-title">{tr("refine.account")}</h1>
@@ -166,11 +170,26 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
 
       <div className="profile-identity-summary">
         <span className="profile-initial" aria-hidden="true">{(profile?.fullName || profile?.email || "").trim().slice(0, 1).toUpperCase()}</span>
-        <div><h2>{profile?.fullName}</h2><p>{profile?.email}</p></div><span className="role-badge">{roleName}</span>
+        <div className="profile-identity-copy">
+          <div className="profile-identity-heading">
+            <h2>{profile?.fullName}</h2>
+            <span className="role-badge">{roleName}</span>
+          </div>
+          <div className="profile-identity-meta">
+            <span><Mail size={15} aria-hidden="true" />{profile?.email}</span>
+            {profile?.phone && <span><Phone size={15} aria-hidden="true" />{profile.phone}</span>}
+            {profile?.organization && <span><Building2 size={15} aria-hidden="true" />{profile.organization}</span>}
+          </div>
+        </div>
       </div>
-      {isTemporaryPassword && section !== "security" && <button className="secondary-button" onClick={() => setSection("security")}>{tr("ui.password_change_required_e4691737")}</button>}
-      <nav className="refine-section-nav" aria-label={tr("refine.accountSections")}>
-        {["contact", "security", "access", "activity"].map(value => <button key={value} type="button" aria-pressed={section === value} onClick={() => setSection(value)}>{tr(`refine.${value}`)}</button>)}
+      {isTemporaryPassword && section !== "security" && <button className="secondary-button profile-security-shortcut" onClick={() => setSection("security")}>{tr("ui.password_change_required_e4691737")}</button>}
+      <nav className="refine-section-nav profile-section-nav" aria-label={tr("refine.accountSections")}>
+        {["contact", "security", "access", "activity"].map((value, index) => (
+          <button key={value} type="button" aria-pressed={section === value} onClick={() => setSection(value)}>
+            <span className="profile-nav-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+            <span>{tr(`refine.${value}`)}</span>
+          </button>
+        ))}
       </nav>
       {/* 2. ACCOUNT / SECURITY */}
       <article hidden={section !== "security"} className="profile-card profile-section-security" aria-labelledby="section-security-title">
