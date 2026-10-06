@@ -1,6 +1,5 @@
 import { translate } from "../i18n.js";
 import { LanguageToggle } from "./base/LanguageToggle";
-import { ProjectBrand } from "./base/ProjectBrand";
 import React, { useState, useEffect, useRef } from "react";
 import { parseVietnamParts } from "../utils/timezone";
 import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, UserRound } from "lucide-react";
@@ -89,7 +88,9 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="header-2026">
       <div className="header-left-2026">
-        <ProjectBrand onNavigate={onOpenHome} />
+        <button type="button" className="workspace-home-link" onClick={onOpenHome} aria-label={t('shell.brand_home')}>
+          <strong>{t('ui.lab_7a62e3ac')}</strong><span>{t('ui.resource_manager_ae0bb64a')}</span>
+        </button>
         <div className="project-header-location">
           <div className="header-title-row-2026"><div className="header-title-2026">{title}</div></div>
           <div className="header-telemetry-row-2026">{roleKey ? t(roleKey) : t('ui.workspace_970a97e3')}</div>

@@ -49,16 +49,15 @@
 @media(min-width:1280px) { .project-header-assistant { display:block; }.project-menu-assistant { display:none; } }
 @media(max-width:1100px) { .project-account-label > span { display:none; }.project-account-label{max-width:130px}.project-header-location{padding-left:20px}.workspace-shell .header-left-2026{gap:20px}.workspace-shell .header-2026{gap:14px} }
 @media(max-width:760px) {
-  .workspace-shell .header-2026 { position:sticky; top:64px; padding:12px 18px; min-height:108px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; }
-  .workspace-shell .header-left-2026 { display:contents; }
-  .workspace-shell .header-left-2026 > .project-brand { grid-column:1; grid-row:1; }
+  .workspace-shell .header-2026 { position:sticky; top:64px; padding:10px 18px; min-height:64px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+  .workspace-shell .header-left-2026 { display:flex; grid-column:1; grid-row:1; }
   .workspace-shell .header-right-2026 { grid-column:2; grid-row:1; gap:2px; }
-  .project-header-location { grid-column:1/-1; grid-row:2; padding:0; border:0; display:flex; gap:12px; align-items:baseline; }
+  .project-header-location { padding:0; border:0; display:grid; gap:4px; }
   .workspace-shell .header-title-2026 { max-width:none; font-size:13px; }
   .workspace-shell .header-telemetry-row-2026 { display:block; margin:0; font-size:11px; }
   .project-account-label,.project-header-refresh,.workspace-shell .user-avatar-btn-2026 > .dropdown-arrow { display:none; }
-  .workspace-shell .header-icon-btn-2026,.workspace-shell .header-notification-btn-2026,.workspace-shell .user-avatar-btn-2026 { min-width:40px; min-height:44px; }
-  .workspace-shell .header-2026 .segmented-btn-2026 { min-width:36px; min-height:44px; }
+  .workspace-shell .header-icon-btn-2026,.workspace-shell .header-notification-btn-2026,.workspace-shell .user-avatar-btn-2026 { min-width:44px; min-height:44px; }
+  .workspace-shell .header-2026 .segmented-btn-2026 { min-width:44px; min-height:44px; }
   .project-menu-refresh { display:flex; }
   .workspace-shell .header-2026 .project-brand > span { font-size:22px; }
   .workspace-shell .header-2026 .project-brand svg { width:25px; }

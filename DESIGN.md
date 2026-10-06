@@ -22,6 +22,18 @@ colors:
   public-focus: "#167992"
   available-bg: "#dcfce7"
   available-text: "#15803d"
+  lab-canvas: "#f8fafb"
+  lab-surface-muted: "#f4f7f9"
+  lab-surface-hover: "#eef3f6"
+  lab-ink: "#0f2942"
+  lab-secondary-text: "#4a6080"
+  lab-muted-text: "#607087"
+  lab-navy-hover: "#123552"
+  lab-navy-tint: "#e8f1f6"
+  lab-line: "#dde4eb"
+  lab-line-strong: "#c4cdd6"
+  lab-danger: "#be123c"
+  lab-danger-bg: "#fff1f2"
 typography:
   display:
     fontFamily: '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
@@ -47,6 +59,17 @@ typography:
     fontWeight: 600
   technical:
     fontFamily: '"IBM Plex Mono", ui-monospace, monospace'
+  home-title:
+    fontFamily: '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    fontSize: "28px"
+    fontWeight: 500
+    lineHeight: 1.3
+    letterSpacing: "-.025em"
+  home-section:
+    fontSize: "20px"
+    fontWeight: 600
+    lineHeight: 1.35
+    letterSpacing: "-.02em"
 rounded:
   public-control: "3px"
   public-card: "4px"
@@ -54,6 +77,8 @@ rounded:
   sm: "8px"
   md: "12px"
   lg: "16px"
+  lab-control: "4px"
+  lab-container: "6px"
 spacing:
   inline: "8px"
   compact: "12px"
@@ -93,6 +118,21 @@ components:
     backgroundColor: "{colors.white}"
     rounded: "{rounded.xs}"
     padding: "{spacing.form}"
+  workspace-header:
+    backgroundColor: "{colors.white}"
+    textColor: "{colors.lab-ink}"
+    height: "72px"
+  workspace-header-mobile:
+    height: "64px"
+  home-working-desk:
+    backgroundColor: "{colors.white}"
+    textColor: "{colors.lab-ink}"
+    rounded: "{rounded.lab-container}"
+  home-register:
+    backgroundColor: "{colors.white}"
+    textColor: "{colors.lab-ink}"
+    rounded: "{rounded.lab-container}"
+    padding: "16px 20px"
 ---
 
 # Design System: Lab Resource Manager
@@ -118,6 +158,8 @@ The approved local extension on 5 October 2026 adds persistent desktop text navi
 
 The subsequent catalogue, resource dossier and profile refinement uses [catalogue/profile styles](frontend/src/styles/catalog-profile.css), loaded after final workspace styles. It extends this world with aligned resource records, collapsed search/filter controls and shared section navigation. Source behavior is in ResourceManagementView, ResourceDetailsModal and ProfilePage; the [refinement report](artifacts/catalog-profile-refinement-20261005/REPORT.md) and [fix verdict](artifacts/catalog-profile-refinement-20261005/FIX_VERDICT.md) own the scoped verification and remaining limits.
 
+The coordinator's wave 1 continuation on 6 October 2026 modernizes the shared header, CSS cascade and role homes under [UI_CONTRACT](docs/ui-redesign/UI_CONTRACT.md) and [REDESIGN_SPEC](docs/ui-redesign/REDESIGN_SPEC.md). Sources are [Header](frontend/src/components/Header.tsx), [shared foundations](frontend/src/styles/lab-design-system.css), [final workspace](frontend/src/styles/final-workspace.css), [home styles](frontend/src/styles/workspace-home.css), and the workspace HomeComponents, StudentHome and AdminHome components. Global foundations load before App's surface imports in [main](frontend/src/main.jsx); unused lab-app-shell and lab-landing imports are removed while their files remain. Home layout now belongs to its dedicated lazy-loaded sheet. The new lab-prefixed frontmatter entries describe the frozen shared CSS API alongside the preserved incumbent surface primitives. This record covers the coordinator changes only; pending contributor landing, calendar, operation and profile changes are not integrated or documented as delivered. Earlier required frontend checks passed according to the coordinator run. The [navigation confirmation](.impeccable/review/coordinator/navigation-confirm/results.json) records 129 checks with no errors on frontend 5173/API 8000; the [final role-home confirmation](.impeccable/review/coordinator/final/results.json) adds 91 checks with no browser errors across all four roles, VI/EN and 1440/1280/768/390/375px widths, including finder draft preservation, query/category forwarding and exact-resource calendar navigation. Final captures follow the import-order and mobile-target corrections. These are read-only local UI checks; no shared-database business mutations, whole-system completion or independent review verdict is claimed.
+
 ## Colors
 
 The primary palette pairs laboratory navy with cool white and slate neutrals.
@@ -139,6 +181,8 @@ The primary palette pairs laboratory navy with cool white and slate neutrals.
 - **Line and strong line**: content divisions and field boundaries; public-line is the landing counterpart.
 - **Public section and public workflow**: subtle alternating landing sections.
 
+The coordinator shell and homes consume the `--lab-*` API: lab-canvas, lab-surface-muted and lab-surface-hover describe its cool neutral grounds; white maps to `--lab-surface`; lab-ink, lab-secondary-text and lab-muted-text map to `--lab-text-primary`, `--lab-text-secondary` and `--lab-text-muted`. Primary remains `--lab-navy-700`; lab-navy-hover and lab-navy-tint map to `--lab-navy-800` and `--lab-navy-100`; lab-line and lab-line-strong map to the shared border tokens. Root workspace variables alias these shared values rather than choosing another palette. Supplementary muted text replaces its previous lighter value (#7a8fa8) for contrast without changing the CSS name; the final value measures 5.04:1 on white, 4.82:1 on lab-canvas and 4.69:1 on lab-surface-muted. Use secondary text for explanatory copy and retain rendered contrast checks. The legacy muted-text primitive and the public, catalogue and profile surface-specific palette remain separate from this shared mapping.
+
 ### Semantic states
 
 The available badge tokens above are the observed catalog success treatment. The catalog also distinguishes in-use, maintenance, calibration, broken, offline, approval and training states. Preserve their existing styles and readable labels; semantic color is supplementary to text. Physical condition and scheduling availability must remain distinguishable.
@@ -151,6 +195,8 @@ The frontmatter display and headline roles belong to the incumbent public landin
 
 Catalogue and profile headings use weight 500 (26px and 28px respectively). Resource names use 18px text with a 1.4 line height; LAB text and section navigation use 14px, metadata uses 12px and thumbnail attribution uses 11px with a 1.4 line height. Profile section headings use 20px, dossier headings use 16px, and profile field labels use 14px at weight 400. Access explanations use the body size with a 1.7 line height and a 68ch measure. These are scoped catalogue/profile roles.
 
+Role homes use home-title for greetings, home-section for section headings, 16px/weight-500 record names, 14px priority labels and 12–13px supporting text. The finder has a 30px/weight-500 heading; mobile greetings reduce to 24px and section headings to 18px. Priority counts use tabular numerals at 24px. The compact shared header uses 14px/weight-500 page context and 12px role context; its plain LAB home link uses 18px brand text and 12px supporting text.
+
 Vietnamese diacritics and English expansion must remain readable. Locale is an application preference; names, descriptions supplied by users, and historical evidence retain their original language. Existing partial translation coverage is documented in the local experience report.
 
 ## Layout
@@ -159,9 +205,13 @@ The landing container is min(1240px, calc(100% - 80px)). Its approved hero has t
 
 At 1100px the landing margins become 28px per side and resource cards become two columns. Below 1100px the approved hero gap becomes 32px. At 850px the incumbent hero becomes one column and public navigation becomes a toggle. At 760px the approved hero uses 40px vertical padding, a 30px gap and a 40px title. At 540px margins become 18px, resource cards become one column and header account controls wrap.
 
-Register/detail workspaces retain their 1280px maximum width and 24px section gap. They use minmax(220px, .8fr) and minmax(0, 1.7fr) with a 32px gap; at 800px these become one column and paired fields stack. The approved shell has a persistent 240px text sidebar at 1100px and wider. Its main content region is at most 1480px wide with 32px top padding and clamp(24px, 2.8vw, 44px) side padding. Below 1100px a 64px top rail opens the existing accessible overlay; at 760px content padding becomes 24px 18px 40px. This supersedes the older 248px/900px sidebar description.
+Register/detail workspaces retain their 1280px maximum width and 24px section gap. They use minmax(220px, .8fr) and minmax(0, 1.7fr) with a 32px gap; at 800px these become one column and paired fields stack. At 1100px and wider the shell defaults to an 80px shortcut rail with a searchable temporary drawer and optional 300px pinned menu. Below 1100px it uses a horizontal 64px shortcut bar and modal drawer. Its main content region is at most 1480px wide with 32px top padding, clamp(24px, 2.8vw, 44px) side padding and 48px bottom padding; at 760px content padding becomes 24px 18px 40px. This reconciles the 6 October retractable-navigation update and supersedes the prior persistent 240px sidebar description.
 
 The shared header carries LAB identity, page/role context, locale and account controls. The footer follows content and offers real role-appropriate destinations and native help disclosures. Calendar controls put resource selection and booking entry on the first desktop row, period navigation and view choice on the second; they stack at 760px. Booking records put resource/purpose beside requester, time and LAB at desktop widths, then stack at narrower widths. Role homes preserve their distinct student, lecturer, staff and administrative tasks. Keep these surface-specific adaptations.
+
+The shared header has a 72px minimum height at desktop widths and 64px at 760px and narrower. Desktop repeats identity as a compact text home link rather than another large symbol; the mobile header hides that link and keeps page/role context, locale and account controls below the shortcut bar. Narrow notification, avatar and locale controls retain a 44px minimum target width and height.
+
+Role homes use a 32px section rhythm and a 2:1 main/related-work split with a 32px gap. The student finder and next-booking area share one bordered white working desk, with a muted next-booking column divided by a rule. At 1000px, ordinary content and staff queue splits stack; the working desk and lecturer/admin lead boards stack at 760px. The priority strip becomes one divided column at 760px. Resource, class and role records remain one-column registers; narrow resource/class rows wrap metadata and actions under their identity. At 420px the finder controls and next-booking facts stack completely. These compositions belong to role homes, not public discovery or other operational pages.
 
 The workspace catalogue uses one divided list. At desktop widths, records align media, name/code/category, LAB, current availability and actions in five columns, with a 20px gap, 18px 22px inset and 124px minimum height. From 701px through 1250px the gap becomes 12px and the inset 16px. At 700px and narrower, a thumbnail/name pair leads into LAB, availability and two actions on full-width rows. Image and category fallback keep the same cover dimensions (76px by 64px, narrowing to 64px wide).
 
@@ -177,6 +227,8 @@ Focus is explicit: incumbent shared controls use a 2px navy outline with 2px off
 
 Catalogue records, filters and profile containers are flat with dividing borders. Record hover changes only the pale background; it adds no lift or shadow. Catalogue background feedback and dossier/profile section color/border feedback use 160ms ease, disabled for reduced motion.
 
+Home panels are transparent and unboxed. The lead board and registers use white surfaces and thin borders without resting shadow; flat priority cells use rules and a danger tint only for nonzero urgent work. Home interactive controls use a 2px shared-focus outline with 3px offset. Priority, class, role and refresh hover feedback uses the shared 120ms easing only when reduced motion is not requested.
+
 ## Shapes
 
 Use compact corners on new surfaces: public controls use public-control, public resource cards use public-card, and new operational forms/disclosures use xs. Register rows are square with dividing rules. These values support the precise LAB direction.
@@ -185,7 +237,9 @@ The approved workspace reuses the existing compact sizes: 4px corners on actions
 
 The catalogue list, filter disclosure and profile containers reuse sm corners (8px). Catalogue rows and section-navigation buttons are square; thumbnails and category fallback use public-card corners (4px). These surface choices extend the existing radius vocabulary.
 
-The sm/md/lg tokens remain in the shared stylesheet as observed legacy values. Narrow overlay items retain 9px corners; catalog detail/media/eligibility areas still contain 10–14px radii. Older role homes retain nested cards, banner metrics, repeated empty-state icons and small scope footnotes. This is known visual drift, not an instruction to propagate it onto new LAB surfaces or to rebuild unrelated components.
+The coordinator home lead boards and register containers use lab-container corners (6px), while their divided rows and priority cells are square. Compact home controls use the frozen lab-control value (4px). The current navigation drawer rows use 6px corners and rail controls use 7px corners.
+
+The sm/md/lg tokens remain in the incumbent shared stylesheet as observed legacy values; they are separate from the frozen `--lab-radius-*` API. Catalogue detail/media/eligibility areas still contain 10–14px radii. This pre-existing drift outside the coordinator boundary remains recorded, not an instruction to propagate it onto new LAB surfaces or rebuild unrelated components.
 
 ## Components
 
@@ -199,7 +253,17 @@ The public catalog search is a visible labeled field, at most 520px wide, with a
 
 ### Navigation
 
-The public header is sticky and provides resource, schedule and process links, a VI/EN selector and account action. Mobile navigation has an explicitly named toggle with expanded state. At 1100px and wider the workspace sidebar displays grouped text destinations using the existing role/feature filters. Rows use 14px text, 10px 14px padding and a 44px minimum height. The active desktop row is white with navy text and weight 600; its pale sidebar ground and quiet hover tint provide separation. Narrow layouts retain the searchable overlay, focus trap, Escape dismissal and focus restoration. Desktop content remains keyboard reachable beside the sidebar. Preserve current-state semantics and focus the destination main content after navigation.
+The public header is sticky and provides resource, schedule and process links, a VI/EN selector and account action. Mobile navigation has an explicitly named toggle with expanded state. Workspace navigation defaults to the compact rail; Menu opens grouped text destinations with Vietnamese accent-insensitive search and existing role/feature filters. Drawer rows use 14px text, 11px 12px padding and a 44px minimum height; the active row combines navy text, weight 600, a pale blue ground and an inset 3px navy marker. Temporary drawers are modal at desktop and narrow widths: focus enters search, Tab stays within visible controls, background content becomes inert, Escape/backdrop/Close dismiss and restore focus. Desktop users may pin the 300px menu; pinned navigation leaves content interactive and the local preference survives reload. Closing removes the pin. Destination selection focuses main content. Below 1100px the shortcuts are horizontal and the menu remains modal. The [6 October navigation evidence](.impeccable/review/coordinator/navigation-confirm/results.json) owns runtime assertions; the user-selected reference direction came from [Linear](https://linear.app/now/behind-the-latest-design-refresh) and [Atlassian](https://atlassian.design/components/navigation-system/layout).
+
+### Role-home working desk and registers
+
+Student discovery leads with a labelled resource finder and next-booking facts or a useful left-aligned empty state. Resource rows show code/category, name, LAB, physical-state text and the exact-resource calendar action. Class rows align code/term, class name, lecturer, membership/activity counts and the existing destination. Admin role rows align role explanation, count and directory action; lecturer/admin lead boards use white surfaces and a separated academic note or totals area. These replace the previous nested home cards and dark metric banner.
+
+Priority cells put a readable task label and hint before the count and directional action. Scope notes use readable 12px supplementary text: student/lecturer recent-record previews remain bounded, while staff/admin booking and incident figures use server summary totals. Maintenance previews retain their own bounded scope. Empty states place one small contextual icon beside title, explanation and existing action; they do not turn failed reads into zero work.
+
+The staff home keeps its real five-row server queue and pagination. Four stage controls use a navy bottom rule and pressed state; records show code/state, resource, requester/purpose, Vietnam time, LAB and the existing evidence/confirmation destination. At narrow widths stage controls become two columns and record actions follow their content. Loading, failure/retry and empty states remain separate; all authorization and mutation semantics stay with the existing business workflow.
+
+**The Home Register Rule.** Within role homes, use one working desk for the leading task and divided registers for repeated resources, classes and roles. Keep section panels unboxed and preserve readable scope, state and destination labels.
 
 ### Calendar and booking records
 
@@ -248,6 +312,8 @@ Loading uses status text, failures use alerts, and completed mutations show conf
 - **Do** show distinct loading, filtered-empty, unavailable, validation and failure states with keyboard-visible focus.
 - **Do** keep workspace catalogue media, identity, LAB, availability and actions aligned across image and category fallback records.
 - **Do** preserve profile drafts when changing sections or VI/EN, and keep protected history feedback inside the dossier history section.
+- **Do** use the frozen `--lab-*` API for coordinator shell/home styling, keep role-home scope notes readable and preserve distinct loading, empty and failed reads.
+- **Do** preserve the compact rail, searchable temporary drawer and optional desktop pin with their existing focus behavior.
 
 ### Don't:
 
@@ -256,10 +322,3 @@ Loading uses status text, failures use alerts, and completed mutations show conf
 - **Don't** communicate resource condition, booking status or warnings through color alone.
 - **Don't** present reference photographs, missing telemetry or unconfirmed operations as verified institutional evidence.
 - **Don't** display internal account classification codes as an explanation of access or imply that self-declared membership grants verified privileges.
-
-
-### Navigation update — 2026-10-06
-
-The user requested retractable navigation again. This supersedes the always-visible desktop sidebar decision: default to an 80px shortcut rail; Menu opens a searchable drawer. Desktop users may pin the full 300px menu; closing it removes the pin. Pin preference is stored locally. Below 1100px, use a horizontal shortcut bar and a modal drawer; never reserve a full sidebar on narrow screens. Keep existing role and feature filters. Temporary drawers trap focus, support Escape/backdrop dismissal, and make background content inert. Pinned navigation leaves the content interactive.
-
-Visual direction: quiet blue-gray surfaces, clear navy active marker, consistent icons and explicit Menu control. References: https://linear.app/now/behind-the-latest-design-refresh and https://atlassian.design/components/navigation-system/layout .

@@ -1,6 +1,6 @@
 /* Approved desktop LAB direction; loaded after the incumbent page styles. */
-.workspace-shell { --workspace-accent:#174d70; --workspace-radius:6px; --workspace-border:#dce4eb; grid-template-columns:240px minmax(0,1fr); }
-.workspace-shell .workspace-navigation { width:240px; background:#eef3f6; border-right:1px solid var(--workspace-border); }
+.workspace-shell { --workspace-accent:var(--lab-navy-700); --workspace-accent-soft:var(--lab-navy-100); --workspace-radius:var(--lab-radius); --workspace-border:var(--lab-border); --workspace-muted:var(--lab-text-muted); grid-template-columns:80px minmax(0,1fr); background:var(--lab-canvas); color:var(--lab-text-primary); font-family:var(--lab-font-sans); }
+.workspace-shell .workspace-navigation { width:80px; background:var(--lab-surface-muted); border-right:1px solid var(--workspace-border); }
 .workspace-shell .workspace-nav-desktop { position:static; width:100%; height:100dvh; padding:28px 14px 20px; background:transparent; box-shadow:none; animation:none; }
 .workspace-nav-desktop .workspace-nav-heading { padding:0 14px; margin-bottom:16px; }
 .workspace-nav-desktop .workspace-nav-heading h2 { margin:0; font-size:17px; font-weight:500; color:#19334b; }
@@ -12,33 +12,24 @@
 .workspace-shell .workspace-nav-desktop .sidebar-nav-item-2026.is-active { background:#fff !important; color:#174d70 !important; font-weight:600; }
 .workspace-nav-desktop .workspace-nav-count { background:#dce9f0; font-variant-numeric:tabular-nums; font-size:11px; font-weight:500; }
 .workspace-shell .main-content-column-2026 { min-width:0; }
-.workspace-shell .main-body-container-2026 { width:100%; max-width:1480px; margin-inline:auto; padding:32px clamp(24px,2.8vw,44px) 52px; }
-.workspace-shell .header-2026 { min-height:88px; padding:16px clamp(24px,2.8vw,44px); }
-.workspace-shell .header-left-2026 { gap:24px; }
+.workspace-shell .main-body-container-2026 { width:100%; max-width:1480px; margin-inline:auto; padding:32px clamp(24px,2.8vw,44px) 48px; }
+.workspace-shell .header-2026 { min-height:72px; padding:12px clamp(24px,2.8vw,44px); background:var(--lab-surface); }
+.workspace-shell .header-left-2026 { gap:20px; min-width:0; }
+.workspace-shell .workspace-home-link { display:flex; align-items:center; gap:8px; min-height:44px; padding:0; border:0; background:transparent; color:var(--lab-navy-700); cursor:pointer; font:inherit; text-align:left; }
+.workspace-shell .workspace-home-link strong { font-size:18px; letter-spacing:-.02em; }
+.workspace-shell .workspace-home-link span { font-size:12px; color:var(--lab-text-secondary); max-width:10ch; line-height:1.25; }
+.workspace-shell .workspace-home-link:hover strong { text-decoration:underline; text-underline-offset:4px; }
+.workspace-shell .workspace-home-link:focus-visible { outline:2px solid var(--lab-border-focus); outline-offset:4px; }
 .workspace-shell .project-brand > span { font-size:23px; }
-.workspace-shell .project-header-location { padding-left:24px; }
+.workspace-shell .project-header-location { padding-left:20px; }
+.workspace-shell .header-title-2026 { font-size:14px; font-weight:500; }
+.workspace-shell .header-telemetry-row-2026 { font-size:12px; color:var(--lab-text-muted); }
 .workspace-shell .project-header-assistant { display:none; }
 .workspace-shell .project-menu-assistant { display:flex; }
 .workspace-shell :is(.primary-button,.secondary-button,.btn-primary,.btn-secondary,.btn-danger,.nav-close) { border-radius:4px; font-weight:500; }
 .workspace-shell :is(input,select,textarea) { border-radius:6px; caret-color:#174d70; }
 .workspace-shell :is(.card,.lab-form,.lab-disclosure,.home-panel,.home-next-ticket,.notification-card) { box-shadow:none; }
 .workspace-shell ::selection,.project-public-shell ::selection { background:#cfe2ed; color:#162f43; }
-.workspace-shell .home-welcome h1 { font-size:28px; margin:0; font-weight:500; letter-spacing:-.025em; }
-.workspace-shell .lab-home .workspace-overline { display:none; }
-.workspace-shell .home-finder { border-radius:6px; padding:28px; }
-.workspace-shell .home-finder h2 { margin-top:0; font-size:30px; letter-spacing:-.025em; font-weight:500; }
-.workspace-shell .home-finder-form { border-radius:6px; }
-.workspace-shell .home-next-ticket { border-top:1px solid var(--workspace-border); }
-.workspace-shell .home-attention-card { border-radius:6px; box-shadow:none; }
-.workspace-shell .home-priority-icon { display:none; }
-.workspace-shell .home-priority-copy small { font-size:12px; }
-.workspace-shell .home-operation-row { border-radius:4px; }
-.workspace-shell .home-operation-row.is-overdue { border-left-width:1px; }
-.workspace-shell .home-scope-pill { font-weight:400; font-size:12px; background:transparent; border:0; }
-.workspace-shell .home-scope-pill svg { display:none; }
-.workspace-shell .home-resource-body > small { text-transform:none; letter-spacing:0; font-size:12px; }
-.workspace-shell .home-quick-link .home-icon-box { width:30px; height:30px; background:transparent; }
-.workspace-shell .home-context-note { background:transparent; padding:16px 0 0; border-top:1px solid var(--workspace-border); }
 .workspace-shell .operations-view { gap:22px; }
 .workspace-shell .operations-header { border:0; padding:0; align-items:center; }
 .workspace-shell :is(.operations-header h1,.calendar-page-heading h1) { margin:0; font-size:28px; line-height:1.3; font-weight:500; letter-spacing:-.025em; color:#19334b; }
@@ -109,7 +100,10 @@
 }
 @media (max-width:760px) {
   .workspace-shell .main-body-container-2026 { padding:24px 18px 40px; }
-  .workspace-shell .header-2026 { padding:12px 18px; }
+  .workspace-shell .header-2026 { padding:10px 18px; min-height:64px; }
+  .workspace-shell .workspace-home-link { display:none; }
+  .workspace-shell .header-left-2026 { gap:0; }
+  .workspace-shell .project-header-location { padding-left:0; border-left:0; }
   .workspace-shell .calendar-toolbar-row { grid-template-columns:minmax(0,1fr); gap:16px; padding:16px; }
   .workspace-shell :is(.calendar-resource-filter,.calendar-new-booking-btn,.calendar-nav-group,.calendar-view-switcher) { grid-column:1; grid-row:auto; }
   .workspace-shell .calendar-new-booking-btn { justify-self:start; }

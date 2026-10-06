@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-05T02:49:09.000Z",
+  "generatedAt": "2026-10-06T16:07:42.000Z",
   "title": "Design System: Lab Resource Manager",
   "extensions": {
     "colorMeta": {
@@ -29,6 +29,54 @@
           "#f1f5f9",
           "#f8fafc"
         ]
+      },
+      "lab-canvas": {
+        "role": "neutral",
+        "displayName": "Shared LAB canvas"
+      },
+      "lab-surface-muted": {
+        "role": "neutral",
+        "displayName": "Shared muted surface"
+      },
+      "lab-surface-hover": {
+        "role": "neutral",
+        "displayName": "Shared hover surface"
+      },
+      "lab-ink": {
+        "role": "neutral",
+        "displayName": "Shared LAB ink"
+      },
+      "lab-secondary-text": {
+        "role": "neutral",
+        "displayName": "Shared secondary text"
+      },
+      "lab-muted-text": {
+        "role": "neutral",
+        "displayName": "Shared supplementary text"
+      },
+      "lab-navy-hover": {
+        "role": "primary",
+        "displayName": "Shared navy hover"
+      },
+      "lab-navy-tint": {
+        "role": "primary",
+        "displayName": "Shared navy tint"
+      },
+      "lab-line": {
+        "role": "neutral",
+        "displayName": "Shared dividing line"
+      },
+      "lab-line-strong": {
+        "role": "neutral",
+        "displayName": "Shared strong line"
+      },
+      "lab-danger": {
+        "role": "semantic",
+        "displayName": "Shared urgent foreground"
+      },
+      "lab-danger-bg": {
+        "role": "semantic",
+        "displayName": "Shared urgent ground"
       }
     },
     "typographyMeta": {
@@ -47,6 +95,14 @@
       "technical": {
         "displayName": "Technical values",
         "purpose": "Identifiers, time, measurements and numbered steps."
+      },
+      "home-title": {
+        "displayName": "Role-home greeting",
+        "purpose": "28px weight-500 greeting; 24px at 760px and narrower."
+      },
+      "home-section": {
+        "displayName": "Role-home section",
+        "purpose": "20px weight-600 section headings; 18px at 760px and narrower."
       }
     },
     "shadows": [
@@ -96,6 +152,11 @@
         "name": "catalogue-section-feedback",
         "value": "160ms ease",
         "purpose": "Workspace catalogue background and dossier/profile section text/border feedback. Record hover has no lift or shadow; reduced motion disables these transitions."
+      },
+      {
+        "name": "home-control-feedback",
+        "value": "120ms cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Priority, class, role and refresh background feedback using the frozen LAB duration/easing, disabled for reduced motion."
       }
     ],
     "breakpoints": [
@@ -130,6 +191,18 @@
       {
         "name": "catalogue-profile-stack",
         "value": "700px"
+      },
+      {
+        "name": "home-content-stack",
+        "value": "1000px"
+      },
+      {
+        "name": "home-lead-stack",
+        "value": "760px"
+      },
+      {
+        "name": "home-finder-stack",
+        "value": "420px"
       }
     ]
   },
@@ -189,11 +262,11 @@
       "css": ".ds-register{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);display:flex;justify-content:space-between;gap:16px;text-align:left;width:100%;padding:16px 12px;border:0;border-bottom:1px solid var(--line,#e2e8f0);background:var(--surface-base,#fff);color:var(--text-primary,#0f172a);border-radius:0;cursor:pointer}.ds-register>span:first-child{display:grid;gap:5px}.ds-register small{color:var(--text-secondary,#475569);font-size:.82rem;line-height:1.6}.ds-register[aria-pressed=true]{background:var(--accent-subtle,#edf4f6);box-shadow:inset 0 0 0 1px var(--accent,#174d70)}.ds-register:hover{background:var(--surface-raised,#f1f5f9)}.ds-register:focus-visible{outline:2px solid var(--blue-600,#174d70);outline-offset:2px}"
     },
     {
-      "name": "Desktop workspace navigation",
+      "name": "Workspace rail and pinned menu",
       "kind": "nav",
-      "description": "Persistent 240px grouped text navigation at 1100px and wider; preview destinations are illustrative. Narrow screens retain the accessible overlay in the application.",
-      "html": "<nav class=\"ds-workspace-nav\" aria-label=\"Workspace navigation\"><h2>Menu</h2><div class=\"ds-workspace-group\"><p>Workspace</p><button type=\"button\">Overview</button><button type=\"button\">Rooms &amp; equipment</button><button type=\"button\" aria-current=\"page\">Room &amp; equipment calendar</button><button type=\"button\">Bookings &amp; handover</button></div></nav>",
-      "css": ".ds-workspace-nav,.ds-workspace-nav button,.ds-workspace-nav p{box-sizing:border-box}.ds-workspace-nav{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);width:240px;padding:28px 14px 20px;background:#eef3f6;border-right:1px solid var(--workspace-border,#dce4eb);box-shadow:none}.ds-workspace-nav h2{margin:0 14px 16px;font-size:17px;font-weight:500;color:#19334b}.ds-workspace-group{display:grid;gap:3px}.ds-workspace-group p{margin:0;padding:6px 14px;min-height:36px;font-size:12px;font-weight:400;color:#53677a}.ds-workspace-group button{display:flex;align-items:center;width:100%;min-height:44px;padding:10px 14px;border:0;border-radius:4px;background:transparent;color:#30495b;font-family:inherit;font-size:14px;line-height:1.4;font-weight:400;text-align:left;cursor:pointer;box-shadow:none}.ds-workspace-group button:hover{background:#e1ebf1;color:var(--workspace-accent,#174d70)}.ds-workspace-group button[aria-current=page]{background:#fff;color:var(--workspace-accent,#174d70);font-weight:600}.ds-workspace-group button:focus-visible{outline:3px solid #3b7fa8;outline-offset:3px}@media(prefers-reduced-motion:no-preference){.ds-workspace-group button{transition:background-color .16s ease-out,color .16s ease-out,border-color .16s ease-out}}"
+      "description": "80px desktop rail with Menu; searchable temporary modal drawer and optional 300px desktop pin. Below 1100px shortcuts become horizontal and the drawer stays modal. Preview shows the rail and a static grouped menu side by side; focus trapping, background inertness, pin persistence and dismissal are application behavior, not simulated by this snippet.",
+      "html": "<div class=\"ds-nav-preview\"><nav class=\"ds-workspace-rail\" aria-label=\"Shortcut rail preview\"><span>LAB</span><button type=\"button\">Menu</button><button type=\"button\" aria-current=\"page\">Overview</button><button type=\"button\">Calendar</button></nav><nav class=\"ds-workspace-menu\" aria-label=\"Pinned menu preview\"><h2>Menu</h2><label>Find a feature<input type=\"search\"></label><p>Workspace</p><button type=\"button\" aria-current=\"page\">Overview</button><button type=\"button\">Rooms &amp; equipment</button><button type=\"button\">Room &amp; equipment calendar</button></nav></div>",
+      "css": ".ds-nav-preview{display:flex;align-items:stretch;font-family:var(--lab-font-sans,\"IBM Plex Sans\",sans-serif);color:var(--lab-text-primary,#0f2942)}.ds-workspace-rail{display:flex;flex-direction:column;align-items:center;gap:12px;width:80px;padding:20px 8px;background:#f9fbfc;border-right:1px solid var(--lab-border,#dde4eb)}.ds-workspace-rail>span{font-weight:600;color:var(--lab-navy-700,#174d70);font-size:12px}.ds-workspace-rail button{width:62px;min-height:60px;padding:8px 4px;border:1px solid transparent;border-radius:7px;background:transparent;font:inherit;font-size:11px;color:var(--lab-text-secondary,#4a6080);cursor:pointer}.ds-workspace-rail button:first-of-type{background:#fff;border-color:#ccdae4;color:var(--lab-navy-700,#174d70)}.ds-workspace-rail button[aria-current=page]{background:var(--lab-navy-100,#e8f1f6);color:var(--lab-navy-700,#174d70)}.ds-workspace-menu{width:300px;padding:20px 16px 16px;background:#f9fbfc}.ds-workspace-menu h2{font-size:18px;font-weight:600;margin:0 0 18px}.ds-workspace-menu label{display:grid;gap:6px;font-size:12px;color:var(--lab-text-secondary,#4a6080)}.ds-workspace-menu input{min-height:44px;width:100%;padding:8px 12px;border:1px solid var(--lab-border,#dde4eb);border-radius:6px;background:#fff;font:inherit;font-size:14px;color:var(--lab-text-primary,#0f2942)}.ds-workspace-menu p{font-size:12px;font-weight:500;color:#586b79;margin:18px 0 8px}.ds-workspace-menu button{display:block;width:100%;min-height:44px;padding:11px 12px;border:0;border-radius:6px;background:transparent;color:#344d5e;font:inherit;font-size:14px;text-align:left;cursor:pointer}.ds-workspace-menu button[aria-current=page]{background:#e3eef5;color:var(--lab-navy-700,#174d70);font-weight:600;box-shadow:inset 3px 0 var(--lab-navy-700,#174d70)}.ds-nav-preview button:hover{background:#eaf0f4}.ds-nav-preview :is(button,input):focus-visible{outline:2px solid var(--lab-border-focus,#174d70);outline-offset:3px}@media(max-width:1099px){.ds-nav-preview{flex-direction:column}.ds-workspace-rail{width:100%;min-height:64px;flex-direction:row;padding:8px 14px;border-right:0;border-bottom:1px solid var(--lab-border,#dde4eb)}.ds-workspace-rail button{width:auto;min-width:44px;min-height:44px}.ds-workspace-menu{max-width:calc(100vw - 24px)}}@media(prefers-reduced-motion:no-preference){.ds-nav-preview button{transition:background-color .16s ease-out,color .16s ease-out}}"
     },
     {
       "name": "Workspace catalogue record",
@@ -208,6 +281,29 @@
       "description": "Shared wrapping section buttons with a navy active rule. Dossier sections contain overview, specifications/guidance, schedule and lazy protected history; profile forms stay mounted across section and locale changes.",
       "html": "<nav class=\"ds-section-nav\" aria-label=\"Resource sections preview\"><button type=\"button\" aria-pressed=\"true\">Overview</button><button type=\"button\" aria-pressed=\"false\">Specifications</button><button type=\"button\" aria-pressed=\"false\">Schedule</button><button type=\"button\" aria-pressed=\"false\">History</button></nav>",
       "css": ".ds-section-nav{font-family:var(--font-sans,\"IBM Plex Sans\",sans-serif);display:flex;flex-wrap:wrap;gap:4px 22px;border-bottom:1px solid #dce4eb;margin-bottom:24px}.ds-section-nav button{position:relative;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:14px 2px;min-height:44px;color:#53677a;font:inherit;font-size:14px;font-weight:400;cursor:pointer;transition:color 160ms ease,border-color 160ms ease}.ds-section-nav button:hover{color:#174d70}.ds-section-nav button[aria-pressed=true]{border-bottom-color:#174d70;color:#174d70;font-weight:500}.ds-section-nav button:focus-visible{outline:2px solid var(--blue-600,#174d70);outline-offset:2px}@media(max-width:700px){.ds-section-nav{gap:0 16px}}@media(prefers-reduced-motion:reduce){.ds-section-nav button{transition:none}}"
+    },
+    {
+      "name": "Compact workspace header",
+      "kind": "custom",
+      "refersTo": "workspace-header",
+      "description": "Plain LAB home link, page/role context and locale/account controls. Minimum height 72px desktop and 64px below 760px; mobile controls keep 44px targets. Preview labels are illustrative.",
+      "html": "<header class=\"ds-workspace-header\"><button class=\"ds-workspace-home\" type=\"button\"><strong>LAB</strong><span>Resource Manager</span></button><div class=\"ds-workspace-context\"><strong>Workspace</strong><span>Role context</span></div><div class=\"ds-workspace-tools\"><button type=\"button\" aria-pressed=\"true\">VI</button><button type=\"button\" aria-pressed=\"false\">EN</button><button type=\"button\">Account</button></div></header>",
+      "css": ".ds-workspace-header{display:flex;align-items:center;gap:20px;min-height:72px;padding:12px 24px;background:var(--lab-surface,#fff);border-bottom:1px solid var(--lab-border,#dde4eb);font-family:var(--lab-font-sans,\"IBM Plex Sans\",sans-serif);color:var(--lab-text-primary,#0f2942)}.ds-workspace-home{display:flex;align-items:center;gap:8px;min-height:44px;padding:0;border:0;background:none;color:var(--lab-navy-700,#174d70);font:inherit;cursor:pointer}.ds-workspace-home strong{font-size:18px}.ds-workspace-home span{max-width:10ch;font-size:12px;line-height:1.25;color:var(--lab-text-secondary,#4a6080)}.ds-workspace-home:hover strong{text-decoration:underline;text-underline-offset:4px}.ds-workspace-context{display:grid;gap:4px;min-width:0;padding-left:20px;border-left:1px solid var(--lab-border,#dde4eb)}.ds-workspace-context strong{font-size:14px;font-weight:500}.ds-workspace-context span{font-size:12px;color:var(--lab-text-muted,#607087)}.ds-workspace-tools{display:flex;gap:4px;margin-left:auto}.ds-workspace-tools button{min-width:44px;min-height:44px;padding:8px;border:0;border-radius:6px;background:transparent;color:var(--lab-navy-700,#174d70);font:inherit;font-size:12px;cursor:pointer}.ds-workspace-tools button:hover{background:var(--lab-surface-hover,#eef3f6)}.ds-workspace-header button:focus-visible{outline:2px solid var(--lab-border-focus,#174d70);outline-offset:3px}@media(max-width:760px){.ds-workspace-header{min-height:64px;padding:10px 18px;gap:8px}.ds-workspace-home{display:none}.ds-workspace-context{padding:0;border:0}}"
+    },
+    {
+      "name": "Role-home priority strip",
+      "kind": "custom",
+      "description": "Flat divided task cells put readable labels/hints before counts and destinations. Preview uses an em dash for a count; the application uses authorized live counts and discloses their scope.",
+      "html": "<section class=\"ds-home-priorities\" aria-label=\"Task priorities preview\"><button type=\"button\"><span><strong>Task label</strong><small>Next action guidance</small></span><b>—</b><span aria-hidden=\"true\">→</span></button><button type=\"button\"><span><strong>Related work</strong><small>Open the authorized queue</small></span><b>—</b><span aria-hidden=\"true\">→</span></button></section>",
+      "css": ".ds-home-priorities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-block:1px solid var(--lab-border,#dde4eb);background:var(--lab-surface,#fff);font-family:var(--lab-font-sans,\"IBM Plex Sans\",sans-serif)}.ds-home-priorities button{display:flex;align-items:center;gap:12px;min-width:0;min-height:88px;padding:16px 20px;border:0;border-right:1px solid var(--lab-border,#dde4eb);border-radius:0;background:transparent;color:var(--lab-text-primary,#0f2942);font:inherit;text-align:left;cursor:pointer}.ds-home-priorities button:last-child{border-right:0}.ds-home-priorities button>span:first-child{display:grid;gap:4px;flex:1;min-width:0}.ds-home-priorities strong{font-size:14px;font-weight:500}.ds-home-priorities small{font-size:12px;line-height:1.5;color:var(--lab-text-secondary,#4a6080)}.ds-home-priorities b{font-size:24px;font-weight:500;font-variant-numeric:tabular-nums}.ds-home-priorities button:hover{background:var(--lab-surface-hover,#eef3f6)}.ds-home-priorities button:focus-visible{outline:2px solid var(--lab-border-focus,#174d70);outline-offset:3px}@media(max-width:760px){.ds-home-priorities{grid-template-columns:minmax(0,1fr)}.ds-home-priorities button{min-height:76px;padding:12px 16px;border-right:0;border-bottom:1px solid var(--lab-border,#dde4eb)}.ds-home-priorities button:last-child{border-bottom:0}}@media(prefers-reduced-motion:no-preference){.ds-home-priorities button{transition:background-color var(--lab-duration-fast,120ms) var(--lab-ease,cubic-bezier(.2,0,0,1))}}"
+    },
+    {
+      "name": "Role-home resource register",
+      "kind": "custom",
+      "refersTo": "home-register",
+      "description": "One-column divided resource rows with code/category, name, LAB, physical-state label and calendar destination. Preview content is illustrative; real home rows preserve exact-resource forwarding.",
+      "html": "<section class=\"ds-home-register\" aria-label=\"Home resource register preview\"><article><div class=\"ds-home-resource-copy\"><small>RESOURCE-CODE · Category</small><h3>Resource name</h3><p>Laboratory name</p></div><div class=\"ds-home-resource-actions\"><span>Physical-state label</span><button type=\"button\">View resource calendar <span aria-hidden=\"true\">→</span></button></div></article></section>",
+      "css": ".ds-home-register{font-family:var(--lab-font-sans,\"IBM Plex Sans\",sans-serif);background:var(--lab-surface,#fff);border:1px solid var(--lab-border,#dde4eb);border-radius:var(--lab-radius,6px);overflow:hidden;color:var(--lab-text-primary,#0f2942)}.ds-home-register article{display:flex;align-items:center;gap:16px;min-width:0;padding:16px 20px;border-bottom:1px solid var(--lab-border,#dde4eb)}.ds-home-register article:last-child{border-bottom:0}.ds-home-resource-copy{flex:1;min-width:0}.ds-home-resource-copy small{font-size:12px;color:var(--lab-text-muted,#607087)}.ds-home-resource-copy h3{font-size:16px;font-weight:500;line-height:1.4;margin:4px 0;overflow-wrap:anywhere}.ds-home-resource-copy p{margin:0;font-size:13px;line-height:1.5;color:var(--lab-text-secondary,#4a6080)}.ds-home-resource-actions{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.ds-home-resource-actions>span{font-size:12px;color:var(--lab-text-secondary,#4a6080)}.ds-home-resource-actions button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 0;border:0;background:transparent;color:var(--lab-navy-700,#174d70);font:inherit;font-size:13px;font-weight:500;cursor:pointer}.ds-home-resource-actions button:hover{text-decoration:underline;text-underline-offset:4px}.ds-home-resource-actions button:focus-visible{outline:2px solid var(--lab-border-focus,#174d70);outline-offset:3px}@media(max-width:760px){.ds-home-register article{flex-wrap:wrap;padding:16px;gap:12px}.ds-home-resource-copy{flex-basis:100%}.ds-home-resource-actions{width:100%;flex-direction:row;align-items:center;justify-content:space-between}}"
     }
   ],
   "narrative": {
@@ -229,6 +325,11 @@
         "name": "The Section Continuity Rule",
         "body": "Dossier and profile sections preserve surrounding identity and navigation. Keep profile forms mounted across section and locale changes so unsaved input survives.",
         "section": "components"
+      },
+      {
+        "name": "The Home Register Rule",
+        "body": "Within role homes, use one working desk for the leading task and divided registers for repeated resources, classes and roles. Keep section panels unboxed and preserve readable scope, state and destination labels.",
+        "section": "components"
       }
     ],
     "dos": [
@@ -238,7 +339,9 @@
       "Do label reference media and retain source, credit and license information when provided.",
       "Do show distinct loading, filtered-empty, unavailable, validation and failure states with keyboard-visible focus.",
       "Do keep workspace catalogue media, identity, LAB, availability and actions aligned across image and category fallback records.",
-      "Do preserve profile drafts when changing sections or VI/EN, and keep protected history feedback inside the dossier history section."
+      "Do preserve profile drafts when changing sections or VI/EN, and keep protected history feedback inside the dossier history section.",
+      "Do use the frozen `--lab-*` API for coordinator shell/home styling, keep role-home scope notes readable and preserve distinct loading, empty and failed reads.",
+      "Do preserve the compact rail, searchable temporary drawer and optional desktop pin with their existing focus behavior."
     ],
     "donts": [
       "Don't copy the landing hero, workflow plate or section order into every operational screen.",
