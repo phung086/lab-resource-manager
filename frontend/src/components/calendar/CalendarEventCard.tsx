@@ -1,6 +1,6 @@
 import { useLocale } from '../../providers/LocaleProvider';
 import React from "react";
-import { Clock, User, Calendar } from "lucide-react";
+import { Clock, User, Calendar, Wrench } from "lucide-react";
 import { BookingStatusBadge } from "../BookingStatusBadge.js";
 import { toVietnamTimeString } from "../../utils/timezone.js";
 
@@ -18,9 +18,12 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
   const { tr } = useLocale();
   const title = event.titleKey ? tr(event.titleKey, event.titleParams) : event.title;
   const isMaintenance = event.type === "maintenance" || event.type === "calibration";
-  const startTime = toVietnamTimeString(event.start);
-  const endTime = toVietnamTimeString(event.end);
+  const startTime = toVietnamTimeString(event.start || event.startAt);
+  const endTime = toVietnamTimeString(event.end || event.endAt);
   const appearance = event.isMine ? "is-mine" : isMaintenance ? "is-maintenance" : "is-booked";
+  const maintenanceLabel = tr(
+    event.type === "calibration" ? "ui.calibration_a71e17c8" : "ui.maintenance_8ad424bd"
+  );
 
   if (compact) {
     return (
@@ -30,14 +33,30 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
           e.stopPropagation();
           if (onClick) onClick(event);
         }}
-        className={`calendar-event-card-wrap ${appearance} w-full text-left text-[11px] px-2 py-1 rounded border cursor-pointer truncate`}
+        className={`calendar-event-card-wrap calendar-event-card-compact ${appearance} w-full text-left`}
         title={`${title} (${startTime} - ${endTime})`}
       >
-        <span className="font-medium">
-          {event.isMine ? <span aria-hidden="true">★ </span> : null}
-          {title}
+        <span className="calendar-event-compact-heading">
+          <span className="calendar-event-title">
+            {event.isMine ? <span aria-hidden="true" className="calendar-own-marker">●</span> : null}
+            <span>{title}</span>
+          </span>
+          <span className="calendar-event-time">{startTime}</span>
         </span>
-        {startTime && <span className="calendar-event-time ml-1 text-[10px]">({startTime})</span>}
+        <span className="calendar-event-compact-status">
+          {isMaintenance ? (
+            <span className="calendar-event-kind-label">
+              <Wrench size={11} aria-hidden="true" />
+              <span>{maintenanceLabel}</span>
+            </span>
+          ) : (
+            <BookingStatusBadge
+              status={event.status}
+              occupancy={event.occupancy}
+              className="calendar-event-status-badge"
+            />
+          )}
+        </span>
       </button>
     );
   }
@@ -46,36 +65,50 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
     <button
       type="button"
       onClick={() => onClick && onClick(event)}
-      className={`calendar-event-card-wrap ${appearance} w-full text-left p-3 rounded-lg border cursor-pointer flex flex-col gap-2`}
+      className={`calendar-event-card-wrap calendar-event-card-full ${appearance} w-full text-left`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="text-sm font-medium leading-snug">
-          {event.isMine && <span aria-hidden="true" className="calendar-own-marker mr-1">●</span>}
-          {title}
-        </h4>
-        <BookingStatusBadge status={event.status} occupancy={event.occupancy} />
-      </div>
+      <span className="calendar-event-heading">
+        <span className="calendar-event-title-block">
+          <span className="calendar-event-title">
+            {event.isMine && <span aria-hidden="true" className="calendar-own-marker">●</span>}
+            <span>{title}</span>
+          </span>
+          {isMaintenance && (
+            <span className="calendar-event-kind-label">
+              <Wrench size={12} aria-hidden="true" />
+              <span>{maintenanceLabel}</span>
+            </span>
+          )}
+        </span>
+        {!isMaintenance && (
+          <BookingStatusBadge
+            status={event.status}
+            occupancy={event.occupancy}
+            className="calendar-event-status-badge"
+          />
+        )}
+      </span>
 
-      <div className="calendar-event-meta flex items-center gap-3 text-xs">
-        <span className="flex items-center gap-1">
-          <Clock size={12} />
-          <span>
+      <span className="calendar-event-meta">
+        <span className="calendar-event-meta-item">
+          <Clock size={13} aria-hidden="true" />
+          <span className="calendar-event-time-range">
             {startTime} – {endTime}
           </span>
         </span>
         {event.resourceName && (
-          <span className="flex items-center gap-1 truncate max-w-[200px]">
-            <Calendar size={12} />
-            <span className="truncate">{event.resourceName}</span>
+          <span className="calendar-event-meta-item calendar-event-resource">
+            <Calendar size={13} aria-hidden="true" />
+            <span>{event.resourceName}</span>
           </span>
         )}
-      </div>
+      </span>
 
       {event.requestedBy && (
-        <div className="calendar-event-owner flex items-center gap-1 text-xs pt-1 border-t">
-          <User size={12} />
+        <span className="calendar-event-owner">
+          <User size={13} aria-hidden="true" />
           <span>{event.requestedBy.fullName || event.requestedBy.email}</span>
-        </div>
+        </span>
       )}
     </button>
   );

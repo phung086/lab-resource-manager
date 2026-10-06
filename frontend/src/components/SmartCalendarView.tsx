@@ -11,6 +11,7 @@ import { BookingStatusBadge } from "./BookingStatusBadge.js";
 import { BaseModal2026 } from "./BaseModal2026.js";
 import { Clock, Calendar, User, AlertCircle } from "lucide-react";
 import { formatVietnamDateTime, getVietnamTodayDateString, toVietnamDateString, vietnamTimeToIso } from "../utils/timezone.js";
+import "../styles/redesign/calendar.css";
 
 export interface SmartCalendarViewProps {
   onOpenBooking?: (slot?: any) => void;
@@ -237,7 +238,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
   const blocked = selectedResource && (!["AVAILABLE", "IN_USE"].includes(selectedResource.operationalStatus) || selectedResource.bookingState !== "bookable");
 
   return (
-    <div className="calendar-page flex flex-col gap-4 w-full">
+    <div className="calendar-page lrm-calendar-redesign flex flex-col gap-4 w-full">
       <header className="calendar-page-heading"><h1>{tr('ui.room_and_equipment_calendar_cce9c071')}</h1><p>{tr('ui.final.calendarIntro')}</p></header>
       {/* Calendar Toolbar */}
       <CalendarToolbar
@@ -266,6 +267,16 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
         selectedResourceId={selectedResourceId}
         onResourceChange={setSelectedResourceId}
       />
+
+      {selectedResource && (
+        <div className="calendar-active-resource-badge" aria-live="polite">
+          <span>{tr("ui.calendar_for_31b82581")}</span>
+          <strong>{selectedResource.name}</strong>
+          {selectedResource.code && (
+            <span className="calendar-active-resource-code">{selectedResource.code}</span>
+          )}
+        </div>
+      )}
 
       {/* Resource Load Error Notice with Retry */}
       {resourcesError && (
