@@ -12,6 +12,9 @@ const tokens = text => (text.match(/"(?:\\.|[^"\\])*"|\/\/[^\n]*|[^\s]/g) || [])
 assert.equal(tokens(readFileSync(generatedPath, "utf8")), tokens(schema), "Run npm run db:generate before generating ERD from a changed schema");
 const coreNames = ["Campus", "Building", "Laboratory", "LabPolicy", "User", "UserLabAssignment", "Resource", "ResourceStatusHistory", "TrainingCourse", "TrainingRequirement", "UserCertification", "Booking", "MaintenanceWindow", "Incident", "UsageLog", "Notification", "TelemetrySource", "TelemetrySample", "MonitoringAlert", "SystemAuditEvent"];
 const extensionNames = ["Resource", "User", "Booking", "MaintenanceWindow", "StockItem", "StockMovement", "TeachingGroup", "TeachingMembership", "TeachingActivity"];
+const supportNames = ["Laboratory", "User", "UserLabAssignment", "SupportSession", "SupportMessage", "SupportPresence"];
+const emailNames = ["User", "EmailDelivery"];
+const simulationNames = ["ResourceCareProfile", "ResourceOperation", "ResourcePart"];
 const modelMap = new Map(Prisma.dmmf.datamodel.models.map(model => [model.name, model]));
 const types = { String: "string", Int: "int", Boolean: "boolean", DateTime: "datetime", Float: "float", Decimal: "decimal", Json: "json" };
 function diagram(names) {
@@ -74,6 +77,35 @@ ${diagram(extensionNames)}
 Stock movements record receipts, issues and admin adjustments. A maintenance-linked
 issue must remain in the same laboratory. Teaching groups represent lecturer
 supervision; academic endorsement does not grant resource approval or handover.
+## Approved human support extension
+
+${diagram(supportNames)}
+
+Support sessions retain customer messages, staff replies, handling events and
+resolution. Staff access follows current lab assignments. Partial unique indexes
+enforce one open request per customer and one active session per staff member
+across all labs. The presence heartbeat coordinates assignment; it does not prove
+the staff member has read a message. See the forward support migration for
+constraints that Prisma cannot express.
+
+## Approved automatic email extension
+
+${diagram(emailNames)}
+
+Registration and verified VNPAY settlement enqueue immutable, password-free
+email snapshots in the same transaction as their business event. Leased workers
+send through configured SMTP after commit. SENT records SMTP acceptance, not
+confirmed inbox delivery. Unique deduplication keys and state/attempt constraints
+are maintained by the forward email migration. See ADR-030 for retry limits.
+
+## Resource lifecycle extension
+
+${diagram(simulationNames)}
+
+Virtual operations retain booking, actor, declared load and server timestamps.
+Maintenance policy and component condition belong to existing catalogue resources.
+Physical-state mutations remain explicit, scoped and history-backed.
+
 Payment, shipment, AI, camera and optimization tables are outside this diagram's
 core projection. Their presence in the schema does not certify those integrations.
 `;

@@ -45,7 +45,7 @@ Use this checklist before handing the system to lab operations.
 ## Monitoring
 
 - `/api/health/ready` returns database connected.
-- `/api/metrics` is scraped by Prometheus.
+- `/metrics` is scraped by Prometheus.
 - Every telemetry agent uses its own active, resource-scoped credential; shared telemetry keys are prohibited.
 - Source health, last-seen time, explicit online/offline state, alert deduplication, and credential rotation have been checked.
 - Camera metadata is disabled until explicitly configured, and access audits are reviewed; the application never substitutes a fake stream.
@@ -56,9 +56,8 @@ Use this checklist before handing the system to lab operations.
 - Assistant answers are verified in Vietnamese and English.
 - `POST /mcp` with `tools/list` returns the same read-only operations tools as the in-app assistant.
 - OpenAI configuration is optional; without `OPENAI_API_KEY` and `OPENAI_MODEL`, the local analyzer remains available.
-- Non-lab questions return cited external knowledge and do not affect scheduling or inventory decisions.
-- `search_external_knowledge` is verified separately from operational MCP tools.
-- AI responses are checked through `dataQuality` and tool results when decisions affect scheduling.
+- General conversation is distinguished from authenticated LAB facts; no external-search tool is promised.
+- AI facts are checked against fresh authorized MCP results; the model never submits booking/payment actions.
 
 ## Security
 

@@ -5299,12 +5299,7 @@ td {
 .modal-container-2026 {
   position: relative !important;
   width: 100% !important;
-  background: #0E121B !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 18px !important;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
   overflow: hidden !important;
-  animation: modalScaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 @keyframes modalScaleUp {

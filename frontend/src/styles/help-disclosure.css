@@ -1,0 +1,6 @@
+.help-disclosure { margin-block: .4rem; max-width: 48rem; }
+.help-disclosure > summary { display: flex; align-items: center; gap: .4rem; width: fit-content; cursor: pointer; color: var(--text-secondary); font-size: .8rem; }
+.help-disclosure > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+.help-disclosure-content { padding: .65rem .8rem; margin-top: .5rem; border-inline-start: 2px solid var(--accent); background: var(--surface-soft); border-radius: 0 6px 6px 0; font-size: .85rem; line-height: 1.5; }
+.help-disclosure-content > p { margin: 0; }
+.help-disclosure-content > p + p { margin-top: .5rem; }

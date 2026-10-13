@@ -138,7 +138,7 @@ export function serializeResource(resource, latestTelemetry = undefined, now = n
     location: resource.location,
     ownerTeam: resource.ownerTeam,
     capacity: resource.capacity,
-    requiresApproval: resource.requiresApproval,
+    requiresApproval: false,
     specs,
     createdAt: toIso(resource.createdAt),
     bookingCount: resource._count?.bookings,

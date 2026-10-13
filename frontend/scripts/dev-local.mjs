@@ -6,12 +6,14 @@ import path from "node:path";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const mainComparison = process.argv.includes("--main");
+const paymentsEnabled = process.argv.includes("--payments");
+const monitoringEnabled = process.argv.includes("--monitoring");
 const source = mainComparison ? path.resolve(root, "../lab-resource-manager-main") : root;
 const frontend = path.join(source, "frontend");
 const uiPort = mainComparison ? "5180" : "5173";
 const apiPort = "8000";
 const project = "lrm-local-review";
-const environment = { ...process.env };
+const environment = { ...process.env, LRM_LOCAL_PAYMENTS_ENABLED: String(paymentsEnabled) };
 const compose = ["compose", "-f", "docker-compose.local.yml"];
 let activeChild;
 let interrupted = false;
@@ -76,9 +78,9 @@ try {
       console.log(`Frontend: http://localhost:${uiPort} | Docker project: ${project}`);
       console.log("Tai khoan local: admin/staff/lecturer/student@lrm.local. Mat khau: LabDemo!2026Pass");
       console.log("Ctrl+C chi dung frontend. Backend va database dung chung cho ca hai giao dien.");
-      await run(process.execPath, ["node_modules/vite/bin/vite.js", "--host", "127.0.0.1", "--port", uiPort, "--strictPort", ...process.argv.slice(2).filter(arg => !["--main", "--rebuild", "--backend"].includes(arg))], {
+      await run(process.execPath, ["node_modules/vite/bin/vite.js", "--host", "127.0.0.1", "--port", uiPort, "--strictPort", ...process.argv.slice(2).filter(arg => !["--main", "--rebuild", "--backend", "--payments", "--monitoring"].includes(arg))], {
         cwd: frontend,
-        env: { ...process.env, VITE_API_BASE_URL: `http://localhost:${apiPort}/api`, VITE_ENABLE_RESEARCH_FEATURES: "false", VITE_ENABLE_PAYMENT_FEATURES: "false", VITE_ENABLE_AI_ASSISTANT: "true" }
+        env: { ...process.env, VITE_API_BASE_URL: `http://localhost:${apiPort}/api`, VITE_ENABLE_RESEARCH_FEATURES: "false", VITE_ENABLE_PAYMENT_FEATURES: String(paymentsEnabled), VITE_ENABLE_TELEMETRY_FEATURES: String(monitoringEnabled), VITE_ENABLE_AI_ASSISTANT: "true" }
       });
     }
   }

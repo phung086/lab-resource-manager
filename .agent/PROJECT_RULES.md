@@ -15,8 +15,7 @@ Use exactly:
 
 - `ADMIN`
 - `LAB_STAFF`
-- `LECTURER`
-- `STUDENT`
+- `CUSTOMER`
 
 No aliases. Do not introduce lowercase role duplicates, `INSTRUCTOR`, or
 `RESEARCHER` as core roles.
@@ -53,7 +52,11 @@ staff must fail closed.
 
 Canonical lifecycle:
 
-`PENDING_APPROVAL` -> `CONFIRMED` -> `CHECKED_OUT` -> `RETURNED` -> `COMPLETED`
+New valid bookings: `CONFIRMED` -> `CHECKED_OUT` -> `RETURNED` -> `COMPLETED`.
+
+Legacy `PENDING_APPROVAL` records retain approval/rejection handling. Per the
+user-approved ADR-032, resource/LAB approval flags never delay new bookings;
+conflict, maintenance, policy, eligibility and pricing checks remain mandatory.
 
 Additional terminal states:
 

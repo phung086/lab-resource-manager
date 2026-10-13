@@ -1,86 +1,53 @@
-# Chốt hướng thực hiện đề tài
+# Phạm vi thực hiện đề tài
 
-## Đề tài
+## Nguồn yêu cầu
 
-**Xây dựng hệ thống đặt lịch và giám sát tài nguyên phòng thí nghiệm**
+**Xây dựng hệ thống đặt lịch và giám sát tài nguyên phòng thí nghiệm**.
+Phiếu giao đề tài và dòng 19 người dùng cung cấp yêu cầu quản lý GPU server,
+Raspberry Pi, UAV, camera và tài nguyên dùng chung; đặt lịch/phê duyệt, phân
+quyền, online/offline, nhật ký, thông báo và giám sát CPU/GPU/RAM/dung lượng.
 
-Nguồn yêu cầu chính:
+Đã đọc hai nguồn giảng viên trong `docs/instructor/` và Hướng triển khai.docx
+người dùng cung cấp ngày 07/10/2026. IOC yêu cầu tài liệu có ích trực tiếp cho
+phát triển: SRS/use case, convention, backlog, ERD, UI/UX và kiến trúc. Tài liệu
+không phục vụ triển khai có thể lược bỏ. File Word cho phép demo mô phỏng khi
+thiếu thiết bị; không thay thế đề tài gốc hay tự đổi framework/bộ trạng thái.
 
-- Phiếu giao đề tài của sinh viên Phạm Đình Hưng, mã SV 22010145.
-- Ảnh đề xuất đề tài số 19: quản lý GPU server, Raspberry Pi, UAV, camera và thiết bị dùng chung; web app có đặt lịch, phê duyệt, trạng thái online/offline, nhật ký sử dụng và thông báo.
+## Hai năng lực bắt buộc
 
-## Hướng chốt
+1. Điều phối sử dụng: tìm tài nguyên, kiểm tra lịch/điều kiện, yêu cầu, duyệt,
+   bàn giao, sử dụng, trả, hoàn tất và lịch sử có trách nhiệm.
+2. Giám sát: nguồn được xác thực, chỉ số CPU/GPU/RAM/disk/online khi có nguồn,
+   lịch sử mẫu, dashboard, ngưỡng, cảnh báo/sự cố và Prometheus.
 
-Xây dựng một nền tảng web nội bộ cho phòng thí nghiệm, tập trung vào hai năng lực:
+Thiếu phần cứng không phải lý do bỏ giám sát. Dùng simulator có nhãn trong môi
+trường demo riêng và ghi rõ nguồn tổng hợp; không giả số đo sản xuất hay tự đổi
+trạng thái vật lý. Preview quy tắc hiện có chưa phải simulator tích hợp.
 
-1. **Resource booking workflow**: sinh viên/giảng viên gửi yêu cầu, hệ thống kiểm tra trùng lịch, cán bộ lab duyệt, bàn giao, tiếp nhận hoàn trả và lưu nhật ký.
-2. **Resource observability**: hệ thống nhận telemetry từ server/thiết bị, xuất metrics cho Prometheus, hiển thị tình trạng CPU/GPU/RAM/dung lượng/online-offline trên dashboard.
+## Hỗ trợ và phần mở rộng
 
-## Căn cứ kỹ thuật tham khảo
+AI tập trung tìm lịch/tài nguyên phù hợp và tóm tắt vận hành có bằng chứng; không
+quyết định quyền, trạng thái hay phê duyệt. Cần đánh giá hai luồng với provider
+thật trước khi tuyên bố đã hoàn thành. Dự báo bảo trì chỉ làm khi đủ dataset.
 
-- Prometheus là toolkit mã nguồn mở cho monitoring/alerting, phù hợp làm lớp thu thập time-series metrics: https://prometheus.io/docs/introduction/overview/
-- Node Exporter là exporter chính thức để thu thập hardware/kernel metrics của Linux host: https://prometheus.io/docs/guides/node-exporter/
-- NVIDIA DCGM-Exporter xuất GPU metrics ở endpoint `/metrics` để Prometheus scrape: https://docs.nvidia.com/datacenter/dcgm/latest/gpu-telemetry/dcgm-exporter.html
-- PostgreSQL range types và exclusion constraints phù hợp để ngăn lịch đặt bị overlap ở tầng dữ liệu: https://www.postgresql.org/docs/current/rangetypes.html
-- Express là framework web tối giản cho Node.js, phù hợp để học routing/middleware và xây API dễ hiểu: https://expressjs.com/
-- Prisma schema là cách mô tả database, quan hệ và Prisma Client trong một file dễ đọc: https://www.prisma.io/docs/orm/prisma-schema/overview
-- Vite là công cụ scaffold/build nhanh cho React app: https://vite.dev/guide/
+Kho vật tư, nhóm học phần, VI/EN, guest OTP, pricing/payment và media đã được
+người dùng chấp thuận; giữ hợp đồng hiện có, không coi chúng là trọng tâm mới.
+QR demo, NSGA-II/Pareto, fair-share, tối ưu điện năng, chargeback, stress
+showcase và bản sao số 3D cũ không phải điều kiện của đề tài. Code nghiên cứu
+đã bị ngừng dùng được loại khỏi runtime và xóa theo allowlist đã kiểm tra; không
+khôi phục để làm test legacy xanh. Firmware ESP32 là adapter tùy chọn,
+không phải yêu cầu phần cứng bắt buộc.
 
-## Phạm vi sản phẩm triển khai
+## Cấu trúc và kiểm chứng
 
-- Đăng nhập bằng tài khoản thật và phân quyền theo vai trò.
-- Dashboard tổng quan: số tài nguyên, lịch đang chờ duyệt, lịch sắp tới, cảnh báo telemetry.
-- Danh mục tài nguyên: loại, vị trí, trạng thái, yêu cầu phê duyệt, thông số kỹ thuật.
-- Đặt lịch: chọn tài nguyên, nhập thời gian, mục đích; hệ thống kiểm tra overlap.
-- Duyệt lịch: cán bộ lab/admin duyệt hoặc từ chối; sinh viên/giảng viên theo dõi trạng thái.
-- Bàn giao/hoàn trả: chuyển trạng thái booking, lưu usage log.
-- Telemetry: nhận chỉ số qua API, cập nhật trạng thái thiết bị và xuất Prometheus metrics.
-- Notification: sinh thông báo khi lịch được tạo, duyệt, từ chối hoặc cần thao tác.
+Giữ React/Vite, Express, Prisma, PostgreSQL 16. `frontend/` và `backend/` ánh
+xạ logic với `code/frontend/` và `code/backend/` của giảng viên; không đổi
+framework hoặc di chuyển toàn source chỉ để giống ví dụ. Xem PROJECT_STRUCTURE.
 
-## Production baseline
+Schema/baseline/applied migrations và dữ liệu nghiệp vụ phải được bảo toàn.
+Bảng mang lịch sử migration không phải database dư để drop thủ công.
+AI report/screenshot/output tạm không phải tài liệu giao việc lâu dài.
+SRS, guideline, CURRENT_STATE và DECISIONS là nguồn context được duy trì.
 
-- Local development và production đều chỉ tạo admin đầu tiên từ biến môi trường qua `backend/prisma/seedAdmin.js`.
-- Resource inventory thật được nhập qua UI hoặc CSV theo `data/resource-inventory.template.csv`.
-- Telemetry thật được gửi qua `backend/agents/systemMetricsAgent.js` hoặc Prometheus exporters.
-- Deployment production dùng `docker-compose.prod.yml`, Nginx frontend, Express backend, PostgreSQL và Prometheus.
-- Health/readiness endpoint: `/health` và `/health/ready`.
-
-## Kiến trúc
-
-```mermaid
-flowchart LR
-  User["Người dùng web"] --> Frontend["React/Vite UI"]
-  Frontend --> API["Node.js/Express API"]
-  API --> DB["PostgreSQL"]
-  API --> Metrics["/metrics"]
-  Agent["Resource agent / exporter"] --> API
-  NodeExporter["node-exporter"] --> Prometheus["Prometheus"]
-  DCGM["NVIDIA DCGM exporter"] --> Prometheus
-  Metrics --> Prometheus
-```
-
-## Quyết định stack
-
-- **Frontend**: React + Vite bằng JavaScript/JSX, CSS thuần để dễ kiểm soát giao diện và không phụ thuộc design system nặng.
-- **Backend**: Node.js + Express bằng JavaScript, dễ học vì dùng cùng ngôn ngữ với frontend.
-- **ORM**: Prisma, giúp schema database dễ đọc và dễ giải thích trong báo cáo.
-- **Database**: PostgreSQL trong Docker, dùng cùng một loại database cho phát triển và triển khai.
-- **Monitoring**: Prometheus scrape API metrics, node-exporter cho server metrics, DCGM exporter cho GPU.
-
-## Mô hình dữ liệu lõi
-
-- `users`: tài khoản, vai trò, trạng thái hoạt động.
-- `resources`: tài nguyên phòng lab, loại, trạng thái, vị trí, specs.
-- `bookings`: lịch đặt, người yêu cầu, người duyệt, thời gian, trạng thái.
-- `usage_logs`: nhật ký yêu cầu, duyệt, bàn giao, hoàn trả, đổi trạng thái.
-- `notifications`: thông báo trong hệ thống.
-- `telemetry_samples`: chỉ số CPU/GPU/RAM/disk/nhiệt độ/online.
-
-## Hướng mở rộng cho báo cáo tốt nghiệp
-
-- Ràng buộc chống overlap bằng PostgreSQL exclusion constraint qua script `backend/prisma/applyBookingGuard.js`.
-- Thêm agent cài trên GPU server/Raspberry Pi để gửi telemetry định kỳ.
-- Tích hợp email/Zalo/Telegram notification.
-- Thêm QR code cho quy trình bàn giao thiết bị.
-- Thêm dashboard Grafana đọc từ Prometheus.
-- Thêm module bảo trì định kỳ và incident reporting.
+Xem [CURRENT_STATE](CURRENT_STATE.md) để phân biệt code hiện có, việc còn thiếu,
+kết quả đã kiểm chứng và giới hạn. Việc dọn không bắt đầu Batch/tính năng mới.

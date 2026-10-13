@@ -71,7 +71,7 @@ async function seed() {
   await prisma.building.create({ data: { id: "phase-h-building", campusId: "phase-h-campus", code: "PHB", name: "Phase H Building" } });
   await prisma.laboratory.create({ data: { id: "phase-h-lab", buildingId: "phase-h-building", code: "PHL", name: "Phase H Lab" } });
   await prisma.labPolicy.create({ data: { id: "phase-h-policy", laboratoryId: "phase-h-lab", allowWeekend: true, workDayStartHour: 0, workDayEndHour: 24 } });
-  for (const [name, role] of Object.entries({ admin: "ADMIN", staff: "LAB_STAFF", student: "STUDENT", other: "STUDENT" })) {
+  for (const [name, role] of Object.entries({ admin: "ADMIN", staff: "LAB_STAFF", student: "CUSTOMER", other: "CUSTOMER" })) {
     await prisma.user.create({ data: { id: `phase-h-${name}`, email: `${name}@phase-h.test`, fullName: `Phase H ${name}`, role, passwordHash } });
     const login = await http.post("/api/auth/login").send({ email: `${name}@phase-h.test`, password });
     assert.equal(login.status, 200, JSON.stringify(login.body));

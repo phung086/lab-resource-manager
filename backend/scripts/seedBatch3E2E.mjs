@@ -36,8 +36,8 @@ try {
   for (const [id, email, fullName, role] of [
     [ids.admin, "b3.admin@lab.test", "Batch 3 Admin", "ADMIN"],
     [ids.staff, "b3.staff@lab.test", "Batch 3 Staff", "LAB_STAFF"],
-    [ids.student, "b3.student@lab.test", "Batch 3 Student", "STUDENT"],
-    [ids.lecturer, "b3.lecturer@lab.test", "Batch 3 Lecturer", "LECTURER"]
+    [ids.student, "b3.student@lab.test", "Batch 3 Student", "CUSTOMER"],
+    [ids.lecturer, "b3.lecturer@lab.test", "Batch 3 Lecturer", "CUSTOMER"]
   ]) {
     await prisma.user.upsert({
       where: { email },

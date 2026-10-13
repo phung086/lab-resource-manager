@@ -1,0 +1,129 @@
+/* Resource workbench: scoped to catalogue, dossier and resource dialogs. */
+.resource-management-view,
+.resource-dossier,
+.modal-container-2026:has(#resource-status-form) {
+  --resource-ink: #26243A;
+  --resource-muted: var(--workspace-muted, #5D596B);
+  --resource-line: var(--workspace-border, #DED7E8);
+  --resource-accent: var(--workspace-accent, #6441D9);
+  --resource-tint: var(--workspace-accent-tint, #F5F2FF);
+  --resource-paper: var(--workspace-paper, #FFF9EE);
+  color: var(--resource-ink);
+  min-width: 0;
+}
+.workspace-shell .resource-management-view { display: grid; gap: 20px; width: 100%; max-width: 100%; }
+.workspace-shell .resource-management-view > * { min-width: 0; max-width: 100%; margin-block: 0; }
+.workspace-shell .resource-management-view .workspace-header { display: flex; flex-wrap: wrap; align-items: start; gap: 20px; padding: 24px; border: 1px solid var(--resource-line); border-radius: 14px; background: linear-gradient(115deg,var(--resource-paper),var(--resource-tint)); }
+.workspace-shell .resource-management-view .workspace-title-group { flex: 1 1 340px; min-width: 0; }
+.workspace-shell .resource-management-view .workspace-title { font-size: clamp(24px,2.3vw,32px); line-height: 1.2; color: var(--resource-ink); letter-spacing: -.025em; margin: 0 0 10px; }
+.workspace-shell .resource-management-view .workspace-subtitle { max-width: 60ch; line-height: 1.65; color: var(--resource-muted); margin: 0; }
+.workspace-shell .resource-management-view .workspace-actions { display: flex; flex-wrap: wrap; justify-content: start; gap: 8px; min-width: 0; }
+.workspace-shell .resource-management-view :is(button,input,select,textarea,summary) { font-family: inherit; }
+.workspace-shell .resource-management-view :is(button,input:not([type=checkbox]):not([type=radio]),select,summary) { min-height: 44px; }
+.workspace-shell .resource-management-view :is(input,select,textarea) { min-width: 0; max-width: 100%; border-radius: 8px; color: var(--resource-ink); border-color: var(--resource-line); }
+.workspace-shell .resource-management-view button { white-space: normal; }
+.workspace-shell .resource-management-view :is(button,input,select,textarea,summary,.resource-table-wrap):focus-visible,
+.resource-dossier :is(button,a,summary):focus-visible { outline: 3px solid var(--resource-accent); outline-offset: 3px; }
+.workspace-shell .resource-management-view .filter-count { background: var(--resource-tint); color: var(--resource-accent); }
+.workspace-shell .resource-management-view .resource-filter-grid { display: block; padding: 20px; border-radius: 12px; background: white; }
+.workspace-shell .resource-management-view .resource-filter-grid-inner { padding: 0; grid-template-columns: repeat(auto-fit,minmax(min(100%,200px),1fr)); align-items: end; gap: 16px; }
+.workspace-shell .resource-management-view .resource-filter-grid-inner label { min-width: 0; gap: 8px; }
+.workspace-shell .resource-management-view .resource-search-field { grid-column: 1 / -1; }
+.workspace-shell .resource-management-view .resource-search-field .search-box { width: 100%; }
+.workspace-shell .resource-management-view .resource-filter-grid-inner label > span:first-child { color: var(--resource-muted); font-size: 13px; }
+.workspace-shell .resource-management-view .results-bar { flex-wrap: wrap; gap: 12px 24px; padding: 16px 20px; border: 1px solid var(--resource-line); border-radius: 12px; }
+.workspace-shell .resource-management-view .sort-control { min-width: 0; flex-wrap: wrap; }
+.workspace-shell .resource-management-view .resource-state-hint { margin: 0; max-width: 88ch; color: var(--resource-muted); font-size: 13px; line-height: 1.65; }
+.workspace-shell .resource-management-view .resource-table-panel { border: 1px solid var(--resource-line); border-radius: 12px; overflow: visible; padding: 0; }
+.workspace-shell .resource-management-view .resource-table-wrap { width: 100%; max-width: 100%; overflow-x: auto; border-radius: inherit; }
+.workspace-shell .resource-management-view .resource-management-table { width: 100%; min-width: 760px; }
+.workspace-shell .resource-management-view .resource-management-table caption { text-align: left; padding: 16px 20px; color: var(--resource-muted); font-size: 13px; }
+.workspace-shell .resource-management-view .resource-management-table th { background: var(--resource-tint); color: var(--resource-muted); letter-spacing: .035em; }
+.workspace-shell .resource-management-view .resource-management-table :is(th,td) { white-space: normal; overflow-wrap: anywhere; vertical-align: middle; }
+.workspace-shell .resource-management-view .resource-management-table td:first-child strong { color: var(--resource-accent); font-size: 12px; font-family: var(--lab-font-mono); }
+.workspace-shell .resource-management-view .resource-management-table td:first-child span { font-weight: 500; color: var(--resource-ink); }
+.workspace-shell .resource-management-view .resource-management-table small { color: var(--resource-muted); }
+.workspace-shell .resource-management-view .resource-row-actions { flex-wrap: wrap; gap: 6px; }
+.workspace-shell .resource-management-view .icon-action { width: 44px; height: 44px; flex-shrink: 0; color: var(--resource-accent); border: 1px solid var(--resource-line); border-radius: 8px; background: white; }
+.workspace-shell .resource-management-view .icon-action:hover:not(:disabled) { background: var(--resource-tint); border-color: var(--resource-accent); }
+.workspace-shell .resource-management-view .resource-editor { padding: 24px; border: 1px solid var(--resource-line); border-radius: 12px; background: white; }
+.workspace-shell .resource-management-view .resource-editor .form-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
+.workspace-shell .resource-management-view .resource-editor :is(label,fieldset) { min-width: 0; }
+.workspace-shell .resource-management-view .resource-editor .booking-form { gap: 20px; }
+.workspace-shell .resource-management-view .resource-form-actions { justify-content: flex-end; flex-wrap: wrap; padding-top: 20px; }
+.workspace-shell .resource-management-view .resource-media-editor { display: block; padding: 20px; border: 1px solid var(--resource-line); border-radius: 12px; background: white; }
+.workspace-shell .resource-management-view .resource-media-editor summary { font-size: 16px; color: var(--resource-ink); line-height: 1.5; padding-block: 10px; }
+.workspace-shell .resource-management-view .resource-media-editor :is(p,label) { color: var(--resource-muted); overflow-wrap: anywhere; }
+.workspace-shell .resource-management-view .resource-media-form fieldset,
+.workspace-shell .resource-management-view .resource-media-list > div { flex-wrap: wrap; }
+.workspace-shell .resource-management-view .resource-media-form fieldset label { min-height: 44px; }
+.workspace-shell .resource-management-view .resource-media-list button { padding: 8px; }
+.workspace-shell .resource-management-view .resource-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 20px; padding: 0; border: 0; background: transparent; overflow: visible; }
+.workspace-shell .resource-management-view .canonical-resource-card { display: flex; flex-direction: column; align-items: stretch; gap: 14px; min-width: 0; padding: 18px; border: 1px solid var(--resource-line); border-radius: 14px; background: white; box-shadow: 0 3px 10px rgb(38 36 58 / .035); transition: border-color 160ms ease,box-shadow 160ms ease; }
+.workspace-shell .resource-management-view .canonical-resource-card:last-child { border-bottom: 1px solid var(--resource-line); }
+.workspace-shell .resource-management-view .canonical-resource-card:is(:hover,:focus-within) { transform: none; background: white; border-color: var(--resource-accent); box-shadow: 0 5px 16px rgb(38 36 58 / .07); }
+.workspace-shell .resource-management-view .catalog-record-cover { width: 100%; margin: 0; align-self: stretch; }
+.workspace-shell .resource-management-view .catalog-record-cover :is(img,.catalog-category-mark) { width: 100%; height: 176px; object-fit: cover; border-radius: 8px; background: var(--resource-tint); color: var(--resource-accent); }
+.workspace-shell .resource-management-view .catalog-record-cover figcaption { text-align: left; margin-top: 7px; color: var(--resource-muted); }
+.workspace-shell .resource-management-view .resource-body { grid-column: auto; padding: 0; }
+.workspace-shell .resource-management-view .canonical-resource-card h2 { margin: 0 0 8px; font-size: 19px; font-weight: 600; color: var(--resource-ink); }
+.workspace-shell .resource-management-view .catalog-resource-name { width: 100%; min-height: 44px; color: inherit; line-height: 1.4; }
+.workspace-shell .resource-management-view .catalog-resource-name:hover { color: var(--resource-accent); }
+.workspace-shell .resource-management-view .catalog-resource-meta { color: var(--resource-muted); }
+.workspace-shell .resource-management-view .canonical-resource-card .catalog-resource-lab { color: var(--resource-muted); margin: 0; font-size: 14px; }
+.workspace-shell .resource-management-view .catalog-record-status { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 0; }
+.workspace-shell .resource-management-view .canonical-resource-card .resource-discovery-actions { flex-direction: row; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--resource-line); }
+.workspace-shell .resource-management-view .canonical-resource-card .resource-discovery-actions > * { flex: 1 1 110px; width: auto; min-height: 44px; padding: 8px 12px; }
+.modal-container-2026:has(.resource-dossier) .resource-dossier .refine-section-nav { gap: 8px; border-color: var(--resource-line); }
+.modal-container-2026:has(.resource-dossier) .resource-dossier .refine-section-nav button { padding: 10px 14px; border-radius: 8px 8px 0 0; color: var(--resource-muted); }
+.modal-container-2026:has(.resource-dossier) .resource-dossier .refine-section-nav button[aria-pressed=true] { background: var(--resource-tint); border-color: var(--resource-accent); color: var(--resource-accent); }
+.modal-container-2026:has(.resource-dossier) .resource-dossier .resource-detail-status-line { flex-wrap: wrap; align-items: start; gap: 14px; }
+.resource-dossier .resource-detail-status-line > div { display: grid; gap: 7px; }
+.resource-dossier .resource-state-label { color: var(--resource-muted); font-size: 12px; }
+.resource-dossier :is(section,dl,dd,figure,nav) { min-width: 0; overflow-wrap: anywhere; }
+.resource-dossier .resource-detail-section h4 { color: var(--resource-ink); }
+.resource-dossier .resource-detail-section p { color: var(--resource-muted); line-height: 1.7; }
+.resource-dossier .lab-resource-gallery figure { border-color: var(--resource-line); background: var(--resource-tint); }
+.resource-dossier .lab-resource-gallery figcaption { color: var(--resource-muted); }
+.resource-dossier .lab-resource-gallery a { color: var(--resource-accent); }
+.resource-dossier .lab-gallery-choices button[aria-pressed=true] { background: var(--resource-tint); border-color: var(--resource-accent); box-shadow: inset 3px 0 var(--resource-accent); }
+.modal-container-2026:has(#resource-status-form) #resource-status-form { min-width: 0; }
+.modal-container-2026:has(#resource-status-form) :is(select,textarea) { width: 100%; min-width: 0; min-height: 44px; font: inherit; color: var(--resource-ink); }
+@media (max-width:700px) {
+  .workspace-shell .resource-management-view .workspace-header { padding: 20px; }
+  .workspace-shell .resource-management-view .workspace-actions { width: 100%; }
+  .workspace-shell .resource-management-view .workspace-actions > * { flex: 1 1 130px; }
+  .workspace-shell .resource-management-view .sort-control { margin: 0; width: 100%; }
+  .workspace-shell .resource-management-view .resource-editor .form-grid { grid-template-columns: minmax(0,1fr); }
+  .workspace-shell .resource-management-view .resource-table-panel { background: transparent; border: 0; }
+  .workspace-shell .resource-management-view .resource-table-wrap { overflow: visible; }
+  .workspace-shell .resource-management-view .resource-management-table { display: block; min-width: 0; }
+  .workspace-shell .resource-management-view .resource-management-table caption { display: block; padding: 0 0 14px; }
+  .workspace-shell .resource-management-view .resource-management-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .workspace-shell .resource-management-view .resource-management-table tbody { display: grid; gap: 16px; }
+  .workspace-shell .resource-management-view .resource-management-table tbody tr { display: block; border: 1px solid var(--resource-line); border-radius: 12px; background: white; padding: 8px 16px; }
+  .workspace-shell .resource-management-view .resource-management-table td { display: grid; grid-template-columns: minmax(90px,.8fr) minmax(0,1.2fr); gap: 5px 12px; padding: 12px 0; border-bottom: 1px solid var(--resource-line); }
+  .workspace-shell .resource-management-view .resource-management-table td::before { content: attr(data-label); grid-column: 1; grid-row: 1 / span 3; align-self: center; color: var(--resource-muted); font-size: 12px; }
+  .workspace-shell .resource-management-view .resource-management-table td > * { grid-column: 2; min-width: 0; }
+  .workspace-shell .resource-management-view .resource-management-table td:first-child { display: grid; grid-template-columns: minmax(0,1fr); }
+  .workspace-shell .resource-management-view .resource-management-table td:first-child::before { content: none; }
+  .workspace-shell .resource-management-view .resource-management-table td:first-child > * { grid-column: 1; }
+  .workspace-shell .resource-management-view .resource-management-table td:first-child span { font-size: 17px; }
+  .workspace-shell .resource-management-view .resource-management-table td:last-child { display: block; border: 0; }
+  .workspace-shell .resource-management-view .resource-management-table td:last-child::before { content: none; }
+  .workspace-shell .resource-management-view .resource-row-actions { justify-content: flex-end; }
+  .resource-dossier #dossier-overview { display: block; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .workspace-shell .resource-management-view > *,
+  .workspace-shell .resource-management-view .canonical-resource-card { animation: none; transition: none; }
+}
+
+/* Catalogue becomes a scannable directory with genuine media as supporting context. */
+.workspace-shell .resource-management-view .resource-grid{display:block;border:1px solid var(--resource-line);border-radius:12px;background:#fff;overflow:hidden}
+.workspace-shell .resource-management-view .canonical-resource-card{display:grid;grid-template-columns:80px minmax(170px,1.4fr) minmax(100px,1fr) 180px 132px;gap:18px;align-items:center;padding:18px 20px;border:0;border-bottom:1px solid var(--resource-line);border-radius:0;box-shadow:none;min-height:120px;transform:none}
+.workspace-shell .resource-management-view .canonical-resource-card:last-child{border-bottom:0}
+.workspace-shell .resource-management-view .catalog-record-cover{width:80px;margin:0;align-self:center}.workspace-shell .resource-management-view .catalog-record-cover :is(img,.catalog-category-mark){width:80px;height:72px;object-fit:contain;aspect-ratio:auto}.workspace-shell .resource-management-view .catalog-record-cover figcaption{font-size:11px;margin-top:4px}.workspace-shell .resource-management-view .catalog-media-failure{font-size:11px;padding:5px;min-height:72px;overflow-wrap:anywhere}.workspace-shell .resource-management-view .catalog-media-failure :is(svg,small){display:none}
+.workspace-shell .resource-management-view .canonical-resource-card .resource-body{padding:0;min-width:0}.workspace-shell .resource-management-view .canonical-resource-card h2{font-size:17px;font-weight:600;margin:0 0 8px}.workspace-shell .resource-management-view .catalog-resource-lab{margin:0;font-size:13px}.workspace-shell .resource-management-view .catalog-record-status{margin:0;padding:0;display:grid;gap:8px}.workspace-shell .resource-management-view .canonical-resource-card .resource-discovery-actions{display:grid;gap:5px;padding:0;margin:0;border:0}.workspace-shell .resource-management-view .canonical-resource-card .resource-discovery-actions>*{width:100%;min-height:44px;padding:7px;font-size:13px}.workspace-shell .resource-management-view .canonical-resource-card .resource-discovery-actions .table-action{background:transparent}
+@media(max-width:1150px){.workspace-shell .resource-management-view .canonical-resource-card{grid-template-columns:64px minmax(140px,1fr) 160px 120px;gap:12px}.workspace-shell .resource-management-view .catalog-resource-lab{grid-column:2;grid-row:2}.workspace-shell .resource-management-view .catalog-record-status{grid-column:3;grid-row:1/3}.workspace-shell .resource-management-view .resource-discovery-actions{grid-column:4;grid-row:1/3}.workspace-shell .resource-management-view .catalog-record-cover{grid-row:1/3;width:64px}.workspace-shell .resource-management-view .catalog-record-cover :is(img,.catalog-category-mark){width:64px;height:64px}}
+@media(max-width:700px){.workspace-shell .resource-management-view .canonical-resource-card{grid-template-columns:64px minmax(0,1fr);padding:18px;gap:10px 14px}.workspace-shell .resource-management-view .canonical-resource-card .resource-body{grid-column:2;grid-row:1}.workspace-shell .resource-management-view .catalog-resource-lab{grid-column:2;grid-row:2}.workspace-shell .resource-management-view .catalog-record-status{grid-column:1/-1;grid-row:3;grid-template-columns:1fr 1fr;margin-top:8px}.workspace-shell .resource-management-view .resource-discovery-actions{grid-column:1/-1;grid-row:4;grid-template-columns:1fr 1fr}.workspace-shell .resource-management-view .catalog-record-cover{align-self:start}}

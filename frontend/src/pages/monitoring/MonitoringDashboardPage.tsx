@@ -1,175 +1,34 @@
-import { TELEMETRY_FEATURES_ENABLED } from "../../config/featureFlags";
-import { translate } from "../../i18n.js";
+import React from 'react';
+import { ArrowRight, RefreshCw, Activity } from 'lucide-react';
 import { useLocale } from '../../providers/LocaleProvider';
-import React, { useState } from "react";
-import { Activity, AlertTriangle, Bell, CalendarClock, Camera, Server, ShieldAlert } from "lucide-react";
-import { OperationsReport } from "../../components/features/monitoring/OperationsReport";
-import { TelemetryStatusGrid } from "../../components/features/monitoring/TelemetryStatusGrid";
-import { acknowledgeMonitoringAlert } from "../../services/monitoring";
-import type { DashboardPayload } from "../../types/telemetry";
-import { formatVietnamDateTime } from "../../utils/timezone.js";
+import { OperationsReport } from '../../components/features/monitoring/OperationsReport';
+import type { DashboardPayload } from '../../types/telemetry';
+import { formatVietnamDateTime } from '../../utils/timezone';
+import { CANONICAL_BOOKING_STATUS_LABELS } from '../../constants.js';
+import { workspacePathForTab } from '../../workspaceRoutes.js';
+import '../../styles/monitoring-workspace.css';
+import { ResourceCareView } from '../../components/features/monitoring/ResourceCareView';
 
-interface Props {
-  mode?: "operations" | "telemetry";
-  dashboard: DashboardPayload | null;
-  loading?: boolean;
-  onRefresh?: () => void;
-}
-
-export const MonitoringDashboardPage: React.FC<Props> = ({ dashboard, loading = false, onRefresh, mode = "telemetry" }) => {
-  const { tr } = useLocale();
-  const operations = mode === "operations";
-  const [actionError, setActionError] = useState("");
-  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
-  if (!dashboard) {
-    return (
-      <section className="content-stack">
-        <div className="empty-state">
-          <Activity size={28} />
-          <p>{loading ? tr("ui.loading_operational_data_2a8d4625") : tr("ui.could_not_load_operational_dashboard_96cfaabb")}</p>
-          {onRefresh && <button className="btn btn-secondary" type="button" onClick={onRefresh}>{tr("ui.retry_c58d068c")}</button>}
-        </div>
-      </section>
-    );
-  }
-
-  const metrics = [
-    { label: tr("ui.total_resources_69ad5e68"), value: dashboard.summary.totalResources, icon: Server },
-    { label: tr("ui.active_bookings_1a5f8201"), value: dashboard.summary.activeBookingsCount, icon: CalendarClock },
-    { label: tr("ui.open_incidents_a8d69cb9"), value: dashboard.summary.openIncidentCount, icon: AlertTriangle },
-    { label: tr("ui.unread_notifications_66bab952"), value: dashboard.summary.unreadNotifications, icon: Bell }
-  ];
-
-  async function acknowledge(alertId: string) {
-    setAcknowledgingId(alertId);
-    setActionError("");
-    try {
-      await acknowledgeMonitoringAlert(alertId);
-      onRefresh?.();
-    } catch (error: any) {
-      setActionError(error?.message || "ui.could_not_acknowledge_alert_e60e1f41");
-    } finally {
-      setAcknowledgingId(null);
-    }
-  }
-
-  return (
-    <section className="content-stack" aria-labelledby="monitoring-dashboard-heading">
-      <div className="page-section-header">
-        <div>
-          <h1 id="monitoring-dashboard-heading">{operations ? tr("ui.operations_dashboard_6a44426c") : tr("ui.telemetry_monitoring_5752a8cc")}</h1>
-          <p className="section-description">
-            {operations ? tr("ui.track_bookings_handovers_usage_and_3f87ab04") : tr("ui.track_measurements_and_sensor_connections_3bd3dc30")}
-          </p>
-          <p className="data-source-note">{operations ? tr("ui.source_saved_bookings_handover_return_5d03d25a") : tr("ui.source_devices_or_exporters_using_8b01b568")} {tr("ui.updated_97c6e2ca")}{formatVietnamDateTime(dashboard.generatedAt)}.</p>
-        </div>
-        {onRefresh && <button className="btn btn-secondary" type="button" onClick={onRefresh} disabled={loading}>{loading ? tr("ui.updating_01c0991e") : tr("ui.last_update_5293d03c")}</button>}
-      </div>
-
-      {operations && <div className="operational-summary-grid">
-        {metrics.map(({ label, value, icon: Icon }) => (
-          <div className="card operational-summary-card" key={label}>
-            <span><Icon size={15} /> {label}</span>
-            <strong>{value}</strong>
-          </div>
-        ))}
-      </div>}
-
-      {actionError && <div className="alert danger" role="alert">{translate(actionError)}</div>}
-
-      {operations && <OperationsReport refreshKey={dashboard.generatedAt} />}
-
-      {!operations && TELEMETRY_FEATURES_ENABLED && <>
-      <div className="card dashboard-data-panel">
-        <div className="panel-heading">
-          <Activity size={17} />
-          <h2>{tr("ui.telemetry_status_1f1f6882")}</h2>
-        </div>
-        <div className="telemetry-summary-row">
-          {(["HEALTHY", "WARNING", "STALE", "UNAVAILABLE", "NO_DATA"] as const).map((state) => (
-            <div key={state}>
-              <strong>{dashboard.telemetrySummary[state] || 0}</strong>
-              <span>{state}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="card dashboard-data-panel">
-        <div className="panel-heading">
-          <ShieldAlert size={17} />
-          <h2>{tr("ui.recorded_monitoring_alerts_56b20cd9")}</h2>
-        </div>
-        {dashboard.monitoringAlerts.length ? (
-          <div className="content-stack compact">
-            {dashboard.monitoringAlerts.map((alert) => (
-              <div className="dashboard-booking-row" key={alert.id}>
-                <div>
-                  <strong>{alert.severity} · {alert.ruleCode}</strong>
-                  <span>{alert.resourceCode || alert.resourceId} · {alert.message}</span>
-                  {alert.incident && <span>{translate("ui.incident_32dcf81b")} {alert.incident.id} ({alert.incident.status})</span>}
-                </div>
-                <div>
-                  <span>{alert.status}</span>
-                  <time dateTime={alert.lastObservedAt}>{formatVietnamDateTime(alert.lastObservedAt)}</time>
-                  {alert.status === "OPEN" && (
-                    <button className="btn btn-secondary" type="button" disabled={acknowledgingId === alert.id} onClick={() => acknowledge(alert.id)}>
-                      {acknowledgingId === alert.id ? tr("ui.acknowledging_58cf7ba6") : tr("ui.confirm_1503b0d0")}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : <div className="empty-state">{tr("ui.no_active_monitoring_alerts_d544ae55")}</div>}
-      </div>
-
-      <TelemetryStatusGrid telemetry={dashboard.telemetry} />
-
-      <div className="card dashboard-data-panel">
-        <div className="panel-heading">
-          <Camera size={17} />
-          <h2>{tr("ui.cameras_safety_alerts_9768aa1d")}</h2>
-        </div>
-        <div className="alert warning">
-          <strong>{translate("ui.non_certified_not_a_fire_83ece6d0")}</strong>
-          <span>{tr("ui.does_not_replace_physical_fire_857990d1")}</span>
-        </div>
-        {dashboard.cameras.length ? (
-          <div className="content-stack compact">
-            {dashboard.cameras.map((camera) => (
-              <div className="dashboard-booking-row" key={camera.id}>
-                <div><strong>{camera.code} — {camera.name}</strong><span>{tr("ui.resource_scoped_metadata_bc029213")}{camera.resourceId}</span></div>
-                <div><span>{camera.state}</span><small>{camera.enabled ? tr("ui.configuration_enabled_bc2db5a3") : tr("ui.disabled_by_default_313eed81")}</small></div>
-              </div>
-            ))}
-          </div>
-        ) : <div className="empty-state">{tr("ui.not_configured_no_camera_configured_0fa994f5")}</div>}
-      </div>
-
-      </>}
-      {operations && <div className="card dashboard-data-panel">
-        <div className="panel-heading">
-          <CalendarClock size={17} />
-          <h2>{tr("ui.upcoming_bookings_f78bd751")}</h2>
-        </div>
-        {dashboard.upcomingBookings.length ? (
-          <div className="content-stack compact">
-            {dashboard.upcomingBookings.slice(0, 10).map((booking: any) => (
-              <div className="dashboard-booking-row" key={booking.id}>
-                <div>
-                  <strong>{booking.resource?.code} — {booking.resource?.name}</strong>
-                  <span>{booking.requestedBy?.fullName || "—"}</span>
-                </div>
-                <div>
-                  <span>{booking.status}</span>
-                  <time dateTime={booking.startAt}>{formatVietnamDateTime(booking.startAt)}</time>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : <div className="empty-state">{tr("ui.no_active_bookings_in_the_2faaa45b")}</div>}
-      </div>}
-    </section>
-  );
+interface Props { userRole?: string; mode?: 'operations' | 'telemetry'; dashboard: DashboardPayload | null; loading?: boolean; onRefresh?: () => void; }
+export const MonitoringDashboardPage: React.FC<Props> = ({dashboard,loading=false,onRefresh,mode='telemetry'}) => {
+ const { tr }=useLocale();
+ const operations=mode==='operations';
+ const queue=dashboard ? [
+  {key:'pending',count:dashboard.summary.pendingApprovalCount,label:'ui.pending_approval_6af96613',href:workspacePathForTab('bookings',{filter:'PENDING_APPROVAL'})},
+  {key:'handover',count:dashboard.summary.activeBookingsCount,label:'ui.monitor.activeQueue',href:workspacePathForTab('bookings',{filter:'ALL'})},
+  {key:'return',count:dashboard.summary.checkedOutCount,label:'ui.monitor.checkedOutQueue',href:workspacePathForTab('bookings',{filter:'CHECKED_OUT'})},
+  {key:'incidents',count:dashboard.summary.openIncidentCount,label:'ui.open_incidents_a8d69cb9',href:workspacePathForTab('incidents',{filter:'OPEN'})}
+ ] : [];
+ if(!operations)return <ResourceCareView/>;
+ return <section className="monitor-workspace" aria-busy={loading} aria-labelledby="monitor-title">
+  <header className="monitor-heading"><div><h1 id="monitor-title">{tr(operations?'ui.operations_dashboard_6a44426c':'ui.telemetry_monitoring_5752a8cc')}</h1><p>{tr(operations?'ui.track_bookings_handovers_usage_and_3f87ab04':'ui.track_measurements_and_sensor_connections_3bd3dc30')}</p>{dashboard && <small>{tr('ui.monitor.updatedAt')} {formatVietnamDateTime(dashboard.generatedAt)}</small>}</div>{onRefresh && <button type="button" className="btn btn-secondary" disabled={loading} onClick={onRefresh}><RefreshCw size={16} />{tr(loading?'ui.updating_01c0991e':'ui.refresh_46140fa8')}</button>}</header>
+  {!dashboard ? <div className="monitor-empty" role={loading?'status':'alert'}><Activity size={28} aria-hidden="true" /><p>{tr(loading?'ui.loading_operational_data_2a8d4625':'ui.could_not_load_operational_dashboard_96cfaabb')}</p></div> : <div className="monitor-operations-layout">
+   <div className="monitor-main"><OperationsReport refreshKey={dashboard.generatedAt} /><section className="monitor-upcoming"><header><h2>{tr('ui.upcoming_bookings_f78bd751')}</h2><a href={workspacePathForTab('smart_calendar')}>{tr('ui.monitor.openCalendar')}<ArrowRight size={15} /></a></header>
+    {dashboard.upcomingBookings.length ? <div className="table-wrap"><table><caption className="sr-only">{tr('ui.upcoming_bookings_f78bd751')}</caption><thead><tr><th>{tr('ui.resource_9a35ef53')}</th><th>{tr('ui.time_b295fd62')}</th><th>{tr('ui.status_cb31de81')}</th></tr></thead><tbody>{dashboard.upcomingBookings.slice(0,10).map((booking: any)=><tr key={booking.id}><td><a href={workspacePathForTab('bookings',{booking:booking.id})}><strong>{booking.resource?.name || booking.title}</strong><ArrowRight size={14} /></a><small>{booking.resource?.code} · {booking.requestedBy?.fullName || '—'}</small></td><td>{formatVietnamDateTime(booking.startAt)}</td><td>{tr(CANONICAL_BOOKING_STATUS_LABELS[booking.status]) || booking.status}</td></tr>)}</tbody></table></div> : <p className="monitor-empty">{tr('ui.no_active_bookings_in_the_2faaa45b')}</p>}
+   </section></div>
+   <aside className="monitor-queue"><h2>{tr('ui.monitor.workQueues')}</h2><p>{tr('ui.monitor.queueHint')}</p><ul>{queue.map(item=><li key={item.key}><a href={item.href}><span>{tr(item.label)}<strong>{item.count}</strong></span><ArrowRight size={16} aria-hidden="true" /></a></li>)}</ul>
+    <dl><div><dt>{tr('ui.total_resources_69ad5e68')}</dt><dd>{dashboard.summary.totalResources}</dd></div><div><dt>{tr('ui.unread_notifications_66bab952')}</dt><dd><a href={workspacePathForTab('escalations',{filter:'unread'})}>{dashboard.summary.unreadNotifications}</a></dd></div></dl><p className="monitor-source-note">{tr('ui.source_saved_bookings_handover_return_5d03d25a')}</p>
+   </aside>
+  </div>}
+ </section>;
 };

@@ -59,8 +59,7 @@ Required roles:
 
 - `ADMIN`
 - `LAB_STAFF`
-- `LECTURER`
-- `STUDENT`
+- `CUSTOMER`
 
 Required booking statuses:
 

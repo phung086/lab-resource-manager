@@ -47,8 +47,8 @@ try {
   const users = [
     [ids.admin, "e2e.admin@lab.test", "Batch 2 Admin", "ADMIN"],
     [ids.staff, "e2e.staff@lab.test", "Batch 2 Staff", "LAB_STAFF"],
-    [ids.student, "e2e.student@lab.test", "Batch 2 Student", "STUDENT"],
-    [ids.lecturer, "e2e.lecturer@lab.test", "Batch 2 Lecturer", "LECTURER"]
+    [ids.student, "e2e.student@lab.test", "Batch 2 Student", "CUSTOMER"],
+    [ids.lecturer, "e2e.lecturer@lab.test", "Batch 2 Lecturer", "CUSTOMER"]
   ];
   for (const [id, email, fullName, role] of users) {
     await prisma.user.upsert({

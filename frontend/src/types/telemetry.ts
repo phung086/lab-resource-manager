@@ -17,6 +17,8 @@ export interface OperationsReportPayload {
 }
 
 export interface TelemetrySampleView {
+  origin?: "EXTERNAL" | "SIMULATED";
+  simulationRunId?: string | null;
   id: string;
   sourceId?: string | null;
   source: string;
@@ -39,6 +41,8 @@ export interface TelemetrySampleView {
 }
 
 export interface TelemetrySourceHealth {
+  kind?: "EXTERNAL" | "SIMULATED";
+  profile?: "ROOM" | "COMPUTE" | null;
   id: string;
   code: string;
   name: string;
@@ -50,6 +54,7 @@ export interface TelemetrySourceHealth {
 }
 
 export interface MonitoringAlertView {
+  origin?: "EXTERNAL" | "SIMULATED";
   id: string;
   sourceId: string;
   sourceCode?: string;

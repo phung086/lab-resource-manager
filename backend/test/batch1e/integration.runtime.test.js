@@ -44,9 +44,9 @@ const userRows = [
   [fixture.users.admin, "admin", "ADMIN", true],
   [fixture.users.staff, "staff", "LAB_STAFF", true],
   [fixture.users.unassignedStaff, "staff-unassigned", "LAB_STAFF", true],
-  [fixture.users.lecturer, "lecturer", "LECTURER", true],
-  [fixture.users.student, "student", "STUDENT", true],
-  [fixture.users.inactive, "inactive", "STUDENT", false]
+  [fixture.users.lecturer, "lecturer", "CUSTOMER", true],
+  [fixture.users.student, "student", "CUSTOMER", true],
+  [fixture.users.inactive, "inactive", "CUSTOMER", false]
 ];
 
 async function seed() {
@@ -156,17 +156,17 @@ test("Batch 1E-L2 isolated canonical runtime", { timeout: 180000 }, async (t) =>
       assert.equal(inactive.status, 401);
       assert.equal(inactive.body.error.code, "ACCOUNT_INACTIVE");
 
-      const forged = jwt.sign({ sub: fixture.users.student, role: "STUDENT" }, "wrong-secret");
+      const forged = jwt.sign({ sub: fixture.users.student, role: "CUSTOMER" }, "wrong-secret");
       const forgedResponse = await request(app).get("/api/auth/me").set(bearer(forged));
       assert.equal(forgedResponse.status, 401);
-      const expired = jwt.sign({ sub: fixture.users.student, role: "STUDENT" }, process.env.JWT_SECRET, { expiresIn: -1 });
+      const expired = jwt.sign({ sub: fixture.users.student, role: "CUSTOMER" }, process.env.JWT_SECRET, { expiresIn: -1 });
       const expiredResponse = await request(app).get("/api/auth/me").set(bearer(expired));
       assert.equal(expiredResponse.status, 401);
 
       const me = await request(app).get("/api/auth/me").set(bearer(tokens.student));
       assert.equal(me.status, 200);
       assert.equal(me.body.id, fixture.users.student);
-      assert.equal(me.body.role, "STUDENT");
+      assert.equal(me.body.role, "CUSTOMER");
     });
 
     await t.test("2. real RBAC and lab scope", async () => {

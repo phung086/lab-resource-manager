@@ -61,7 +61,7 @@ export const emptyResourceForm = {
   status: "",
   ownerTeam: "",
   capacity: "",
-  requiresApproval: true,
+  requiresApproval: false,
   specsText: ""
 };
 

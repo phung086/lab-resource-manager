@@ -64,9 +64,9 @@ async function seed() {
     admin: "ADMIN",
     staff: "LAB_STAFF",
     foreignStaff: "LAB_STAFF",
-    student: "STUDENT",
-    lecturer: "LECTURER",
-    targetUser: "STUDENT"
+    student: "CUSTOMER",
+    lecturer: "CUSTOMER",
+    targetUser: "CUSTOMER"
   };
 
   await isolated.user.createMany({
@@ -116,13 +116,13 @@ test("Phase F System Audit Trail and Administrative Accountability", { timeout: 
   const tokens = Object.fromEntries(await Promise.all(names.map(async (n) => [n, await login(n)])));
 
   await t.test("USER ROLE: admin role change is auditable with before/after state; unauthorized mutation denied", async () => {
-    // 1. Admin changes target user role from STUDENT to LECTURER
+    // 1. Admin changes target user role from CUSTOMER to CUSTOMER
     const changeRes = await request(app)
       .patch(`/api/users/${fixture.users.targetUser}/role`)
       .set(bearer(tokens.admin))
-      .send({ role: "LECTURER" });
+      .send({ role: "CUSTOMER" });
     assert.equal(changeRes.status, 200);
-    assert.equal(changeRes.body.role, "LECTURER");
+    assert.equal(changeRes.body.role, "CUSTOMER");
 
     const auditEvent = await isolated.systemAuditEvent.findFirst({
       where: {
@@ -134,10 +134,10 @@ test("Phase F System Audit Trail and Administrative Accountability", { timeout: 
     assert.ok(auditEvent);
     assert.equal(auditEvent.actorId, fixture.users.admin);
     assert.equal(auditEvent.actorRoleSnapshot, "ADMIN");
-    assert.deepEqual(auditEvent.beforeState, { role: "STUDENT" });
-    assert.deepEqual(auditEvent.afterState, { role: "LECTURER" });
+    assert.deepEqual(auditEvent.beforeState, { role: "CUSTOMER" });
+    assert.deepEqual(auditEvent.afterState, { role: "CUSTOMER" });
 
-    // 2. Unauthorized role change by STUDENT fails with 403, writes no audit
+    // 2. Unauthorized role change by CUSTOMER fails with 403, writes no audit
     const countBefore = await isolated.systemAuditEvent.count();
     const deniedRes = await request(app)
       .patch(`/api/users/${fixture.users.targetUser}/role`)
@@ -150,7 +150,7 @@ test("Phase F System Audit Trail and Administrative Accountability", { timeout: 
     const nonExistentRes = await request(app)
       .patch(`/api/users/${id()}/role`)
       .set(bearer(tokens.admin))
-      .send({ role: "LECTURER" });
+      .send({ role: "CUSTOMER" });
     assert.equal(nonExistentRes.status, 404);
     assert.equal(await isolated.systemAuditEvent.count(), countBefore);
   });
@@ -257,11 +257,11 @@ test("Phase F System Audit Trail and Administrative Accountability", { timeout: 
   });
 
   await t.test("AUDIT READ AUTHORIZATION: ordinary users denied, staff scoped, admin global", async () => {
-    // 9. STUDENT denied
+    // 9. CUSTOMER denied
     const studentRes = await request(app).get("/api/audit-events").set(bearer(tokens.student));
     assert.equal(studentRes.status, 403);
 
-    // 10. LECTURER denied
+    // 10. CUSTOMER denied
     const lecturerRes = await request(app).get("/api/audit-events").set(bearer(tokens.lecturer));
     assert.equal(lecturerRes.status, 403);
 
@@ -348,7 +348,7 @@ test("Phase F System Audit Trail and Administrative Accountability", { timeout: 
     });
     assert.ok(guestCreatedEvent);
     assert.equal(guestCreatedEvent.targetType, AUDIT_TARGET_TYPES.USER);
-    assert.equal(guestCreatedEvent.afterState?.role, "STUDENT");
+    assert.equal(guestCreatedEvent.afterState?.role, "CUSTOMER");
     assert.equal(guestCreatedEvent.afterState?.customerType, "EXTERNAL");
     assert.equal(JSON.stringify(guestCreatedEvent).includes(capturedOtp), false);
     assert.equal(JSON.stringify(guestCreatedEvent).includes("0912345678"), false);
@@ -443,7 +443,7 @@ test("Phase F System Audit Trail and Administrative Accountability", { timeout: 
     // 16. If audit insert fails, the enclosing mutation must roll back
     const userBefore = await isolated.user.findUnique({ where: { id: fixture.users.targetUser } });
     const originalRole = userBefore.role;
-    const candidateRole = originalRole === "LECTURER" ? "STUDENT" : "LECTURER";
+    const candidateRole = originalRole === "CUSTOMER" ? "CUSTOMER" : "CUSTOMER";
 
     await assert.rejects(async () => {
       await isolated.$transaction(async (tx) => {

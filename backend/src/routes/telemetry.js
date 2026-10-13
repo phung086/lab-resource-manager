@@ -18,6 +18,7 @@ import {
   telemetrySourceInclude
 } from "../services/telemetryIdentityService.js";
 import { persistTelemetrySample, resolveMonitoringThresholds, serializeTelemetry } from "../services/telemetryService.js";
+import { monitoringOperatorBudget, monitoringSourceBudget } from "../middleware/monitoringLimits.js";
 
 const router = express.Router();
 
@@ -35,8 +36,9 @@ const telemetrySchema = z.object({
   resourceId: z.string().uuid().optional(),
   source: z.string().trim().min(2).max(100).regex(/^[A-Za-z0-9._:-]+$/).optional(),
   timestamp: z.coerce.date(),
-  temperatureC: z.number().min(-40).max(125),
-  humidityPercent: z.number().min(0).max(100),
+  temperatureC: z.number().min(-40).max(125).optional(),
+  humidityPercent: z.number().min(0).max(100).optional(),
+  simulationRunId: z.string().uuid().optional(),
   online: z.boolean(),
   cpuPercent: z.number().min(0).max(100).optional(),
   gpuPercent: z.number().min(0).max(100).optional(),
@@ -60,7 +62,9 @@ const thresholdSchema = z.object({
   temperatureCriticalC: z.number().min(-40).max(125).nullable().optional(),
   humidityMinPercent: z.number().min(0).max(100).nullable().optional(),
   humidityMaxPercent: z.number().min(0).max(100).nullable().optional(),
-  staleMinutes: z.number().int().min(1).max(10080).nullable().optional()
+  staleMinutes: z.number().int().min(1).max(10080).nullable().optional(),
+  utilizationWarningPercent: z.number().min(1).max(100).nullable().optional(),
+  utilizationCriticalPercent: z.number().min(1).max(100).nullable().optional()
 }).strict().superRefine((value, ctx) => {
   if (value.temperatureWarningC != null && value.temperatureCriticalC != null && value.temperatureWarningC >= value.temperatureCriticalC) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["temperatureCriticalC"], message: "Critical temperature must exceed warning temperature" });
@@ -68,6 +72,7 @@ const thresholdSchema = z.object({
   if (value.humidityMinPercent != null && value.humidityMaxPercent != null && value.humidityMinPercent > value.humidityMaxPercent) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["humidityMaxPercent"], message: "Maximum humidity must be at least minimum humidity" });
   }
+  if (value.utilizationWarningPercent != null && value.utilizationCriticalPercent != null && value.utilizationWarningPercent >= value.utilizationCriticalPercent) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["utilizationCriticalPercent"], message: "Critical capacity must exceed utilization warning" });
 });
 
 const listSchema = z.object({
@@ -109,10 +114,14 @@ function alertInclude() {
   };
 }
 
-router.post("/samples", async (req, res, next) => {
+async function authenticateSource(req, _res, next) {
+  try { req.telemetrySource = await authenticateTelemetrySource(prisma, sourceCredential(req)); next(); } catch (error) { next(error); }
+}
+router.post("/samples", authenticateSource, monitoringSourceBudget, async (req, res, next) => {
   try {
     const payload = telemetrySchema.parse(req.body);
-    const source = await authenticateTelemetrySource(prisma, sourceCredential(req));
+    if (payload.online && !["temperatureC", "humidityPercent", "cpuPercent", "gpuPercent", "gpuMemoryPercent", "ramPercent", "diskPercent"].some(key => payload[key] != null) && !payload.signals?.length) throw new HttpError(400, "Online samples must contain a reading or signal", undefined, "VALIDATION_ERROR");
+    const source = req.telemetrySource;
     const result = await prisma.$transaction((tx) => persistTelemetrySample(tx, { source, payload }));
     const sample = await prisma.telemetrySample.findUnique({
       where: { id: result.sample.id },
@@ -122,6 +131,7 @@ router.post("/samples", async (req, res, next) => {
       where: { id: source.resourceId },
       include: {
         monitoringThreshold: true,
+        telemetrySources: { orderBy: { createdAt: "desc" }, take: 1 },
         laboratory: { include: { monitoringThreshold: true } },
         monitoringAlerts: {
           where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } },
@@ -130,7 +140,7 @@ router.post("/samples", async (req, res, next) => {
         }
       }
     });
-    observeTelemetry({ code: resource.code, type: resource.subtype }, sample);
+    if (sample.origin !== "SIMULATED") observeTelemetry({ code: resource.code, type: resource.subtype }, sample);
     res.status(result.replayed ? 200 : 201).json({
       ...serializeTelemetry(resource, sample),
       replayed: result.replayed,
@@ -145,7 +155,7 @@ router.post("/samples", async (req, res, next) => {
   }
 });
 
-router.use(requireAuth);
+router.use(requireAuth, monitoringOperatorBudget);
 
 router.post("/cameras/:id/access", async (req, res, next) => {
   try {
@@ -343,6 +353,7 @@ router.get("/", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
     const resources = await prisma.resource.findMany({
       where: { ...resourceWhere, ...(query.resourceId ? { id: query.resourceId } : {}) },
       include: {
+        telemetrySources: { orderBy: { createdAt: "desc" }, take: 1 },
         monitoringThreshold: true,
         laboratory: { include: { monitoringThreshold: true } },
         monitoringAlerts: {
@@ -367,6 +378,8 @@ router.get("/", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
       ...serializeTelemetry(resource, resource.telemetrySamples[0] || null),
       history: resource.telemetrySamples.map((sample) => ({
         id: sample.id,
+        origin: sample.origin,
+        simulationRunId: sample.simulationRunId,
         sourceId: sample.sourceId,
         source: sample.telemetrySource?.code || sample.source,
         sampledAt: sample.sampledAt,

@@ -47,7 +47,7 @@ for (const database of databases) {
       } });
       await client.user.create({ data: {
         id: ids.user, email: `b1d-${token}@example.test`, fullName: "Batch 1D Test User",
-        role: "STUDENT", passwordHash: "TEST_ONLY_NOT_A_REAL_PASSWORD_HASH",
+        role: "CUSTOMER", passwordHash: "TEST_ONLY_NOT_A_REAL_PASSWORD_HASH",
       } });
       await rejectsWithDatabaseError(client.user.create({ data: {
         id: randomUUID(), email: `bad-role-${token}@example.test`, fullName: "Invalid Role",

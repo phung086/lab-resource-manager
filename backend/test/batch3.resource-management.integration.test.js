@@ -40,7 +40,7 @@ async function seed() {
     id: userId,
     email: `${name}-${marker}@example.test`,
     fullName: `Batch 3 ${name}`,
-    role: name === "admin" ? "ADMIN" : name === "staff" || name === "unassigned" ? "LAB_STAFF" : name === "lecturer" ? "LECTURER" : "STUDENT",
+    role: name === "admin" ? "ADMIN" : name === "staff" || name === "unassigned" ? "LAB_STAFF" : name === "lecturer" ? "CUSTOMER" : "CUSTOMER",
     passwordHash,
     isActive: true
   })) });
@@ -106,8 +106,8 @@ test("Batch 3 canonical resource management", { timeout: 180000 }, async (t) => 
     assert.equal(staffCreate.status, 201);
     assert.equal((await request(app).post("/api/resources").set(bearer(tokens.staff)).send({ ...payload, code: `B3-FOREIGN-${marker}`, laboratoryId: fixture.labs.foreign })).status, 403);
     assert.equal((await request(app).post("/api/resources").set(bearer(tokens.unassigned)).send({ ...payload, code: `B3-UNASSIGNED-${marker}` })).status, 403);
-    assert.equal((await request(app).post("/api/resources").set(bearer(tokens.student)).send({ ...payload, code: `B3-STUDENT-${marker}` })).status, 403);
-    assert.equal((await request(app).post("/api/resources").set(bearer(tokens.lecturer)).send({ ...payload, code: `B3-LECTURER-${marker}` })).status, 403);
+    assert.equal((await request(app).post("/api/resources").set(bearer(tokens.student)).send({ ...payload, code: `B3-CUSTOMER-${marker}` })).status, 403);
+    assert.equal((await request(app).post("/api/resources").set(bearer(tokens.lecturer)).send({ ...payload, code: `B3-CUSTOMER-${marker}` })).status, 403);
     assert.equal((await request(app).post("/api/resources").set(bearer(tokens.admin)).send({ ...payload, code: `B3-BAD-${marker}`, category: "GPU_CLUSTER" })).status, 400);
     assert.equal((await request(app).post("/api/resources").set(bearer(tokens.admin)).send({ ...payload, code: `B3-NOLAB-${marker}`, laboratoryId: id() })).status, 404);
     assert.equal((await request(app).post("/api/resources").set(bearer(tokens.admin)).send(payload)).status, 409);

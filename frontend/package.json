@@ -12,6 +12,7 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test:ui:dossier": "node test_resource_dossier_ui.mjs",
+    "test:ui:catalogue": "node test_resource_catalogue_ui.mjs",
     "test:e2e:auth": "node test_batch2_auth_e2e.mjs",
     "test:e2e:resources": "node test_batch3_resources_e2e.mjs",
     "test:e2e:calendar": "node test_batch4_calendar_e2e.mjs",
@@ -19,7 +20,8 @@
     "test:e2e:monitoring": "node test_batch6_monitoring_e2e.mjs",
     "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
     "typecheck": "tsc -p tsconfig.check.json",
-    "test:required": "npm run test:i18n && npm run lint && npm run typecheck && npm run build",
+    "test:required": "npm run test:routes && npm run test:auth && npm run test:payments && npm run test:i18n && npm run lint && npm run typecheck && npm run build",
+    "test:payments": "node --experimental-strip-types --test test_payment_validation.mjs",
     "test:phase-g": "node --experimental-strip-types test_timezone_vietnam.mjs && node --experimental-strip-types test_guest_booking_wizard.mjs && node test_eligibility_and_temp_account.mjs",
     "test:e2e:phase-h": "node test_phase_h_payment_e2e.mjs",
     "test:e2e:demo": "node test_batch7_graduation_demo_e2e.mjs",
@@ -31,7 +33,10 @@
     "test:ui:roles": "node test_role_workspaces_ui.mjs",
     "test:ui:queue-pagination": "node test_queue_pagination_ui.mjs",
     "dev:backend": "node scripts/dev-local.mjs --backend",
-    "dev:backend:rebuild": "node scripts/dev-local.mjs --backend --rebuild"
+    "dev:backend:rebuild": "node scripts/dev-local.mjs --backend --rebuild",
+    "test:auth": "node --test test_auth_validation.mjs",
+    "test:routes": "node --test test_workspace_routes.mjs",
+    "test:ui:support": "node test_support_ui.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",

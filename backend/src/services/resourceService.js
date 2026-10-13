@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import { stopResourceOperation } from "./resourceCareAccounting.js";
+import { careStatus, bookingCareUsage } from "./resourceCareModel.js";
 
 import { prisma } from "../db.js";
 import { ADMIN } from "../constants/roles.js";
@@ -35,29 +37,42 @@ export function currentInterval(now = new Date()) {
   };
 }
 
+export async function attachCareUsage(client, resource) {
+  if (!resource?.careProfile) return resource;
+  const [bookings, room] = await Promise.all([client.booking.findMany({ where: { resourceId: resource.id, actualStartAt: { not: null } }, select: { actualStartAt: true, actualEndAt: true } }), resource.careProfile.roomId ? client.resource.findUnique({ where: { id: resource.careProfile.roomId }, select: { operationalStatus: true, careInspectionRequired: true } }) : null]);
+  return { ...resource, careUsage: bookingCareUsage(bookings, new Date(), resource.careProfile.servicedAt), careRoomUnavailable: Boolean(resource.careProfile.roomId && (!room || room.careInspectionRequired || BLOCKING_OPERATIONAL_STATUSES.has(room.operationalStatus))) };
+}
+
 export function resourceAvailability(resource, interval = null) {
   let state = "AVAILABLE";
   let source = "resource";
 
   const isCurrentQuery = interval == null || interval?.isCurrent === true;
   const { startAt, endAt } = interval || currentInterval();
+  const overlaps = row => new Date(row.startAt) < endAt && new Date(row.endAt) > startAt;
   const now = new Date();
   const intervalIncludesNow = startAt <= now && endAt > now;
 
   if (BLOCKING_OPERATIONAL_STATUSES.has(resource.operationalStatus)) {
     state = resource.operationalStatus;
     source = "operational_status";
+  } else if (resource.careInspectionRequired || resource.careRoomUnavailable || (resource.careProfile && careStatus(resource.careProfile, resource.careUsage?.hours || 0, now, resource.careUsage?.uses || 0).due)) {
+    state = "UNAVAILABLE";
+    source = "maintenance_policy";
   } else if (resource.operationalStatus === "IN_USE" && (isCurrentQuery || intervalIncludesNow)) {
     state = "IN_USE";
     source = "operational_status";
+  } else if (resource.laboratory?.isActive === false) {
+    state = "UNAVAILABLE";
+    source = "booking_policy";
   } else if (resource.bookingState !== "bookable") {
     state = resource.bookingState === "restricted" ? "RESTRICTED" : "UNAVAILABLE";
     source = "booking_policy";
-  } else if ((resource.maintenanceWindows || []).some((window) => BLOCKING_MAINTENANCE_STATUSES.includes(window.status))) {
-    const calibration = resource.maintenanceWindows.some((window) => window.kind === "calibration" && BLOCKING_MAINTENANCE_STATUSES.includes(window.status));
+  } else if ((resource.maintenanceWindows || []).some((window) => overlaps(window) && BLOCKING_MAINTENANCE_STATUSES.includes(window.status))) {
+    const calibration = resource.maintenanceWindows.some((window) => overlaps(window) && window.kind === "calibration" && BLOCKING_MAINTENANCE_STATUSES.includes(window.status));
     state = calibration ? "CALIBRATION" : "MAINTENANCE";
     source = "maintenance_window";
-  } else if ((resource.bookings || []).some((booking) => ACTIVE_BOOKING_STATUSES.includes(booking.status))) {
+  } else if ((resource.bookings || []).some((booking) => overlaps(booking) && ACTIVE_BOOKING_STATUSES.includes(booking.status))) {
     state = "RESERVED";
     source = "booking";
   }
@@ -72,10 +87,8 @@ export function resourceAvailability(resource, interval = null) {
 }
 
 export function serializeCanonicalResource(resource, interval) {
-  const labPolicy = resource.laboratory?.labPolicy || null;
-  const effectiveRequiresApproval = Boolean(
-    resource.requiresApproval || labPolicy?.requiresApproval
-  );
+  const labPolicy = resource.laboratory?.labPolicy ? { ...resource.laboratory.labPolicy, requiresApproval: false } : null;
+  const effectiveRequiresApproval = false;
 
   return {
     id: resource.id,
@@ -84,17 +97,19 @@ export function serializeCanonicalResource(resource, interval) {
     description: resource.description || null,
     media: resource.media || [],
     laboratoryId: resource.laboratoryId || null,
-    laboratory: resource.laboratory || null,
+    laboratory: resource.laboratory ? { ...resource.laboratory, labPolicy } : null,
     labPolicy,
     category: resource.category || null,
     subtype: resource.subtype,
     operationalStatus: resource.operationalStatus,
     availability: resourceAvailability(resource, interval),
     bookingState: resource.bookingState,
+    maxBookingMinutes: resource.maxBookingMinutes != null && labPolicy?.maxBookingMinutes != null ? Math.min(resource.maxBookingMinutes,labPolicy.maxBookingMinutes) : resource.maxBookingMinutes ?? labPolicy?.maxBookingMinutes ?? null,
+    rental: resource.pricingRules?.length ? { hourlyRateVnd: Math.min(...resource.pricingRules.map(rule => rule.hourlyRateVnd)), currency: "VND" } : null,
     location: resource.location,
     ownerTeam: resource.ownerTeam || null,
     capacity: resource.capacity,
-    requiresApproval: resource.requiresApproval,
+    requiresApproval: false,
     effectiveRequiresApproval,
     serialNumber: resource.serialNumber || null,
     manufacturer: resource.manufacturer || null,
@@ -152,11 +167,14 @@ export async function applyOperationalStatusChange(
     return { resource: current, changed: false };
   }
 
+  if (operationalStatus !== "IN_USE") await stopResourceOperation(tx, resourceId, `STATUS_${operationalStatus}`);
+
   const updated = await tx.resource.update({
     where: { id: resourceId },
     data: {
       operationalStatus,
       status: compatibilityStatusFor(operationalStatus),
+      ...(["BROKEN", "MAINTENANCE", "CALIBRATION"].includes(operationalStatus) ? { careInspectionRequired: true } : {}),
       version: { increment: 1 }
     }
   });

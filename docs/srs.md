@@ -5,7 +5,7 @@
 | Document field | Value |
 |---|---|
 | Document ID | LRM-SRS-001 |
-| Version | 1.2 |
+| Version | 1.3 |
 | Status | Working baseline for the current project checkpoint |
 | Prepared | 28 September 2026; clarified 3 October 2026 |
 | Product | Lab Resource Manager |
@@ -36,7 +36,7 @@ External quick booking, pricing/payment, and AI assistance are incremental or su
 - `PRODUCT.md` — product purpose, users, principles, and priority.
 - `docs/convention.md` — naming, layering, API and validation conventions.
 - `docs/PROJECT_STRUCTURE.md` — repository layout and responsibilities.
-- `docs/CURRENT_STATE.md` and verified Batch reports — implementation and verification evidence.
+- `docs/CURRENT_STATE.md` and maintained contracts and reproducible tests — implementation and verification evidence.
 - `backend/prisma/schema.prisma` — persisted data model and canonical enums.
 
 ## 2. Overall Description
@@ -63,8 +63,7 @@ At a high level, the system supports:
 |---|---|---|
 | `ADMIN` | Manage users, roles, laboratory assignments, resources, policies, and cross-lab administration | Global administrative permission, enforced by backend |
 | `LAB_STAFF` | Operate resources, process bookings, maintenance, monitoring, and incidents | Limited to laboratories assigned through `UserLabAssignment` |
-| `LECTURER` | Manage own bookings and supervise assigned course groups | Own bookings/incidents; assigned group membership and academic review; no staff operations |
-| `STUDENT` | Manage own bookings and submit/revise own course activities | Own records and membership-scoped groups; external business identity may be separately marked `EXTERNAL` |
+| `CUSTOMER` | Discover resources, book, pay and request assistance | Own bookings, incidents, profile and support history; no operator privileges |
 
 Public visitors may view explicitly public catalog and schedule projections. Public access does not grant booking mutation or account privileges.
 
@@ -78,7 +77,7 @@ Public visitors may view explicitly public catalog and schedule projections. Pub
 
 ### 2.5 Constraints and assumptions
 
-- Canonical roles are exactly `ADMIN`, `LAB_STAFF`, `LECTURER`, and `STUDENT`.
+- Canonical roles are exactly `ADMIN`, `LAB_STAFF`, and `CUSTOMER`.
 - Canonical booking statuses are `PENDING_APPROVAL`, `CONFIRMED`, `CHECKED_OUT`, `RETURNED`, `COMPLETED`, `REJECTED`, and `CANCELLED`.
 - Canonical physical operational statuses are `AVAILABLE`, `IN_USE`, `MAINTENANCE`, `CALIBRATION`, `BROKEN`, `RETIRED`, and `OFFLINE`.
 - Resource categories are `ROOM`, `EQUIPMENT`, `MACHINE`, `EXPERIMENT_KIT`, and `MATERIAL`; technical subtype is a separate field.
@@ -110,11 +109,11 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | ID | Requirement |
 |---|---|
 | FR-AUTH-01 | The system shall authenticate users using persisted account credentials. |
-| FR-AUTH-02 | Public self-registration shall create only the canonical `STUDENT` role. |
+| FR-AUTH-02 | Public self-registration shall create only the canonical `CUSTOMER` role using email and password only; contact details are collected when booking. |
 | FR-AUTH-03 | For each protected request, the backend shall verify the current database user exists and is active before authorizing the operation. |
 | FR-AUTH-04 | An `ADMIN` shall be able to manage user roles, activation, and laboratory assignments. |
 | FR-AUTH-05 | The system shall not treat client-side route hiding or client-provided user/role/laboratory identifiers as authorization. |
-| FR-AUTH-06 | When external quick booking is enabled, the system shall verify the configured email OTP flow before creating/reusing an external account and proceeding with booking. The account shall retain role `STUDENT` and may carry `customerType=EXTERNAL`. |
+| FR-AUTH-06 | When external quick booking is enabled, the system shall verify the configured email OTP flow before creating/reusing an external account and proceeding with booking. The account shall retain role `CUSTOMER` and may carry `customerType=EXTERNAL`. |
 
 ### 4.2 Resource catalogue and administration
 
@@ -132,12 +131,13 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 |---|---|
 | FR-BKG-01 | An authenticated user shall be able to request a booking for an eligible resource and time interval. |
 | FR-BKG-02 | The system shall evaluate resource policy, operational state, maintenance windows, eligibility, and existing bookings before accepting a request. |
-| FR-BKG-03 | A booking that requires approval shall enter `PENDING_APPROVAL`; a policy-approved immediate booking may enter `CONFIRMED`. |
-| FR-BKG-04 | Authorized staff shall be able to approve or reject eligible pending bookings. |
+| FR-BKG-03 | New eligible bookings shall automatically enter `CONFIRMED` after conflict, maintenance, resource-state, eligibility, rental-duration and laboratory-policy checks. Legacy `PENDING_APPROVAL` records retain their operator workflow. |
+| FR-BKG-04 | Authorized staff shall be able to approve or reject eligible legacy pending bookings. New valid bookings require no staff approval. |
 | FR-BKG-05 | A booking owner shall be able to view and cancel only their own eligible bookings. |
 | FR-BKG-06 | The system shall prevent overlapping active bookings at the database level, including concurrent requests. |
 | FR-BKG-07 | Availability shall be derived from operational status, booking intervals, maintenance windows, and applicable policy. |
 | FR-BKG-08 | Public schedule data shall omit requester identity and private booking titles. |
+| FR-BKG-10 | ADMIN or assigned LAB_STAFF may move a CONFIRMED booking, preserving duration and accepted fee, requiring reason/current start snapshot, rechecking policy/conflicts/eligibility and retaining audit and owner notifications. |
 | FR-BKG-09 | Workspace booking and incident queues shall expose older authorized records through bounded server pages and complete scoped totals; recent list caps shall not define queue totals. |
 
 ### 4.4 Handover and return
@@ -168,12 +168,14 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | FR-MON-02 | The system shall distinguish current, stale, unavailable, and no-data states. No sample shall be shown as a fabricated healthy state. |
 | FR-MON-03 | A monitoring alert may create a persisted incident only under approved policy and with source/sample provenance. |
 | FR-MON-04 | Automated monitoring shall not change authoritative physical resource state. |
+| FR-MON-05 | Virtual resource operation shall require an actual checked-out booking, assigned operator, valid resource state and maintenance policy. Persist server timestamps and declared workload/occupancy; do not claim sensor measurements. |
+| FR-MON-06 | Track persisted handover/return hours, completed-use counts, components and calendar/hour/use maintenance due. Notify assigned staff and admins once per service cycle and warning/due stage (default 80%/100%). Damage shall use incident/physical-state history; return stops operation. A completed maintenance job and explicit inspection are required to reset the service baseline. |
 
 ### 4.7 Pricing, payment, and AI assistance
 
 | ID | Requirement |
 |---|---|
-| FR-EXT-01 | When pricing is configured, the server shall calculate a quote from the persisted resource/purpose pricing rule and preserve the accepted booking price snapshot. |
+| FR-EXT-01 | Rental tariffs and per-resource duration limits shall be persisted and publicly visible. The server calculates integer VND from the configured rate and accepted duration, verifies the quote version and preserves the booking price snapshot. |
 | FR-EXT-02 | A browser return from a payment provider shall not settle a transaction. Only a valid, verified server callback matching configured merchant and transaction data may update payment state. |
 | FR-EXT-03 | Payment unavailability shall remain visible; the system shall not fabricate a successful payment or require payment as a canonical booking status. |
 | FR-EXT-04 | AI assistance may search, explain, summarize, or recommend using available data but shall not override authorization, operational state, policy, booking rules, or human approval. |
@@ -221,7 +223,7 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 
 ## 8. Current Status and Traceability Notes
 
-This SRS defines the working product requirements. Current implementation evidence is maintained separately in `docs/CURRENT_STATE.md`, Batch reports, and release/demo runbooks. At the 28 September 2026 checkpoint, core booking, operations, administration, notifications, persisted monitoring, and product-experience work have implementation and automated verification evidence. External SMTP OTP and a live VNPAY merchant transaction remain environment-dependent; physical sensor/camera verification requires real hardware. Optional AI and research workflows are supporting/experimental and do not define the required graduation core.
+This SRS defines the working product requirements. Current implementation evidence is maintained separately in `docs/CURRENT_STATE.md`, current state and release/demo runbooks. At the 28 September 2026 checkpoint, core booking, operations, administration, notifications, persisted monitoring, and product-experience work have implementation and automated verification evidence. External SMTP OTP and a live VNPAY merchant transaction remain environment-dependent; physical sensor/camera verification requires real hardware. Optional AI and research workflows are supporting/experimental and do not define the required graduation core.
 
 Requirement status shall be assessed against current code and verification artifacts before each progress report. A passing isolated test or demo does not alone establish production deployment or real-world use.
 
@@ -247,14 +249,12 @@ Requirement status shall be assessed against current code and verification artif
 - LAB-MAINT-01: Preview affected bookings, reject overlaps, require reasons for
   schedule/status changes, and preserve closed jobs. Resource physical state is
   verified separately; completing maintenance does not certify safe operation.
-- LAB-TEACH-01: Admin assigns lecturer-owned course groups. Lecturers supervise
-  their groups; students submit/revise their own activities. Academic endorsement
-  does not replace staff resource approval, handover or return.
+- LAB-TEACH-01 (retired by ADR-033): course-group screens and mutations are no longer active. Preserve existing tables/history in an ADMIN-only read archive.
 - LAB-MEDIA-01: Show image/video details with truthful loading/unavailable states;
   fail clearly when storage is unconfigured. Reference media is labeled.
 
 Implementation and verification boundaries are recorded in
-`LAB_WORKSPACE_EXPERIENCE_REPORT_20260929.md`.
+`CURRENT_STATE.md`.
 
 
 ## Appendix C. User-approved bilingual assistant foundation (2026-10-01)
@@ -280,7 +280,7 @@ Implementation and verification boundaries are recorded in
 - LAB-HW-01: Normal hardware-off business views shall omit camera/sensor reads
   and disclose deferred monitoring without fabricated health data.
 
-See ADR-025 and `ASSISTANT_REQUEST_HARDENING_20261001.md` for the implemented
+See ADR-025 and `CURRENT_STATE.md` for the implemented
 boundary and verification evidence. The 2026-10-05 conversation extension and
 remaining provider checks are recorded in `AI_ASSISTANT_MCP.md` and
 `artifacts/assistant-api-preparation-20261005/REPORT.md` at the repository root.
@@ -288,9 +288,9 @@ remaining provider checks are recorded in `AI_ASSISTANT_MCP.md` and
 ## Appendix D. Actor permissions and operational use cases (2026-10-03)
 
 This clarification follows the existing contracts and the approved extension in
-Appendix B. It does not create another role or change resource approval authority.
+Appendix B. The actor contract is updated by ADR-033 to ADMIN, LAB_STAFF and CUSTOMER.
 The required core is booking, resource operations, truthful monitoring and their
-supporting accounts/history. Stock, teaching groups, global VI/EN and media are
+supporting accounts/history. Stock, global VI/EN and media are
 approved product extensions. Payment, SMTP, object storage, AI and hardware need
 their own configuration/evidence. Research dashboards are disabled by default.
 
@@ -299,46 +299,40 @@ their own configuration/evidence. Research dashboards are disabled by default.
 Every permission is enforced by the server; navigation visibility is only a UX aid.
 "Assigned labs" means current persisted `UserLabAssignment`, never a request field.
 
-| Operation | ADMIN | LAB_STAFF | LECTURER | STUDENT |
-|---|---|---|---|---|
-| Users, roles, lab assignments administration | Global | No | No | No |
-| Profile/password self-service | Own | Own | Own | Own |
-| Resources and operational state | Global | Assigned labs | Public/authenticated safe reads | Public/authenticated safe reads |
-| Read booking/incident queues | Global | Assigned labs | Own records | Own records |
-| Request/cancel booking | Canonical actor/owner rules | Canonical actor/owner rules | Own eligible booking | Own eligible booking |
-| Approve/reject, checkout, staff return/complete | Global | Assigned labs | No | No |
-| Owner ROOM self-return | Own checked-out ROOM | Own checked-out ROOM | Own checked-out ROOM | Own checked-out ROOM |
-| Maintenance/incident operational handling | Global | Assigned labs | Own incident reporting | Own incident reporting |
-| Material receipts/issues/history | Global | Assigned labs | No | No |
-| Inventory count adjustments | Global | No | No | No |
-| Create group/assign lecturer | Global | No | No | No |
-| Group membership and academic review | Global | No | Assigned groups | No |
-| Course activity submission/revision | No student impersonation | No | No | Own booking/activity in member group |
-| Read system audit events | Global | Assigned labs | No | No |
-| Manually edit/delete system audit events | No | No | No | No |
+| Operation | ADMIN | LAB_STAFF | CUSTOMER |
+|---|---|---|---|
+| Users, roles, lab assignments administration | Global | No | No |
+| Profile/password self-service | Own | Own | Own |
+| Resources and operational state | Global | Assigned labs | Public/authenticated safe reads |
+| Read booking/incident queues | Global | Assigned labs | Own records |
+| Request/cancel booking | Canonical actor/owner rules | Canonical actor/owner rules | Own eligible booking |
+| Approve/reject, checkout, staff return/complete | Global | Assigned labs | No |
+| Owner ROOM self-return | Own checked-out ROOM | Own checked-out ROOM | Own checked-out ROOM |
+| Maintenance/incident operational handling | Global | Assigned labs | Own incident reporting |
+| Material receipts/issues/history | Global | Assigned labs | No |
+| Inventory count adjustments | Global | No | No |
+| Read system audit events | Global | Assigned labs | No |
+| Manually edit/delete system audit events | No | No | No |
 
-Lecturers may see students' booking evidence through the assigned teaching group
-projection, not through a global booking queue. Students do not receive classmates'
-private activity records. Academic endorsement leaves booking status unchanged.
+Historical academic records remain accessible only to ADMIN through the read archive. CUSTOMER never inherits academic review or operator privileges.
 
 ### Use cases and acceptance paths
 
 | ID / actor | Preconditions and normal path | Failure or alternate path | Requirements / verification entry |
 |---|---|---|---|
-| UC-01 Account access / all | Persisted active account; login, retrieve current identity, use authorized workspace | Bad credentials, inactive user or unavailable DB deny access; public registration remains STUDENT | FR-AUTH-01–05 / `test:batch2`, `test:release-security` |
-| UC-02 Discover and request / lecturer, student | Inspect safe resource/schedule; select eligible interval; submit; persist pending or confirmed booking | Conflict, training/policy failure or hard operational state rejects request; no fake success | FR-RES-01, FR-BKG-01–03,06–08 / `test:batch4` |
+| UC-01 Account access / all | Persisted active account; login, retrieve current identity, use authorized workspace | Bad credentials, inactive user or unavailable DB deny access; public registration creates CUSTOMER | FR-AUTH-01–05 / `test:batch2`, `test:release-security` |
+| UC-02 Discover and request / customer | Inspect safe resource/schedule; select eligible interval; submit; automatically persist CONFIRMED booking | Conflict, training/policy failure, due maintenance or hard operational state rejects request; no fake success | FR-RES-01, FR-BKG-01–03,06–08 / `test:batch4` |
 | UC-03 Process queue / admin, assigned staff | Page/filter complete scoped queue; open exact booking; approve/reject eligible pending request | Wrong lab/owner cannot widen read or mutate; invalid transition rejected; read failure has retry | FR-BKG-04,09, BR-05 / `test:queue-pagination`, frontend `test:ui:queue-pagination` |
 | UC-04 Handover and close / admin, assigned staff | Confirm booking and actual evidence; checkout; record return condition; review and complete | Preserve BROKEN/MAINTENANCE and other hard states; rejected transition keeps state/history intact | FR-OPS-01–06 / `test:batch5` |
 | UC-05 Owner room return / owner | Checked-out ROOM; declare condition through owner-return; staff review follows existing policy | Other owner's booking or non-ROOM self-return denied; declaration is not staff inspection | FR-OPS-04–05 / `test:batch5` |
 | UC-06 Reschedule maintenance / admin, assigned staff | Open scheduled job with its resource preserved; enter reason/time; preview impact; save allowed change | Conflict blocks saving; terminal job remains closed; missing resource is validation failure | FR-SUP-01, LAB-MAINT-01 / `test:lab-workspace`, maintenance regression in browser queue suite |
 | UC-07 Handle incident/notification / all, operators | Owner reports incident; assigned operator reviews/resolves with evidence; recipient reads own notification | Cross-lab operations denied; missing email configuration never means delivered email | FR-SUP-02–04 / `test:batch6`, `test:queue-pagination` |
 | UC-08 Material ledger / admin, assigned staff | Initialize verified receipt/unit; issue available quantity with reference; optional open same-lab maintenance link | Negative/overspent balance, changed retry, wrong unit/lab/job rejected; only admin adjusts count | LAB-STOCK-01–02 / `test:lab-workspace` |
-| UC-09 Course supervision / admin, lecturer, student | Admin assigns lecturer; authorized membership; student submits own booking goal; lecturer gives feedback; student revises | Non-member, other lecturer, archived group or other owner's booking denied; no resource approval implied | LAB-TEACH-01 / `test:lab-workspace` |
 | UC-10 Monitoring / configured source, operators | Authenticate persisted source; ingest valid sample; show freshness/provenance; inspect actual alert/incident | Missing/stale source remains NO_DATA/stale; replay/invalid scope denied; no automated physical-state change | FR-MON-01–04 / `test:batch8` |
 
 These are acceptance paths and test entry points, not a claim that every suite was
 rerun on this revision. Current run scope and remaining failures are recorded in
-[current state](CURRENT_STATE.md) and the dated [review follow-up](backlogs/review-followup-20261003.md).
+[current state](CURRENT_STATE.md) and the dated review follow-up (historical run output; retired).
 Use [core ERD](DB-erd/core-erd.md) for persisted relationships and the
 [graduation demo runbook](GRADUATION_DEMO_RUNBOOK.md) for the presentation sequence.
 
@@ -362,3 +356,63 @@ scope and monitoring provenance remain authoritative. See the
 
 This local continuation adds the operational report and isolated rule preview.
 It does not activate predictive ML, hardware, provider AI or another numbered Batch.
+
+## Appendix F. Human support chat (user approved 2026-10-12)
+
+- LAB-CHAT-01: Signed-in CUSTOMER may request human help after asking
+  the assistant, or directly from Support. They select the appropriate active
+  LAB and issue category. One customer has at most one WAITING/ACTIVE request.
+  Sharing recent assistant context requires an explicit choice; the server
+  validates ownership and copies its bounded display transcript.
+- LAB-CHAT-02: Currently assigned, active LAB_STAFF explicitly go ready and
+  maintain a heartbeat. Each idle staff member automatically receives the oldest
+  eligible request for their assigned labs. Multiple staff work concurrently;
+  one staff member has at most one ACTIVE session across all labs. Remaining
+  requests show their lab queue position #1, #2, etc. Finishing/cancelling frees
+  capacity and dispatches the next eligible request within the same transaction.
+- LAB-CHAT-03: Customer and assigned staff exchange real persisted text messages.
+  Staff may insert and edit localized quick replies before sending. Messages do
+  not change booking/payment state. Staff finish with a resolution; customers
+  may cancel with a reason. Closed sessions remain readable as history.
+- LAB-CHAT-04: ADMIN reads all sessions, messages and handling events, with
+  pagination/filtering. Staff read only their assigned conversations under
+  current LAB assignments; customers only their own. Admin may requeue an ACTIVE
+  session with a reason, pausing the prior staff from receiving it immediately.
+  Assignment events preserve previous handlers and timestamps.
+- LAB-CHAT-05: This first release refreshes messages and positions every 2 seconds
+  and heartbeats every 15 seconds. Presence expires after 45 seconds without a
+  heartbeat. A disconnected ACTIVE session retains its handler and messages;
+  admin can requeue it. No background tab, read receipt, attachment, anonymous
+  chat, email delivery or automatic AI resolution is implied.
+
+Verification entries: backend `test:support:integration` (guarded isolated
+PostgreSQL), frontend `test:ui:support` (separate browser sessions forwarding
+to the real isolated Express/Prisma API), required suites and migration safety.
+See CURRENT_STATE for the actual run scope and limits.
+
+## Appendix G. Automatic account and payment emails (approved 2026-10-12)
+
+- LAB-MAIL-01: Successful public registration, and a new guest account created
+  after verified OTP booking completion, atomically enqueue a welcome email.
+  It contains the account email/name and password-use/setup guidance; no plaintext
+  password, password hash, OTP, bearer token or invented reset link is included.
+  Account reuse and rejected/rolled-back registration create no welcome email.
+- LAB-MAIL-02: A verified successful VNPAY IPN atomically enqueues one payment
+  receipt per payment. Include amount, payment/provider references, booking,
+  equipment/LAB, scheduled Vietnam time and booking status at settlement time.
+  Invalid/failed callbacks and browser Return never create payment receipts.
+  Late success requiring reconciliation must preserve and disclose the booking
+  state; sending an email cannot approve or reactivate the booking.
+- LAB-MAIL-03: Durable outbox delivery is independent of the business response
+  and in-app reminders. Missing SMTP retains PENDING; configured sending retries
+  with backoff up to five attempts, records SMTP acceptance/failure and recovers
+  expired worker leases. Operators may explicitly retry FAILED messages.
+  Deduplication prevents repeated business events creating multiple rows, but
+  external SMTP acceptance followed by a crash cannot guarantee exactly-once
+  delivery. SMTP acceptance is not proof of inbox delivery.
+- LAB-MAIL-04: SMTP credentials stay on the backend. Templates escape user text,
+  use a configured application URL and Vietnam timezone, and registration follows
+  the request VI/EN locale. VNPAY receipts default to Vietnamese; customer locale
+  preference and a mail administration UI are deferred. Historical events are
+  not automatically backfilled. External SMTP and live merchant verification
+  remain prerequisites for inbox/end-to-end payment evidence.

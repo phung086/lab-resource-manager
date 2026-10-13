@@ -19,6 +19,9 @@ import { CANONICAL_BOOKING_STATUS_LABELS } from "../constants.js";
 import { GuestQuickBookingPanel } from "./GuestQuickBookingPanel";
 import { ResourceGallery } from "./ResourceGallery";
 import { ResourceUsageGuide, UsageGuide } from "./ResourceUsageGuide";
+import { ResourceSpecifications } from "./ResourceSpecifications";
+import { ResourceTariffTable } from "./ResourceTariffTable";
+import { ResourcePricingSummary } from "./ResourcePricingSummary";
 import { ResourceMediaPreview } from "./ResourceMediaPreview";
 import { formatVietnamDateTime } from "../utils/timezone";
 import "../styles/public-catalog.css";
@@ -42,11 +45,14 @@ type TrainingReq = {
 };
 
 type Resource = {
+  availability?: { source: string; available: boolean; state: string };
+  rental?: { hourlyRateVnd: number } | null;
+  maxBookingMinutes?: number | null;
   id: string;
   code: string;
   name: string;
   description?: string;
-  specs?: { usageGuide?: UsageGuide };
+  specs?: Record<string, unknown> & { usageGuide?: UsageGuide };
   category?: string;
   location: string;
   capacity: number;
@@ -55,6 +61,7 @@ type Resource = {
   media?: Media[];
   laboratory?: {
     name: string;
+    isActive?: boolean;
     labPolicy?: {
       requiresApproval?: boolean;
       maxBookingMinutes?: number;
@@ -76,7 +83,7 @@ type SchedulePayload = { bookings: ScheduleBlock[]; maintenanceWindows: Schedule
 
 const categoryLabels: Record<string, string> = {
   ROOM: "ui.lab_room_8ed94274",
-  EQUIPMENT: "ui.resources_eb706979",
+  EQUIPMENT: "enum.category.EQUIPMENT",
   MACHINE: "ui.machine_1d4b86ad",
   EXPERIMENT_KIT: "ui.experiment_kit_0acb51cf",
   MATERIAL: "ui.material_23ab10cc"
@@ -88,7 +95,7 @@ const operationalBadgeLabels: Record<string, { label: string; class: string }> =
   MAINTENANCE: { label: "ui.maintenance_8ad424bd", class: "badge-op-maintenance" },
   CALIBRATION: { label: "ui.calibration_a71e17c8", class: "badge-op-calibration" },
   BROKEN: { label: "ui.broken_969112a4", class: "badge-op-broken" },
-  RETIRED: { label: "ui.offline_b4f199c3", class: "badge-op-retired" },
+  RETIRED: { label: "enum.operational.RETIRED", class: "badge-op-retired" },
   OFFLINE: { label: "ui.offline_96a8bb03", class: "badge-op-offline" }
 };
 
@@ -120,6 +127,8 @@ export function PublicResourceCatalog({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
+  const [priceView, setPriceView] = useState(false);
+  const [detailSection, setDetailSection] = useState("overview");
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
   const detailRequest = useRef(0);
@@ -177,6 +186,7 @@ export function PublicResourceCatalog({
   const visible = matches.slice(0, limit);
 
   async function openDetails(row: Resource, rememberOpener = true) {
+    if (rememberOpener) setDetailSection("overview");
     const request = ++detailRequest.current;
     if (rememberOpener && selected?.id !== row.id) setGuestBookingOpened(false);
     if (rememberOpener) detailOpener.current = document.activeElement as HTMLElement;
@@ -226,11 +236,15 @@ export function PublicResourceCatalog({
 
   // Compute eligibility verdict for selected resource
   function computeEligibility(resource: Resource) {
+    if (resource.availability?.source === "maintenance_policy") return {
+      status: "UNAVAILABLE", label: tr("ui.rental.serviceRequired"),
+      message: tr("ui.rental.serviceRequired"), type: "danger"
+    };
     if (resource.bookingState !== "bookable") return {
       status: "RESTRICTED", label: t("ui.booking_restricted_7636ca33"),
       message: t("ui.self_service_booking_is_not_abeb64ab"), type: "danger"
     };
-    const isPhysicalOk = ["AVAILABLE", "IN_USE"].includes(resource.operationalStatus);
+    const isPhysicalOk = ["AVAILABLE", "IN_USE"].includes(resource.operationalStatus) && resource.laboratory?.isActive !== false;
     if (!isPhysicalOk) {
       return {
         status: "UNAVAILABLE",
@@ -285,7 +299,7 @@ export function PublicResourceCatalog({
         {[
           ["ALL", tr("ui.all_49c73a31")],
           ["ROOM", tr("ui.lab_room_8ed94274")],
-          ["EQUIPMENT", tr("ui.resources_eb706979")],
+          ["EQUIPMENT", tr("enum.category.EQUIPMENT")],
           ["MACHINE", tr("ui.machine_1d4b86ad")],
           ["EXPERIMENT_KIT", tr("ui.experiment_kit_0acb51cf")],
           ["MATERIAL", tr("ui.material_23ab10cc")]
@@ -314,7 +328,9 @@ export function PublicResourceCatalog({
       )}
 
       {/* Catalog Cards Grid */}
-      <div className="catalog-grid">
+      <div className="rental-view-switch"><button type="button" aria-pressed={!priceView} onClick={() => setPriceView(false)}>{tr("ui.care.assets")}</button><button type="button" aria-pressed={priceView} onClick={() => setPriceView(true)}>{tr("ui.rental.pricing")}</button></div>
+      {priceView && <ResourceTariffTable resources={matches} onSelect={row => { const resource = resources.find(item => item.id === row.id); if (resource) void openDetails(resource); }}/>}
+      <div className="catalog-grid" hidden={priceView}>
         {visible.map((row) => {
           const image = row.media?.find((item) => item.kind === "IMAGE");
           const opBadge = operationalBadgeLabels[row.operationalStatus] || {
@@ -356,6 +372,7 @@ export function PublicResourceCatalog({
                 </span>
                 <h4>{row.name}</h4>
                 <p className="catalog-card-loc">{row.location}</p>
+                <strong className="rental-card-price">{row.rental ? new Intl.NumberFormat("vi-VN").format(row.rental.hourlyRateVnd) + " ₫ / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</strong>
 
                 {/* Primary CTA */}
                 <button
@@ -371,7 +388,7 @@ export function PublicResourceCatalog({
         })}
       </div>
 
-      {!loading && !error && matches.length > limit && <button type="button" className="public-secondary catalog-show-more" onClick={() => setLimit(value => value + 6)}>{t("ui.show_more_resources_8cf8a7b8")} ({matches.length - limit})</button>}
+      {!priceView && !loading && !error && matches.length > limit && <button type="button" className="public-secondary catalog-show-more" onClick={() => setLimit(value => value + 6)}>{t("ui.show_more_resources_8cf8a7b8")} ({matches.length - limit})</button>}
       {/* Resource Detail Section */}
       {selected && (
         <section className="catalog-detail" id="chi-tiet-tai-nguyen" aria-labelledby="catalog-detail-title">
@@ -396,10 +413,12 @@ export function PublicResourceCatalog({
             </div>
           ) : null}
 
+          <nav className="resource-profile-nav" aria-label={tr('ui.catalogue.detailNavigation')}>{[['overview','ui.resourceDiscovery.overview'],['specs','ui.catalogue.specifications'],['usage','ui.usage_guide_28e5af8d']].map(([value,key]) => <button key={value} type="button" aria-pressed={detailSection===value} onPointerEnter={()=>setDetailSection(value)} onFocus={()=>setDetailSection(value)} onClick={()=>setDetailSection(value)}>{tr(key)}</button>)}</nav>
           <div className="catalog-detail-layout">
             <div className="catalog-media-gallery">
-              <ResourceGallery key={selected.id} resourceId={selected.id} initialItems={selected.media} />
-              <ResourceUsageGuide guide={selected.specs?.usageGuide} />
+              <div hidden={detailSection!=="overview"}><ResourceGallery key={selected.id} resourceId={selected.id} initialItems={selected.media}/></div>
+              <section className="resource-detail-section" hidden={detailSection!=="specs"}><h4>{tr("ui.recorded_specifications_eeeff271")}</h4><ResourceSpecifications specs={selected.specs} /></section>
+              <div hidden={detailSection!=="usage"}><ResourceUsageGuide guide={selected.specs?.usageGuide}/></div>
             </div>
 
             <div className="catalog-facts">
@@ -420,16 +439,16 @@ export function PublicResourceCatalog({
                       )}
                       <strong>{tr("ui.access_requirements_6c692202")}{" "}{verdict.label}</strong>
                     </div>
-                    <p>{verdict.message}</p>
+
                   </div>
                 );
               })()}
 
-              <p className="catalog-description">
+              <ResourcePricingSummary resourceId={selected.id}/><p className="catalog-description" hidden={detailSection!=="overview"}>
                 {selected.description || tr("ui.lab_staff_maintain_the_detailed_af9d4644")}
               </p>
 
-              <dl className="catalog-spec-dl">
+              <details><summary>{tr("ui.laboratory_booking_policy_37816f8d")}</summary><dl className="catalog-spec-dl">
                 <div>
                   <dt>{tr("ui.location_4c781313")}</dt>
                   <dd>{selected.location}</dd>
@@ -470,7 +489,7 @@ export function PublicResourceCatalog({
                     <dd>{selected.model}</dd>
                   </div>
                 )}
-              </dl>
+              </dl></details>
 
               {/* Busy Schedule in Next 14 Days */}
               <div className="catalog-schedule">

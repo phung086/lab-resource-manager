@@ -2,7 +2,7 @@
 
 This log records decisions that future agents must preserve unless the user
 explicitly approves a replacement decision. Detailed evidence remains in the
-linked canonical documents and verified Batch reports.
+linked canonical documents and maintained contracts and reproducible tests.
 
 ## ADR-001 - PostgreSQL And Prisma Remain Canonical
 
@@ -213,7 +213,7 @@ Existing staff transition endpoints retain their authorization rules.
 Booking creation and transitions now notify active ADMIN users and assigned
 LAB_STAFF; owners receive transition outcomes. Notifications commit with the
 booking operation and deduplicate per booking/event/recipient. Historical events
-are not backfilled. See OPEN_LAB_UPGRADE_REPORT.md for tests and remaining work.
+are not backfilled. See CURRENT_STATE.md for tests and remaining work.
 
 ## 2026-09-23 — Versioned booking pricing checkpoint
 
@@ -224,7 +224,7 @@ Positive fees create a charge only when CONFIRMED; CHECK_OUT requires a verified
 successful payment matching the stored amount and currency. Unpriced resources
 remain free. New migration is additive; external roles are still unchanged.
 Payment expiry/late callbacks/refunds and external fast booking remain open in
-OPEN_LAB_UPGRADE_REPORT.md. Do not represent this checkpoint as a final release.
+CURRENT_STATE.md. Do not represent this checkpoint as a final release.
 
 ## 2026-09-23 — Booking checkout at VNPAY
 
@@ -236,6 +236,19 @@ back to the booking; only verified IPN changes payment status. A historical
 zero-fee booking has no payable transaction or QR. Merchant configuration is
 absent from local demo and cannot be claimed as a live payment integration.
 
+
+### 2026-10-13 clarification — Merchant-supported payment methods
+
+`VNPAY_BANK_CODE` is configurable. An absent variable preserves `VNPAYQR` for
+existing environments; an explicit empty value omits `vnp_BankCode` and lets
+VNPAY offer the merchant's supported methods. A configured code must be 3–20
+uppercase alphanumeric characters and is included in the HMAC signature.
+QR is available only when enabled for that merchant. The application uses
+generic VNPAY payment labels; frontend URL validation preserves HTTPS/domain
+guards and rejects duplicate or malformed bank codes. Production Compose must
+preserve the difference between absent and empty values. This changes method
+selection only: verified server IPN remains the settlement authority, and a
+browser Return or QueryDr diagnostic cannot mark a payment successful.
 
 ## 2026-09-24 — External quick booking identity and LAB loyalty checkpoint
 
@@ -441,4 +454,156 @@ credential is not an authentication factor. Password login rejects EXTERNAL
 accounts with `passwordResetRequired`; the email-verified booking session may
 complete password setup, after which normal login works. Recovery after loss of
 that setup session and revocation of existing tokens remain separate unresolved
-work. See `reviews/PR22_REVIEW_RESPONSE_20261003.md` for tests and limits.
+work. See `CURRENT_STATE.md` for tests and limits.
+
+## ADR-027 — Tài liệu được duy trì và loại bỏ nghiên cứu đã ngừng dùng
+
+Status: Accepted theo yêu cầu người dùng ngày 07/10/2026.
+
+Giữ SRS, convention, cấu trúc, trạng thái ngắn, quyết định, guideline, ERD,
+backlog, nguồn giảng viên và runbook hữu ích. Báo cáo AI sau tác vụ, screenshot,
+bản sao/output tạm và handoff lặp được ngừng dùng; cập nhật context trong
+CURRENT_STATE thay vì yêu cầu agent đọc lịch sử mọi lần chạy. Không viết lại Git.
+
+Gỡ registry/routing nghiên cứu cũ, UI giả sự cố/KPI, benchmark/test import các
+module đã retired. Giữ chức năng được chấp thuận, trợ lý MCP read-only và preview
+giám sát có nhãn. Đây là retirement của showcase, không loại bỏ năng lực giám
+sát bắt buộc hoặc hướng simulator demo. Quyết định này thay ưu tiên bảo tồn
+Advanced/Research cũ; không thay role/status, RBAC, schema hay applied migrations.
+
+Tệp runtime/config/test/asset còn được gọi và dữ liệu nghiệp vụ không phải rác.
+Chỉ dọn đúng allowlist trong checkout và tài nguyên Docker LAB không còn dùng;
+giữ dự án Docker khác và worktree ngoài checkout.
+
+## ADR-028 — Ngữ cảnh Claude theo task và checkpoint có thể kiểm chứng
+
+Status: Accepted theo yêu cầu tối ưu Claude của người dùng ngày 07/10/2026.
+
+Giữ source FE/BE, contracts và runtime. Root AGENTS/quy tắc governance là nền;
+đọc complete relevant sections và dependency liên vùng theo CONTEXT_MAP thay
+đọc toàn bộ tài liệu cho mọi task. CLAUDE nhập root/area AGENTS, UI rules theo
+paths; workflow chuyên biệt chỉ nạp khi cần. CURRENT_STATE lưu checkpoint của
+task và checkout, không nhân bản source/log hay tạo report sau mỗi phiên.
+
+Project bắt đầu với compact window 120k và skills ngoài mục tiêu LAB gọi thủ
+công. Đây là tham số cần theo dõi, không chứng minh tỷ lệ tiết kiệm. Loại bản
+Playwright plugin trùng ở checkout chính, giữ MCP ghim/cấu hình browser hiện có.
+Không đổi model/gateway/auth/permissions, ép proxy hỗ trợ tool search, cài thêm
+harness/graph/workflow hay chạy EXE tham khảo. So sánh hiệu quả phải tính cả
+cache, context qua nhiều lượt và correctness; token log không phải hóa đơn.
+
+## ADR-029 — Chat hỗ trợ có lưu lịch sử và tự giao theo LAB
+
+Status: Accepted theo yêu cầu người dùng ngày 12/10/2026.
+
+Người dùng đã đăng nhập (STUDENT/LECTURER) yêu cầu chat với LAB_STAFF. Staff
+bật sẵn sàng; mỗi người một phiên ACTIVE trên toàn bộ LAB được phân công,
+nhiều người có thể hỗ trợ đồng thời. Chọn lượt WAITING có ordinal nhỏ nhất
+trong phạm vi hợp lệ; người còn chờ thấy vị trí theo LAB. Hoàn tất/hủy sẽ tự
+giao lượt tiếp theo. UserLabAssignment hiện tại là authority; admin đọc toàn
+bộ và có thể requeue kèm lý do khi cần chuyển người, không gửi thay staff.
+
+SupportSession/Message/Presence lưu PostgreSQL qua migration forward mới.
+Transaction advisory lock điều phối dispatch; partial unique indexes bảo vệ
+capacity/open request, row locks điều phối gửi/kết thúc. Client UUID hỗ trợ
+retry yêu cầu/tin nhắn có kiểm tra cùng nội dung. Tin nhắn, người nhận trước,
+lý do và thời điểm xử lý lưu thật; không suy ra booking/payment đã thành công.
+
+Ngữ cảnh AI display có giới hạn, ràng buộc owner/session/role và TTL; chỉ copy
+server-owned transcript khi người dùng chọn chia sẻ. Không nhận transcript
+tự gửi từ browser và không dùng bản copy làm current business evidence/model
+history. Mẫu trả lời chỉ chèn bản nháp để staff kiểm tra rồi gửi.
+
+Bản đầu dùng polling 2 giây, heartbeat 15 giây, TTL presence 45 giây. Offline
+không tự giành phiên đang xử lý; admin requeue có audit event và tạm ngừng
+nhận của staff cũ. Chưa mở WebSocket, read receipts, attachments hoặc nâng cấp
+AI/provider. Không thay canonical role/status, framework hoặc scope nghiệp vụ.
+
+## ADR-030 — Email tự động đăng ký và thanh toán qua outbox
+
+Status: Accepted theo yêu cầu người dùng ngày 12/10/2026.
+
+Đăng ký public và tài khoản mới được tạo sau OTP guest booking enqueue thư
+chào mừng trong cùng transaction tạo user/booking. Chỉ verified successful
+VNPAY IPN enqueue biên nhận trong transaction settle payment. Không lấy Return
+làm settlement và không backfill email từ dữ liệu cũ. Snapshot chỉ chứa thông
+tin công khai cần gửi; không chứa password/hash/OTP/token. Không mở thêm luồng
+quên mật khẩu hay tự gửi mật khẩu tạm qua email. Guest được nhắc hoàn tất setup
+trong phiên OTP đã xác thực; giới hạn recovery cũ không được coi là đã giải quyết.
+
+EmailDelivery có unique dedupeKey, FK user, snapshot JSON, locale, lifecycle,
+attempts/backoff và lease. Worker claim bằng FOR UPDATE SKIP LOCKED, gửi SMTP
+sau commit và chỉ ghi kết quả nếu còn giữ lease token. Thiếu cấu hình giữ
+PENDING không tăng attempts; lỗi gửi tối đa năm lần rồi FAILED, operator retry
+bằng CLI. Lease hết hạn được recover; lease cuối đã hết lượt ghi
+DELIVERY_UNCERTAIN để operator xem xét. Delete user cascade outbox; không suy
+ra dữ liệu email cần giữ vĩnh viễn. Các trường snapshot không đưa vào public API.
+
+SMTP thật là bắt buộc; loại fallback Ethereal/console-success. TLS/STARTTLS và
+timeout áp dụng, chỉ fixture SMTP loopback trong NODE_ENV=test được plaintext.
+SENT là SMTP acceptance, không chứng minh inbox. Message-ID cố định theo delivery
+hỗ trợ nhận diện retry nhưng crash sau SMTP acceptance trước DB write có thể
+gửi trùng; không hứa exactly-once qua SMTP. Không lưu raw provider error có thể
+chứa credential; CLI chỉ đọc trạng thái/configuration flags, không dump env.
+
+Biên nhận dùng thông tin tại thời điểm IPN và giờ Việt Nam. Thanh toán trễ sau
+CANCELLED/REJECTED hoặc trùng settlement phải nêu cần đối soát, không đổi lịch.
+Registration chọn locale request VI/EN; receipt mặc định VI do IPN không mang
+ngôn ngữ khách. Mail quản trị UI, webhook bounce/delivery và lưu lựa chọn ngôn
+ngữ khách chưa nằm trong bản này. User chưa có tài khoản SMTP; không ghi live
+inbox PASS. VNPAY merchant mã70 vẫn là điều kiện ngoài feature email.
+
+## ADR-031 — Vận hành tài nguyên ảo gắn nghiệp vụ
+
+Người dùng ngày 12/10 thay thế màn kịch bản demo bằng quản lý vòng đời phòng,
+máy và linh kiện trong danh mục: bàn giao, vận hành, hoàn trả, hư hỏng, bảo trì
+theo ngày/giờ và kiểm tra sau sửa chữa. Phiên vận hành ghi workload/occupancy
+do staff khai báo và thời gian server; không tự phát số đo vật lý. Resource
+operationalStatus vẫn do thao tác nghiệp vụ có quyền và lịch sử quyết định.
+Policy bảo trì không tự cấp chứng nhận an toàn; hoàn thành job và kiểm tra đạt
+là hai bước riêng. Migrations đã áp dụng giữ bất biến.
+
+## ADR-032 — Đặt lịch tự xác nhận, giá thuê và chu kỳ bảo trì
+
+Theo yêu cầu người dùng 12/10, booking mới hợp lệ tự CONFIRMED; cờ requiresApproval
+legacy không tạo hàng đợi mới. Giữ các trạng thái và API xử lý lịch cũ. Staff
+phụ trách bàn giao, nhận trả, di chuyển lịch và hỗ trợ. Di chuyển giữ thời lượng/
+phí, optimistic start snapshot, khóa resource/booking và kiểm tra lại xung đột.
+
+Chu kỳ dùng actualStartAt → actualEndAt (phiên đang mượn tính đến hiện tại); số
+lượt chỉ tính bàn giao đã hoàn trả sau baseline, không đếm yêu cầu hoặc đổi tải.
+Mốc mặc định 80% gửi cảnh báo, 100% gửi đến hạn và chặn sử dụng tiếp. Notification
+scoped admin/staff có unique key theo resource/baseline/stage/recipient; đọc lại
+DB dưới resource lock để tránh cảnh báo cũ sau inspection. Kiểm tra đạt kết thúc
+chu kỳ cũ và xóa cảnh báo khỏi danh sách chưa đọc, giữ lịch sử.
+
+Giá hiện hành là bảng giá nội bộ do hệ thống cấu hình, không phải giá thị trường.
+25 tài nguyên có giá riêng; bốn purpose hiện cùng giá để một tài nguyên hiện một
+mức thuê. ADMIN sửa rate và duration qua transaction/audit; snapshot booking và
+payment cũ không đổi. Resource và LAB cùng giới hạn thời lượng, lấy mức nhỏ hơn.
+Không tự ghi payment thành công hoặc bỏ qua đào tạo/trạng thái vật lý.
+
+Clarification cùng ngày: áp dụng trên toàn hệ thống, gồm projections resource,
+calendar và AI. Trang khách/tiến trình mới không trình bày chờ duyệt như một bước
+mặc định; chỉ hiển thị xử lý legacy khi có bản ghi. Optional guidance mở theo nhu
+cầu ở các màn hình chính. Availability chỉ xét các booking/maintenance giao với
+khoảng truy vấn; không khóa cả tài nguyên vì có một lịch bảo trì tương lai.
+
+## ADR-033 — Ba vai trò và đăng ký tối giản (13/10/2026)
+
+Người dùng yêu cầu thay LECTURER/STUDENT bằng CUSTOMER. Canonical roles là
+ADMIN, LAB_STAFF, CUSTOMER; không alias role cũ. Quyết định này thay hợp đồng
+actor cũ, phần academic của ADR-024/026 và identity STUDENT của quick booking.
+Migration 20261012001000 chuyển tài khoản cũ, giữ ID, credentials và quan hệ;
+audit actorRoleSnapshot chuyển sang TEXT để giữ đúng vai trò tại thời điểm sự kiện.
+Không sửa baseline/migration cũ hoặc xóa lịch sử. Các màn hình/mutation học phần
+ngừng dùng; ADMIN vẫn đọc được archive API. Không chuyển quyền học phần cho khách.
+
+Đăng ký public chỉ email/password (8–128 ký tự), server luôn cấp CUSTOMER.
+Tên ban đầu trống, UI dùng email. Khi đặt lịch, cần họ tên 2–255 ký tự và số điện
+thoại hợp lệ (10 số bắt đầu bằng 0 hoặc số quốc tế có +). Ghi contact profile và
+Booking.contactSnapshot trong cùng transaction; lỗi đặt lịch rollback thay đổi
+liên hệ. Lần sau dùng thông tin đã lưu. Địa chỉ/tổ chức không bắt buộc cho booking
+đến LAB. Validation giữ field/issue codes an toàn, chỉ rõ trường lỗi, focus đúng
+trường; placeholder form không chứa ví dụ dài. Quote, thanh toán, xung đột, care
+readiness, tự CONFIRMED và scope staff/owner của ADR-032 vẫn bắt buộc.

@@ -25,7 +25,7 @@ phần cứng thực tế.
 | Available, Occupied, Fault | Bộ trạng thái chuẩn đã có | Dùng AVAILABLE, IN_USE, BROKEN…; không thêm Occupied/Fault hay trạng thái đặt lịch mới |
 | SensorLog, Alert, ResourceLog | TelemetrySample, TelemetrySource, MonitoringAlert, Incident, UsageLog đã có | Tái sử dụng xác thực nguồn, ngưỡng, episode và bằng chứng; không tạo bộ bảng song song |
 | Mô phỏng cảm biến mỗi 3–10 giây | Giám sát đã nhận mẫu từ nguồn xác thực; thiếu phần cứng và demo simulator đã được kiểm chứng | Chuẩn bị kịch bản độc lập có nhãn. Chưa đưa dữ liệu tổng hợp vào luồng giám sát sử dụng thật |
-| Nhiệt độ phòng trên 32°C | Ngưỡng có thứ tự tài nguyên → lab → mặc định | 32°C là cấu hình minh họa của phòng trong preview. Không đổi mặc định cho mọi thiết bị |
+| Nhiệt độ phòng trên 32°C | Ngưỡng có thứ tự tài nguyên → lab → mặc định | Ngưỡng cần cấu hình theo tài nguyên. Không đổi mặc định cho mọi thiết bị |
 | Quá nhiệt hoặc đủ giờ dùng tự chuyển bảo trì | Trạng thái vật lý do nghiệp vụ có thẩm quyền quyết định | Cảnh báo dẫn đến kiểm tra, tạo sự cố, lập bảo trì. Không tự đổi trạng thái vật lý hoặc hủy lịch chỉ vì mô phỏng |
 | Điện năng, số người trong phòng | Chưa có nguồn đo và hợp đồng dữ liệu được kiểm chứng | Chưa hiển thị như số đo thật. Sức chứa/nhu cầu đặt phòng khác với số người thực tế |
 | Báo cáo tuần/tháng, sử dụng nhiều/ít, lịch hủy | Dashboard cũ có chỉ số 30 ngày và danh sách tối đa 20 lịch | Đã thêm báo cáo 7/30 ngày, mức dùng từng tài nguyên, lịch hủy, không đến nhận, sự cố và bảo trì theo lịch |
@@ -76,25 +76,6 @@ Dashboard vẫn giữ danh sách sắp tới tối đa 20 dòng để đọc nha
 đang mở được đếm riêng từ toàn bộ trạng thái hoạt động, kể cả bàn giao quá giờ
 và hoàn trả đang chờ rà soát. Danh sách và tổng số vì vậy có mục đích khác nhau.
 
-### 2. Kịch bản giám sát độc lập
-
-Chạy từ `backend/`:
-
-```text
-npm run demo:monitoring-scenario
-npm run demo:monitoring-scenario -- --play
-```
-
-Lệnh đầu xuất JSON; `--play` phát từng bước cách nhau năm giây:
-chờ sử dụng → đang dùng → quá nhiệt → mất kết nối → hồi phục → kết thúc.
-Các kết quả mang nhãn `SIMULATION_PREVIEW`, dùng lại quy tắc phân loại và
-ngưỡng của backend. Kịch bản cố định nên có thể lặp lại và kiểm thử.
-
-Đây là preview quy tắc, **chưa phải simulator IoT tích hợp**: không đọc/ghi DB,
-gửi API, nhận credential, tạo cảnh báo/sự cố đã lưu hay đổi trạng thái tài nguyên.
-Giờ sử dụng trong preview là giả định của kịch bản, tách khỏi báo cáo vận hành.
-Không có tuyên bố đã đo nhiệt độ, điện năng hoặc số người trong phòng.
-
 ## Luồng bảo vệ và ứng dụng thực tế
 
 ```mermaid
@@ -116,8 +97,8 @@ flowchart LR
 2. ADMIN/nhân viên đúng lab xử lý lịch. Trùng lịch, điều kiện đào tạo và trạng
    thái vật lý được kiểm tra ở backend.
 3. Bàn giao qua luồng chuẩn ghi actualStartAt và đồng bộ IN_USE trong transaction.
-4. Chỉ demo dữ liệu giám sát đã có nguồn/provenance. Nếu thiếu phần cứng, chạy
-   preview riêng và trình bày rõ đây là dữ liệu tổng hợp.
+4. Vận hành tài nguyên ảo gắn booking, workload/occupancy khai báo và giờ server;
+   đối chiếu SRS/CURRENT_STATE cho phạm vi hiện hành.
 5. Cảnh báo thật/đã chấp nhận theo chính sách liên kết với sự cố. Người có quyền
    kiểm tra, phân công và xử lý; lịch bảo trì không được ghi đè lịch đang có.
 6. Hoàn trả ghi actualEndAt, giữ các trạng thái nghiêm trọng như BROKEN hoặc
@@ -129,10 +110,6 @@ flowchart LR
 
 Đây là các bước kế tiếp có giới hạn, chưa phải tuyên bố đã triển khai:
 
-1. **Simulator tích hợp:** môi trường demo và DB riêng; nguồn có nhãn mô phỏng,
-   credential riêng, tắt mặc định. Dùng cùng API ingestion và cảnh báo hiện có.
-   Kiểm chứng replay, hồi phục, lưu lịch sử, tách khỏi số liệu phần cứng thật.
-   Nút kích hoạt kịch bản chỉ dành cho người quản trị trong môi trường đó.
 2. **Hai chức năng AI:** tra cứu lịch phù hợp bằng API và tóm tắt vận hành từ
    báo cáo đã phân quyền. Kiểm tra bộ câu hỏi VI/EN, số liệu được dẫn, xử lý thiếu
    dữ liệu, lỗi nhà cung cấp và từ chối thao tác vượt quyền. Chưa công bố chất
@@ -151,7 +128,7 @@ giữ nguyên phạm vi hiện tại.
 
 ## Kiểm chứng và giới hạn
 
-Xem [báo cáo lần chạy](../artifacts/implementation-direction-20261005/REPORT.md).
+Xem báo cáo lần chạy (historical run output; retired).
 Code cũ và thay đổi local đã được giữ, file sửa có bản sao SHA256 trong artifacts.
 Không đổi schema/migration, reset dữ liệu, thêm API key hay push Git.
 Thử nghiệm DB dùng fixture có nhãn trong DB test riêng, xóa đúng fixture của

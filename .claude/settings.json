@@ -1,0 +1,19 @@
+{
+  "autoCompactWindow": 120000,
+  "skillOverrides": {
+    "algorithmic-art": "user-invocable-only",
+    "banner-design": "user-invocable-only",
+    "brand": "user-invocable-only",
+    "canvas-design": "user-invocable-only",
+    "design": "user-invocable-only",
+    "file-van-phong": "user-invocable-only",
+    "internal-comms": "user-invocable-only",
+    "mcp-builder": "user-invocable-only",
+    "skill-creator": "user-invocable-only",
+    "slack-gif-creator": "user-invocable-only",
+    "slides": "user-invocable-only",
+    "theme-factory": "user-invocable-only",
+    "viet-tai-lieu": "user-invocable-only",
+    "web-artifacts-builder": "user-invocable-only"
+  }
+}

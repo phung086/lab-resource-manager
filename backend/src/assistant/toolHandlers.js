@@ -7,7 +7,9 @@ import { assertBookingAccess } from "../middleware/labScope.js";
 import {
   checkLabPolicyCompliance,
   buildAvailabilityResult,
+  getResourceAvailability,
 } from "../services/availabilityService.js";
+import { assertCareReady } from "../services/resourceCareAccounting.js";
 import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
 import { serializeTelemetry } from "../services/telemetryService.js";
 import { getTrainingEligibility } from "../services/trainingEligibilityService.js";
@@ -71,6 +73,7 @@ const resourceSelect = {
   location: true,
   laboratoryId: true,
   requiresApproval: true,
+  maxBookingMinutes: true,
   specs: true,
 };
 const bookingSelect = {
@@ -223,8 +226,20 @@ async function scopedResource(actor, resourceId) {
     );
   return row;
 }
-const projectResource = (r) =>
-  Object.fromEntries(Object.keys(resourceSelect).map((k) => [k, r[k]]));
+const projectResource = (r) => ({
+  ...Object.fromEntries(Object.keys(resourceSelect).map((k) => [k, r[k]])),
+  requiresApproval: false,
+});
+const projectPolicy = (r) => r.laboratory?.labPolicy
+  ? { ...r.laboratory.labPolicy, requiresApproval: false } : null;
+
+async function careBlockReason(resourceId) {
+  try { await assertCareReady(prisma, resourceId); return null; }
+  catch (error) {
+    if (["RESOURCE_MAINTENANCE_DUE", "RESOURCE_INSPECTION_REQUIRED", "RESOURCE_COMPONENT_BROKEN", "RESOURCE_ROOM_UNAVAILABLE"].includes(error.code)) return error.code;
+    throw error;
+  }
+}
 async function searchResources(input, actor) {
   const where = {
     ...(await resourceScope(actor)),
@@ -248,7 +263,7 @@ async function searchResources(input, actor) {
     take: input.limit || 10,
   });
   return {
-    resources: rows,
+    resources: rows.map(projectResource),
     returned: rows.length,
     limit: input.limit || 10,
     source: "database",
@@ -258,7 +273,7 @@ async function resourceDetail({ resourceId }, actor) {
   const r = await scopedResource(actor, resourceId);
   return {
     resource: projectResource(r),
-    policy: r.laboratory?.labPolicy || null,
+    policy: projectPolicy(r),
     source: "database",
   };
 }
@@ -415,6 +430,7 @@ function policyResult(resource, startAt, endAt, now = new Date()) {
   if (resource.laboratory && !resource.laboratory.isActive)
     return "LAB_INACTIVE";
   if (startAt < now) return "PAST_TIME";
+  if (resource.maxBookingMinutes != null && (endAt - startAt) / 60000 > resource.maxBookingMinutes) return "RESOURCE_DURATION_EXCEEDED";
   try {
     checkLabPolicyCompliance({
       policy: resource.laboratory?.labPolicy,
@@ -431,8 +447,7 @@ function policyResult(resource, startAt, endAt, now = new Date()) {
 async function conflicts(input, actor) {
   const resource = await scopedResource(actor, input.resourceId);
   const [startAt, endAt] = interval(input.startAt, input.endAt);
-  const data = await blocks(resource.id, startAt, endAt);
-  const result = buildAvailabilityResult({ resource, startAt, endAt, ...data });
+  const result = await getResourceAvailability(prisma, { resourceId: resource.id, resource, startAt, endAt });
   const policy = policyResult(resource, startAt, endAt);
   return {
     resourceId: resource.id,
@@ -452,6 +467,7 @@ async function conflicts(input, actor) {
 }
 async function eligibility({ resourceId }, actor) {
   const r = await scopedResource(actor, resourceId);
+  const careReason = await careBlockReason(resourceId);
   const training = await getTrainingEligibility(prisma, {
     userId: actor.id,
     resourceId,
@@ -460,15 +476,15 @@ async function eligibility({ resourceId }, actor) {
   return {
     resourceId,
     bookable:
-      training.eligible &&
+      training.eligible && !careReason &&
       r.bookingState === "bookable" &&
       ["AVAILABLE", "IN_USE"].includes(r.operationalStatus) &&
       r.laboratory?.isActive !== false,
     missingTraining: training.missingTraining.map(({ code, name }) => ({ code, name })),
-    requiresApproval: Boolean(
-      r.requiresApproval || r.laboratory?.labPolicy?.requiresApproval,
-    ),
-    policy: r.laboratory?.labPolicy || null,
+    requiresApproval: false,
+    policy: projectPolicy(r),
+    careReason,
+    maxBookingMinutes: r.maxBookingMinutes,
     finalValidationRequired: true,
     source: "database",
   };
@@ -503,6 +519,7 @@ async function findSlots(input, actor, { signal } = {}) {
   resourceLoop: for (const resource of resources) {
     assertNotAborted(signal);
     if (!["AVAILABLE", "IN_USE"].includes(resource.operationalStatus) || resource.bookingState !== "bookable") continue;
+    if (await careBlockReason(resource.id)) continue;
     resourcesChecked += 1;
     const data = await blocks(resource.id, from, to);
     // Fixed 15-minute grid in absolute time (UTC+7 has no DST); canonical policy evaluates VN wall time.
@@ -536,10 +553,7 @@ async function findSlots(input, actor, { signal } = {}) {
           resourceName: resource.name,
           startAt: startAt.toISOString(),
           endAt: endAt.toISOString(),
-          requiresApproval: Boolean(
-            resource.requiresApproval ||
-              resource.laboratory?.labPolicy?.requiresApproval,
-          ),
+          requiresApproval: false,
         });
         t += duration * 60000 - 900000;
       }

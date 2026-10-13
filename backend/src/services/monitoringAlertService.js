@@ -41,6 +41,7 @@ export async function acknowledgeMonitoringAlert(tx, { alertId, actor }) {
 export function serializeMonitoringAlert(alert) {
   return {
     id: alert.id,
+    origin: alert.origin || "EXTERNAL",
     sourceId: alert.sourceId,
     sourceCode: alert.source?.code,
     resourceId: alert.resourceId,

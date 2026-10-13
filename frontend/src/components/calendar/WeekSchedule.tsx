@@ -1,10 +1,12 @@
 import { translate } from "../../i18n.js";
 import { useLocale } from '../../providers/LocaleProvider';
+import { vietnamTimeToIso } from "../../utils/timezone.js";
 import React from "react";
 import { CheckCircle2, Lock, Wrench, Plus, Clock } from "lucide-react";
 
 export interface WeekScheduleProps {
   slotsData: any;
+  blocked?: boolean;
   selectedResourceName?: string;
   onSelectSlot: (dateStr: string, timeStr: string) => void;
   onSelectBooking?: (booking: any) => void;
@@ -12,6 +14,7 @@ export interface WeekScheduleProps {
 
 export const WeekSchedule: React.FC<WeekScheduleProps> = ({
   slotsData,
+  blocked = false,
   selectedResourceName,
   onSelectSlot,
   onSelectBooking
@@ -32,7 +35,7 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
 
   return (
     <div className="calendar-week-frame">
-      <div className="calendar-week-scroll">
+      <div className="calendar-week-scroll" role="region" aria-label={tr("ui.calendarWorkspace.weekGrid")} tabIndex={0}>
         <div
           className="calendar-week-slots-grid"
         >
@@ -127,13 +130,15 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                   );
                 }
 
-                // Available slot (visually quiet by default, revealed on hover/focus)
+                const isPast = !dayHeader?.fullDate || new Date(vietnamTimeToIso(dayHeader.fullDate, row.time)).getTime() <= Date.now();
+                // Show selectable slots without depending on hover.
                 return (
                   <button
                     type="button"
                     key={`${row.hour}-${idx}`}
+                    disabled={isPast || blocked}
                     onClick={() => onSelectSlot(dayHeader?.fullDate, row.time)}
-                    className="calendar-week-cell is-available w-full text-left p-1.5 group cursor-pointer transition-colors flex flex-col justify-between"
+                    className={`calendar-week-cell ${isPast ? "is-past" : "is-available"} w-full text-left p-1.5 group transition-colors flex flex-col justify-between`}
                     aria-label={
                       selectedResourceName
                         ? translate("ui.book_at_on_a37b206a", { value0: selectedResourceName, value1: row.time, value2: dayHeader?.dateStr || "" })
@@ -146,10 +151,10 @@ export const WeekSchedule: React.FC<WeekScheduleProps> = ({
                     }
                   >
                     <div className="w-full flex items-center justify-end">
-                      <Plus size={11} className="calendar-slot-hover-icon opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-blue-600 transition-opacity" aria-hidden="true" />
+                      <Plus size={13} className="calendar-slot-hover-icon opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-blue-600 transition-opacity" aria-hidden="true" />
                     </div>
                     <div className="calendar-slot-action text-[10px] font-medium opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-blue-600 transition-opacity">
-                      {tr("ui.book_f0937e77")}{row.time}
+                      {tr(isPast ? 'ui.calendarWorkspace.past' : blocked ? 'ui.resource_unavailable_cf6673b5' : 'ui.book_f0937e77')}{!isPast && !blocked ? ` ${row.time}` : ''}
                     </div>
                   </button>
                 );

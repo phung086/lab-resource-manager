@@ -35,7 +35,7 @@ certification. Required booking operations take priority over optional integrati
   stock/teaching, monitoring, OTP and optional payment contracts.
 
 These identify relevant checks; consult [current state](../CURRENT_STATE.md) and
-[review follow-up](../backlogs/review-followup-20261003.md) for checks actually run
+review follow-up (historical run output; retired) for checks actually run
 on this working tree. Worker counts, coverage and physical-device claims require
 real evidence.
 

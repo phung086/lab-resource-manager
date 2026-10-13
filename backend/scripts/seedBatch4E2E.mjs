@@ -105,13 +105,13 @@ try {
   for (const [id, email, fullName, role] of [
     [ids.admin, "b4.admin@lab.test", "Batch 4 Admin", "ADMIN"],
     [ids.staff, "b4.staff@lab.test", "Batch 4 Staff", "LAB_STAFF"],
-    [ids.student, "b4.student@lab.test", "Batch 4 Student", "STUDENT"],
-    [ids.student2, "b4.student2@lab.test", "Batch 4 Student Two", "STUDENT"],
-    [ids.lecturer, "b4.lecturer@lab.test", "Batch 4 Lecturer", "LECTURER"]
+    [ids.student, "b4.student@lab.test", "Batch 4 Student", "CUSTOMER"],
+    [ids.student2, "b4.student2@lab.test", "Batch 4 Student Two", "CUSTOMER"],
+    [ids.lecturer, "b4.lecturer@lab.test", "Batch 4 Lecturer", "CUSTOMER"]
   ]) {
     await prisma.user.upsert({
       where: { email },
-      update: { fullName, role, passwordHash, isActive: true },
+      update: { fullName, phone: "0901234567", role, passwordHash, isActive: true },
       create: { id, email, fullName, role, passwordHash, isActive: true }
     });
   }

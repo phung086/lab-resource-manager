@@ -1,5 +1,7 @@
+import { HelpDisclosure } from "./base/HelpDisclosure";
 import { translate } from "../i18n.js";
 import { ResourceUsageGuide } from "./ResourceUsageGuide";
+import { ResourceSpecifications } from "./ResourceSpecifications";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import { apiRequest } from "../api.js";
@@ -9,6 +11,7 @@ import { CalendarClock, History, Server } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026";
 import { LabPolicySummary } from "./LabPolicySummary";
 import { formatVietnamDateTime } from "../utils/timezone.js";
+import "../styles/resource-workspace.css";
 
 export interface ResourceDetailsModalProps {
   isOpen: boolean;
@@ -26,7 +29,7 @@ const categoryLabels: Record<string, string> = {
 };
 const operationalLabels: Record<string, string> = {
   AVAILABLE: "ui.available_d654065d", IN_USE: "ui.in_use_a07a3647", MAINTENANCE: "ui.maintenance_8ad424bd",
-  CALIBRATION: "ui.calibration_a71e17c8", BROKEN: "ui.broken_fd69bba6", RETIRED: "ui.offline_b4f199c3", OFFLINE: "ui.offline_96a8bb03"
+  CALIBRATION: "ui.calibration_a71e17c8", BROKEN: "ui.broken_fd69bba6", RETIRED: "ui.retired_910c0237", OFFLINE: "ui.offline_96a8bb03"
 };
 const bookingLabels: Record<string, string> = {
   PENDING_APPROVAL: "ui.pending_approval_6af96613", CONFIRMED: "ui.confirmed_e72d13e3", CHECKED_OUT: "ui.in_use_a07a3647",
@@ -74,13 +77,13 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
     >
       <div className="resource-dossier">
       <nav className="refine-section-nav" aria-label={tr("refine.detailSections")}>
-        {["overview", "specifications", "schedule", "history"].map(value => <button key={value} type="button" aria-pressed={section === value} aria-controls={`dossier-${value}`} onClick={() => setSection(value)}>{tr(`refine.${value}`)}</button>)}
+        {["overview", "specifications", "schedule", "history"].map(value => <button key={value} type="button" aria-pressed={section === value} aria-controls={`dossier-${value}`} onPointerEnter={() => setSection(value)} onFocus={() => setSection(value)} onClick={() => setSection(value)}>{tr(`refine.${value}`)}</button>)}
       </nav>
       <section id="dossier-overview" hidden={section !== "overview"}>
       <ResourceGallery key={resource.id} resourceId={resource.id} initialItems={resource.media} />
       <div className="resource-detail-status-line">
-        <span className={`resource-status-pill status-${String(resource.operationalStatus).toLowerCase()}`}>{tr(operationalLabels[resource.operationalStatus]) || resource.operationalStatus}</span>
-        <span className={`resource-status-pill status-${String(resource.availability?.state || "unavailable").toLowerCase()}`}>{tr(availabilityLabels[resource.availability?.state]) || tr("ui.not_bookable_cc51bab6")}</span>
+        <div><span className="resource-state-label">{tr("ui.physical_state_c30af32d")}</span><span className={`resource-status-pill status-${String(resource.operationalStatus).toLowerCase()}`}>{tr(operationalLabels[resource.operationalStatus]) || resource.operationalStatus}</span></div>
+        <div><span className="resource-state-label">{tr("ui.current_availability_f57c5e36")}</span><span className={`resource-status-pill status-${String(resource.availability?.state || "unavailable").toLowerCase()}`}>{tr(availabilityLabels[resource.availability?.state]) || tr("ui.not_bookable_cc51bab6")}</span></div>
         {!resource.category && <span className="resource-status-pill status-unresolved">{tr("ui.unclassified_10fe63fa")}</span>}
       </div>
 
@@ -96,7 +99,7 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
 
       </section>
       <section id="dossier-specifications" hidden={section !== "specifications"}>
-      <p className="section-description">{tr("ui.availability_describes_the_current_time_2913c3cd")}</p>
+      <HelpDisclosure>{tr("ui.availability_describes_the_current_time_2913c3cd")}</HelpDisclosure>
       <dl className="resource-detail-grid">
         <Detail label={tr("ui.resource_category_5fc170bb")} value={resource.category ? tr(categoryLabels[resource.category]) || resource.category : tr("ui.unclassified_10fe63fa")} />
         <Detail label={tr("ui.technical_subtype_f4ef03ac")} value={resource.subtype} />
@@ -110,12 +113,12 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
 
       <LabPolicySummary policy={resource.labPolicy || resource.laboratory?.labPolicy} requiresApproval={resource.effectiveRequiresApproval} />
 
-      <ResourceUsageGuide guide={resource.specs?.usageGuide} />
+      <ResourceUsageGuide guide={resource.specs?.usageGuide} isSample={resource.specs?.environment === "LOCAL_DEMO"} />
 
       {resource.specs && Object.keys(resource.specs).some(key => key !== "usageGuide") && (
         <section className="resource-detail-section">
           <h4>{tr("ui.recorded_specifications_eeeff271")}</h4>
-          <dl className="resource-spec-grid">{Object.entries(resource.specs).filter(([key]) => key !== "usageGuide").map(([key, value]) => <Detail key={key} label={key} value={String(value)} />)}</dl>
+          <ResourceSpecifications specs={resource.specs} />
         </section>
       )}
 

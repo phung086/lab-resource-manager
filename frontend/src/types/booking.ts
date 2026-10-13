@@ -31,6 +31,7 @@ export interface BookingResourceSummary {
 }
 
 export interface BookingRecord {
+  contactSnapshot?: { fullName: string; phone: string; email: string } | null;
   feeAmountVnd?: number;
   id: string;
   bookingCode?: string | null;

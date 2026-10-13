@@ -30,7 +30,7 @@ export async function seedQueueFixture(db) {
   }
   const password = "QueueTest!2026";
   const passwordHash = await bcrypt.hash(password, 4);
-  for (const [name, role] of Object.entries({ admin: "ADMIN", staff: "LAB_STAFF", foreignStaff: "LAB_STAFF", unassigned: "LAB_STAFF", student: "STUDENT", otherStudent: "STUDENT", lecturer: "LECTURER", inactive: "ADMIN" })) {
+  for (const [name, role] of Object.entries({ admin: "ADMIN", staff: "LAB_STAFF", foreignStaff: "LAB_STAFF", unassigned: "LAB_STAFF", student: "CUSTOMER", otherStudent: "CUSTOMER", lecturer: "CUSTOMER", inactive: "ADMIN" })) {
     users[name] = await db.user.create({ data: { id: id(), email: `${name.toLowerCase()}@queue.test`, fullName: `Queue ${name}`, role, isActive: name !== "inactive", passwordHash } });
   }
   await db.userLabAssignment.createMany({ data: [

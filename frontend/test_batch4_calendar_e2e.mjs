@@ -69,7 +69,7 @@ try {
   console.log("  Zero-resource empty state and disabled booking guard verified: PASS");
   await zeroResContext.close();
 
-  console.log("=== 1. STUDENT E2E WORKFLOW ===");
+  console.log("=== 1. CUSTOMER E2E WORKFLOW ===");
   const studentContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const studentPage = await studentContext.newPage();
   await login(studentPage, "b4.student@lab.test");
@@ -276,7 +276,7 @@ try {
 
   await studentContext.close();
 
-  console.log("=== 2. LECTURER E2E WORKFLOW ===");
+  console.log("=== 2. CUSTOMER E2E WORKFLOW ===");
   const lecturerContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const lecturerPage = await lecturerContext.newPage();
   await login(lecturerPage, "b4.lecturer@lab.test");

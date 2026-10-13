@@ -1,16 +1,18 @@
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
 import { Header } from "./Header.tsx";
 import { ProjectFooter } from "./features/ProjectFooter";
 import { KeyRound, Check, ShieldAlert } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.tsx";
+import "../styles/home-structure.css";
+import { validatePassword } from "../utils/profileValidation";
 import { apiRequest } from "../api.js";
-import { RESEARCH_FEATURES_ENABLED, AI_ASSISTANT_ENABLED } from "../config/featureFlags";
+import { AI_ASSISTANT_ENABLED } from "../config/featureFlags";
 import { AssistantLauncher } from './features/assistant/AssistantLauncher';
+import { MaintenanceNoticeToast } from './features/monitoring/MaintenanceNoticeToast';
 const LaboratoryAssistant = React.lazy(() => import("./features/assistant/LaboratoryAssistant"));
-import { AiCopilotDrawer, FloatingCopilotFab } from "../research/ResearchFeatureRegistry";
 
 export interface AppLayoutProps {
   activeTab: string;
@@ -69,7 +71,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     return () => media.removeEventListener('change', resize);
   }, []);
   const [navigationOpen, setNavigationOpen] = useState(false);
-  const [copilotOpen, setCopilotOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantMounted, setAssistantMounted] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -79,6 +80,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
+  const passwordBusyRef = useRef(false);
+  const [passwordFields, setPasswordFields] = useState<Record<string,string>>({});
 
   useEffect(() => {
     setNavigationOpen(false);
@@ -122,13 +125,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     if (passwordBusy) return;
     if (user?.passwordResetRequired && !passwordSuccess) return;
     setChangePasswordOpen(false);
+    setPasswordFields({});
     setPasswordError("");
     setPasswordSuccess(false);
   }
 
   // Map activeTab to readable header title
   const tabTitles: Record<string, string> = {
-    stock: translate("ui.materials_inventory_2b570ac6"), teaching: translate("ui.course_groups_73951b09"),
+    stock: translate("ui.materials_inventory_2b570ac6"),
     home: tr("ui.workspace_970a97e3"),
     profile: translate("ui.profile_and_lab_preferences_ab1e68a1"),
     payments: translate("ui.payments_d4b946cc"),
@@ -166,26 +170,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (passwordBusy) return;
-    setPasswordError("");
-    if (!currentPassword) {
-      setPasswordError("ui.enter_your_current_password_840cc081");
-      return;
-    }
-    if (!newPassword || newPassword.length < 8) {
-      setPasswordError("ui.your_new_password_must_have_b32509a2");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("ui.passwords_do_not_match_633c4090");
-      return;
-    }
-
+    if (passwordBusyRef.current) return;
+    setPasswordError('');
+    const checked=validatePassword({currentPassword,newPassword,confirmPassword});
+    setPasswordFields(checked.errors);
+    if (!checked.data) { const ids:Record<string,string>={currentPassword:'current-password',newPassword:'new-password',confirmPassword:'confirm-password'}; document.getElementById(ids[Object.keys(checked.errors)[0]])?.focus(); return; }
+    passwordBusyRef.current=true;
     setPasswordBusy(true);
     try {
       await apiRequest("/auth/change-password", {
         method: "POST",
-        body: JSON.stringify({ currentPassword, newPassword })
+        body: JSON.stringify(checked.data)
       });
       setPasswordSuccess(true);
       onPasswordChanged?.();
@@ -195,6 +190,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     } catch (error: any) {
       setPasswordError(error?.message || "ui.could_not_change_your_password_6c44efd3");
     } finally {
+      passwordBusyRef.current=false;
       setPasswordBusy(false);
     }
   }
@@ -234,35 +230,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           onOpenHome={() => navigateFromShell("home")}
           onLogout={onLogout}
           onOpenAssistant={AI_ASSISTANT_ENABLED ? openAssistant : undefined}
+          assistantControl={AI_ASSISTANT_ENABLED && !changePasswordOpen ? <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} /> : undefined}
         />
 
         <main id="workspace-main" tabIndex={-1} className="main-body-container-2026">
           {children}
+          <MaintenanceNoticeToast role={user?.role || ''}/>
         </main>
         <ProjectFooter variant="workspace" role={user?.role} onNavigate={navigateFromShell} />
       </div>
 
-      {AI_ASSISTANT_ENABLED && !navigationOpen && !changePasswordOpen && <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} />}
       {AI_ASSISTANT_ENABLED && assistantMounted && <React.Suspense fallback={assistantOpen ? <p className="assistant-loading" role="status">{translate("ui.opening_assistant_9a8f8008")}</p> : null}>
         <LaboratoryAssistant isOpen={assistantOpen && !navigationOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />
       </React.Suspense>}
-      {RESEARCH_FEATURES_ENABLED && (
-        <React.Suspense fallback={null}>
-          <FloatingCopilotFab
-            isOpen={copilotOpen}
-            onClick={() => setCopilotOpen(true)}
-          />
-          <AiCopilotDrawer
-            isOpen={copilotOpen}
-            onClose={() => setCopilotOpen(false)}
-            onActionTrigger={(action) => {
-              if (action === "auto_resolve_sla" || action === "thermal_throttle_rebalance") {
-                handleSelectTab("conflict_queue");
-              }
-            }}
-          />
-        </React.Suspense>
-      )}
 
       <BaseModal2026
         isOpen={changePasswordOpen}
@@ -277,7 +257,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           {!passwordSuccess && <button type="submit" form="change-password-form" className="btn btn-primary" disabled={passwordBusy}>{passwordBusy ? tr("ui.updating_01c0991e") : tr("ui.update_password_a9f9616f")}</button>}
         </>}
       >
-            <form id="change-password-form" onSubmit={handlePasswordSubmit} className="booking-form">
+            <form id="change-password-form" onSubmit={handlePasswordSubmit} className="booking-form password-setup-form" noValidate>
+              {Object.keys(passwordFields).length>0 && <div className="alert danger" role="alert"><ul>{Object.entries(passwordFields).map(([field,message])=><li key={field}>{tr(message)}</li>)}</ul></div>}
               {passwordError && (
                 <div className="alert danger text-xs flex items-center gap-2" role="alert">
                   <ShieldAlert size={14} aria-hidden="true" />
@@ -295,39 +276,54 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 <label htmlFor="current-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.current_password_7f06b3a5")}</label>
                 <input
                   id="current-password"
+                  maxLength={128}
+                  disabled={passwordBusy || passwordSuccess}
+                  aria-invalid={!!passwordFields.currentPassword}
+                  aria-describedby={passwordFields.currentPassword?'current-password-error':undefined}
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder={tr("ui.enter_current_password_60f70758")}
+
                   autoComplete="current-password"
                   required
                 />
+                {passwordFields.currentPassword && <small className="password-field-error" id="current-password-error">{tr(passwordFields.currentPassword)}</small>}
               </div>
 
               <div>
                 <label htmlFor="new-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.new_password_8f6cace3")}</label>
                 <input
                   id="new-password"
+                  maxLength={128}
+                  disabled={passwordBusy || passwordSuccess}
+                  aria-invalid={!!passwordFields.newPassword}
+                  aria-describedby={passwordFields.newPassword?'new-password-error':undefined}
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder={tr("ui.at_least_8_characters_5b6fe49d")}
+
                   autoComplete="new-password"
                   required
                 />
+                {passwordFields.newPassword && <small className="password-field-error" id="new-password-error">{tr(passwordFields.newPassword)}</small>}
               </div>
 
               <div>
                 <label htmlFor="confirm-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.confirm_new_password_7a0fe0f4")}</label>
                 <input
                   id="confirm-password"
+                  maxLength={128}
+                  disabled={passwordBusy || passwordSuccess}
+                  aria-invalid={!!passwordFields.confirmPassword}
+                  aria-describedby={passwordFields.confirmPassword?'confirm-password-error':undefined}
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder={tr("ui.repeat_password_f012d34b")}
+
                   autoComplete="new-password"
                   required
                 />
+                {passwordFields.confirmPassword && <small className="password-field-error" id="confirm-password-error">{tr(passwordFields.confirmPassword)}</small>}
               </div>
 
             </form>

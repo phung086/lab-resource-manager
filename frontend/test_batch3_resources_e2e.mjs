@@ -127,7 +127,7 @@ try {
     await mobileContext.close();
   }
 
-  console.log("Batch 3 frontend resource E2E: PASS (STUDENT, LECTURER, LAB_STAFF, ADMIN)");
+  console.log("Batch 3 frontend resource E2E: PASS (CUSTOMER, CUSTOMER, LAB_STAFF, ADMIN)");
 } finally {
   await browser.close();
 }

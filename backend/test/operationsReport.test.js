@@ -4,7 +4,7 @@ import { buildOperationsReport } from "../src/services/operationsReportService.j
 
 test("report service rejects ordinary roles and unsupported windows before database access", async () => {
   const client = { $queryRaw: () => assert.fail("No query should run") };
-  for (const role of ["LECTURER", "STUDENT", "STAFF"]) {
+  for (const role of ["CUSTOMER", "STAFF"]) {
     await assert.rejects(buildOperationsReport(client, { role }), error => error.code === "FORBIDDEN");
   }
   for (const days of [0, 1, 31, "7"]) {

@@ -1,7 +1,7 @@
 # Chuẩn bị và kết nối trợ lý AI LAB
 
 Ngày 05/10/2026. Phần chuẩn bị đã triển khai trên local, chưa thêm API key, chưa
-push Git và không mở Batch mới. [Báo cáo kiểm thử](../artifacts/assistant-api-preparation-20261005/REPORT.md)
+push Git và không mở Batch mới. Báo cáo kiểm thử (historical run output; retired)
 ghi rõ phần đã xác minh. [Hợp đồng kỹ thuật](AI_ASSISTANT_MCP.md) mô tả API và MCP.
 
 ## 1. Những gì đã sẵn sàng

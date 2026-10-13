@@ -30,7 +30,7 @@ async function openNav(page, id) {
 }
 
 try {
-  console.log("=== BATCH 6 STUDENT NOTIFICATIONS ===");
+  console.log("=== BATCH 6 CUSTOMER NOTIFICATIONS ===");
   const studentContext = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const studentPage = await studentContext.newPage();
   await login(studentPage, "b6.student@lab.test");
@@ -64,7 +64,7 @@ try {
   await visibleNotification.getByRole("heading", { name: catalogs.vi["notification.booking.upcoming.title"], exact: true }).waitFor();
   await studentPage.screenshot({ path: path.join(screenshotDir, "student_notifications_desktop.png"), fullPage: true });
 
-  console.log("=== BATCH 6 STUDENT INCIDENT REPORT ===");
+  console.log("=== BATCH 6 CUSTOMER INCIDENT REPORT ===");
   await openNav(studentPage, "incidents");
   await studentPage.locator("main").getByRole("heading", { name: "Sự cố tài nguyên" }).waitFor();
   await studentPage.getByText("Batch 6 sự cố phòng B").waitFor({ state: "visible" });

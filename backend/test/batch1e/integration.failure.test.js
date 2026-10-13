@@ -11,7 +11,7 @@ const [{ createApp }, { prisma }] = await Promise.all([
   import("../../src/db.js")
 ]);
 const app = createApp();
-const token = jwt.sign({ sub: "00000000-0000-4000-8000-000000000001", role: "STUDENT" }, process.env.JWT_SECRET);
+const token = jwt.sign({ sub: "00000000-0000-4000-8000-000000000001", role: "CUSTOMER" }, process.env.JWT_SECRET);
 const auth = { Authorization: `Bearer ${token}` };
 
 test("Batch 1E-L2 controlled DB outage never returns fake core success", { timeout: 60000 }, async () => {

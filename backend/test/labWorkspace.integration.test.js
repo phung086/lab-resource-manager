@@ -29,7 +29,7 @@ test.before(async () => {
   const building = await prisma.building.create({ data: { id: id(), code: marker, name: 'Test building', campusId: campus.id } });
   lab = await prisma.laboratory.create({ data: { id: id(), code: `A-${marker}`, name: 'Assigned lab', buildingId: building.id } });
   otherLab = await prisma.laboratory.create({ data: { id: id(), code: `B-${marker}`, name: 'Foreign lab', buildingId: building.id } });
-  for (const [name, role] of Object.entries({ admin: 'ADMIN', staff: 'LAB_STAFF', unassigned: 'LAB_STAFF', lecturer: 'LECTURER', otherLecturer: 'LECTURER', student: 'STUDENT', otherStudent: 'STUDENT' })) {
+  for (const [name, role] of Object.entries({ admin: 'ADMIN', staff: 'LAB_STAFF', unassigned: 'LAB_STAFF', lecturer: 'CUSTOMER', otherLecturer: 'CUSTOMER', student: 'CUSTOMER', otherStudent: 'CUSTOMER' })) {
     users[name] = await prisma.user.create({ data: { id: id(), email: `${name}-${marker}@example.test`.toLowerCase(), fullName: `Test ${name}`, role, passwordHash: await bcrypt.hash('WorkspaceTest!2026', 4) } });
     const response = await request(app).post('/api/auth/login').send({ email: users[name].email, password: 'WorkspaceTest!2026' });
     assert.equal(response.status, 200); tokens[name] = response.body.accessToken;
@@ -66,24 +66,17 @@ test('stock scope, initialization, retries and concurrent issues preserve the ba
   assert.equal(await prisma.systemAuditEvent.count({ where: { resourceId: material.id, action: 'STOCK_MOVEMENT_RECORDED' } }), 3);
 });
 
-test('teaching assignments protect student privacy and support revision without approving a resource', async () => {
-  const body = { code: marker, name: 'Laboratory practical group', term: '2026-1', lecturerEmail: users.lecturer.email };
-  assert.equal((await call('post', '/lab-workspace/groups', 'lecturer', body)).status, 403);
-  const created = await call('post', '/lab-workspace/groups', 'admin', body); assert.equal(created.status, 201); group = created.body;
-  assert.equal((await call('get', `/lab-workspace/groups/${group.id}`, 'otherLecturer')).status, 403);
-  assert.equal((await call('get', '/lab-workspace/groups', 'staff')).status, 403);
-  for (const name of ['student', 'otherStudent']) assert.equal((await call('post', `/lab-workspace/groups/${group.id}/members`, 'lecturer', { email: users[name].email })).status, 201);
-  const submit = { bookingId: booking.id, learningGoal: 'Measure circuit voltage accurately' };
-  assert.equal((await call('post', `/lab-workspace/groups/${group.id}/activities`, 'otherStudent', submit)).status, 403);
-  const submitted = await call('post', `/lab-workspace/groups/${group.id}/activities`, 'student', submit); assert.equal(submitted.status, 201); activity = submitted.body;
-  const peerView = await call('get', `/lab-workspace/groups/${group.id}`, 'otherStudent'); assert.equal(peerView.body.activities.length, 0); assert.equal(peerView.body.members.length, 1);
-  const activityPath = `/lab-workspace/groups/${group.id}/activities/${activity.id}`;
-  assert.equal((await call('patch', activityPath, 'student', { decision: 'ENDORSED', feedback: 'Unauthorized approval' })).status, 403);
-  assert.equal((await call('patch', activityPath, 'otherLecturer', { decision: 'ENDORSED', feedback: 'Wrong lecturer' })).status, 403);
-  assert.equal((await call('patch', activityPath, 'lecturer', { decision: 'CHANGES_REQUESTED', feedback: 'Specify measurement tolerance' })).status, 200);
-  const revised = await call('patch', `${activityPath}/revision`, 'student', { learningGoal: 'Measure circuit voltage with a 1% tolerance' }); assert.equal(revised.status, 200); assert.equal(revised.body.decision, 'SUBMITTED');
-  assert.equal((await call('patch', activityPath, 'lecturer', { decision: 'ENDORSED', feedback: 'The objective is now clear' })).status, 200);
-  assert.equal((await prisma.booking.findUnique({ where: { id: booking.id } })).status, 'CONFIRMED');
+test('retired teaching workspace keeps a private ADMIN archive and rejects new mutations', async () => {
+  group = await prisma.teachingGroup.create({ data: { id: id(), code: marker, name: 'Historical group', term: '2026-1', lecturerId: users.lecturer.id } });
+  activity = await prisma.teachingActivity.create({ data: { id: id(), groupId: group.id, bookingId: booking.id, learningGoal: 'Historical learning goal' } });
+  await prisma.teachingMembership.create({ data: { groupId: group.id, userId: users.student.id } });
+  for (const name of ['student','lecturer','staff']) assert.equal((await call('get', '/lab-workspace/groups', name)).status,403);
+  const archive = await call('get', '/lab-workspace/groups/'+group.id, 'admin');
+  assert.equal(archive.status,200); assert.equal(archive.body.activities[0].id,activity.id);
+  assert.equal((await call('post','/lab-workspace/groups','admin',{code:'NEW'})).status,404);
+  assert.equal((await call('post','/lab-workspace/groups/'+group.id+'/members','admin',{email:users.student.email})).status,404);
+  assert.equal((await call('patch','/lab-workspace/groups/'+group.id+'/activities/'+activity.id,'admin',{decision:'ENDORSED',feedback:'No longer active'})).status,404);
+  assert.equal((await prisma.booking.findUnique({where:{id:booking.id}})).status,'CONFIRMED');
 });
 
 test('maintenance impact, rescheduling reason and terminal states are enforced by the API', async () => {

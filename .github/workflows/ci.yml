@@ -50,6 +50,14 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lrm_ci_fresh?schema=public
         run: npm run db:migrate
+      - name: Verify automatic emails with isolated PostgreSQL and loopback SMTP
+        env:
+          PGPASSWORD: postgres
+          EMAIL_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_email_test?schema=public
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE "lab_resources_email_test";'
+          DATABASE_URL="$EMAIL_TEST_DATABASE_URL" npm run db:migrate
+          npm run test:email:integration
       - name: Create isolated Batch 4 integration database
         env:
           PGPASSWORD: postgres
@@ -145,6 +153,61 @@ jobs:
         with:
           name: queue-pagination-browser
           path: logs/queue-pagination-ci
+
+  support-chat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lab_resources_support_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_support_test?schema=public
+      SUPPORT_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lab_resources_support_test?schema=public
+      SUPPORT_UI_URL: http://127.0.0.1:15186
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install and deploy isolated support test database
+        run: |
+          (cd backend && npm ci && npm run db:generate && npm run db:migrate)
+          (cd frontend && npm ci && npx playwright-core install --with-deps chromium)
+      - name: Verify durable chat, queue, permissions and browser flow
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd backend && npm run test:support:integration)
+          (cd frontend && VITE_ENABLE_AI_ASSISTANT=true VITE_API_BASE_URL=http://127.0.0.1:8000/api node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 15186 --strictPort) > "$RUNNER_TEMP/support-ui.log" 2>&1 &
+          ui_pid=$!
+          trap 'kill "$ui_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in {1..30}; do
+            if curl -fsS "$SUPPORT_UI_URL" >/dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then cat "$RUNNER_TEMP/support-ui.log"; exit 1; fi
+          (cd frontend && npm run test:ui:support)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: support-chat-browser
+          path: backend/logs/support-browser
 
   migration-safety:
     runs-on: ubuntu-latest

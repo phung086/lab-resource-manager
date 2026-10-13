@@ -1,43 +1,25 @@
-import { translate } from "../../../i18n.js";
+import React, { useEffect, useState } from 'react';
 import { useLocale } from '../../../providers/LocaleProvider';
-import React, { useEffect, useState } from "react";
-import { apiRequest } from "../../../api.js";
+import { apiRequest } from '../../../api.js';
+import { ResourceTariffTable } from '../../ResourceTariffTable';
+import '../../../styles/resource-catalogue.css';
 
-const purposes = { STUDY: "ui.study_practice_4937f9c0", TEACHING: "ui.teaching_9f674f2f", RESEARCH: "ui.research_8b814571", SERVICE: "ui.external_service_bfa35139" };
+type Resource = { id: string; name: string; code: string; maxBookingMinutes: number | null; rental: { hourlyRateVnd: number } | null };
 export function ResourcePricingEditor() {
-  const { tr } = useLocale();
-  const [resources, setResources] = useState<any[]>([]);
-  const [resourceId, setResourceId] = useState("");
-  const [rules, setRules] = useState<any[]>([]);
-  const [purposeCode, setPurposeCode] = useState("STUDY");
-  const [rate, setRate] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { apiRequest("/resources").then(setResources).catch(e => setError(e.message)); }, []);
-  useEffect(() => {
-    let active = true;
-    setRules([]); setNotice("");
-    if (resourceId) apiRequest(`/booking-pricing/${encodeURIComponent(resourceId)}`).then(rows => { if (active) setRules(rows); }).catch(e => { if (active) setError(e.message); });
-    return () => { active = false; };
-  }, [resourceId]);
-  async function save(event: React.FormEvent) {
-    event.preventDefault(); setBusy(true); setError(""); setNotice("");
-    try {
-      await apiRequest(`/booking-pricing/${encodeURIComponent(resourceId)}`, { method: "PUT", body: JSON.stringify({ purposeCode, label: purposes[purposeCode as keyof typeof purposes], hourlyRateVnd: Number(rate) }) });
-      setRules(await apiRequest(`/booking-pricing/${encodeURIComponent(resourceId)}`));
-      setNotice("ui.pricing_saved_existing_booking_fee_977d17c3");
-    } catch (e: any) { setError(e.message); } finally { setBusy(false); }
-  }
-  return <details className="panel payment-charge"><summary>{translate("ui.resource_pricing_by_purpose_b8e96e61")}</summary>
-    <p>{translate("ui.applies_to_internal_and_external_3039230a")}</p>
-    {error && <p role="alert">{translate(error)}</p>}{notice && <p role="status">{translate(notice)}</p>}
-    <form onSubmit={save} className="booking-form">
-      <label>{tr("ui.resource_9a35ef53")}<select aria-label={translate("ui.chargeable_resource_4b757486")} required value={resourceId} onChange={e => setResourceId(e.target.value)}><option value="">{tr("ui.select_a_resource_8849f4e1")}</option>{resources.map(r => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
-      <label>{tr("ui.pricing_purpose_f1a0b490")}<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{Object.entries(purposes).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></label>
-      <label>{translate("ui.vnd_per_hour_dbe020c0")}<input required type="number" min="0" max="100000000" step="1" value={rate} onChange={e => setRate(e.target.value)} /></label>
-      <button className="btn btn-primary" disabled={busy || !resourceId}>{busy ? tr("ui.saving_18c4cf71") : translate("ui.save_rates_6acc633e")}</button>
-    </form>
-    <ul>{rules.map(rule => <li key={rule.id}>{rule.label}: {rule.hourlyRateVnd.toLocaleString("vi-VN")}  {translate("ui.vnd_hour_version_44e8cdd0")} {rule.version}</li>)}</ul>
-  </details>;
+ const { tr } = useLocale();
+ const [resources,setResources]=useState<Resource[]>([]),[selected,setSelected]=useState(''),[rate,setRate]=useState(''),[minutes,setMinutes]=useState('');
+ const [error,setError]=useState(''),[saved,setSaved]=useState(false),[busy,setBusy]=useState(false),[revision,setRevision]=useState(0);
+ useEffect(()=>{const controller=new AbortController();apiRequest('/resources',{signal:controller.signal}).then(rows=>{if(!controller.signal.aborted)setResources(rows);}).catch(cause=>{if(!controller.signal.aborted)setError(cause.message);});return()=>controller.abort();},[revision]);
+ function choose(id:string) { const resource=resources.find(r=>r.id===id); if(!resource)return;setSelected(id);setRate(String(resource.rental?.hourlyRateVnd ?? ''));setMinutes(String(resource.maxBookingMinutes ?? ''));setSaved(false);setError(''); }
+ async function save(event:React.FormEvent<HTMLFormElement>) {
+  event.preventDefault();if(busy||!selected)return;setBusy(true);setError('');setSaved(false);
+  try { await apiRequest(`/booking-pricing/${selected}/tariff`,{method:'PUT',body:JSON.stringify({hourlyRateVnd:Number(rate),maxBookingMinutes:Number(minutes)})});setSaved(true);setRevision(value=>value+1); }
+  catch(cause){setError(cause instanceof Error?cause.message:'api.API_REQUEST_FAILED');}finally{setBusy(false);}
+ }
+ return <details className="panel payment-pricing"><summary>{tr('ui.rental.pricing')}</summary>
+ {error&&<p role="alert" className="alert danger">{tr(error)}</p>}{saved&&<p role="status">{tr('ui.care.saved')}</p>}
+ <label>{tr('ui.care.resource')}<select value={selected} disabled={busy} onChange={event=>choose(event.target.value)}><option value="">{tr('ui.select_a_resource_8849f4e1')}</option>{resources.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
+ {selected&&<form onSubmit={save} className="booking-form"><fieldset disabled={busy}><div className="form-grid"><label>{tr('ui.rental.hourlyPrice')}<input type="number" min="0" max="100000000" step="1" required value={rate} onChange={event=>setRate(event.target.value)}/></label><label>{tr('ui.maximum_duration_aa77487c')} ({tr('ui.rental.minutes')})<input type="number" min="15" max="525600" step="1" required value={minutes} onChange={event=>setMinutes(event.target.value)}/></label></div><button type="submit" className="btn btn-primary">{tr(busy?'ui.users.saving':'ui.save_rates_6acc633e')}</button></fieldset></form>}
+ <ResourceTariffTable resources={resources} onSelect={resource=>choose(resource.id)}/>
+ </details>;
 }

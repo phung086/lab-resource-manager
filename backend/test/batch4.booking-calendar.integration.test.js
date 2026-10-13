@@ -59,8 +59,8 @@ const fixture = {
 const userRows = [
   ["admin", "ADMIN"],
   ["staff", "LAB_STAFF"],
-  ["studentA", "STUDENT"],
-  ["studentB", "STUDENT"]
+  ["studentA", "CUSTOMER"],
+  ["studentB", "CUSTOMER"]
 ];
 
 async function seed() {
@@ -98,6 +98,7 @@ async function seed() {
         id: fixture.users[key],
         email: `${key}-${marker}@example.test`,
         fullName: `${key.toUpperCase()} User`,
+        phone: "0901234567",
         role,
         passwordHash,
         isActive: true
@@ -186,8 +187,8 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
   const tokens = {
     admin: tokenFor(fixture.users.admin, "ADMIN"),
     staff: tokenFor(fixture.users.staff, "LAB_STAFF"),
-    studentA: tokenFor(fixture.users.studentA, "STUDENT"),
-    studentB: tokenFor(fixture.users.studentB, "STUDENT")
+    studentA: tokenFor(fixture.users.studentA, "CUSTOMER"),
+    studentB: tokenFor(fixture.users.studentB, "CUSTOMER")
   };
 
   const slot1Start = futureVietnamTime(1, 9);
@@ -221,7 +222,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     assert.equal(log.toStatus, "CONFIRMED");
   });
 
-  await t.test("2. Approval-required resource booking creates PENDING_APPROVAL status", async () => {
+  await t.test("2. Legacy resource approval flag still creates CONFIRMED booking", async () => {
     const res = await request(app)
       .post("/api/bookings")
       .set(bearer(tokens.studentA))
@@ -234,7 +235,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
       });
 
     assert.equal(res.status, 201);
-    assert.equal(res.body.status, "PENDING_APPROVAL");
+    assert.equal(res.body.status, "CONFIRMED");
     bookingApprovalId = res.body.id;
   });
 
@@ -296,15 +297,14 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     assert.equal(res.body.error?.code, "POLICY_VIOLATION");
   });
 
-  await t.test("6. Canonical state machine transitions: PENDING_APPROVAL -> CONFIRMED -> CHECKED_OUT -> RETURNED -> COMPLETED", async () => {
-    // Approve by staff
+  await t.test("6. Automatic confirmation proceeds through handover, return and completion", async () => {
+    // An already confirmed booking does not need a second approval.
     const approveRes = await request(app)
       .post(`/api/bookings/${bookingApprovalId}/approve`)
       .set(bearer(tokens.staff))
       .send({ reason: "Approved for research thesis" });
 
-    assert.equal(approveRes.status, 200);
-    assert.equal(approveRes.body.status, "CONFIRMED");
+    assert.equal(approveRes.status, 409);
 
     // Check out
     const checkOutRes = await request(app)
@@ -342,7 +342,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     });
     const actions = logs.map((l) => l.action);
     assert.ok(actions.includes("REQUEST"));
-    assert.ok(actions.includes("APPROVE"));
+    assert.equal(actions.includes("APPROVE"), false, "Automatic confirmation must not fabricate a staff approval event");
     assert.ok(actions.includes("CHECK_OUT"));
     assert.ok(actions.includes("RETURN"));
     assert.ok(actions.includes("COMPLETE"));
@@ -735,7 +735,7 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     assert.equal(resInvalid.body.error?.code, "VALIDATION_ERROR");
   });
 
-  await t.test("14. Effective approval requirement: labPolicy.requiresApproval=true enforces PENDING_APPROVAL even when resource.requiresApproval=false", async () => {
+  await t.test("14. Legacy laboratory approval flag does not delay automatic confirmation", async () => {
     // Create new lab with labPolicy.requiresApproval = true
     const approvalLabId = id();
     await isolated.laboratory.create({
@@ -772,16 +772,16 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
       }
     });
 
-    // 14a: GET /api/resources/:id must serialize effectiveRequiresApproval: true
+    // 14a: Public projections match the effective automatic workflow.
     const getRes = await request(app)
       .get(`/api/resources/${policyApprovalResourceId}`)
       .set(bearer(tokens.studentA));
     assert.equal(getRes.status, 200);
     assert.equal(getRes.body.requiresApproval, false, "Underlying resource flag remains false");
-    assert.equal(getRes.body.effectiveRequiresApproval, true, "Effective requiresApproval must be true due to lab policy");
-    assert.equal(getRes.body.labPolicy?.requiresApproval, true);
+    assert.equal(getRes.body.effectiveRequiresApproval, false, "Legacy lab policy must not require a manual approval");
+    assert.equal(getRes.body.labPolicy?.requiresApproval, false);
 
-    // 14b: Booking creation must result in PENDING_APPROVAL
+    // 14b: A valid booking confirms automatically.
     const testStart = futureVietnamTime(7, 10);
     const testEnd = new Date(testStart.getTime() + 60 * 60 * 1000);
 
@@ -799,8 +799,8 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
     assert.equal(bookingRes.status, 201);
     assert.equal(
       bookingRes.body.status,
-      "PENDING_APPROVAL",
-      "Persisted status must be PENDING_APPROVAL when lab policy requires approval"
+      "CONFIRMED",
+      "Persisted status must be CONFIRMED even with a legacy approval flag"
     );
   });
 

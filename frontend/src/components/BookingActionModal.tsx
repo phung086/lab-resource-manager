@@ -123,7 +123,7 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
             <textarea
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder={action === "REJECT" ? tr("ui.explain_the_reason_so_the_bdd20cef") : tr("ui.operational_notes_optional_eea98d3f")}
+
               maxLength={1000}
               required={reasonRequired}
               autoFocus
@@ -140,7 +140,7 @@ export const BookingActionModal: React.FC<BookingActionModalProps> = ({
               id="booking-condition-evidence"
               value={condition}
               onChange={(event) => setCondition(event.target.value)}
-              placeholder={tr("ui.describe_the_actual_condition_observed_f139d5a7")}
+
               maxLength={2000}
               required
             />

@@ -43,7 +43,7 @@ export function telemetrySourceInclude() {
   };
 }
 
-export async function createTelemetrySource(tx, { code, name, laboratoryId, resourceId }) {
+export async function createTelemetrySource(tx, { code, name, laboratoryId, resourceId, kind = "EXTERNAL", profile = null }) {
   const resource = await tx.resource.findUnique({
     where: { id: resourceId },
     select: { id: true, laboratoryId: true }
@@ -62,6 +62,8 @@ export async function createTelemetrySource(tx, { code, name, laboratoryId, reso
       name: String(name).trim(),
       laboratoryId,
       resourceId,
+      kind,
+      profile,
       credentialSalt: issued.credentialSalt,
       credentialHash: issued.credentialHash
     }
@@ -108,6 +110,8 @@ export function serializeTelemetrySource(source, now = new Date(), staleMinutes 
     id: source.id,
     code: source.code,
     name: source.name,
+    kind: source.kind || "EXTERNAL",
+    profile: source.profile || null,
     laboratoryId: source.laboratoryId,
     resourceId: source.resourceId,
     isActive: source.isActive,

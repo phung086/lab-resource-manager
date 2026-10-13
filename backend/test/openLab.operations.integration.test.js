@@ -10,7 +10,7 @@ assert.match(target.pathname, /^\/lab_resources_open_lab_test_[a-z0-9_]+$/);
 Object.assign(process.env, { NODE_ENV: "test", JWT_SECRET: "open-lab-isolated-test-secret-only", LOG_FORMAT: "dev", PAYMENTS_ENABLED: "true", MCP_ASSISTANT_ENABLED: "false", RATE_LIMIT_MAX: "5000" });
 const [{ createApp }, { prisma }] = await Promise.all([import("../src/app.js"), import("../src/db.js")]);
 const http = request(createApp());
-const roles = { admin: "ADMIN", staff: "LAB_STAFF", foreign: "LAB_STAFF", owner: "STUDENT", other: "LECTURER" };
+const roles = { admin: "ADMIN", staff: "LAB_STAFF", foreign: "LAB_STAFF", owner: "CUSTOMER", other: "CUSTOMER" };
 const auth = who => ({ Authorization: `Bearer ${jwt.sign({ sub: who, role: roles[who] }, process.env.JWT_SECRET, { algorithm: "HS256" })}` });
 let roomBooking;
 

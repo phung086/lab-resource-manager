@@ -76,7 +76,7 @@ async function seed() {
         id: ids.student,
         email: "b7.student@lab.test",
         fullName: "Batch 7 Student",
-        role: "STUDENT",
+        role: "CUSTOMER",
         passwordHash,
         isActive: true
       }

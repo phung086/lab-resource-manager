@@ -5,9 +5,10 @@ import jwt from "jsonwebtoken";
 
 import { config } from "../config.js";
 import { prisma } from "../db.js";
-import { STUDENT } from "../constants/roles.js";
+import { CUSTOMER } from "../constants/roles.js";
 import { HttpError } from "../middleware/errors.js";
 import { sendRequiredEmail, escapeHtml } from "./emailService.js";
+import { enqueueRegistrationEmail } from "./emailAutomationService.js";
 import { validateVietnamAddress } from "./addressService.js";
 import { createBookingWithTransaction } from "./bookingService.js";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "./systemAuditService.js";
@@ -212,7 +213,7 @@ async function validateOtpInTransaction(tx, email, code, now) {
   return { otp };
 }
 
-export async function completeGuestBooking(payload) {
+export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
   const email = normalizeEmail(payload.email);
   const phone = normalizePhone(payload.phone);
   if (!phone || phone.length < 9 || phone.length > 20) {
@@ -238,7 +239,7 @@ export async function completeGuestBooking(payload) {
       data: {
         id: crypto.randomUUID(),
         email,
-        role: STUDENT,
+        role: CUSTOMER,
         passwordHash: await bcrypt.hash(phone, 12),
         passwordResetRequired: true,
         isActive: true,
@@ -271,6 +272,7 @@ export async function completeGuestBooking(payload) {
     }
 
     if (!existing) {
+      await enqueueRegistrationEmail(tx, user, locale);
       await recordSystemAuditEvent(tx, {
         actor: null,
         action: AUDIT_ACTIONS.GUEST_ACCOUNT_CREATED,

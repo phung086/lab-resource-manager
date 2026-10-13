@@ -82,7 +82,7 @@ try {
     visible: ["bookings"],
     hidden: ["dashboard", "users"]
   });
-  console.log("Batch 2 frontend auth E2E: PASS (unauthenticated, STUDENT, LAB_STAFF, ADMIN, LECTURER)");
+  console.log("Batch 2 frontend auth E2E: PASS (unauthenticated, CUSTOMER, LAB_STAFF, ADMIN, CUSTOMER)");
 } finally {
   await browser.close();
 }

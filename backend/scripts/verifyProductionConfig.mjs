@@ -12,7 +12,15 @@ const base = {
   ADMIN_PASSWORD: "Batch7Admin!Passphrase",
   ADMIN_FULL_NAME: "Lab Administrator",
   LOG_FORMAT: "combined",
-  METRICS_TOKEN: ""
+  METRICS_TOKEN: "",
+  // Explicit blanks prevent dotenv from importing the operator's live merchant keys.
+  PAYMENTS_ENABLED: "false",
+  VNPAY_ENABLED: "false",
+  VNPAY_TMN_CODE: "",
+  VNPAY_HASH_SECRET: "",
+  VNPAY_PAYMENT_URL: "",
+  VNPAY_RETURN_URL: "",
+  VNPAY_IPN_URL: ""
 };
 
 function runConfig(overrides = {}) {

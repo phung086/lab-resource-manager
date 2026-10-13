@@ -26,6 +26,7 @@ import {
   resourceLaboratorySelect,
   serializeCanonicalResource
 } from "../services/resourceService.js";
+import { attachCareUsage } from "../services/resourceService.js";
 import { BLOCKING_MAINTENANCE_STATUSES } from "../services/availabilityService.js";
 import { getResourceHistory, projectResourceHistoryForActor } from "../services/resourceHistoryService.js";
 import { normalizeResourceCode, normalizeSpecs, normalizeText } from "../utils/dataContract.js";
@@ -65,7 +66,8 @@ const resourceCreateSchema = z.object({
   location: z.string().min(1).max(255).transform(normalizeText),
   ownerTeam: z.string().max(255).transform(normalizeText).default(""),
   capacity: z.coerce.number().int().min(1).max(100000).default(1),
-  requiresApproval: z.boolean().default(false),
+  maxBookingMinutes: z.number().int().min(15).max(525600).nullable().optional(),
+  requiresApproval: z.boolean().transform(() => false).default(false),
   serialNumber: optionalText(255),
   manufacturer: optionalText(255),
   model: optionalText(255),
@@ -130,6 +132,9 @@ function overlapWhere(startAt, endAt) {
 
 function availabilityInclude(startAt, endAt) {
   return {
+    pricingRules: true,
+    careProfile: true,
+    operationSessions: { select: { startedAt: true, endedAt: true, loadPercent: true } },
     media: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
     laboratory: { select: resourceLaboratorySelect },
     bookings: {
@@ -144,7 +149,7 @@ function availabilityInclude(startAt, endAt) {
 }
 
 async function loadCanonicalResource(id, interval = currentInterval()) {
-  return prisma.resource.findUnique({ where: { id }, include: availabilityInclude(interval.startAt, interval.endAt) });
+  return attachCareUsage(prisma, await prisma.resource.findUnique({ where: { id }, include: availabilityInclude(interval.startAt, interval.endAt) }));
 }
 
 function availabilityMatches(resource, requested, interval) {
@@ -179,7 +184,8 @@ router.get("/", async (req, res, next) => {
       orderBy: [{ operationalStatus: "asc" }, { name: "asc" }],
       take: 250
     });
-    res.json(resources
+    const projectedResources = await Promise.all(resources.map(resource => attachCareUsage(prisma, resource)));
+    res.json(projectedResources
       .filter((resource) => availabilityMatches(resource, query.availability, interval))
       .map((resource) => serializeCanonicalResource(resource, interval)));
   } catch (error) {
@@ -231,6 +237,8 @@ router.get("/:id/schedule", async (req, res, next) => {
     const resource = await prisma.resource.findUnique({
       where: { id: req.params.id },
       include: {
+        careProfile: true,
+        operationSessions: { select: { startedAt: true, endedAt: true, loadPercent: true } },
         media: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
         laboratory: { select: resourceLaboratorySelect },
         bookings: { where: overlapWhere(startAt, endAt), select: { id: true, status: true, startAt: true, endAt: true }, orderBy: { startAt: "asc" } },
@@ -244,7 +252,7 @@ router.get("/:id/schedule", async (req, res, next) => {
       maintenanceWindows: resource.maintenanceWindows.filter((row) => BLOCKING_MAINTENANCE_STATUSES.includes(row.status))
     };
     res.json({
-      resource: serializeCanonicalResource(blockingView, { startAt, endAt }),
+      resource: serializeCanonicalResource(await attachCareUsage(prisma, blockingView), { startAt, endAt }),
       interval: { from: startAt.toISOString(), to: endAt.toISOString(), semantics: "[from,to)" },
       bookings: resource.bookings.map((row) => ({ ...row, startAt: row.startAt.toISOString(), endAt: row.endAt.toISOString() })),
       maintenanceWindows: resource.maintenanceWindows.map((row) => ({ ...row, startAt: row.startAt.toISOString(), endAt: row.endAt.toISOString() }))
@@ -275,6 +283,9 @@ router.get("/:id", async (req, res, next) => {
     const resource = await prisma.resource.findUnique({
       where: { id: req.params.id },
       include: {
+        careProfile: true,
+        pricingRules: true,
+        operationSessions: { select: { startedAt: true, endedAt: true, loadPercent: true } },
         media: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
         laboratory: { select: resourceLaboratorySelect },
         bookings: { where: { endAt: { gte: now }, status: { in: ACTIVE_BOOKING_STATUSES } }, select: { id: true, startAt: true, endAt: true, status: true }, orderBy: { startAt: "asc" }, take: 10 },
@@ -285,7 +296,7 @@ router.get("/:id", async (req, res, next) => {
     });
     if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
     res.json({
-      ...serializeCanonicalResource(resource, interval),
+      ...serializeCanonicalResource(await attachCareUsage(prisma, resource), interval),
       trainingRequirements: (resource.trainingRequirements || []).map((row) => ({
         id: row.id,
         courseId: row.courseId,

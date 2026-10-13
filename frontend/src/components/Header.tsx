@@ -24,6 +24,7 @@ export interface HeaderProps {
   onOpenProfile?: () => void;
   onLogout?: () => void;
   onOpenAssistant?: () => void;
+  assistantControl?: React.ReactNode;
   onOpenHome?: () => void;
 }
 
@@ -38,6 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfile,
   onLogout,
   onOpenAssistant,
+  assistantControl,
   onOpenHome
 }) => {
   const t = translate;
@@ -78,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
   const quotaUsed = user?.quotaUsed || 0;
   const quotaTotal = user?.quotaTotal || 0;
   const quotaPercent = hasQuota ? Math.min(100, Math.round((quotaUsed / quotaTotal) * 100)) : 0;
-  const roleKeys: Record<string, string> = { ADMIN: 'core.roles.admin', LAB_STAFF: 'core.roles.lab_staff', LECTURER: 'core.roles.lecturer', STUDENT: 'core.roles.student' };
+  const roleKeys: Record<string, string> = { ADMIN: 'core.roles.admin', LAB_STAFF: 'core.roles.lab_staff', CUSTOMER: 'core.roles.customer' };
   const roleKey = roleKeys[user?.role || ''];
 
   function closeUserMenu() {
@@ -98,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right side: Language Segmented Control, Actions & User Profile */}
       <div className="header-right-2026">
-        {onOpenAssistant && <button type="button" className="secondary-button project-header-assistant" onClick={onOpenAssistant}>{t("ui.lab_assistant_0a8d5bc9")}</button>}
+        {assistantControl || (onOpenAssistant && <button type="button" className="secondary-button project-header-assistant" onClick={onOpenAssistant}>{t("ui.lab_assistant_0a8d5bc9")}</button>)}
         <LanguageToggle />
 
         {/* Refresh button */}
@@ -150,7 +152,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="avatar-letter-circle">
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
               </div>
-              <div className="project-account-label"><span>{user.fullName}</span></div>
+              <div className="project-account-label"><span>{user.fullName || user.email}</span></div>
               <ChevronDown size={14} className={`dropdown-arrow ${userMenuOpen ? "rotated" : ""}`} />
             </button>
 
@@ -163,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
                     {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
                   </div>
                   <div className="user-menu-details">
-                    <strong className="user-menu-fullname">{user.fullName}</strong>
+                    <strong className="user-menu-fullname">{user.fullName || user.email}</strong>
                     <span className="user-menu-email">{user.email || translate("ui.email_not_provided_64af79ce")}</span>
                     <div className="user-menu-role-badge">{roleKey && t(roleKey)}</div>
                     <div className="project-account-clock">{currentDateTime}</div>

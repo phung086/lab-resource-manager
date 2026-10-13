@@ -16,7 +16,7 @@ export function assertBatch2Database(database) {
 export async function configureBatch2TestEnvironment(database) {
   assertBatch2Database(database);
   const env = parse(await readFile(path.join(backend, ".env")));
-  const url = new URL(env.DATABASE_URL);
+  const url = new URL(process.env.DATABASE_URL || env.DATABASE_URL);
   assert.ok(["localhost", "127.0.0.1"].includes(url.hostname), "Only local PostgreSQL is allowed");
   url.pathname = `/${database}`;
   url.searchParams.set("schema", "public");

@@ -9,10 +9,10 @@ import { config } from "../config.js";
 import { prisma } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
-import { STUDENT, isCanonicalRole } from "../constants/roles.js";
-import { validateVietnamAddress } from "../services/addressService.js";
+import { CUSTOMER, isCanonicalRole } from "../constants/roles.js";
 import { publicCustomerUser } from "../services/guestBookingService.js";
 import { forgetAssistantSession } from "../assistant/assistantService.js";
+import { enqueueRegistrationEmail } from "../services/emailAutomationService.js";
 
 const router = express.Router();
 
@@ -29,22 +29,9 @@ const loginSchema = z.object({
   password: z.string().min(8)
 }).strict();
 
-const addressSchema = z.object({
-  addressLine: z.string().trim().min(5).max(300),
-  provinceCode: z.union([z.string(), z.number()]),
-  wardCode: z.union([z.string(), z.number()])
-}).strict();
-
 const registerSchema = z.object({
-  email: z.string().trim().email().transform((value) => value.toLowerCase()),
-  password: z.string().min(8).max(128),
-  fullName: z.string().trim().min(2).max(255),
-  studentId: z.string().trim().max(50).optional(),
-  department: z.string().trim().max(100).optional(),
-  phone: z.string().trim().max(20).optional(),
-  organization: z.string().trim().max(160).optional(),
-  customerType: z.enum(["INTERNAL", "EXTERNAL"]).optional(),
-  address: addressSchema.optional()
+  email: z.string().trim().email().transform(value => value.toLowerCase()),
+  password: z.string().min(8).max(128)
 }).strict();
 
 const changePasswordSchema = z.object({
@@ -63,19 +50,6 @@ function publicUser(user) {
   return publicCustomerUser(user);
 }
 
-function addressData(address) {
-  if (!address) return {};
-  return {
-    defaultAddressLine: address.addressLine,
-    defaultAddressProvinceCode: address.provinceCode,
-    defaultAddressProvinceName: address.provinceName,
-    defaultAddressWardCode: address.wardCode,
-    defaultAddressWardName: address.wardName,
-    defaultAddressSource: address.source,
-    defaultAddressVersion: address.version
-  };
-}
-
 /**
  * POST /register — Create a new user account.
  * Database-backed only. No mockStore fallback.
@@ -90,24 +64,22 @@ router.post("/register", authRateLimit, async (req, res, next) => {
       throw new HttpError(409, "Email already registered", { field: "email" }, "DUPLICATE_EMAIL");
     }
 
-    const verifiedAddress = data.address ? await validateVietnamAddress(data.address) : null;
     const passwordHash = await bcrypt.hash(data.password, 12);
-    const user = await prisma.user.create({
-      data: {
-        id: crypto.randomUUID(),
-        email: data.email,
-        fullName: data.fullName,
-        role: STUDENT, // Canonical uppercase
-        passwordHash,
-        studentId: data.studentId || null,
-        department: data.department || null,
-        phone: data.phone || null,
-        organization: data.organization || null,
-        customerType: data.customerType || "INTERNAL",
-        passwordResetRequired: false,
-        isActive: true,
-        ...addressData(verifiedAddress)
-      }
+    const user = await prisma.$transaction(async tx => {
+      const created = await tx.user.create({
+        data: {
+          id: crypto.randomUUID(),
+          email: data.email,
+          fullName: "",
+          role: CUSTOMER, // Canonical uppercase
+          passwordHash,
+          customerType: "EXTERNAL",
+          passwordResetRequired: false,
+          isActive: true
+        }
+      });
+      await enqueueRegistrationEmail(tx, created, req.locale);
+      return created;
     });
 
     const token = jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, {
@@ -144,7 +116,7 @@ router.post("/login", authRateLimit, async (req, res, next) => {
     }
 
     if (!user) {
-      throw new HttpError(401, "Email or password is incorrect", undefined, "AUTH_INVALID");
+      throw new HttpError(401, "Email or password is incorrect", undefined, "AUTH_INVALID_CREDENTIALS");
     }
 
     // Real password verification — always required
@@ -152,7 +124,7 @@ router.post("/login", authRateLimit, async (req, res, next) => {
     // A guest's initial phone-based credential is usable only inside the
     // email-verified setup session, never as proof of identity at login.
     if (!isValid || (user.customerType === "EXTERNAL" && user.passwordResetRequired)) {
-      throw new HttpError(401, "Email or password is incorrect", undefined, "AUTH_INVALID");
+      throw new HttpError(401, "Email or password is incorrect", undefined, "AUTH_INVALID_CREDENTIALS");
     }
 
     if (!user.isActive) {
@@ -195,7 +167,7 @@ router.post("/change-password", requireAuth, async (req, res, next) => {
     const data = changePasswordSchema.parse(req.body);
     const currentMatches = await bcrypt.compare(data.currentPassword, req.user.passwordHash);
     if (!currentMatches) {
-      throw new HttpError(400, "Current password is incorrect", undefined, "CURRENT_PASSWORD_INVALID");
+      throw new HttpError(400, "Current password is incorrect", { field: "currentPassword" }, "CURRENT_PASSWORD_INVALID");
     }
     const passwordHash = await bcrypt.hash(data.newPassword, 12);
     await prisma.user.update({ where: { id: req.user.id }, data: { passwordHash, passwordResetRequired: false } });

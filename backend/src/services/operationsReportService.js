@@ -20,7 +20,7 @@ export async function buildOperationsReport(client, user, { days = 30, now = new
       SELECT r.id, r.code, r.name, r.category, r."operationalStatus",
              l.name AS "laboratoryName"
       FROM resources r LEFT JOIN laboratories l ON l.id = r."laboratoryId"
-      WHERE ${scope}
+      WHERE ${scope} AND COALESCE(r.specs->>'monitoringSimulation','false') <> 'true'
     ), booking_evidence AS (
       SELECT b."resourceId",
         COUNT(*) FILTER (WHERE b."startAt" < ${now} AND b."endAt" > ${start})::int AS "bookingCount",
@@ -46,6 +46,7 @@ export async function buildOperationsReport(client, user, { days = 30, now = new
         COUNT(*) FILTER (WHERE i."detectedAt" >= ${start} AND i."detectedAt" < ${now})::int AS "incidentCount",
         COUNT(*) FILTER (WHERE i.status IN ('reported','triaged','assigned','investigating'))::int AS "openIncidentCount"
       FROM incidents i JOIN authorized r ON r.id = i."resourceId"
+      WHERE i.origin <> 'SIMULATED'
       GROUP BY i."resourceId"
     ), maintenance_evidence AS (
       SELECT m."resourceId", COALESCE(SUM(GREATEST(0, EXTRACT(EPOCH FROM (

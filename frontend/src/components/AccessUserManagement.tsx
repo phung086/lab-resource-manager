@@ -1,267 +1,171 @@
-import { translate } from "../i18n.js";
+import { HelpDisclosure } from "./base/HelpDisclosure";
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Plus, RefreshCw, ArrowRight, ShieldCheck, UserCheck, UserX } from 'lucide-react';
+import { apiRequest } from '../api.js';
 import { useLocale } from '../providers/LocaleProvider';
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, RefreshCw, ShieldCheck, UserCheck, UserX } from "lucide-react";
+import { navigateApp, readRouteParams, workspacePathForTab } from '../workspaceRoutes.js';
+import { USER_ROLES, validateManagedUser } from '../utils/userValidation';
+import type { UserRole } from '../utils/userValidation';
+import { BaseModal2026 } from './BaseModal2026';
+import '../styles/users-workspace.css';
 
-import { apiRequest } from "../api.js";
-import { BaseModal2026 } from "./BaseModal2026.js";
-
-const ROLES = ["ADMIN", "LAB_STAFF", "LECTURER", "STUDENT"] as const;
-const roleLabels: Record<(typeof ROLES)[number], string> = {
-  ADMIN: "ui.administrator_d00831ec",
-  LAB_STAFF: "ui.lab_staff_1b410267",
-  LECTURER: "ui.lecturer_948c8824",
-  STUDENT: "ui.student_1b487b2d"
-};
-
-type Role = typeof ROLES[number];
-type User = {
-  id: string;
-  email: string;
-  fullName: string;
-  role: Role;
-  isActive: boolean;
-  department?: string | null;
-  _count?: { bookings: number };
-};
+const roleLabels: Record<UserRole, string> = { ADMIN: 'ui.administrator_d00831ec', LAB_STAFF: 'ui.lab_staff_1b410267', CUSTOMER: 'core.roles.customer' };
+type User = { id: string; email: string; fullName: string; role: UserRole; isActive: boolean; department?: string | null; _count?: { bookings: number } };
 type Laboratory = { id: string; code: string; name: string; isActive: boolean };
 type Assignment = { laboratoryId: string; laboratory: Laboratory };
+type Change = { user: User; type: 'role' | 'active' | 'assign' | 'remove'; role?: UserRole; laboratory?: Laboratory };
+const failure = (error: unknown) => error instanceof Error ? error.message : 'ui.users.requestFailed';
+const initialForm = { fullName: '', email: '', password: '', role: 'CUSTOMER' as UserRole };
+const initialRole = () => { const role = readRouteParams().get('role'); return USER_ROLES.includes(role as UserRole) ? role || '' : ''; };
 
 export function AccessUserManagement() {
-  const { tr } = useLocale();
-  const loadAbort = useRef<AbortController | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState(() => {
-    const value = new URLSearchParams(window.location.hash.split("?")[1] || "").get("role");
-    return ROLES.includes(value as Role) ? value : "";
-  });
-  const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
-  const [assignments, setAssignments] = useState<Record<string, Assignment[]>>({});
-  const [selectedLabs, setSelectedLabs] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    role: "STUDENT" as Role
-  });
+  const { tr } = useLocale(), formId = useId(), createRef = useRef<HTMLFormElement>(null), dossierRef = useRef<HTMLElement>(null);
+  const loadAbort = useRef<AbortController | null>(null), busyRef = useRef(false);
+  const [users, setUsers] = useState<User[]>([]), [laboratories, setLaboratories] = useState<Laboratory[]>([]);
+  const [loading, setLoading] = useState(true), [error, setError] = useState('');
+  const [search, setSearch] = useState(''), [roleFilter, setRoleFilter] = useState(initialRole), [statusFilter, setStatusFilter] = useState('');
+  const [selected, setSelected] = useState(() => readRouteParams().get('user') || '');
+  const [roles, setRoles] = useState<Record<string, UserRole>>({}), [labChoices, setLabChoices] = useState<Record<string, string>>({});
+  const [assignmentRead, setAssignmentRead] = useState<{ userId: string; rows: Assignment[]; loading: boolean; error: string }>({ userId: '', rows: [], loading: false, error: '' });
+  const [assignmentRevision, setAssignmentRevision] = useState(0);
+  const [showCreate, setShowCreate] = useState(false), [createForm, setCreateForm] = useState(initialForm);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({}), [createError, setCreateError] = useState('');
+  const [change, setChange] = useState<Change | null>(null), [busy, setBusy] = useState(false), [actionError, setActionError] = useState(''), [notice, setNotice] = useState('');
+  const user = users.find(item => item.id === selected), isStaff = user?.role === 'LAB_STAFF';
+  const assignments = assignmentRead.userId === selected ? assignmentRead.rows : [];
+  const assignmentsLoading = isStaff && (assignmentRead.userId !== selected || assignmentRead.loading);
+  const assignmentsError = assignmentRead.userId === selected ? assignmentRead.error : '';
+  const visible = users.filter(item => (!roleFilter || item.role === roleFilter) && (!statusFilter || String(item.isActive) === statusFilter) && (item.fullName + ' ' + item.email).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
 
   const load = useCallback(async () => {
-    loadAbort.current?.abort();
-    const controller = new AbortController();
-    loadAbort.current = controller;
-    const read = (path: string) => apiRequest(path, { signal: controller.signal });
-    setLoading(true);
-    setError("");
+    loadAbort.current?.abort(); const controller = new AbortController(); loadAbort.current = controller;
+    setLoading(true); setError('');
     try {
-      const [nextUsers, nextLabs] = await Promise.all([
-        read("/users"),
-        read("/users/laboratories")
-      ]);
-      if (controller.signal.aborted) return;
-      setUsers(nextUsers);
-      setLaboratories(nextLabs);
-      const staff = nextUsers.filter((user: User) => user.role === "LAB_STAFF");
-      const staffAssignments: [string, Assignment[]][] = [];
-      let next = 0;
-      await Promise.all(Array.from({ length: Math.min(4, staff.length) }, async () => {
-        while (next < staff.length && !controller.signal.aborted) {
-          const member = staff[next++];
-          staffAssignments.push([member.id, await read(`/users/${member.id}/lab-assignments`)]);
-        }
-      }));
-      if (!controller.signal.aborted) setAssignments(Object.fromEntries(staffAssignments));
-    } catch (requestError: any) {
-      if (!controller.signal.aborted) setError(requestError?.message || "ui.could_not_load_users_76f5be64");
-    } finally {
-      if (!controller.signal.aborted) setLoading(false);
-    }
+      const [nextUsers, nextLabs] = await Promise.all([apiRequest('/users', { signal: controller.signal }), apiRequest('/users/laboratories', { signal: controller.signal })]);
+      if (!controller.signal.aborted) { setUsers(nextUsers); setLaboratories(nextLabs); }
+    } catch (cause: unknown) { if (!controller.signal.aborted) setError(failure(cause)); }
+    finally { if (!controller.signal.aborted) setLoading(false); }
   }, []);
-
   useEffect(() => { void load(); return () => loadAbort.current?.abort(); }, [load]);
-
-  async function updateRole(user: User, role: Role) {
-    setError("");
-    try {
-      await apiRequest(`/users/${user.id}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
-      await load();
-    } catch (requestError: any) {
-      setError(requestError?.message || "ui.could_not_update_role_4e55c254");
-    }
+  useEffect(() => {
+    const sync = () => { setSelected(readRouteParams().get('user') || ''); setRoleFilter(initialRole()); setActionError(''); setNotice(''); };
+    window.addEventListener('popstate', sync); return () => window.removeEventListener('popstate', sync);
+  }, []);
+  useEffect(() => {
+    if (!selected || !isStaff) return;
+    const controller = new AbortController();
+    setAssignmentRead({ userId: selected, rows: [], loading: true, error: '' });
+    apiRequest('/users/' + selected + '/lab-assignments', { signal: controller.signal })
+      .then(rows => { if (!controller.signal.aborted) setAssignmentRead({ userId: selected, rows, loading: false, error: '' }); })
+      .catch((cause: unknown) => { if (!controller.signal.aborted) setAssignmentRead({ userId: selected, rows: [], loading: false, error: failure(cause) }); });
+    return () => controller.abort();
+  }, [selected, isStaff, assignmentRevision]);
+  function choose(id: string) {
+    if (busyRef.current) return;
+    setSelected(id); setActionError(''); setNotice('');
+    const params = readRouteParams(); if (id) params.set('user', id); else params.delete('user');
+    navigateApp(workspacePathForTab('users', params), { notify: false });
+    if (id && window.matchMedia('(max-width: 1050px)').matches) requestAnimationFrame(() => { dossierRef.current?.scrollIntoView({ block: 'start' }); dossierRef.current?.focus({ preventScroll: true }); });
   }
-
-  async function updateActive(user: User) {
-    setError("");
-    try {
-      await apiRequest(`/users/${user.id}/active`, {
-        method: "PATCH",
-        body: JSON.stringify({ isActive: !user.isActive })
-      });
-      await load();
-    } catch (requestError: any) {
-      setError(requestError?.message || "ui.could_not_update_account_status_0612c128");
-    }
+  function filterRole(role: string) {
+    setRoleFilter(role); const params = readRouteParams(); if (role) params.set('role', role); else params.delete('role');
+    navigateApp(workspacePathForTab('users', params), { notify: false });
   }
-
-  async function addAssignment(user: User) {
-    const laboratoryId = selectedLabs[user.id];
-    if (!laboratoryId) return;
-    setError("");
+  function propose(next: Change) { if (!busyRef.current) { setChange(next); setActionError(''); setNotice(''); } }
+  async function applyChange() {
+    if (!change || busyRef.current) return;
+    busyRef.current = true; setBusy(true); setActionError(''); setNotice('');
+    const target = change;
     try {
-      await apiRequest(`/users/${user.id}/lab-assignments`, {
-        method: "POST",
-        body: JSON.stringify({ laboratoryId })
-      });
+      const prefix = '/users/' + target.user.id;
+      if (target.type === 'role') await apiRequest(prefix + '/role', { method: 'PATCH', body: JSON.stringify({ role: target.role }) });
+      if (target.type === 'active') await apiRequest(prefix + '/active', { method: 'PATCH', body: JSON.stringify({ isActive: !target.user.isActive }) });
+      if (target.type === 'assign') await apiRequest(prefix + '/lab-assignments', { method: 'POST', body: JSON.stringify({ laboratoryId: target.laboratory?.id }) });
+      if (target.type === 'remove') await apiRequest(prefix + '/lab-assignments/' + target.laboratory?.id, { method: 'DELETE' });
+      setChange(null); setNotice('ui.users.saved');
+      setRoles(current => { const next = { ...current }; delete next[target.user.id]; return next; });
+      setLabChoices(current => ({ ...current, [target.user.id]: '' })); setAssignmentRevision(value => value + 1);
       await load();
-    } catch (requestError: any) {
-      setError(requestError?.message || "ui.could_not_assign_laboratory_42b8a3ff");
-    }
+    } catch (cause: unknown) { setActionError(failure(cause)); }
+    finally { busyRef.current = false; setBusy(false); }
   }
-
-  async function removeAssignment(userId: string, laboratoryId: string) {
-    setError("");
+  async function create(event: React.FormEvent) {
+    event.preventDefault(); if (busyRef.current) return;
+    const result = validateManagedUser(createForm); setFieldErrors(result.errors); setCreateError('');
+    if (!result.data) { createRef.current?.querySelector<HTMLElement>('[name="' + Object.keys(result.errors)[0] + '"]')?.focus(); return; }
+    busyRef.current = true; setBusy(true); setNotice('');
     try {
-      await apiRequest(`/users/${userId}/lab-assignments/${laboratoryId}`, { method: "DELETE" });
-      await load();
-    } catch (requestError: any) {
-      setError(requestError?.message || "ui.could_not_remove_assignment_c0bec68f");
+      const created = await apiRequest('/users', { method: 'POST', body: JSON.stringify(result.data) });
+      setCreateForm(initialForm); setShowCreate(false); setNotice('ui.users.created'); await load(); setSelected(created.id); const params = readRouteParams(); params.set('user', created.id); navigateApp(workspacePathForTab('users', params), { notify: false });
+     } catch (cause: unknown) {
+      const error = cause as { code?: string; details?: { fieldErrors?: Record<string,string[]> } };
+      if (error.code === 'DUPLICATE_EMAIL') {setFieldErrors({email:'ui.email_already_registered_please_login_4d3e2f1a'});createRef.current?.querySelector<HTMLElement>('[name="email"]')?.focus();}
+      else setCreateError(failure(cause));
     }
+    finally { busyRef.current = false; setBusy(false); }
   }
+  const createFields = [
+    { name: 'fullName', label: 'ui.full_name_03de764f', type: 'text', max: 255, autocomplete: 'name' },
+    { name: 'email', label: 'ui.email_969ccbd3', type: 'email', max: undefined, autocomplete: 'off' },
+    { name: 'password', label: 'ui.initial_password_59759f04', type: 'password', max: 128, autocomplete: 'new-password' }
+  ] as const;
+  const changeTitle = change?.type === 'role' ? 'ui.users.confirmRole' : change?.type === 'active' ? (change.user.isActive ? 'ui.users.deactivate' : 'ui.users.activate') : change?.type === 'remove' ? 'ui.users.removeLab' : 'ui.users.confirmAssignment';
 
-  async function createUser(event: React.FormEvent) {
-    event.preventDefault();
-    setError("");
-    if (!createForm.fullName.trim() || !createForm.email.trim() || createForm.password.length < 12) {
-      setError("ui.full_name_email_and_a_0c7bafbf");
-      return;
-    }
-    setCreating(true);
-    try {
-      await apiRequest("/users", {
-        method: "POST",
-        body: JSON.stringify({
-          fullName: createForm.fullName.trim(),
-          email: createForm.email.trim(),
-          password: createForm.password,
-          role: createForm.role
-        })
-      });
-      setCreateForm({ fullName: "", email: "", password: "", role: "STUDENT" });
-      setShowCreate(false);
-      await load();
-    } catch (requestError: any) {
-      setError(requestError?.message || "ui.could_not_create_user_21164c3d");
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  return (
-    <section className="view-section">
-      <div className="section-heading">
-        <div>
-          <h2>{tr("ui.user_administration_2a750b85")}</h2>
+  return <section className="view-section users-workspace" aria-busy={loading}>
+    <header className="users-heading"><div><h1>{tr('ui.user_administration_2a750b85')}</h1><HelpDisclosure>{tr('ui.users.subtitle')}</HelpDisclosure></div><div className="users-actions">
+      <button type="button" className="btn btn-secondary" disabled={loading || busy} onClick={() => void load()}><RefreshCw size={16} />{tr('ui.refresh_46140fa8')}</button>
+      <button type="button" className="btn btn-primary" aria-expanded={showCreate} aria-controls={formId + '-create'} disabled={busy} onClick={() => setShowCreate(value => !value)}><Plus size={16} />{tr('ui.create_user_70f60575')}</button>
+    </div></header>
+    {notice && <p className="users-notice" role="status">{tr(notice)}</p>}
+    <div id={formId + '-create'} hidden={!showCreate} className="users-create">
+      <div><h2>{tr('ui.create_user_70f60575')}</h2><p>{tr('ui.users.createHint')}</p></div>
+      <form ref={createRef} className="users-form" onSubmit={create} noValidate>
+        {Object.keys(fieldErrors).length > 0 && <div className="users-error users-form-summary" role="alert"><strong>{tr('ui.users.checkFields')}</strong><ul>{Object.entries(fieldErrors).map(([name, key]) => <li key={name}><a href={'#' + formId + '-' + name} onClick={event => { event.preventDefault(); createRef.current?.querySelector<HTMLElement>('[name="' + name + '"]')?.focus(); }}>{tr(key)}</a></li>)}</ul></div>}
+        {createError && <p className="users-error users-form-summary" role="alert">{tr(createError)}</p>}
+        {createFields.map(field => <label key={field.name} htmlFor={formId + '-' + field.name}>{tr(field.label)}<input id={formId + '-' + field.name} name={field.name} type={field.type} value={createForm[field.name]} maxLength={field.max} autoComplete={field.autocomplete} required aria-invalid={!!fieldErrors[field.name]} aria-describedby={fieldErrors[field.name] ? formId + '-error-' + field.name : field.name === 'password' ? formId + '-password-hint' : undefined} disabled={busy} onChange={event => { setCreateForm(current => ({ ...current, [field.name]: event.target.value })); setFieldErrors(current => { const next = { ...current }; delete next[field.name]; return next; }); }} />{fieldErrors[field.name] && <span id={formId + '-error-' + field.name} className="users-field-error">{tr(fieldErrors[field.name])}</span>}{field.name === 'password' && <small id={formId + '-password-hint'}>{tr('ui.users.passwordHint')}</small>}</label>)}
+        <label htmlFor={formId + '-role'}>{tr('ui.role_35195dea')}<select id={formId + '-role'} name="role" value={createForm.role} disabled={busy} onChange={event => setCreateForm(current => ({ ...current, role: event.target.value as UserRole }))}>{USER_ROLES.map(role => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}</select></label>
+        <div className="users-actions users-form-summary"><button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setShowCreate(false)}>{tr('ui.cancel_74fcd352')}</button><button type="submit" className="btn btn-primary" disabled={busy}>{tr(busy ? 'ui.creating_45c27eb9' : 'ui.create_user_70f60575')}</button></div>
+      </form>
+    </div>
+    {error && <div className="users-error" role="alert">{tr(error)} <button type="button" className="btn btn-secondary" disabled={loading || busy} onClick={() => void load()}>{tr('ui.users.retry')}</button></div>}
+    <div className="users-layout">
+      <div className="users-directory">
+        <div className="users-filters">
+          <label>{tr('ui.home.directory.search')}<input type="search" value={search} maxLength={120} placeholder={tr('ui.home.directory.placeholder')} onChange={event => setSearch(event.target.value)} /></label>
+          <label>{tr('ui.role_35195dea')}<select value={roleFilter} onChange={event => filterRole(event.target.value)}><option value="">{tr('ui.home.directory.all')}</option>{USER_ROLES.map(role => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}</select></label>
+          <label>{tr('ui.status_cb31de81')}<select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="">{tr('ui.users.allStatuses')}</option><option value="true">{tr('ui.active_767d67bb')}</option><option value="false">{tr('ui.inactive_50157a4c')}</option></select></label>
         </div>
-        <div className="flex gap-2">
-          <button className="btn btn-primary" type="button" onClick={() => setShowCreate(true)}>
-            <Plus size={15} /> {tr("ui.create_user_70f60575")}</button>
-          <button className="icon-button" type="button" onClick={load} title={tr("ui.refresh_46140fa8")} aria-label={tr("ui.refresh_user_list_7abc765c")} disabled={loading}>
-            <RefreshCw size={16} />
-          </button>
-        </div>
+        <p className="users-result-count" role="status">{loading ? tr('ui.loading_data_84c68bd5') : tr('ui.users.resultCount', { count: visible.length, total: users.length })}</p>
+        <div className="table-wrap users-table"><table><caption className="sr-only">{tr('ui.users_roles_and_laboratory_assignments_0f27b670')}</caption><thead><tr><th>{tr('ui.users_9e9519eb')}</th><th>{tr('ui.role_35195dea')}</th><th>{tr('ui.status_cb31de81')}</th></tr></thead><tbody>{visible.map(item => <tr key={item.id} className={item.id === selected ? 'is-selected' : ''}><td><button type="button" disabled={busy} aria-pressed={item.id === selected} className="users-account" onClick={() => choose(item.id)}><span><strong>{item.fullName}</strong><small>{item.email}</small></span><ArrowRight size={16} aria-hidden="true" /></button></td><td>{tr(roleLabels[item.role])}</td><td><span className={item.isActive ? 'users-status is-active' : 'users-status'}>{tr(item.isActive ? 'ui.active_767d67bb' : 'ui.inactive_50157a4c')}</span></td></tr>)}</tbody></table></div>
+        {!loading && !visible.length && <div className="users-empty"><h2>{tr(users.length ? 'ui.users.noMatches' : 'ui.users.noAccounts')}</h2><p>{tr(users.length ? 'ui.users.filterHint' : 'ui.users.createHint')}</p>{users.length > 0 && <button className="btn btn-secondary" type="button" onClick={() => { setSearch(''); filterRole(''); setStatusFilter(''); }}>{tr('ui.users.clearFilters')}</button>}</div>}
       </div>
-
-      {error && <div className="alert danger" role="alert">{translate(error)}</div>}
-      {loading && <p className="empty-state">{tr("ui.loading_data_84c68bd5")}</p>}
-      <div className="user-directory-filters">
-        <label><span id="directory-search-label">{tr("ui.home.directory.search")}</span><input aria-labelledby="directory-search-label" type="search" value={search} onChange={event => setSearch(event.target.value)} maxLength={120} placeholder={tr("ui.home.directory.placeholder")} /></label>
-        <label><span id="directory-role-label">{tr("ui.home.directory.role")}</span><select aria-labelledby="directory-role-label" value={roleFilter} onChange={event => setRoleFilter(event.target.value)}><option value="">{tr("ui.home.directory.all")}</option>{ROLES.map(role => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}</select></label>
-      </div>
-      <BaseModal2026 isOpen={showCreate} onClose={() => setShowCreate(false)} title={tr("ui.create_user_70f60575")} dismissible={!creating}>
-            <form className="booking-operation-form" onSubmit={createUser} noValidate>
-              <label>
-                {tr("ui.full_name_03de764f")}<input value={createForm.fullName} onChange={(event) => setCreateForm({ ...createForm, fullName: event.target.value })} maxLength={255} />
-              </label>
-              <label>
-                 {translate("ui.email_969ccbd3")} <input type="email" value={createForm.email} onChange={(event) => setCreateForm({ ...createForm, email: event.target.value })} />
-              </label>
-              <label>
-                {tr("ui.initial_password_59759f04")}<input type="password" value={createForm.password} onChange={(event) => setCreateForm({ ...createForm, password: event.target.value })} minLength={12} maxLength={128} autoComplete="new-password" />
-              </label>
-              <label>
-                {tr("ui.role_35195dea")}<select value={createForm.role} onChange={(event) => setCreateForm({ ...createForm, role: event.target.value as Role })}>
-                  {ROLES.map((role) => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}
-                </select>
-              </label>
-              <div className="modal-actions">
-                <button className="btn btn-secondary" type="button" onClick={() => setShowCreate(false)}>{tr("ui.cancel_74fcd352")}</button>
-                <button className="btn btn-primary" type="submit" disabled={creating}>{creating ? tr("ui.creating_45c27eb9") : tr("ui.create_user_70f60575")}</button>
-              </div>
-            </form>
-      </BaseModal2026>
-
-      {!loading && (
-        <div className="table-wrap user-management-table">
-          <table>
-            <caption className="sr-only">{tr("ui.users_roles_and_laboratory_assignments_0f27b670")}</caption>
-            <thead><tr><th>{tr("ui.users_9e9519eb")}</th><th>{tr("ui.role_35195dea")}</th><th>{tr("ui.status_cb31de81")}</th><th>{tr("ui.laboratory_assignments_79925c7e")}</th></tr></thead>
-            <tbody>
-              {users.filter(user => (!roleFilter || user.role === roleFilter) && `${user.fullName} ${user.email}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())).map((user) => (
-                <tr key={user.id}>
-                  <td><strong>{user.fullName}</strong><br /><small>{user.email}</small></td>
-                  <td>
-                    <select aria-label={translate("ui.role_for_f776e3da", { value0: user.fullName, value1: user.email })} value={user.role} onChange={(event) => updateRole(user, event.target.value as Role)}>
-                      {ROLES.map((role) => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}
-                    </select>
-                  </td>
-                  <td>
-                    <button className="btn btn-secondary" type="button" aria-label={`${user.isActive ? tr("ui.active_deactivate_82833f2d") : tr("ui.inactive_activate_18425b7c")} ${user.fullName} (${user.email})`} onClick={() => updateActive(user)}>
-                      {user.isActive ? <UserCheck size={14} /> : <UserX size={14} />}
-                      {user.isActive ? tr("ui.active_767d67bb") : tr("ui.inactive_50157a4c")}
-                    </button>
-                  </td>
-                  <td>
-                    {user.role !== "LAB_STAFF" ? <span>{tr("ui.not_applicable_ae31a6d7")}</span> : (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex flex-wrap gap-2">
-                          {(assignments[user.id] || []).map((assignment) => (
-                            <button
-                              key={assignment.laboratoryId}
-                              type="button"
-                              className="btn btn-secondary"
-                              title={tr("ui.remove_assignment_b4f12f61")}
-                              aria-label={translate("ui.remove_assignment_for_f268ec8b", { value0: assignment.laboratory.code, value1: user.fullName, value2: user.email })}
-                              onClick={() => removeAssignment(user.id, assignment.laboratoryId)}
-                            >
-                              <ShieldCheck size={13} /> {assignment.laboratory.code}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <select
-                            aria-label={translate("ui.laboratory_to_assign_to_17240d1e", { value0: user.fullName, value1: user.email })}
-                            value={selectedLabs[user.id] || ""}
-                            onChange={(event) => setSelectedLabs((current) => ({ ...current, [user.id]: event.target.value }))}
-                          >
-                            <option value="">{tr("ui.choose_laboratory_09dc49a7")}</option>
-                            {laboratories.map((lab) => <option key={lab.id} value={lab.id}>{lab.code} - {lab.name}</option>)}
-                          </select>
-                          <button className="btn btn-primary" type="button" aria-label={translate("ui.assign_a_laboratory_to_6d0937d2", { value0: user.fullName, value1: user.email })} onClick={() => addAssignment(user)}>{tr("ui.assign_cf04fe53")}</button>
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!users.some(user => (!roleFilter || user.role === roleFilter) && `${user.fullName} ${user.email}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())) && <p className="empty-state">{tr("ui.home.directory.empty")}</p>}
-        </div>
-      )}
-    </section>
-  );
+      <aside ref={dossierRef} tabIndex={-1} className="users-dossier" aria-label={tr('ui.users.accountDetails')}>
+        {!user ? <div className="users-empty"><ShieldCheck size={28} aria-hidden="true" /><h2>{tr(selected && !loading ? 'ui.users.accountUnavailable' : 'ui.users.selectAccount')}</h2><p>{tr('ui.users.selectHint')}</p></div> : <>
+          <header><h2>{user.fullName}</h2><p>{user.email}</p><span className={user.isActive ? 'users-status is-active' : 'users-status'}>{tr(user.isActive ? 'ui.active_767d67bb' : 'ui.inactive_50157a4c')}</span></header>
+          <dl><div><dt>{tr('ui.role_35195dea')}</dt><dd>{tr(roleLabels[user.role])}</dd></div>{user.department && <div><dt>{tr('ui.users.department')}</dt><dd>{user.department}</dd></div>}<div><dt>{tr('ui.users.bookingCount')}</dt><dd>{user._count?.bookings ?? '—'}</dd></div></dl>
+          <section className="users-permissions"><h3>{tr('ui.users.access')}</h3><p>{tr('ui.users.accessHint')}</p>
+            <label>{tr('ui.users.newRole')}<select disabled={busy} value={roles[user.id] || user.role} onChange={event => setRoles(current => ({ ...current, [user.id]: event.target.value as UserRole }))}>{USER_ROLES.map(role => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}</select></label>
+            <button type="button" className="btn btn-secondary" disabled={busy || !roles[user.id] || roles[user.id] === user.role} onClick={() => propose({ user, type: 'role', role: roles[user.id] })}>{tr('ui.users.reviewRole')}</button>
+            <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => propose({ user, type: 'active' })}>{user.isActive ? <UserX size={16} /> : <UserCheck size={16} />}{tr(user.isActive ? 'ui.users.deactivate' : 'ui.users.activate')}</button>
+          </section>
+          {isStaff && <section className="users-lab-scope" aria-busy={assignmentsLoading}><h3>{tr('ui.laboratory_assignments_79925c7e')}</h3><p>{tr('ui.users.labHint')}</p>
+            {assignmentsLoading ? <p role="status">{tr('ui.loading_data_84c68bd5')}</p> : assignmentsError ? <p className="users-error" role="alert">{tr(assignmentsError)} <button type="button" className="btn btn-secondary" onClick={() => setAssignmentRevision(value => value + 1)}>{tr('ui.users.retry')}</button></p> : <>
+              {assignments.length ? <ul className="users-labs">{assignments.map(assignment => <li key={assignment.laboratoryId}><div><strong>{assignment.laboratory.code}</strong><span>{assignment.laboratory.name}</span>{!assignment.laboratory.isActive && <small>{tr('ui.inactive_50157a4c')}</small>}</div><button type="button" className="btn btn-secondary" disabled={busy} aria-label={tr('ui.users.removeLab') + ': ' + assignment.laboratory.code} onClick={() => propose({ user, type: 'remove', laboratory: assignment.laboratory })}>{tr('ui.users.remove')}</button></li>)}</ul> : <p className="users-muted">{tr('ui.users.noAssignments')}</p>}
+              <label>{tr('ui.choose_laboratory_09dc49a7')}<select disabled={busy} value={labChoices[user.id] || ''} onChange={event => setLabChoices(current => ({ ...current, [user.id]: event.target.value }))}><option value="">{tr('ui.choose_laboratory_09dc49a7')}</option>{laboratories.filter(lab => !assignments.some(assignment => assignment.laboratoryId === lab.id)).map(lab => <option key={lab.id} value={lab.id}>{lab.code} · {lab.name}{lab.isActive ? '' : ' (' + tr('ui.inactive_50157a4c') + ')'}</option>)}</select></label>
+              <button type="button" className="btn btn-primary" disabled={busy || !laboratories.some(lab => lab.id === labChoices[user.id])} onClick={() => propose({ user, type: 'assign', laboratory: laboratories.find(lab => lab.id === labChoices[user.id]) })}>{tr('ui.users.reviewAssignment')}</button>
+            </>}
+          </section>}
+        </>}
+      </aside>
+    </div>
+    <BaseModal2026 isOpen={!!change} onClose={() => { if (!busy) { setChange(null); setActionError(''); } }} title={tr(changeTitle)} dismissible={!busy}>
+      {change && <div className="users-confirm"><h4>{change.user.fullName}</h4><p>{change.user.email}</p>
+        {change.type === 'role' && <><p>{tr(roleLabels[change.user.role])} <ArrowRight size={16} aria-hidden="true" /> {tr(roleLabels[change.role!])}</p>{change.user.role === 'LAB_STAFF' && change.role !== 'LAB_STAFF' && <p className="users-error">{tr('ui.users.assignmentRemovalWarning')}</p>}</>}
+        {change.type === 'active' && <p>{tr(change.user.isActive ? 'ui.users.deactivateHint' : 'ui.users.activateHint')}</p>}
+        {change.laboratory && <p><strong>{change.laboratory.code}</strong> · {change.laboratory.name}</p>}
+        {actionError && <p className="users-error" role="alert">{tr(actionError)}</p>}
+        <div className="users-actions"><button type="button" className="btn btn-secondary" disabled={busy} onClick={() => { setChange(null); setActionError(''); }}>{tr('ui.cancel_74fcd352')}</button><button type="button" className="btn btn-primary" disabled={busy} onClick={() => void applyChange()}>{tr(busy ? 'ui.users.saving' : 'ui.users.confirm')}</button></div>
+      </div>}
+    </BaseModal2026>
+  </section>;
 }

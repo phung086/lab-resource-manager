@@ -53,7 +53,7 @@ router.post("/otp", limiter, route(async (req, res) => {
 
 router.post("/book", limiter, route(async (req, res) => {
   const data = completeSchema.parse(req.body);
-  res.status(201).json(await completeGuestBooking(data));
+  res.status(201).json(await completeGuestBooking(data, { locale: req.locale }));
 }));
 
 export default router;

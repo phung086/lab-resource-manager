@@ -21,7 +21,7 @@ const addressSchema = z.object({
 
 const updateOwnProfileSchema = z.object({
   fullName: z.string().trim().min(2).max(255).optional(),
-  phone: z.string().trim().max(20).optional(),
+  phone: z.string().trim().max(20).refine(value => !value || /^(?:0\d{9}|\+[1-9]\d{7,14})$/.test(value)).optional(),
   organization: z.string().trim().max(160).optional().nullable(),
   customerType: z.enum(["INTERNAL", "EXTERNAL"]).optional(),
   address: addressSchema.optional()
@@ -164,7 +164,7 @@ const createUserSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
   password: z.string().min(12).max(128),
   fullName: z.string().trim().min(2).max(255),
-  role: z.enum(CANONICAL_ROLES).default("STUDENT"),
+  role: z.enum(CANONICAL_ROLES).default("CUSTOMER"),
   isActive: z.boolean().default(true),
   studentId: z.string().trim().max(50).optional(),
   department: z.string().trim().max(100).optional(),
@@ -322,7 +322,7 @@ router.get("/:id", requireAuth, requireRole(ADMIN), async (req, res, next) => {
  * Only ADMIN can change roles.
  */
 const updateRoleSchema = z.object({
-  role: z.enum(["ADMIN", "LAB_STAFF", "LECTURER", "STUDENT"])
+  role: z.enum(["ADMIN", "LAB_STAFF", "CUSTOMER"])
 }).strict();
 
 router.patch("/:id/role", requireAuth, requireRole(ADMIN), async (req, res, next) => {

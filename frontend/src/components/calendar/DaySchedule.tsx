@@ -31,6 +31,7 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
         {HOURS.map((hour) => {
           const hourStr = `${String(hour).padStart(2, "0")}:00`;
 
+          const isPast = new Date(vietnamTimeToIso(currentDateStr, hourStr)).getTime() <= Date.now();
           // Match events covering this hour in Vietnam time
           const matchedEvents = events.filter((ev) => {
             if (!ev.start || !ev.end) return false;
@@ -63,8 +64,9 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
                 ) : blocked ? <span className="section-description">{tr("ui.this_resource_is_not_accepting_7365dfdb")}</span> : (
                   <button
                     type="button"
+                    disabled={isPast}
                     onClick={() => onSelectSlot(currentDateStr, hourStr)}
-                    className="calendar-day-available w-full text-left py-2 px-3 rounded text-xs flex items-center justify-between transition-colors cursor-pointer"
+                    className={`calendar-day-available ${isPast ? "is-past" : ""} w-full text-left py-2 px-3 rounded text-xs flex items-center justify-between transition-colors`}
                     aria-label={
                       selectedResourceName
                         ? translate("ui.book_at_on_a37b206a", { value0: selectedResourceName, value1: hourStr, value2: currentDateStr })
@@ -80,7 +82,7 @@ export const DaySchedule: React.FC<DayScheduleProps> = ({
                       <span className="calendar-day-idle-dot" />
                     </span>
                     <span className="calendar-day-slot-hover font-medium">
-                      {tr("ui.book_f0937e77")}{hourStr}
+                      {tr(isPast ? 'ui.calendarWorkspace.past' : 'ui.book_f0937e77')}{!isPast ? ` ${hourStr}` : ''}
                     </span>
                     <Plus size={13} className="calendar-day-slot-icon" aria-hidden="true" />
                   </button>

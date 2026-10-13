@@ -2,7 +2,7 @@
 
 Current local continuation: 2026-10-05. No new numbered Batch or live provider
 activation. [Setup guide](AI_ASSISTANT_SETUP.md) explains configuration; the
-[verification report](../artifacts/assistant-api-preparation-20261005/REPORT.md)
+verification report (historical run output; retired)
 records the tested environment and limits.
 
 ## Runtime modes
@@ -72,13 +72,22 @@ Expiry is 30 idle minutes, checked on access and swept every minute. Raw bearer
 credentials and business tool output are not stored. Earlier business replies
 become an internal intent marker rather than operational evidence.
 
+The human-support extension separately retains up to twenty displayed question/
+answer messages (at most 12,000 serialized UTF-8 bytes) in the same owner-bound,
+expiring session. This display transcript is never provider history and contains
+no raw tool JSON. The signed-in customer explicitly requests support and chooses
+whether to share it; the support API copies server-owned messages into that
+durable support record. Staff see the shared prior context as historical text,
+not verified current business status. Foreign/expired conversation IDs fail.
+
 Minimize preserves the browser draft, conversation ID and visible turns; locale
 changes preserve original questions. New conversation deletes current server
 context and clears selected form context while retaining the unsent draft.
 Authenticated logout cancels that session's assistant work and deletes its server
 context. Reload starts a fresh browser conversation; abandoned server context
 expires separately. Restart clears server memory. This does not introduce JWT
-revocation or durable conversation storage.
+revocation or durable assistant storage. An explicitly shared support record
+remains after the temporary assistant session is cleared.
 
 ## REST API
 

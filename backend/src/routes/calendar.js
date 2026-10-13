@@ -4,6 +4,8 @@ import { prisma } from "../db.js";
 import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
 import { ADMIN, LAB_STAFF, STAFF_ROLES } from "../constants/roles.js";
 import { optionalAuth } from "../middleware/auth.js";
+import { getVietnamTimeParts } from "../services/availabilityService.js";
+import { attachCareUsage, resourceAvailability } from "../services/resourceService.js";
 
 const router = express.Router();
 
@@ -38,11 +40,12 @@ router.get("/slots", async (req, res, next) => {
     if (resource_id) resourceWhere.id = String(resource_id);
     if (targetLabId) resourceWhere.laboratoryId = String(targetLabId);
 
-    const resources = await prisma.resource.findMany({
+    const resourceRows = await prisma.resource.findMany({
       where: resourceWhere,
-      include: { laboratory: { select: { id: true, name: true, code: true } } },
+      include: { careProfile: true, laboratory: { select: { id: true, name: true, code: true, isActive: true, labPolicy: true } } },
       orderBy: { code: "asc" }
     });
+    const resources = await Promise.all(resourceRows.map(resource => attachCareUsage(prisma, resource)));
 
     let existingBookings = [];
     let maintenanceWindows = [];
@@ -57,12 +60,11 @@ router.get("/slots", async (req, res, next) => {
     const safeAnchor = Number.isNaN(anchorDate.getTime()) ? now : anchorDate;
 
     // Compute dates for Monday -> Sunday
-    const currentDayOfWeek = safeAnchor.getDay();
+    const anchorParts = getVietnamTimeParts(safeAnchor);
+    const currentDayOfWeek = anchorParts.dayOfWeek;
     const diffToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
 
-    const monday = new Date(safeAnchor);
-    monday.setDate(safeAnchor.getDate() + diffToMonday);
-    monday.setHours(0, 0, 0, 0);
+    const monday = new Date(Date.UTC(anchorParts.year, anchorParts.month - 1, anchorParts.day + diffToMonday));
 
     const days = [
       { key: "mon", name: "Thứ 2", offset: 0 },
@@ -74,20 +76,19 @@ router.get("/slots", async (req, res, next) => {
       { key: "sun", name: "Chủ Nhật", offset: 6 }
     ].map((d) => {
       const dateObj = new Date(monday);
-      dateObj.setDate(monday.getDate() + d.offset);
+      dateObj.setUTCDate(monday.getUTCDate() + d.offset);
       return {
         ...d,
         nameKey: `enum.weekday.${d.key}`, name: localize(req.locale, `enum.weekday.${d.key}`),
-        dateStr: `${String(dateObj.getDate()).padStart(2, "0")}/${String(dateObj.getMonth() + 1).padStart(2, "0")}`,
-        fullDate: `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}-${String(dateObj.getDate()).padStart(2, "0")}`,
-        isToday: dateObj.toDateString() === now.toDateString()
+        dateStr: `${String(dateObj.getUTCDate()).padStart(2, "0")}/${String(dateObj.getUTCMonth() + 1).padStart(2, "0")}`,
+        fullDate: dateObj.toISOString().slice(0,10),
+        isToday: dateObj.toISOString().slice(0,10) === new Date(+now + 7*3600000).toISOString().slice(0,10)
       };
     });
 
     if (activeResourceId) {
-      const weekStart = new Date(monday);
-      const weekEnd = new Date(monday);
-      weekEnd.setDate(monday.getDate() + 7);
+      const weekStart = new Date(+monday - 7*3600000);
+      const weekEnd = new Date(+weekStart + 7*86400000);
 
       [existingBookings, maintenanceWindows] = await Promise.all([
         prisma.booking.findMany({
@@ -127,10 +128,13 @@ router.get("/slots", async (req, res, next) => {
       const timeLabel = `${String(hour).padStart(2, "0")}:00`;
 
       const daySlots = days.map((day) => {
-        const slotStart = new Date(`${day.fullDate}T${String(hour).padStart(2, "0")}:00:00`);
+        const slotStart = new Date(`${day.fullDate}T${String(hour).padStart(2, "0")}:00:00+07:00`);
         const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000);
 
         const opStatus = selectedResource?.operationalStatus || (selectedResource?.status ? String(selectedResource.status).toUpperCase() : "AVAILABLE");
+        const policy = selectedResource?.laboratory?.labPolicy;
+        if (selectedResource?.bookingState !== "bookable" || selectedResource?.laboratory?.isActive === false || (policy && ((policy.workDayStartHour != null && hour < policy.workDayStartHour) || (policy.workDayEndHour != null && hour + 1 > policy.workDayEndHour) || (policy.allowWeekend === false && ["sat","sun"].includes(day.key))))) return { status: "offline", labelKey: "calendar.closed", label: localize(req.locale, "calendar.closed"), detailsKey: "calendar.outsidePolicy", details: localize(req.locale, "calendar.outsidePolicy") };
+        if (selectedResource && resourceAvailability(selectedResource).source === "maintenance_policy") return { status: "maintenance", labelKey: "calendar.maintenance", label: localize(req.locale,"calendar.maintenance"), detailsKey: "calendar.serviceDue", details: localize(req.locale,"calendar.serviceDue") };
 
         if (opStatus === "MAINTENANCE" || opStatus === "CALIBRATION") {
           return {
@@ -211,8 +215,8 @@ router.get("/slots", async (req, res, next) => {
             category: selectedResource.category,
             status: selectedResource.status,
             operationalStatus: selectedResource.operationalStatus,
-            requiresApproval: selectedResource.requiresApproval,
-            laboratory: selectedResource.laboratory
+            requiresApproval: false,
+            laboratory: selectedResource.laboratory ? { ...selectedResource.laboratory, labPolicy: selectedResource.laboratory.labPolicy ? { ...selectedResource.laboratory.labPolicy, requiresApproval: false } : null } : null
           }
         : null,
       availableResources: resources.map((r) => ({
@@ -223,13 +227,13 @@ router.get("/slots", async (req, res, next) => {
         category: r.category,
         status: r.status,
         operationalStatus: r.operationalStatus,
-        requiresApproval: r.requiresApproval
+        requiresApproval: false
       })),
       daysHeader: days,
       grid,
       range: {
-        start: monday.toISOString(),
-        end: new Date(monday.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        start: new Date(+monday - 7*3600000).toISOString(),
+        end: new Date(+monday - 7*3600000 + 7 * 86400000).toISOString()
       }
     });
   } catch (error) {

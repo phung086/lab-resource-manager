@@ -17,7 +17,8 @@ export const SYSTEM_MONITORING_DEFAULTS = Object.freeze({
   humidityMinPercent: 20,
   humidityMaxPercent: 80,
   staleMinutes: 15,
-  utilizationWarningPercent: 90
+  utilizationWarningPercent: 90,
+  utilizationCriticalPercent: 98
 });
 
 function thresholdValue(resourceValue, laboratoryValue, defaultValue, field) {
@@ -38,17 +39,12 @@ export function resolveMonitoringThresholds(resource) {
     "temperatureCriticalC",
     "humidityMinPercent",
     "humidityMaxPercent",
-    "staleMinutes"
+    "staleMinutes", "utilizationWarningPercent", "utilizationCriticalPercent"
   ];
   const resolved = Object.fromEntries(fields.map((field) => {
     const item = thresholdValue(resourcePolicy[field], laboratoryPolicy[field], SYSTEM_MONITORING_DEFAULTS[field], field);
     return [field, item];
   }));
-  resolved.utilizationWarningPercent = {
-    value: SYSTEM_MONITORING_DEFAULTS.utilizationWarningPercent,
-    source: "SYSTEM_DEFAULT",
-    field: "utilizationWarningPercent"
-  };
   return {
     values: Object.fromEntries(Object.entries(resolved).map(([field, item]) => [field, item.value])),
     sourceByField: Object.fromEntries(Object.entries(resolved).map(([field, item]) => [field, item.source]))
@@ -119,14 +115,14 @@ export function evaluateTelemetryConditions(sample, thresholds) {
   if (sample.online === false) {
     conditions.push({ ruleCode: "SOURCE_OFFLINE", severity: "WARNING", message: "Telemetry source explicitly reported offline" });
   }
-  if (sample.temperatureC >= thresholds.temperatureCriticalC) {
+  if (sample.temperatureC != null && sample.temperatureC >= thresholds.temperatureCriticalC) {
     conditions.push({
       ruleCode: "TEMPERATURE_CRITICAL",
       severity: "CRITICAL",
       message: "Temperature reached the configured critical threshold",
       observedValue: sample.temperatureC
     });
-  } else if (sample.temperatureC >= thresholds.temperatureWarningC) {
+  } else if (sample.temperatureC != null && sample.temperatureC >= thresholds.temperatureWarningC) {
     conditions.push({
       ruleCode: "TEMPERATURE_WARNING",
       severity: "WARNING",
@@ -134,10 +130,16 @@ export function evaluateTelemetryConditions(sample, thresholds) {
       observedValue: sample.temperatureC
     });
   }
-  if (sample.humidityPercent < thresholds.humidityMinPercent) {
+  if (sample.humidityPercent != null && sample.humidityPercent < thresholds.humidityMinPercent) {
     conditions.push({ ruleCode: "HUMIDITY_LOW", severity: "WARNING", message: "Humidity is below the configured minimum", observedValue: sample.humidityPercent });
-  } else if (sample.humidityPercent > thresholds.humidityMaxPercent) {
+  } else if (sample.humidityPercent != null && sample.humidityPercent > thresholds.humidityMaxPercent) {
     conditions.push({ ruleCode: "HUMIDITY_HIGH", severity: "WARNING", message: "Humidity is above the configured maximum", observedValue: sample.humidityPercent });
+  }
+  for (const key of ["cpuPercent", "gpuPercent", "gpuMemoryPercent", "ramPercent", "diskPercent"]) {
+    if (sample[key] == null || sample[key] < thresholds.utilizationWarningPercent) continue;
+    // CPU/GPU may legitimately be fully busy. Only capacity exhaustion is critical.
+    const critical = ["gpuMemoryPercent", "ramPercent", "diskPercent"].includes(key) && sample[key] >= thresholds.utilizationCriticalPercent;
+    conditions.push({ ruleCode: `${key.toUpperCase()}_${critical ? "CRITICAL" : "WARNING"}`, severity: critical ? "CRITICAL" : "WARNING", message: `${key} reached its configured ${critical ? "critical capacity" : "utilization warning"} threshold`, observedValue: sample[key] });
   }
   const signals = Array.isArray(sample.verifiedSignals) ? sample.verifiedSignals : [];
   for (const signal of signals) {
@@ -170,6 +172,7 @@ async function reconcileAlerts(tx, { source, sample, thresholdResolution, now })
       sourceId: source.id,
       resourceId: source.resourceId,
       laboratoryId: source.laboratoryId,
+      origin: sample.origin,
       sampleId: sample.id,
       ruleCode: condition.ruleCode,
       severity: condition.severity,
@@ -198,6 +201,7 @@ async function reconcileAlerts(tx, { source, sample, thresholdResolution, now })
           data: {
             id: crypto.randomUUID(),
             resourceId: source.resourceId,
+            origin: sample.origin,
             reportedById: null,
             telemetrySourceId: source.id,
             telemetrySampleId: sample.id,
@@ -214,7 +218,8 @@ async function reconcileAlerts(tx, { source, sample, thresholdResolution, now })
               telemetrySourceId: source.id,
               telemetrySampleId: sample.id,
               monitoringAlertId: alert.id,
-              ruleCode: condition.ruleCode
+              ruleCode: condition.ruleCode,
+              origin: sample.origin, simulationRunId: sample.simulationRunId
             }
           }
         });
@@ -228,7 +233,7 @@ async function reconcileAlerts(tx, { source, sample, thresholdResolution, now })
             message: "incident.monitoring_alert_reported",
             messageKey: "incident.monitoring_alert_reported",
             reason: condition.message,
-            metadata: { monitoringAlertId: alert.id, telemetrySampleId: sample.id, ruleCode: condition.ruleCode }
+            metadata: { monitoringAlertId: alert.id, telemetrySampleId: sample.id, ruleCode: condition.ruleCode, origin: sample.origin, simulationRunId: sample.simulationRunId }
           }
         });
       }
@@ -258,6 +263,8 @@ async function reconcileAlerts(tx, { source, sample, thresholdResolution, now })
 }
 
 export async function persistTelemetrySample(tx, { source, payload, now = new Date() }) {
+  if (source.kind === "SIMULATED") throw new HttpError(410, "Scenario simulator has been removed", undefined, "TELEMETRY_SOURCE_INACTIVE");
+  if (source.kind !== "SIMULATED" && payload.simulationRunId) throw new HttpError(403, "External sources cannot submit simulated runs", undefined, "FORBIDDEN");
   const sampledAt = validateTelemetryTimestamp(payload.timestamp, now);
   if (payload.labId && payload.labId !== source.laboratoryId) {
     throw new HttpError(403, "Telemetry source cannot submit for another laboratory", { field: "labId" }, "TELEMETRY_SOURCE_SCOPE_MISMATCH");
@@ -274,6 +281,8 @@ export async function persistTelemetrySample(tx, { source, payload, now = new Da
   if (!currentSource?.isActive) {
     throw new HttpError(403, "Telemetry source is inactive", undefined, "TELEMETRY_SOURCE_INACTIVE");
   }
+  if (source.profile === "ROOM" && ["cpuPercent", "gpuPercent", "gpuMemoryPercent", "ramPercent", "diskPercent"].some(key => payload[key] != null)) throw new HttpError(400, "Room source cannot report compute readings", undefined, "VALIDATION_ERROR");
+  if (source.profile === "COMPUTE" && payload.humidityPercent != null) throw new HttpError(400, "Compute profile does not measure ambient humidity", undefined, "VALIDATION_ERROR");
 
   if (payload.eventId) {
     const prior = await tx.telemetrySample.findUnique({
@@ -291,14 +300,16 @@ export async function persistTelemetrySample(tx, { source, payload, now = new Da
       id: crypto.randomUUID(),
       sourceId: source.id,
       externalId: payload.eventId || null,
+      origin: source.kind || "EXTERNAL",
+      simulationRunId: payload.simulationRunId || null,
       resourceId: source.resourceId,
       cpuPercent: payload.cpuPercent ?? null,
       gpuPercent: payload.gpuPercent ?? null,
       gpuMemoryPercent: payload.gpuMemoryPercent ?? null,
       ramPercent: payload.ramPercent ?? null,
       diskPercent: payload.diskPercent ?? null,
-      temperatureC: payload.temperatureC,
-      humidityPercent: payload.humidityPercent,
+      temperatureC: payload.temperatureC ?? null,
+      humidityPercent: payload.humidityPercent ?? null,
       online: payload.online,
       source: source.code,
       verifiedSignals,
@@ -325,7 +336,7 @@ export async function persistTelemetrySample(tx, { source, payload, now = new Da
 export function serializeTelemetry(resource, sample, now = new Date()) {
   const thresholdResolution = resolveMonitoringThresholds(resource);
   const derived = deriveTelemetryState(resource, sample, now, thresholdResolution);
-  const source = sample?.telemetrySource || null;
+  const source = sample?.telemetrySource || resource.telemetrySources?.[0] || null;
   return {
     resource: {
       id: resource.id,
@@ -340,6 +351,8 @@ export function serializeTelemetry(resource, sample, now = new Date()) {
       : null,
     latestTelemetry: sample ? {
       id: sample.id,
+      origin: sample.origin || "EXTERNAL",
+      simulationRunId: sample.simulationRunId || null,
       sourceId: sample.sourceId,
       source: source?.code || sample.source,
       sampledAt: sample.sampledAt,

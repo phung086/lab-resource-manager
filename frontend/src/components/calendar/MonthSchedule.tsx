@@ -3,7 +3,7 @@ import { useLocale } from '../../providers/LocaleProvider';
 import React from "react";
 import { Plus } from "lucide-react";
 import { CalendarEventCard } from "./CalendarEventCard.js";
-import { vietnamTimeToIso, getVietnamTodayDateString } from "../../utils/timezone.js";
+import { vietnamTimeToIso, getVietnamTodayDateString, parseVietnamParts } from "../../utils/timezone.js";
 
 export interface MonthScheduleProps {
   anchorDate: Date;
@@ -48,6 +48,9 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
   for (let day = 1; day <= daysInMonth; day++) {
     const dayDateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const isToday = dayDateStr === todayStr;
+    const startHour = isToday ? Math.max(9, (parseVietnamParts(new Date())?.hours || 0) + 1) : 9;
+    const isPast = dayDateStr < todayStr || startHour > 20;
+    const startTime = `${String(startHour).padStart(2, "0")}:00`;
 
     // Filter events for this day in Vietnam time
     const dayEvents = events.filter((ev) => {
@@ -62,8 +65,8 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
       >
         <button
           type="button"
-          disabled={blocked}
-          onClick={() => onSelectSlot(dayDateStr, "09:00")}
+          disabled={blocked || isPast}
+          onClick={() => onSelectSlot(dayDateStr, startTime)}
           aria-label={
             selectedResourceName
               ? translate("ui.book_on_df27a9ce", { value0: selectedResourceName, value1: dayDateStr })
@@ -77,7 +80,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
             {day}
           </span>
           <Plus
-            size={12}
+            size={14}
             className="calendar-month-add"
             aria-hidden="true"
           />
@@ -107,7 +110,7 @@ export const MonthSchedule: React.FC<MonthScheduleProps> = ({
 
   return (
     <div className="calendar-month-frame">
-      <div className="calendar-month-scroll">
+      <div className="calendar-month-scroll" role="region" aria-label={tr("ui.calendarWorkspace.monthGrid")} tabIndex={0}>
         <div className="calendar-month-grid">
           {DAY_NAMES.map((dayName) => (
             <div

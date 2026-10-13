@@ -1,12 +1,14 @@
 /**
  * Email Notification Service
  * Powered by Nodemailer & HTML Templates
- * Supports SMTP, SendGrid, Ethereal Test Account, and Dev Console fallback.
+ * Requires real SMTP configuration; never reports console output as delivery.
  */
 
 import nodemailer from "nodemailer";
+import { createHash } from "node:crypto";
 
 let transporter = null;
+let transportFingerprint = null;
 
 export function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, (character) => ({
@@ -18,84 +20,74 @@ export function escapeHtml(value) {
   })[character]);
 }
 
-async function getTransporter() {
-  if (transporter) return transporter;
-
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT) || 587;
-  const user = process.env.SMTP_USER;
+export function emailConfiguration() {
+  const host = process.env.SMTP_HOST?.trim();
+  const port = Number(process.env.SMTP_PORT || 587);
+  const user = process.env.SMTP_USER?.trim();
   const pass = process.env.SMTP_PASS;
+  const from = process.env.EMAIL_FROM?.trim();
+  const fromAddress = from?.match(/^(?:[^<>\r\n]*<)?([^\s<>@]+@[^\s<>@]+\.[^\s<>@]+)>?$/)?.[1];
+  return { host, port, user, pass, from, fromAddress, configured: Boolean(
+    host && user && pass && fromAddress && Number.isInteger(port) && port > 0 && port <= 65535
+  ) };
+}
 
-  if (host && user) {
-    transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass }
-    });
-    return transporter;
-  }
+function getTransporter() {
+  const c = emailConfiguration();
+  if (!c.configured) return null;
+  const requireTLS = !(process.env.NODE_ENV === "test" && ["127.0.0.1", "localhost"].includes(c.host)) && c.port !== 465;
+  const fingerprint = createHash("sha256").update(JSON.stringify({ ...c, requireTLS })).digest("hex");
+  if (transporter && transportFingerprint === fingerprint) return transporter;
+  transporter?.close();
+  transporter = nodemailer.createTransport({
+    host: c.host, port: c.port, secure: c.port === 465,
+    // Only the isolated SMTP integration fixture may run without TLS.
+    requireTLS,
+    auth: { user: c.user, pass: c.pass },
+    connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000
+  });
+  transportFingerprint = fingerprint;
+  return transporter;
+}
 
-  // Local Dev Fallback: Ethereal Test Account or Console log
-  try {
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      secure: false,
-      auth: { user: testAccount.user, pass: testAccount.pass }
-    });
-    return transporter;
-  } catch (_err) {
-    return null;
-  }
+function deliveryError(error) {
+  return error?.code === "EAUTH" ? "SMTP_AUTH_FAILED"
+    : error?.code === "EENVELOPE" ? "SMTP_RECIPIENT_REJECTED"
+      : "SMTP_DELIVERY_FAILED";
+}
+
+export async function verifyEmailTransport() {
+  const transport = getTransporter();
+  if (!transport) return { success: false, error: "SMTP is not configured" };
+  try { await transport.verify(); return { success: true }; }
+  catch (error) { return { success: false, error: deliveryError(error) }; }
 }
 
 /**
  * Send email safely without throwing
  */
-export async function sendEmail({ to, subject, html, text }) {
+export async function sendEmail({ to, subject, html, text, messageId }) {
   try {
-    if (process.env.NODE_ENV === "production" && (!process.env.SMTP_HOST || !process.env.SMTP_USER)) {
-      return { success: false, error: "SMTP is not configured" };
-    }
-
-    const transport = await getTransporter();
-    const from = process.env.EMAIL_FROM || '"Lab Management System" <no-reply@lab.local>';
-
-    if (!transport) {
-      console.log(`[EMAIL DEV MOCK] To: ${to} | Subject: ${subject}`);
-      return { success: true, mocked: true };
-    }
-
+    const transport = getTransporter();
+    if (!transport) return { success: false, error: "SMTP is not configured" };
     const info = await transport.sendMail({
-      from,
+      from: emailConfiguration().from,
       to,
       subject,
       text: text || subject,
-      html
+      html, messageId,
+      disableFileAccess: true, disableUrlAccess: true
     });
-
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-      console.log(`[EMAIL TEST PREVIEW]: ${previewUrl}`);
+    if (!info.accepted?.length || info.rejected?.length) {
+      return { success: false, error: "SMTP_RECIPIENT_REJECTED" };
     }
-
-    return { success: true, messageId: info.messageId, previewUrl };
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error("Failed to send email:", error.message);
-    return { success: false, error: error.message };
+    return { success: false, error: deliveryError(error) };
   }
 }
 
-export async function sendRequiredEmail({ to, subject, html, text }) {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  if (!host || !user) {
-    return { success: false, error: "SMTP is not configured" };
-  }
-  return sendEmail({ to, subject, html, text });
-}
+export const sendRequiredEmail = sendEmail;
 
 /**
  * Send Booking Status HTML Email

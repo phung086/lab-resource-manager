@@ -1,5 +1,6 @@
 import { activeBookingStatuses } from "../utils/bookingOverlap.js";
 import { HttpError } from "../middleware/errors.js";
+import { assertCareReady } from "./resourceCareAccounting.js";
 
 export const maintenanceKinds = ["maintenance", "calibration"];
 export const maintenanceStatuses = ["scheduled", "in_progress", "completed", "cancelled"];
@@ -152,13 +153,21 @@ export async function getResourceAvailability(client, { resourceId, startAt, end
     })
   ]);
 
-  return buildAvailabilityResult({
+  const result = buildAvailabilityResult({
     resource: selectedResource,
     startAt,
     endAt,
     bookings,
     maintenanceWindows
   });
+  try { await assertCareReady(client, resourceId); }
+  catch (error) {
+    if (!["RESOURCE_MAINTENANCE_DUE", "RESOURCE_INSPECTION_REQUIRED", "RESOURCE_COMPONENT_BROKEN", "RESOURCE_ROOM_UNAVAILABLE"].includes(error.code)) throw error;
+    result.available = false;
+    result.conflicts.push({ type: "MAINTENANCE_CONFLICT", severity: "HARD", resourceId, message: error.message, startAt: toIso(startAt), endAt: toIso(endAt), suggestedActions: ["USE_ALTERNATIVE_EQUIPMENT"] });
+    result.unavailableIntervals.push({ type: "MAINTENANCE_CONFLICT", source: "maintenance_policy", resourceId, startAt: toIso(startAt), endAt: toIso(endAt), label: error.code });
+  }
+  return result;
 }
 
 export function assertResourceAvailable(availability) {
@@ -204,6 +213,8 @@ function getResourceStatus(resource) {
 
 function isResourceStatusBlocking(resource) {
   if (!resource) return false;
+  if (resource.bookingState && resource.bookingState !== "bookable") return true;
+  if (resource.laboratory?.isActive === false) return true;
   const status = getResourceStatus(resource);
   return BLOCKING_RESOURCE_STATUSES.includes(status);
 }

@@ -20,8 +20,7 @@ model DeploymentBaseline {
 enum Role {
   ADMIN
   LAB_STAFF
-  LECTURER
-  STUDENT
+  CUSTOMER
 }
 
 // Technical subtype vocabulary. Resource.category is the assignment-level taxonomy.
@@ -238,6 +237,7 @@ model Laboratory {
   cameras             Camera[]
   cameraAccessAudits  CameraAccessAudit[]
   systemAuditEvents   SystemAuditEvent[]             @relation("SystemAuditLab")
+  supportSessions     SupportSession[]
 
   @@index([buildingId])
   @@map("laboratories")
@@ -267,7 +267,7 @@ model User {
   stockMovements StockMovement[]
   id                           String                @id
   email                        String                @unique
-  fullName                     String
+  fullName                     String @default("")
   role                         Role
   passwordHash                 String
   studentId                    String?
@@ -308,8 +308,91 @@ model User {
   cameraAccessAudits           CameraAccessAudit[]
   emailOtps                    EmailOtp[]
   systemAuditEvents          SystemAuditEvent[]    @relation("SystemAuditActor")
+  requestedSupport             SupportSession[]      @relation("SupportRequester")
+  assignedSupport              SupportSession[]      @relation("SupportStaff")
+  supportMessages              SupportMessage[]
+  supportPresence              SupportPresence?
+  emailDeliveries              EmailDelivery[]
 
   @@map("users")
+}
+
+model EmailDelivery {
+  id            String    @id
+  dedupeKey     String    @unique
+  userId        String
+  recipient     String
+  kind          String
+  locale        String    @default("vi")
+  payload       Json
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime? @default(now())
+  leaseToken    String?
+  lockedAt      DateTime?
+  sentAt        DateTime?
+  messageId     String?
+  lastError     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([userId, createdAt])
+  @@map("email_deliveries")
+}
+
+model SupportSession {
+  id                 String           @id
+  ordinal            Int              @unique @default(autoincrement())
+  laboratoryId       String
+  requesterId        String
+  assignedStaffId    String?
+  category           String
+  subject            String
+  requestFingerprint String
+  status             String           @default("WAITING")
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  assignedAt         DateTime?
+  closedAt           DateTime?
+  resolution         String?
+  laboratory         Laboratory       @relation(fields: [laboratoryId], references: [id], onDelete: Restrict)
+  requester          User             @relation("SupportRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  assignedStaff      User?            @relation("SupportStaff", fields: [assignedStaffId], references: [id], onDelete: Restrict)
+  messages           SupportMessage[]
+
+  @@index([laboratoryId, status, ordinal])
+  @@index([requesterId, ordinal])
+  @@index([assignedStaffId, status])
+  @@map("support_sessions")
+}
+
+model SupportMessage {
+  id        String         @id
+  sequence  Int            @unique @default(autoincrement())
+  sessionId String
+  senderId  String?
+  kind      String
+  body      String
+  eventType String?
+  source    String         @default("CHAT")
+  createdAt DateTime       @default(now())
+  session   SupportSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  sender    User?          @relation(fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([sessionId, sequence])
+  @@map("support_messages")
+}
+
+model SupportPresence {
+  userId         String    @id
+  accepting      Boolean   @default(false)
+  lastSeenAt     DateTime   @default(now())
+  lastAssignedAt DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("support_presence")
 }
 
 model EmailOtp {
@@ -330,6 +413,12 @@ model EmailOtp {
 }
 
 model Resource {
+  maxBookingMinutes Int?
+  careInspectionRequired Boolean @default(false)
+  careProfile ResourceCareProfile? @relation("CareResource")
+  containedCareProfiles ResourceCareProfile[] @relation("CareRoom")
+  operationSessions ResourceOperation[]
+  parts ResourcePart[]
   stockItem StockItem?
   pricingRules         ResourcePricingRule[]
   media               ResourceMedia[]
@@ -482,9 +571,11 @@ model UserCertification {
 
 // PostgreSQL bookings_no_active_overlap is preserved externally; Prisma cannot model EXCLUDE.
 model Booking {
+  operationSessions ResourceOperation[]
   teachingActivity TeachingActivity?
   feeAmountVnd      Int                   @default(0)
   feeSnapshot       Json                  @default("{}")
+  contactSnapshot   Json?
   id                String                @id
   bookingCode       String?               @unique
   resourceId        String
@@ -551,6 +642,7 @@ model MaintenanceWindow {
 }
 
 model Incident {
+  origin            String           @default("EXTERNAL")
   id                String            @id
   resourceId        String
   bookingId         String?
@@ -653,6 +745,9 @@ model Notification {
 }
 
 model TelemetrySample {
+  origin           String            @default("EXTERNAL")
+  simulationRunId  String?
+  simulationRun    MonitoringSimulationRun? @relation(fields: [simulationRunId], references: [id], onDelete: Restrict)
   id               String            @id
   resourceId       String
   sourceId         String?
@@ -676,10 +771,14 @@ model TelemetrySample {
   @@unique([sourceId, externalId])
   @@index([resourceId, sampledAt])
   @@index([sourceId, sampledAt])
+  @@index([simulationRunId])
   @@map("telemetry_samples")
 }
 
 model TelemetrySource {
+  kind             String            @default("EXTERNAL")
+  profile          String?
+  simulationRuns   MonitoringSimulationRun[]
   id               String            @id
   code             String            @unique
   name             String
@@ -707,6 +806,8 @@ model TelemetrySource {
 }
 
 model LaboratoryMonitoringThreshold {
+  utilizationWarningPercent  Float?
+  utilizationCriticalPercent Float?
   id                   String     @id
   laboratoryId         String     @unique
   temperatureWarningC  Float?
@@ -722,6 +823,8 @@ model LaboratoryMonitoringThreshold {
 }
 
 model ResourceMonitoringThreshold {
+  utilizationWarningPercent  Float?
+  utilizationCriticalPercent Float?
   id                   String   @id
   resourceId           String   @unique
   temperatureWarningC  Float?
@@ -737,6 +840,7 @@ model ResourceMonitoringThreshold {
 }
 
 model MonitoringAlert {
+  origin            String                  @default("EXTERNAL")
   id                String                  @id
   activeDedupeKey   String?                 @unique
   conditionKey      String
@@ -770,6 +874,30 @@ model MonitoringAlert {
   @@index([sourceId, status])
   @@index([conditionKey])
   @@map("monitoring_alerts")
+}
+
+model MonitoringSimulationRun {
+  id              String   @id
+  sourceId        String
+  activeSourceId  String?  @unique
+  startedById     String
+  scenario        String
+  profile         String
+  status          String   @default("RUNNING")
+  phase           String   @default("STARTING")
+  intervalSeconds Int      @default(5)
+  acceptedCount   Int      @default(0)
+  elapsedSeconds  Int      @default(0)
+  lastError       String?
+  configuration   Json     @default("{}")
+  startedAt       DateTime @default(now())
+  endedAt         DateTime?
+  lastHeartbeatAt DateTime @default(now())
+  source          TelemetrySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  samples         TelemetrySample[]
+
+  @@index([sourceId, startedAt])
+  @@map("monitoring_simulation_runs")
 }
 
 model Camera {
@@ -1181,7 +1309,7 @@ model ResourcePricingRule {
 model SystemAuditEvent {
   id                String    @id
   actorId           String?   @map("actor_id")
-  actorRoleSnapshot Role?     @map("actor_role_snapshot")
+  actorRoleSnapshot String?     @map("actor_role_snapshot")
   action            String    @db.VarChar(64)
   targetType        String    @map("target_type") @db.VarChar(64)
   targetId          String    @map("target_id")
@@ -1202,4 +1330,51 @@ model SystemAuditEvent {
   @@index([targetType, targetId, createdAt])
   @@index([labId, createdAt])
   @@map("system_audit_events")
+}
+
+model ResourceCareProfile {
+  intervalUses Int?
+  warningPercent Int @default(80)
+  resourceId String @id
+  roomId String?
+  intervalDays Int?
+  intervalHours Float?
+  servicedAt DateTime @default(now())
+  lastMaintenanceId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  resource Resource @relation("CareResource", fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  room Resource? @relation("CareRoom", fields: [roomId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  @@index([roomId])
+  @@map("resource_care_profiles")
+}
+
+model ResourceOperation {
+  id String @id
+  resourceId String
+  bookingId String
+  activeResourceId String? @unique
+  actorId String
+  loadPercent Float
+  occupants Int?
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  stopReason String?
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  @@index([resourceId, startedAt])
+  @@index([bookingId])
+  @@map("resource_operations")
+}
+
+model ResourcePart {
+  id String @id
+  resourceId String
+  name String
+  condition String @default("OK")
+  notes String @default("")
+  updatedAt DateTime @default(now()) @updatedAt
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  @@unique([resourceId, name])
+  @@map("resource_parts")
 }

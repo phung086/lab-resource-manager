@@ -40,14 +40,33 @@ large unrelated diff.
 
 ## UI Principles
 
-- Build operational screens, not marketing pages.
+- User override 10/10/2026: previous visual directions, rollout plans and
+  ownership assignments are cancelled. Claude chooses the design and code plan.
+  Historical visual/navigation descriptions below document earlier source;
+  their palettes, layouts and implementation order are not binding. Keep the
+  required business capabilities, real discovery/authentication and contracts.
 - Prioritize scanning, forms, tables, clear state, and repeated workflows.
+- User clarification 12/10: apply concise, visual task presentation across the
+  system. Show actions, state, resource/rental price first; optional explanations
+  use HelpDisclosure/details. Keep validation/errors and required safety inputs
+  visible. New booking UI uses automatic confirmation and handover stages;
+  pending filters/steps appear only for actual legacy records.
 - Keep core workflows usable in Vietnamese.
 - Use clear loading, empty, no-data, stale, unavailable, validation, and error
   states.
 - Do not show fake success for login, booking, payment, notification, telemetry,
   or resource operations.
 - Do not let static/demo content appear as verified runtime data.
+- Booking checkout receives the current actor and displays payment actions only
+  when both booking and charge belong to them and the booking is CONFIRMED.
+  Admin access to a customer's record is read access, not permission to pay for
+  that customer. The backend independently enforces payment ownership.
+  An elapsed hosted-session deadline may display expiry; it never proves failure
+  or success at the provider and cannot change settlement evidence.
+  VNPAY labels do not promise QR: the server may omit `vnp_BankCode` so the
+  merchant offers its supported methods. The hosted-URL guard accepts an absent
+  bank code or one uppercase alphanumeric code of 3–20 characters; duplicate,
+  empty or malformed values are rejected alongside unsafe origins/protocols.
 
 ## Authorization
 
@@ -122,17 +141,17 @@ form state during locale changes and original user/resource content. Use the sha
 `components/base/LanguageToggle.tsx` in headers and modal focus traps so language
 changes remain reachable while a form is open. Calendar
 labels and assistant tool summaries carry keys; business codes and Vietnam time
-remain unchanged. See `BILINGUAL_ASSISTANT_FOUNDATION_20260930.md` for the verified
+remain unchanged. See `CURRENT_STATE.md` for the verified
 boundary and examples of recovery tests.
 
 
 ## Role entry points
 
 `pages/WorkspaceHome.tsx` selects a lazily loaded view from
-`components/features/workspace/`. Keep student discovery, lecturer teaching,
+`components/features/workspace/`. Keep customer discovery and booking,
 LAB staff operations and administrative coordination distinct in information
 hierarchy. Reuse shared primitives, catalogs and existing authenticated screens.
-Carry validated resource/group/booking/filter context into the destination; action
+Carry validated resource/booking/filter context into the destination; action
 links open confirmation forms and never perform mutations implicitly. Staff/admin
 booking and incident counts cover all authorized records; their previews show one
 page. Other bounded lists must continue disclosing their recent-record limits.
@@ -141,6 +160,14 @@ See ADR-026, the role workspace refinement report, and
 
 
 ## Request deadlines and assistant context
+
+The signed-in Support workspace uses server-owned sessions and persisted messages.
+Poll sequentially every 2 seconds, cancel superseded reads, merge by message UUID/
+sequence and preserve per-session drafts. Display request failures and offline
+state. A staff heartbeat runs every 15 seconds while the workspace stays open;
+explicit readiness writes must win over older heartbeat responses. Human handoff
+shares only an explicitly chosen, owner-validated server transcript. Quick replies
+insert editable text; they never auto-send or change business state.
 
 Use the shared `apiRequest` cancellation and deadline boundary: normal requests
 wait at most 30 seconds, chat 65 seconds, including response-body reads. Preserve
@@ -186,93 +213,35 @@ times the local planner cannot resolve request explicit fields; do not substitut
 a different day. Payment guidance follows backend feature/provider readiness and
 links to bookings rather than an invented checkout URL.
 
-## Shared project shell — local continuation, 2026-10-04–05
+## Workflow regression contracts
 
-Landing and registration reuse `components/PublicShell.tsx`; authenticated pages
-keep `components/AppLayout.tsx`. Both use `base/ProjectBrand.tsx` and
-`features/ProjectFooter.tsx`, with scoped rules in `styles/project-shell.css`.
-Keep the shared LAB identity, existing IBM Plex typography, white/navy palette,
-visible page/role context and restrained text hierarchy. The footer stays at the
-end of page content and offers real next destinations and native help disclosures.
-`PRODUCT.md`, `DESIGN.md` and `.impeccable/design.json` remain the incumbent design
-authority; this extension does not regenerate their tokens or repair older drift.
+Design and page/component structure are Claude's decision under the current user
+request. Preserve role/feature filters, deep links/history, password gates and
+unsaved drafts across navigation/locale changes. A resource name is not a unique
+booking identity; use IDs. Tables/queues retain authorized totals and pagination.
 
-Read the current canonical role for presentation. ADMIN/LAB_STAFF footer paths
-lead to bookings/handover and materials; LECTURER/STUDENT paths lead to their
-bookings and teaching groups. Use existing navigation callbacks and backend
-permissions. Shell links must preserve the required-password gate and open the
-existing destination or confirmation form without submitting business actions.
-All shell copy uses matching VI/EN catalog IDs and the shared LanguageToggle;
-switching language must retain mounted registration and booking drafts.
+Resource details and private history are separate authorized reads; load history
+on demand. A denied/failed history read must not become fabricated empty history.
+Self-declared membership must not grant privileges, pricing waivers or verified
+training. A password-set flag is not proof of password strength.
 
-After permitted workspace shell navigation, scroll to the content start and focus
-`workspace-main`, including when the selected tab is already active. Delayed
-public-section alignment is consumed once and cancelled when the user interacts,
-so a completed catalog read cannot take focus from an active field. Before closing
-an account popover action for assistant/refresh, focus the persistent account
-trigger so keyboard focus can return after the lazy modal closes.
+Temporary dialogs/drawers trap focus, restore it, handle Escape and leave background
+content inert. Normal navigation remains interactive. Do not leave scroll locks
+after changing layout. Delayed reads must not steal focus from active fields.
+After failed server sign-out, clear local session consistently; do not claim confirmed
+server revocation. Media illustrations/stock must not imply institutional evidence.
 
-This continuation prioritizes desktop web. Narrow viewport checks cover reachability,
-focus and horizontal overflow; they do not establish deep mobile optimization.
-See [local shell report](../artifacts/local-project-shell-20261004/REPORT.md) and
-[design handoff](../artifacts/local-project-shell-20261004/DESIGN_HANDOFF.md) for
-the tested boundary, evidence and remaining work. No new numbered Batch is opened.
+The signed-in resource catalogue groups ROOM separately from equipment
+(EQUIPMENT/MACHINE/EXPERIMENT_KIT), while MATERIAL and unresolved categories
+remain accessible in Materials & other. `catalogueGroup` is browsing context,
+not a persisted category or API filter. Keep it with search/filter context through
+detail, back and selection. Cards use three desktop columns, two on tablet and
+one on mobile; customer cards prioritize current availability, while physical
+state remains explicitly labelled in the resource dossier and management table.
 
-## Approved desktop navigation and task hierarchy — 2026-10-05
-
-Load `styles/final-workspace.css` after the existing shell styles. The approved
-desktop panel is 240px wide from 1100px and contains text destinations using the
-incumbent role/feature filters. It is ordinary navigation, not a modal: desktop
-content stays interactive and the document remains scrollable. Below that width,
-retain the overlay's focus trap, Escape dismissal and focus restoration. Changing
-the breakpoint closes the overlay and clears the search; do not carry a mobile
-scroll lock into desktop mode.
-
-Keep the shared branded header and footer. Resource/calendar selection and period
-controls have separate rows. Booking queues lead with resource/purpose and show
-only the operational context needed to choose the next action. Preserve server
-totals, status filters, pagination, deep links and evidence forms. The resource
-name is not a unique booking identity; pagination tests use the booking ID.
-
-The landing hero is one labelled generated LAB illustration with explicit image
-dimensions and prompt provenance. It does not establish facts about institutional
-rooms or replace actual resource media. The catalogue, check-schedule section and
-required authentication/guest-booking paths remain real backend flows.
-
-Treat resource information and private history as separate reads. Open authorized
-resource details without requesting history. Fetch history only when its section
-is selected; a denied history read shows localized feedback in that section while
-resource details and the calendar action remain available. Never bypass backend
-LAB-scope checks or turn a denied/failed read into a fabricated empty history.
-On failed server sign-out, clear the local React workspace consistently with the
-API client's local credential cleanup; do not report server revocation as confirmed.
-
-See [the local build report](../artifacts/local-final-ui-20261005/REPORT.md) for
-verification, screenshots, documentation and the remaining broader page scope.
-
-
-## Catalogue and profile disclosure — 2026-10-05
-
-Catalogue search and filters start collapsed. Keep filter values when closing the
-panel, show an active count and retain an accessible reset. Resource cards lead
-with name, LAB, current availability and attributed media already provided by the
-API. Names and the detail action both open the dossier. Technical specifications,
-usage guidance, schedule and private activity belong in dossier sections.
-
-Profile uses personal information, security, access requirements and activity
-sections. Keep forms mounted when switching sections or languages to preserve
-unsaved input. Use human labels rather than internal role/classification codes.
-Self-declared membership must never imply verified authority, discounted prices
-or a waiver of safety training. A password-set flag is not proof of password
-strength. Shared header/footer and server permissions remain authoritative.
-
-Surface styles live in `styles/catalog-profile.css`, loaded after the shared
-workspace styles. Figma adaptations and scoped verification are recorded in
-`artifacts/catalog-profile-refinement-20261005/`.
-
-
-### Navigation update — 2026-10-06
-
-The user requested retractable navigation again. This supersedes the always-visible desktop sidebar decision: default to an 80px shortcut rail; Menu opens a searchable drawer. Desktop users may pin the full 300px menu; closing it removes the pin. Pin preference is stored locally. Below 1100px, use a horizontal shortcut bar and a modal drawer; never reserve a full sidebar on narrow screens. Keep existing role and feature filters. Temporary drawers trap focus, support Escape/backdrop dismissal, and make background content inert. Pinned navigation leaves the content interactive.
-
-Visual direction: quiet blue-gray surfaces, clear navy active marker, consistent icons and explicit Menu control. References: https://linear.app/now/behind-the-latest-design-refresh and https://atlassian.design/components/navigation-system/layout .
+ResourceSpecifications renders nested JSON/arrays as labelled facts, omitting the
+technical environment marker and separate usage guide. Product UI shows persisted
+configuration without repetitive demo disclaimers; retain provenance in stored
+data/docs and never invent telemetry or business history. ResourcePricingSummary reads actual purpose rates
+independently from resource/schedule/history. An unconfigured rate is not a failed
+read or proof of free usage; the backend quote remains authoritative for booking.

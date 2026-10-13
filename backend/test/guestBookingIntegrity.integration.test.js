@@ -108,7 +108,7 @@ async function seed() {
 
   const conflictOwner = id();
   await isolated.user.create({
-    data: { id: conflictOwner, email: email("conflict-owner"), fullName: "Conflict Owner", role: "STUDENT", passwordHash: await bcrypt.hash(password, 4) }
+    data: { id: conflictOwner, email: email("conflict-owner"), fullName: "Conflict Owner", role: "CUSTOMER", passwordHash: await bcrypt.hash(password, 4) }
   });
   await isolated.booking.create({
     data: {
@@ -235,7 +235,7 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
     const originalHash = await bcrypt.hash(password, 4);
     await isolated.user.create({
       data: {
-        id: userId, email: target, fullName: "Authoritative External", role: "STUDENT", passwordHash: originalHash,
+        id: userId, email: target, fullName: "Authoritative External", role: "CUSTOMER", passwordHash: originalHash,
         customerType: "EXTERNAL", phone: "0988888888", organization: "Trusted Organization", isActive: true
       }
     });
@@ -256,7 +256,7 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
     const target = email("existing-internal");
     const userId = id();
     await isolated.user.create({
-      data: { id: userId, email: target, fullName: "Trusted Internal", role: "STUDENT", passwordHash: await bcrypt.hash(password, 4), customerType: "INTERNAL" }
+      data: { id: userId, email: target, fullName: "Trusted Internal", role: "CUSTOMER", passwordHash: await bcrypt.hash(password, 4), customerType: "INTERNAL" }
     });
     await issueOtp(target);
     const response = await request(app).post("/api/guest-booking/book")

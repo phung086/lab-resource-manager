@@ -45,7 +45,7 @@ derive summary counts from the complete authorized scope. Queries without `page`
 retain their legacy array contracts and caps.
 
 Apply current `UserLabAssignment` scope inside every staff list and aggregate
-query. Admin reads remain global; lecturer/student reads retain ownership scope.
+query. Admin reads remain global; customer reads retain ownership scope.
 Use deterministic ordering with an ID tie-breaker. Items and counts share one
 Repeatable Read transaction per response; successive pages are separate snapshots.
 See [queue contract and verification](WORKSPACE_QUEUE_PAGINATION_20261003.md).
@@ -67,6 +67,12 @@ See [queue contract and verification](WORKSPACE_QUEUE_PAGINATION_20261003.md).
 - Use half-open intervals `[startAt, endAt)`.
 - Map overlap conflicts to `409 BOOKING_CONFLICT`.
 - Do not bypass database-level overlap protection.
+- Every new eligible booking is automatically CONFIRMED through the shared
+  creation service, including guest booking. Legacy approval flags are projected
+  false in resource/calendar/assistant reads; existing pending records remain
+  operable. AI slot search observes care readiness and resource duration limits.
+- Future booking/maintenance intervals block only intersecting intervals, not
+  current catalogue availability. A closed LAB blocks catalogue/calendar/creation.
 
 ## Resource Rules
 
@@ -138,6 +144,15 @@ across users or business submissions. Business dashboards can explicitly request
 `includeTelemetry=false`; omit monitoring counts and return `telemetrySummary=null`
 with `telemetryIncluded=false` rather than claiming healthy hardware.
 
+Human support uses a separate bounded ingress bucket for campus/shared-IP polling,
+then current authentication and a 180 requests/minute account limit; mutations
+also have a 60/minute account limit. Support writes coordinate dispatch with a
+PostgreSQL transaction advisory lock, and message/closure operations lock the
+session row. Partial unique indexes enforce one open customer request and one
+active session per staff across labs. Scope is checked against current persisted
+assignments on every staff read/write. Presence is not a read receipt. Preserve
+handling events and resolutions; chat cannot settle payments or approve bookings.
+
 Local assistant intents must match the question being answered. Identity, greetings and
 capability questions return localized application guidance without MCP/model
 calls. Unknown questions ask for clarification; never substitute operational
@@ -159,3 +174,26 @@ MCP before exposing refreshed names to a model. Reset/logout clear context; logo
 also aborts active session work. Do not imply JWT revocation or shared multi-replica
 memory. Cancellation must not commit a late reply. Key/model presence checks
 must not echo secrets or send a provider request.
+
+## Automatic account and payment emails
+
+Enqueue EmailDelivery in the same transaction as public registration, a new
+OTP-verified guest account, or verified VNPAY settlement. Use explicit public
+field snapshots; never include passwords/hashes/OTP/tokens. Email is not account
+activation, password recovery, booking approval or payment authority. Return
+must not enqueue receipts; preserve cancelled/rejected/reconciliation outcomes.
+
+SMTP runs outside the transaction through a separate scheduler, even when in-app
+reminders are disabled. FOR UPDATE SKIP LOCKED, bounded leases and lease tokens
+coordinate workers. Missing configuration retains pending emails without using
+attempts; delivery errors retry with backoff up to five attempts. Operators can
+retry FAILED via the local CLI; SENT cannot be manually resent by that command.
+Use stable redacted errors, required TLS, escaped templates and configured
+application links. SENT means SMTP acceptance, not verified inbox delivery.
+Lease recovery can duplicate a message accepted just before a worker crash.
+
+Registration uses the request locale; VNPAY receipts default to VI. Dates are
+explicitly Asia/Ho_Chi_Minh. Read-only `email:check -- --verify --queue` checks
+configuration/SMTP and queue states without sending mail. Integration tests
+must guard the dedicated localhost `lab_resources_email_test` database and use
+loopback SMTP, never real business data or customer inboxes. See ADR-030/README.

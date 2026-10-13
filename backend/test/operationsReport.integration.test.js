@@ -22,7 +22,7 @@ test.before(async () => {
   await prisma.campus.create({ data: { id: ids.campus, code: `OR-${marker}`, name: "Isolated report test" } });
   await prisma.building.create({ data: { id: ids.building, campusId: ids.campus, code: `OR-${marker}`, name: "Isolated report test" } });
   for (const key of ["lab", "foreignLab"]) await prisma.laboratory.create({ data: { id: ids[key], buildingId: ids.building, code: `OR-${key}-${marker}`, name: `Isolated ${key}` } });
-  for (const [key, role] of Object.entries({ admin: "ADMIN", staff: "LAB_STAFF", unassigned: "LAB_STAFF", lecturer: "LECTURER", student: "STUDENT", inactive: "ADMIN" })) {
+  for (const [key, role] of Object.entries({ admin: "ADMIN", staff: "LAB_STAFF", unassigned: "LAB_STAFF", lecturer: "CUSTOMER", student: "CUSTOMER", inactive: "ADMIN" })) {
     users[key] = await prisma.user.create({ data: { id: randomUUID(), email: `or-${key}-${marker}@example.test`, fullName: `Isolated ${key}`, role, isActive: key !== "inactive", passwordHash: "unused-test-hash" } });
   }
   await prisma.userLabAssignment.create({ data: { userId: users.staff.id, laboratoryId: ids.lab } });

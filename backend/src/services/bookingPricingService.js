@@ -5,7 +5,7 @@ import { config } from "../config.js";
 export const PURPOSE_CODES = ["STUDY", "TEACHING", "RESEARCH", "SERVICE"];
 
 export async function quoteBooking(tx, { resourceId, purposeCode, startAt, endAt }) {
-  const resource = await tx.resource.findUnique({ where: { id: resourceId }, select: { id: true } });
+  const resource = await tx.resource.findUnique({ where: { id: resourceId }, select: { id: true, maxBookingMinutes: true, laboratory: { select: { labPolicy: { select: { maxBookingMinutes: true } } } } } });
   if (!resource) throw new HttpError(404, "Không tìm thấy tài nguyên.", undefined, "NOT_FOUND");
   const rules = await tx.resourcePricingRule.findMany({ where: { resourceId } });
   if (!rules.length) return { amountVnd: 0, currency: "VND", purposeCode: purposeCode || null, version: 0, hourlyRateVnd: 0, label: "Miễn phí", minutes: null };
@@ -14,6 +14,9 @@ export async function quoteBooking(tx, { resourceId, purposeCode, startAt, endAt
   const duration = new Date(endAt).getTime() - new Date(startAt).getTime();
   if (!Number.isFinite(duration) || duration <= 0 || duration % 60000 !== 0) throw new HttpError(400, "Khung giờ tính phí phải hợp lệ và tròn phút.", undefined, "VALIDATION_ERROR");
   const minutes = duration / 60000;
+  const limits = [resource.maxBookingMinutes,resource.laboratory?.labPolicy?.maxBookingMinutes].filter(value=>value!=null);
+  const maxBookingMinutes = limits.length ? Math.min(...limits) : null;
+  if (maxBookingMinutes != null && minutes > maxBookingMinutes) throw new HttpError(400, "Duration exceeds the resource rental limit", { maxBookingMinutes }, "RESOURCE_DURATION_LIMIT");
   const amountVnd = Math.ceil(rule.hourlyRateVnd * minutes / 60);
   if (!Number.isSafeInteger(amountVnd) || amountVnd > 2000000000) throw new HttpError(400, "Số tiền vượt giới hạn booking.", undefined, "VALIDATION_ERROR");
   if (amountVnd > 0 && !config.paymentsEnabled) throw new HttpError(503, "Tài nguyên có thu phí nhưng thanh toán chưa được bật. Vui lòng liên hệ cán bộ lab.", undefined, "PAYMENT_NOT_CONFIGURED");

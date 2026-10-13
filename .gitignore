@@ -23,3 +23,10 @@ frontend/screenshots_*/
 frontend/test-results/
 frontend/playwright-report/
 frontend/baseline_results.json
+
+# Disposable agent output: retain knowledge in canonical docs, not run packets
+/artifacts/
+/.impeccable/review/
+/.cleanup-plan.local.json
+/docs/screenshots/
+/tmp/

@@ -1,23 +1,13 @@
 # LAB RESOURCE MANAGER - AGENT INSTRUCTIONS
 
-## Multi-agent UI redesign coordination (2026-10-06)
-
-For an assigned redesign task, also read `docs/ui-redesign/TEAM_PLAN.md`,
-`UI_CONTRACT.md`, `assignments.json` and that task's BRIEF.md after the mandatory
-project documents below. Contributors edit only their manifest allowlist and
-own task REPORT.md, use independent branches/checkouts, and never merge/push
-main. Codex alone owns shared tokens, shell, translations and integration.
-Reuse unchanged documents within a session; checkpoints do not replace required
-reading at the start of a fresh session. Do not repeat a whole-project audit
-when an assigned bounded task and current checkpoint are sufficient.
-
 This repository is an existing graduation project. These instructions apply to
 Codex, Antigravity, Claude Code, Cursor, and any other coding agent working on
 this repository.
 
 ## Mandatory Reading Order
 
-Before modifying any file, read:
+At the start of a fresh session, read items 1–3 in full. Then read the complete
+sections relevant to the task in items 4–11, in this order:
 
 1. `.agent/PROJECT_RULES.md`
 2. `.agent/INSTRUCTOR_BASELINE.md`
@@ -25,13 +15,18 @@ Before modifying any file, read:
 4. `docs/srs.md`
 5. `docs/convention.md`
 6. `docs/PROJECT_STRUCTURE.md`
-7. `docs/CURRENT_STATE.md`
-8. `docs/DECISIONS.md`
+7. `docs/CURRENT_STATE.md` (current boundary, limitations and task checkpoint)
+8. `docs/DECISIONS.md` (shared invariants and applicable decisions/clarifications)
 9. `docs/FRONTEND_GUIDELINE.md` when touching frontend
 10. `docs/BACKEND_GUIDELINE.md` when touching backend
-11. Relevant verified Batch reports
+11. Current contracts and task-specific code/tests; historical AI reports are retired
 12. `backend/prisma/schema.prisma` when touching persistence
 
+Use `.agent/CONTEXT_MAP.md` and the FE/BE area guide to locate those sections.
+Read shared invariants and follow cross-area dependencies before editing. Read
+whole documents for a whole-project audit or when the scope is uncertain. A
+keyword match alone does not replace the surrounding contract. Reuse unchanged
+documents within a session; re-read changed sections after compaction/resume.
 Do not begin implementation before understanding the relevant documents.
 
 ## Authority Order
@@ -43,7 +38,7 @@ When sources disagree, use this order:
 3. `docs/srs.md`
 4. `PRODUCT.md`
 5. Approved canonical architecture and contracts
-6. Verified Batch reports
+6. Current documented verification and reproducible tests
 7. Current implementation
 8. Reference repositories/templates
 9. Agent suggestions
@@ -68,8 +63,7 @@ Canonical roles:
 
 - `ADMIN`
 - `LAB_STAFF`
-- `LECTURER`
-- `STUDENT`
+- `CUSTOMER`
 
 Canonical `BookingStatus`:
 
@@ -148,3 +142,7 @@ Priority:
 
 Correctness > Security > Required Business Rules > Data Integrity > UX >
 Monitoring > AI > Optimization > Experimental Features.
+
+## Documentation retention
+
+The user authorized removing completed AI reports, screenshots, temporary outputs and retired research code on 2026-10-07. Read docs/CURRENT_STATE.md and maintained contracts instead of old Batch/handoff reports. Update existing documents with concise results and limits; do not accumulate one report per run. Preserve original instructor sources, runtime assets, configuration, tests, Prisma baseline/migrations and business data. The cleanup allowlist is project-local; do not generalize it into global machine or Docker pruning.

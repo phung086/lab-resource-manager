@@ -1,987 +1,389 @@
-# Current Project State
-
-## Five-agent redesign preparation — 2026-10-06 (supersedes older handoff Git state)
-
-The user authorized publishing the existing local baseline to main and preparing
-bounded assignments for Codex, Antigravity and three web Git agents. See
-[team plan](ui-redesign/TEAM_PLAN.md), [spec](ui-redesign/REDESIGN_SPEC.md) and
-[baseline checks](ui-redesign/BASELINE_VERIFICATION.md). Setup is not completed
-application redesign and does not start another numbered Batch. Earlier runtime,
-Git and UI claims below remain dated evidence; inspect current HEAD and services.
-
-## Latest handoff and live GitHub reconciliation — 2026-10-06
-
-Current full-project entry point: [Claude context](CLAUDE_PROJECT_CONTEXT_20261006.md).
-Git fetch and GitHub metadata confirm PR #22 merged into main at `a5472d4`;
-its source branch is deleted remotely. Local `codex/lab-workspace-ui-draft` HEAD
-`43b1832` and main have identical committed trees, but numerous modified/untracked
-local UI, assistant, report and startup files are not published. Nine PR-triggered
-workflows succeeded at exact PR head `43b1832`; this is not CI for the dirty tree.
-No open PRs/issues were returned at this check. Evidence and exact local inventory
-are under `artifacts/claude-context-20261006/`.
-
-The latest runtime is the shared Docker configuration near the end of this file:
-frontends 5173/5180, one branch API 8000 and one retained database volume. It
-supersedes the earlier two-stack and FE-auto-start instructions below. Both Docker
-containers were stopped at this documentation check; prior runtime smoke remains
-dated evidence. Historical entries are preserved and are not fresh verification.
-
-This handoff changes documentation only; it does not start improvement work,
-a new Batch, commit/push, deployment, or a fresh full regression run.
-
-## One-command local startup — 2026-10-06
-
-Parallel comparison follow-up: `npm run dev:main` uses the clean detached
-`../lab-resource-manager-main` worktree (origin/main a5472d4 at setup), frontend
-5180, API 8010 and Docker project/volume `lrm-main-compare`. Default dev remains
-5173/8000 and `lrm-local-review`. Main is not auto-pulled; source and commit are
-printed at launch. Both API readiness endpoints, both frontends, all four role
-logins and corresponding CORS origins passed concurrently. Docker inspection
-confirmed separate database volumes and main checkout remained clean.
-Repeated Compose up reused running containers with no build. Routine startup no
-longer forces --build; use --rebuild for dependency/schema/Dockerfile changes.
-This is runtime smoke verification, not a new full feature/regression verdict.
-
-User-authorized local tooling continuation: `frontend/npm run dev` now starts
-the isolated `docker-compose.local.yml` PostgreSQL/backend stack, waits for
-readiness, then runs Vite on 5173 against API 8000. The guarded demo database
-uses its own persistent volume; the old development database and its unresolved
-payment migration checksum mismatch remain untouched. Ctrl+C stops Vite;
-`npm run dev:stop` stops the Docker services without deleting data.
-`dev:frontend` retains standalone Vite for CI and frontend containers.
-
-Verified on Windows/Docker Desktop: fresh canonical initialization and local seed,
-healthy API, frontend HTTP 200, four role logins and localhost CORS, unauthenticated
-booking rejection (401), 11 catalog records, occupied frontend-port rejection,
-stop/restart retaining the same four user and eleven resource records, Ctrl+C
-releasing 5173, and frontend production build. No provider/hardware integration
-or complete business E2E rerun is claimed. Payments remain disabled in this local
-review profile. No numbered Batch or business/schema contract changed.
-See README's one-command local instructions.
-
-## Implementation direction integration — local continuation, 2026-10-05
-
-Compared the user-provided `Hướng triển khai.docx` with the assignment/SRS,
-canonical workflow and current code. The approved stack, roles, handover/return
-timestamps, source provenance and lab authorization remain. The
-[comparison](IMPLEMENTATION_DIRECTION_20261005.md) maps the proposal to existing
-modules and separates the implemented scope from future integrations.
-
-Added `GET /api/dashboard/report?days=7|30`, a single-snapshot PostgreSQL
-aggregate of approved schedules, actual handover/return usage, cancellations,
-no-shows, incidents and planned maintenance. Current staff assignments are
-enforced within the query; unassigned staff receive an empty result. The VI/EN
-desktop report has period controls, usage ranking, optional calculation details,
-loading/error/retry and cancellation of superseded reads. Dashboard work totals
-now count all active records separately from the 20-item upcoming preview,
-including overdue handovers. No hardware runtime or repair-duration claim is
-derived from booking/maintenance timestamps.
-
-Added an isolated `demo:monitoring-scenario` CLI with optional five-second
-playback. Its explicitly labelled synthetic frames reuse the existing threshold
-rules. This is a rule preview, not an integrated simulator: no API ingestion,
-DB writes, persisted alerts/incidents or physical-state mutations. Connecting it
-requires a separately labelled demo environment and verification.
-
-Verified: 86 required backend tests, three real PostgreSQL report integration
-tests, 38 browser assertions covering all four roles/VI/EN/recovery and populated
-isolated-fixture rendering; frontend required checks with 2,213 matching keys,
-eight locale/network tests, 84 audited active modules, zero lint errors and nine
-existing warnings. Backend lint, frontend typecheck/build and scenario playback pass.
-See [run evidence](../artifacts/implementation-direction-20261005/REPORT.md).
-No schema/migration/reset, provider activation, new Batch or Git push. Existing
-local changes preserved. Hardware, LLM quality, forecasting and large-history
-performance remain outside this verification.
-
-## Contextual assistant preparation — 2026-10-05
-
-User-authorized local continuation before adding an API key. The backend now
-supports bounded server-owned conversation IDs and strict Responses intent
-planning for general chat, clarification, payment guidance and existing read-only
-MCP tools. Tool arguments retain canonical validation and actor/object/lab scope.
-Referenced choices are re-read; old business prose is excluded from history.
-Selected historical slots are checked again and labelled accordingly. Form
-prefill remains a suggestion, with canonical backend checks at submission.
-
-The lower-right dock passes conversation/workspace context, preserves VI/EN
-drafts, offers New conversation and handles expired sessions explicitly. Memory
-is process-local: ten turns, 12 KB history, 200 sessions, 30 idle minutes. Logout
-cancels/clears that session's assistant work; reload starts a fresh browser chat.
-The provider adapter uses finite SDK calls and `store:false`. `assistant:check`
-reports configuration without exposing secrets, billing or querying the DB.
-
-Verified: 82 required backend tests (38 core, 6 security, 38 assistant/transport),
-10 isolated PostgreSQL/MCP integration tests, 122 real-browser checks across
-all four roles and 37 student dock/canonical form regression assertions.
-Frontend required checks/typecheck/build pass with 2,189 matching
-locale keys, zero lint errors and nine existing warnings. No provider key or
-model was added; actual OpenAI access, schema acceptance and response quality
-remain unverified. No migration/reset, new Batch or Git push. Earlier local UI
-work is preserved. See [setup](AI_ASSISTANT_SETUP.md) and
-[verification](../artifacts/assistant-api-preparation-20261005/REPORT.md).
-
-## Assistant response correction — follow-up, 2026-10-05
-
-The user's screenshot exposed an incorrect fallback: `ban la ai` selected the
-operational summary and returned resource counts. Introductions, greetings and
-capability questions now return localized guidance without unrelated reads.
-Unknown intent asks for clarification; operational summary requires an explicit
-request. Slot detection no longer interprets Vietnamese `trong` (in) alone as
-availability. Existing booking/payment/scope rules and dock layout remain.
-
-Verified on the running local API and browser: the exact screenshot question,
-VI/EN unknown questions, real slot reads and explicit overview, 34 checks pass.
-Required backend tests now total 68 (38 core, 6 security, 24 assistant/transport);
-9 isolated real-MCP tests and frontend required checks also pass. Catalogs contain
-2,178 matching keys, with zero frontend lint errors and nine existing warnings.
-This is a local bug fix, not a new Batch or external-model activation. No push.
-See [response correction evidence](../artifacts/assistant-response-fix-20261005/REPORT.md).
-
-## Assistant dock — local continuation, 2026-10-05
-
-The signed-in workspace now has a compact lower-right assistant launcher and a
-nonmodal chat window. Three short suggestions cover availability, booking help
-and payment guidance. Resource/time context and provider/source information remain
-available through disclosures. Minimize keeps ten turns, the draft and context in
-memory; reload/logout clears them. VI/EN and cancellation/deadline contracts remain.
-
-Booking intent now reads real MCP slot availability and offers the canonical form
-prefill only after existing eligibility checks. The user reviews/submits that form;
-the assistant does not create/approve bookings or initiate/confirm payments. Dates
-the local planner cannot resolve ask for explicit Vietnam-time window fields.
-Payment guidance distinguishes disabled, unconfigured and ready backend states.
-Local demo payments remain disabled; external-model readiness is reported in the
-assistant's About disclosure. No provider configuration, migration or new Batch.
-
-Verification: 66 required backend tests, 9 isolated real-MCP integration tests,
-98 four-role browser checks and 37 additional student keyboard/fault checks pass.
-Frontend catalogs contain 2,176 matching keys; required checks/typecheck/build pass
-with zero lint errors and nine existing warnings. The bounded assistant design
-review returned `ship`. Local changes are preserved and have not been pushed.
-See [assistant implementation and verification](../artifacts/assistant-widget-20261005/REPORT.md)
-for the limitations and reproducible commands.
-
-## Current review status - 2026-10-03
-
-Draft PR #22 continues from published revision `7424957`; no new Batch.
-That revision passed three backend workflows but failed six CI workflows.
-The frontend locale manifest hashed Windows CRLF bytes while Git published LF
-catalogs, blocking locale initialization on Linux. The sync script now normalizes
-the catalog files before hashing, and a regression test covers CRLF input.
-
-The review correction also rejects phone-based password login for external
-accounts awaiting password setup and avoids item OFFSET queries past the last
-queue page. Scope remains based on current persisted resource/lab assignments.
-See [review response and verification](reviews/PR22_REVIEW_RESPONSE_20261003.md)
-for the current checks, finding dispositions and remaining risks.
-
-## Historical checkpoints
-
-The entries below preserve verification at their original revisions. Their test
-counts, warning counts and CI state do not describe the current tree. In
-particular, QA-01 was fixed in `7424957`; its earlier open status is historical.
-
-## Review follow-up - 2026-10-03
-
-Continuation of draft PR #22, without a new Batch. The supplied DOCX was read
-fully and assessed against current requirements/source. Removed 13 unreferenced
-duplicate JSX components and 2 unused mock/store files, preserving active
-implementations and earlier local changes. Legacy booking reads now use validated
-service queries with persisted lab/owner scope; bounded string IDs support older
-resources. Maintenance editing preserves the nested API resource ID (QA-01 fixed).
-
-SRS use cases/permissions, a schema-derived core ERD, documentation index,
-actual UI/UX guidance and current threat model replace gaps/outdated claims.
-Production metrics require a configured bearer; observability services are
-opt-in and the production API image runs as node.
-
-Fresh verification: 63 required backend tests, 5 isolated PostgreSQL integration
-tests, 54 real-browser checks including persisted maintenance rescheduling,
-backend lint/config/ERD, frontend required gate (7 locale/network tests, 2,122
-keys, 9 existing lint warnings, typecheck/build), Compose configuration and
-Docker build/UID/writable-data/Prisma initialization all pass. Full backend audit
-reports 4 high development-tool dependency findings; production-only audit
-reports zero. No dependency upgrade or full historical regression was performed.
-GitHub CI and live providers/hardware remain separate verification steps.
-
-See [review disposition, evidence and remaining work](backlogs/review-followup-20261003.md).
-Earlier QA and pagination entries below are their original snapshots.
-
-## Workspace queue pagination - 2026-10-03
-
-User-authorized continuation on `codex/lab-workspace-ui-draft`, draft PR #22;
-no new Batch. Booking and incident reads opt into server pagination with `page`.
-Status filtering and full totals run inside the authenticated owner/lab scope,
-with stable ordering and a consistent PostgreSQL snapshot per response. Legacy
-array reads keep their existing limits. Staff home, administrative priority counts,
-booking operations, incident operations and the incident navigation badge use the
-new contract. Confirmation forms still use the existing authorized mutations.
-
-Local verification passes: 60 required backend tests, 4 new PostgreSQL integration
-tests with 160 bookings/86 incidents, 51 real-browser checks, backend lint, frontend
-locale/network checks, lint (13 existing warnings), TypeScript and production build.
-The new isolated PostgreSQL/browser CI job is configured but has not run on GitHub
-for these local changes. See [queue report](WORKSPACE_QUEUE_PAGINATION_20261003.md)
-for contracts, reproduction and remaining limits. Earlier local QA/documents and
-artifacts are preserved. No schema migration, dependency change, push, merge or
-deployment is included.
-
-## Workflow QA checkpoint - 2026-10-03
-
-PR #22 at `66e744473c940515548048d448019beb3d311e9b` was checked through
-required tests, backend integrations, business browser suites and role/bilingual
-UI checks. [QA report](QA_WORKFLOW_REPORT_20261003.md) records evidence, setup
-corrections and external integration limits. A P2 issue remains open: the
-maintenance edit form reads `resourceId` while the API returns nested
-`resource.id`, clearing the selected resource during rescheduling. Selecting it
-again allows the tested workflow to finish; this does not close the issue.
-No application source was changed in this QA task; PR remains draft.
-
-## Assistant and request isolation — 2026-10-01
-
-Continuation stays on `codex/lab-workspace-ui-draft`, draft PR #22, preserving
-the accepted role views, shared catalogs and navigation read budgets. MCP ingress
-now has its own bounded IP allowance; internal protocol/tool calls cannot spend
-the ordinary business API allowance. Disconnects and deadlines reach active tools;
-admission remains occupied until an already-started database read settles.
-
-VI/EN duration questions support minutes, hours, decimal hours and combined
-hours/minutes. An untouched assistant field no longer overrides the question;
-explicit minutes take priority. Eligibility is read once per resource per answer.
-Missing/deferred evidence skips model generation; complete model input is capped
-at 24,000 UTF-8 bytes. API deadlines cover fetch and body reads, preserve caller
-cancellation and never automatically retry a mutation. Shared catalogs now contain
-2,115 keys, including localized deadline and deferred-hardware feedback.
-
-Normal workspace dashboards request `includeTelemetry=false`, avoiding camera,
-sample, threshold and hardware-alert reads. Deferred monitoring is explicit,
-not a healthy-zero measurement. Legacy authenticated hardware routes retain their
-contracts; assistant hardware reads additionally require
-`HARDWARE_TELEMETRY_ENABLED=true`. No schema or runtime dependency changes.
-
-Local verification: 60 required backend tests (38 core, 3 security, 19 assistant
-unit/HTTP transport), backend lint/configuration, 7 frontend locale/network tests,
-76-module source audit, typecheck and production build pass. Frontend lint has
-zero errors and 13 existing warnings. PostgreSQL and browser cases are included
-in the existing CI gates; exact current-head outcomes remain authoritative on
-PR #22. See `ASSISTANT_REQUEST_HARDENING_20261001.md`. Main is not merged or deployed.
-
-## Task-focused role entry points — 2026-09-30
-
-Draft PR #22 now separates student resource finding, lecturer practical groups,
-LAB staff work stages and administrative coordination into four layouts. Exact
-booking/group/category/role links reuse the existing authenticated screens and
-confirmation forms. Shared catalogs contain 2,107 VI/EN keys; role views load on
-demand. Core/group failures have explicit recovery and no fake zero work counts.
-Frontend gates, responsive visual QA and 523 PostgreSQL browser checks pass
-(104 navigation + 298 bilingual + 121 role entry). All nine workflows passed on
-code revision `e815fd82b184e6c7d94ad7b9be51177faaa8ea20`; current-head checks
-remain authoritative on the PR. Resource links resolve the exact selected record,
-and in-modal VI/EN controls preserve action drafts. Directory requests use at most
-four workers and cancel stale reads. Shared application loads also cancel stale
-requests and reuse records when leaving home; role checks assert the API request
-budget on session entry and notification navigation. See `docs/ROLE_WORKSPACE_REFINEMENT_20260930.md` for
-research, routing, list-count limits and verification. No main merge, schema or
-runtime dependency change is included.
-
-## Bilingual and assistant foundation — 2026-09-30
-
-The interrupted VI/EN + assistant work is continued in draft PR #22 on
-`codex/lab-workspace-ui-draft`. One 1,947-key catalog and verified backend
-projection replace parallel translation maps; failed/tampered language loads
-retry without discarding drafts. API errors, calendar/system labels, notifications
-and OTP mail use the shared boundary. Original user/resource evidence is retained.
-The authenticated assistant is read-only, reports local/model provenance, limits
-work and releases capacity after abort/deadline. Camera/sensor UI is deferred by
-a default-off flag. No runtime dependency or schema migration is added.
-Local PostgreSQL 16 integration/business regressions, 298 bilingual browser
-checks and 104 navigation checks passed. See
-`docs/BILINGUAL_ASSISTANT_FOUNDATION_20260930.md` for contracts, configuration,
-performance measurements and unverified external-provider boundaries. Current-head
-CI is authoritative on the PR; this is not a production deployment or main merge.
-
-
-## Workspace navigation and role overview — 2026-09-30
-
-Continuation of the interrupted UI task in draft PR #22 on
-`codex/lab-workspace-ui-draft`. Signed-in users enter a role-aware overview;
-the complete menu opens on click, with search, grouped links and keyboard focus
-management. Shared shell styling applies across authenticated screens.
-Local PostgreSQL 16 auth/calendar/handover E2E, 104 navigation checks and 78
-desktop/mobile screen checks passed. See
-`docs/WORKSPACE_NAVIGATION_REFINEMENT_20260930.md` for evidence and limits.
-The PR remains draft; this update does not merge into `main` or deploy a release.
-
-## Resource dossier refinement — 2026-09-30
-
-User-authorized continuation of draft PR #22: shared selective media gallery,
-public practical usage guides in existing resource JSON, guarded resource edits,
-restricted-booking feedback and workspace code splitting. See
-`docs/RESOURCE_DOSSIER_REFINEMENT_20260930.md` for usage, checks and limits.
-This does not advance PostgreSQL, live media/storage or production verification.
-
-
-## Local LAB experience continuation — 2026-09-29
-
-User-authorized working-tree continuation, not a new numbered Batch or release.
-Landing, VI/EN presentation, maintenance rescheduling, scoped material stock,
-and course-group supervision have been extended. See
-`docs/LAB_WORKSPACE_EXPERIENCE_REPORT_20260929.md` for scope, verification, and
-integration limits. The user requested publication as a draft PR for further
-revision; visual acceptance and merge remain pending. This is not a production
-deployment. The GitHub checkpoint below remains historical evidence.
-
-## Repository integration checkpoint — 2026-09-28
-
-This section is the current GitHub authority for repository integration state. Older
-phase sections below remain historical evidence and must not override this checkpoint.
-
-- Default branch: `main`.
-- Consolidated implementation PR #17 was retargeted to `main`, re-described as the
-  full cumulative integration, and merged at
-  `34c5e8c6da32e29bdf44542564d8edb76d6241c6`.
-- PR #17 contained the accepted implementation chain for migration hardening,
-  training eligibility, release-gate reliability, guest OTP/booking integrity,
-  privacy governance, transactional system audit, Open LAB workflow UX,
-  VNPAY/payment reconciliation, and backend release readiness.
-- Historical audit-only PR #5 was preserved in `main`; PR #7 was retargeted after
-  integration so its only remaining diff was its dated audit document, then preserved
-  in `main`.
-- The pre-handoff-sync `main` checkpoint after preserving the historical audit
-  documents was `344d9141e59c0d049319800a6889b7068684d335`. Subsequent
-  documentation-only synchronization is tracked by PR #18; always inspect the
-  current `main` branch head for the latest SHA rather than treating this historical
-  checkpoint as the live branch tip.
-- Stacked PRs #6, #8, #9, #11, #12, #13, #14, #15, and #16 were closed after their
-  commits were integrated through #17.
-- Alternate guest-booking PR #10 was closed as superseded by the stronger accepted
-  #12 path; its branch remains historical and was not merged.
-- There are no open pull requests at this checkpoint.
-
-### Fresh GitHub verification on the integrated code
-
-Exact consolidated PR head
-`9616de496f800d9405628ab0b89d11f1a8def96c` passed:
-
-- CI;
-- Batch 5 Backend Regression;
-- Batch 5 Full-stack E2E;
-- Batch 6 Backend Regression;
-- Batch 6 Full-stack E2E;
-- Batch 7 Backend Regression;
-- Batch 7 Graduation Demo;
-- Batch 8 Smart Monitoring Release Gate;
-- Phase H Payment Reconciliation.
-
-The first Batch 8 smart-monitoring E2E attempt on the post-merge `main` commit
-timed out while waiting for a browser response. Its required-regression job passed.
-The failed job was rerun without changing source; attempt 2 passed, so the Batch 8
-workflow completed successfully. CI, Batch 7 Backend Regression, and the official
-Batch 7 Graduation Demo also passed on the merge commit.
-
-After the two documentation-only audit merges, CI passed on
-`344d9141e59c0d049319800a6889b7068684d335`.
-
-### Important local/GitHub boundary
-
-The separate Product Experience work reported locally on 2026-09-28
-(`FINAL_PRODUCT_EXPERIENCE_REPORT.md`, UX plan, skill review, local preview) was not
-present on GitHub when this checkpoint was created. It is therefore **not** part of
-the verified GitHub state above. Do not claim GitHub matches that local working tree
-until those local changes are explicitly pushed and reviewed.
-
-No canonical Batch 9 or Batch 10 exists. Physical sensor/camera verification remains
-pending real hardware.
-
-## Product experience synchronization completed — 2026-09-28
-
-PR #20 synchronized the Product Experience work from live `origin/main` and merged
-into `main` at `77386e0514cd962ad219f1a2c9b7c138d87d6ec4`. The scope was
-product-experience refinement, supporting documentation, targeted browser test
-source, and a small public pricing read/quote route correction needed for the
-unauthenticated guest booking flow. It preserves database contracts, canonical
-roles/statuses/taxonomy, Prisma schema, migrations, RBAC-protected write paths,
-and research feature boundaries.
-
-The synchronized UX pass covers public detail stale-response/loading/error and
-focus fixes, guest wizard sequential validation and pending controls, resource-reset
-behavior, accurate training guidance, Vietnam-time schedule presentation, media
-failure fallback, responsive progress controls, and admin control accessible names.
-Local verification passed, all 14 PR checks passed before merge, and all 9
-post-merge checks on `main` passed after merge.
-
-## Phase H payment hardening and transaction reconciliation — 2026-09-28
-
-Branch `fix/payment-lifecycle-reconciliation` starts from the exact verified
-Phase G SHA `d850201d11d60797718fc9433e82b233837c8754`. Payment remains an
-optional extension below eligibility, availability, approval, and booking
-policy; it does not grant access or change `BookingStatus`.
-
-The authoritative booking fee snapshot now supplies every charge amount. A
-paid charge can be initiated only after the booking reaches `CONFIRMED`, and a
-free booking creates no payment transaction. VNPAY sessions have persisted
-creation and expiry timestamps; a valid pending session is reused, an expired
-session is closed and replaced, and concurrent initiation converges on one
-active transaction per booking.
-
-The browser return route is presentation-only. A signed server-side IPN is the
-local settlement authority after merchant, amount, transaction reference, and
-provider transaction number validation. Duplicate and out-of-order callbacks
-are monotonic: success is idempotent and cannot be downgraded. A valid late
-success leaves a cancelled or rejected booking unchanged and creates a durable
-`manual_review` reconciliation exception. ADMIN may resolve that internal case
-with a required reason; the action is transaction-coupled and recorded as
-`PAYMENT_RECONCILIATION_RESOLVED`. Resolution does not claim or invoke a VNPAY
-refund.
-
-Payment access remains owner-or-ADMIN with non-enumerating foreign-user
-responses. Stored checkout URLs and signed hashes are not returned in ordinary
-payment reads, and VNPAY callback query strings are excluded from access logs.
-Production configuration fails closed when payments are enabled without the
-required VNPAY settings.
-
-Local PostgreSQL 16 evidence is green: Phase H 24/24, signed-callback browser
-E2E, migration safety 14/14, core 33/33, guest 13/13, privacy 5/5, system audit
-9/9, and the existing payment/MCP regression 10/10. Live VNPAY merchant,
-QueryDr, and refund verification remain blocked on external credentials.
-
-## Phase G UX & Product Workflow Refinement — 2026-09-26
-
-Branch `feat/ux-product-workflow-refinement` builds on the verified Phase F base (`e52e558d75a54ee5e9b7b9029efe7697fb978f2c`) to align the user experience with the platform's core positioning: **Laboratory Resource Access & Operations Platform**.
-
-Key improvements implemented and verified:
-1. **Guest Quick Booking 3-Stage Wizard:**
-   - Transformed dense single form into 3 guided steps:
-     - Step 1: Resource & Booking (details, schedule, quote, prerequisite checks)
-     - Step 2: Customer Information (strictly required fields: name, email, phone, address)
-     - Step 3: OTP Verification & Final Review (challenge triggering, 60s cooldown, summary, confirm)
-   - Input state is fully preserved when navigating back and forth.
-   - Domain error code mapping (`OTP_INVALID`, `OTP_EXPIRED`, `OTP_ATTEMPTS_EXCEEDED`, `OTP_ALREADY_USED`, `OTP_RESEND_TOO_SOON`, `EMAIL_DELIVERY_FAILED`) without database or account leakage.
-   - Phase D security invariants preserved (one challenge, 5 attempts, cooldown, atomic transaction, restricted temporary account).
-2. **Vietnam Timezone Standardization (`Asia/Ho_Chi_Minh` UTC+07:00):**
-   - Centralized shared timezone logic in `frontend/src/utils/timezone.ts`.
-   - Replaced all local date skew calculations (`new Date().toISOString().slice(0, 10)`).
-   - Validated against UTC midnight boundaries.
-3. **Resource Detail — Eligibility First:**
-   - Directly answers: *"Tôi có thể sử dụng tài nguyên này không?"* before displaying calendar availability.
-   - Authoritative verification for: Available, In Maintenance, Training Required, Expired Certification, or Eligible.
-4. **Public Resource Catalog:**
-   - Replaced commercial e-commerce metaphors with lab-oriented status badges (Available, Maintenance, Approval required, Training required, Fee/free) and primary CTA *"Xem lịch & đặt"*.
-5. **Actionable Workspace Overview (`WorkspaceHome`):**
-   - Replaced decorative metrics with 6 actionable priority queues:
-     1. Upcoming bookings
-     2. Pending approval & payment
-     3. Training & access prerequisites
-     4. Due returns
-     5. Open incidents
-     6. System notices
-6. **Profile Hierarchy (7 Sections):**
-   - Reordered to: 1. Identity, 2. Security (inline password change), 3. Access Classification (`customerTypeSemantics = SELF_DECLARED_UNVERIFIED` with explicit non-authority warning), 4. Training/certifications, 5. Contact/address, 6. Bookings, 7. Loyalty/commercial last.
-7. **Temporary Account Enforcement:**
-   - Server-side and client-side gated access when `passwordResetRequired === true`.
-   - Forces focused password setup modal; unblocks navigation upon successful change.
-8. **Mobile Telemetry Simplification:**
-   - Prioritizes critical alerts at viewport top.
-   - Resource status cards feature compact health metrics with expandable `<details>` disclosures for sensor history.
-9. **Responsive Validation:**
-   - Audited across 1440x960, 1280x900, 768x1024, 390x844, 360x800: zero whole-page horizontal scroll.
-10. **Verification Status:**
-    - Migration safety: 14/14 PASS. Core: 33/33 PASS. Guest: 13/13 PASS. Privacy: 5/5 PASS. Audit: 9/9 PASS. Batches 2,3,4,5,6,8: PASS. Phase G unit tests: PASS. Frontend lint, typecheck, build: PASS. Playwright browser E2E: PASS.
-
-## Phase F system audit trail and administrative accountability — 2026-09-26
-
-Branch `feat/system-audit-accountability` starts from the exact accepted Phase E
-SHA `c40b2d541b818bda0724e49d8c91e132d936da02`. An append-only
-`SystemAuditEvent` model has been introduced to provide transactional
-accountability for administrative and security mutations that previously lacked
-durable audit records.
-
-Key architectural highlights:
-1. Target mutations covered:
-   - User role changes (`USER_ROLE_CHANGED`) with before/after role snapshots.
-   - User active/inactive transitions (`USER_ACTIVATION_CHANGED`).
-   - Lab assignment additions and removals (`LAB_ASSIGNMENT_ADDED`, `LAB_ASSIGNMENT_REMOVED`),
-     ensuring complete survivability after assignment deletion.
-   - Resource pricing rule modifications (`RESOURCE_PRICING_CHANGED`) with
-     before/after rate snapshots.
-   - Guest account creation (`GUEST_ACCOUNT_CREATED`) and reuse
-     (`GUEST_ACCOUNT_REUSED`).
-   - Admin payment charge creation (`PAYMENT_CHARGE_CREATED`).
-2. Transaction coupling: Every audited mutation and its audit event commit
-   inside the same Prisma transaction; a failed audit write rolls back the
-   business mutation.
-3. Strict authorization and RBAC:
-   - `ADMIN`: Global read access across all audit records.
-   - `LAB_STAFF`: Read access strictly scoped to their assigned laboratories.
-   - `STUDENT`, `LECTURER`, and unauthenticated callers: Denied (`403 FORBIDDEN`).
-4. Data minimization: Sanitization strips passwords, hashes, JWTs, and secrets
-   before persistence. Before and after states record only changed attributes.
-5. Migration safety: Forward migration `20260925000200_add_system_audit_events`
-   is purely additive. Historical migrations and the frozen baseline are untouched;
-   the 14-case migration safety matrix passed.
-6. Verification status: Local PostgreSQL 16 testing passed 9/9 Phase F tests,
-   14/14 migration safety scenarios, 33/33 core tests, 13/13 guest integrity tests,
-   5/5 Phase E tests, backend lint, frontend lint/typecheck/build.
-
-## Phase E privacy, audit and customer classification governance — 2026-09-25
-
-Branch `fix/privacy-audit-governance` starts from the exact accepted Phase D
-SHA `c4a4aa921a9352fbb775bfb184ebb44844f41d82`. The authenticated resource
-history endpoint no longer returns one full provenance DTO to every role.
-`STUDENT` and `LECTURER` now receive an anonymous operational timeline plus
-their own booking events; actor/reporter identity, internal reasons, record
-identifiers, unrelated booking events and private metadata are removed.
-Assigned `LAB_STAFF` and `ADMIN` retain the full operational view. Unassigned
-or foreign-lab staff fail closed with `403`.
-
-`customerType` remains compatibility metadata and is now explicitly returned
-and displayed as `SELF_DECLARED_UNVERIFIED`. It does not grant RBAC, training
-bypass, quota, priority, discount or institution-only pricing. Profile writes
-remain strict and allowlisted; role, active state, lab assignment, training and
-loyalty configuration cannot be mass-assigned through `/api/users/me`.
-
-The audit inventory confirms durable resource, booking, maintenance,
-calibration, incident and pricing evidence in existing domain records. The
-schema still has no general system-audit model for role/activation changes,
-lab-assignment deletion, guest account create/reuse or payment-admin action.
-Phase E does not fabricate those events in resource-scoped `UsageLog`; these
-gaps remain explicit forward-schema work. The sample-only `AuditLogsView`
-under Advanced/Research is not treated as runtime evidence.
-
-Local PostgreSQL 16 verification is green: Phase E 5/5, migration safety
-14/14, required core 33/33, guest integrity 13/13, backend Batch 1E–8,
-frontend lint/typecheck/build, and browser Batch 2/3/4/5/6/8. No schema or
-migration changed, and `prisma db push` was not used.
-
-## Phase 3 release gate reliability — 2026-09-25
-
-Branch `fix/release-gate-reliability` starts from the exact accepted Phase B
-SHA `91f9d0892a2bcd160cf20917660b92ee58a11ab4`. The previous GitHub result was
-10/13: two full-stack E2E jobs and smart-monitoring E2E were red.
-
-Local reproduction verified three test-infrastructure mismatches. Batch 4
-exhausted the 180-request global limiter across sequential browser contexts;
-Batch 6 expected telemetry states on the intentionally separate Operations
-page; Batch 8 opened Telemetry but waited for the old Operations heading. The
-E2E selectors now follow the approved Telemetry page, and full-stack workflow
-backend processes use an explicit `RATE_LIMIT_MAX=1000` only beside
-`NODE_ENV=test`. Production runtime code and the default limit of 180 are
-unchanged.
-
-Local PostgreSQL 16 verification is green: required core 33/33, Batch 4
-policy/integration 32/32, migration safety 14/14, frontend lint/typecheck/build,
-Batch 2/3/4/5/6/8 browser suites, two consecutive Batch 4 runs, and responsive
-smoke at 1440, 1280, 768, 390 and 360 pixels. GitHub candidate
-`ba302e13eec39bf7d5c4670a7fdec2286fa8f371` passed the requested 13/13 job
-matrix. The final documentation-only evidence commit must independently retain
-13/13 before Phase C is closed.
-
-## Phase 2 mandatory training eligibility — 2026-09-25
-
-Branch `feat/booking-training-eligibility` now enforces every configured
-mandatory `TrainingRequirement` in authoritative booking creation. A requester
-must have an `active`, non-expired `UserCertification` for the same course;
-missing, expired, revoked, other-user and incomplete multi-course cases fail
-with `403 BOOKING_TRAINING_REQUIRED`. No override policy was invented.
-
-Local verification on disposable PostgreSQL 16 passed the required core suite
-33/33 and Batch 4 policy/integration suite 32/32. The latter preserves booking
-conflict, half-open interval, approval, availability and state-machine behavior
-while exercising the training gate at the API boundary. This phase changes no
-schema or migration. See `docs/LOCAL_ENGINEERING_VERIFICATION.md` and
-`docs/LOCAL_VERIFIED_GAP_MATRIX_20260925.md` for current local evidence and the
-remaining release/guest/security gaps.
-
-## Phase 0 verified gap audit — 2026-09-24
-
-The current `main` HEAD is `dbab294`. The external business/UX review is in
-open PR #5 and has not been merged into `main`. The read-only baseline and
-current evidence matrix are in
-[CURRENT_VERIFIED_GAP_MATRIX_20260924.md](CURRENT_VERIFIED_GAP_MATRIX_20260924.md).
-At this HEAD, general CI passes but three GitHub workflows that exercise fresh
-PostgreSQL migration/startup fail. Local checks found a deterministic mismatch
-between the historical mixed-line-ending checksum expectations and the bytes
-produced by a fresh CRLF checkout. An isolated PostgreSQL 16 validation and a
-safe canonical deployment strategy are required before claiming clean deploy.
-Mandatory training is also not enforced in `createBooking`; guest OTP/account
-and booking use separate transactions. These are current gaps, despite the
-historical verified milestones below.
-
-## Phase 1 migration reproducibility — 2026-09-24
-
-P0 fresh deployment is repaired on branch
-`feature/fresh-migration-reproducibility`. The root cause was confirmed on a
-fresh Windows checkout and PostgreSQL 16: `.gitattributes` produced CRLF bytes
-whose Prisma checksums differed from the historical mixed-line-ending values
-embedded in the reconciliation migration. No historical migration was edited.
-
-`npm run db:migrate` now applies a reviewed clean-install baseline only to a
-truly empty database. Hardening on `fix/migration-baseline-hardening` freezes the
-baseline SQL and Prisma schema snapshot, verifies normalized hashes for every
-represented migration, and fingerprints the complete critical PostgreSQL
-catalog before any official `migrate resolve`. Current `schema.prisma` may now
-evolve through forward migrations without regenerating the old baseline.
-
-Existing databases preserve their lineage only when migration rows form a
-completed canonical prefix. Unknown objects, foreign/empty/failed/rolled-back
-history, and damaged baseline structures fail closed. Resume is supported after
-baseline SQL and its marker complete; interruption inside baseline SQL requires
-recreating the initially empty database. The 12-case PostgreSQL 16 local safety
-matrix passes, including historical-row preservation and future forward
-migration compatibility. See
-[PHASE1_MIGRATION_REPRODUCIBILITY_REPORT.md](PHASE1_MIGRATION_REPRODUCIBILITY_REPORT.md).
-
-## Active local work — 2026-09-23
-
-User has approved an iterative Open LAB upgrade for internal/external users,
-resource/purpose fees, fast booking with verified email, ROOM self-return,
-administrative booking notifications, and separate operations/telemetry screens.
-This is **in progress, not final**. Read [OPEN_LAB_UPGRADE_REPORT.md](OPEN_LAB_UPGRADE_REPORT.md)
-for implementation and verification status before continuing local agent work.
-Checkpoint 2026-09-23: routing, split monitoring views, ROOM self-return, booking
-notifications and versioned resource/purpose pricing with automatic charges are
-implemented and tested. Fast booking/OTP/address and payment expiry remain pending.
-The closure statements below describe historical milestones, not this upgrade.
-
-Historical baseline synchronized: 2026-09-21
-
-## Final Boundary
-
-Phases A-D of graduation finalization are complete on branch
-`final-graduation-hardening`, synchronized from main SHA
-`71da1683fc1c8bf842d2fc5b1313b45ac15499c1`.
-
-Batch 7 repair/closure was verified and committed at
-`50ecda3a69ef37fc21b572616ac76b3e4975a7d3`.
-
-Batch 7 Production Demo Hardening and Batch 8 Smart Laboratory Monitoring are
-implemented and verified. The final release/assignment closure audit is
-recorded in `docs/FINAL_ASSIGNMENT_CLOSURE_AUDIT.md`. There is no canonical
-Batch 9 or Batch 10, and neither has been started.
-
-## Historical Frontend Milestone: Final UI/UX Master Polish Pass
-
-- Status: **VERIFIED GO**; historical verified dark/master-polish baseline committed at SHA: `81675fb0293535c6205da3b19a12b2f1f2dfe467`.
-- Mounted required-core auth, resource, calendar, booking, operations, incident, notification, and monitoring surfaces visually harmonized and keyboard-accessible.
-- Historical review evidence preserved as 23 screenshots in `frontend/screenshots_ui_final_review/`.
-
-## Post-Closure Light UI & Motion Redesign — Final Frontend Baseline
-
-- Status: **VERIFIED GO / SOURCE CLOSED**. Current accepted frontend baseline:
-  `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7`.
-- Authoritative Post-Closure Milestone Chain:
-  - Historical Final UI/UX Master Polish: `81675fb0293535c6205da3b19a12b2f1f2dfe467`
-  - Previous final docs closure: `1b9d5e9d8a272a3dab94bae4a8e9990fc51135c1`
-  - Light UI & Motion redesign candidate: `155482f245cc84d033567ff4700dedb1b0b34b6c`
-  - Final semantic cleanup: `1ae1423a4db3dc4d405820282f812b7abf3e2218`
-  - Final one-line accessibility correction / CURRENT ACCEPTED FRONTEND BASELINE: `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7`
-- Scope: Frontend presentation, accessibility, and responsive interaction only.
-  No backend contract changes. No API changes. No Prisma changes. No migrations.
-  No Docker changes. No research activation. This is NOT Batch 9 or Batch 10.
-- Design Summary:
-  - Light-first academic and enterprise laboratory operations UI with white surfaces on a pale neutral canvas;
-  - Blue primary interaction system with distinct semantic status tokens;
-  - Plus Jakarta Sans UI typography paired with IBM Plex Mono for technical and telemetry contexts;
-  - Subtle card elevation, restrained hover translations, horizontal icon/action micro-motion, and dropdown fade/translate transitions;
-  - Sticky application headers and calendar navigation surfaces where safe;
-  - Fully responsive desktop, tablet (768×1024), and mobile (390×844) layouts;
-  - `prefers-reduced-motion` compliance across all CSS animations;
-  - Improved accessible naming: localized modal dismissal (`aria-label="Đóng hộp thoại"`), explicit Vietnamese icon-only header controls (`Làm mới dữ liệu`, unread notification counts), and accurate popover trigger semantics.
-- Verification Chronology:
-  - Main Light Redesign Candidate (`155482f2`): Complete regression matrix (B2, B3, B4, B5, B6, B8 E2E) passed 100% on isolated PostgreSQL 16 databases. Unchanged official Batch 7 10-step production demo rerun passed 10/10 with `REMINDER_SCHEDULER_ENABLED=false`, `BOOKING_UPCOMING_REMINDER_MINUTES=10080`, `RETURN_REMINDER_MINUTES=15`, and `VITE_ENABLE_RESEARCH_FEATURES=false` (including `/health`, `/api/health`, `/api/health/ready`, Prisma migration status, CORS, and Helmet security headers).
-  - Semantic Cleanup (`1ae1423`): Focused B4 (`test_batch4_calendar_e2e.mjs`: 18.07s PASS) and B5 (`test_batch5_operations_e2e.mjs`: 9.99s PASS) E2E suites rerun and passed on fresh isolated PostgreSQL 16 databases with `prisma migrate deploy`.
-  - Final Accessibility Correction (`ff85dc7`): Removed `aria-haspopup="menu"` from the header account trigger to align with popover semantics; verified via fresh `npm run lint` (0 errors, 14 warnings), `npm run typecheck` (PASS), and `npm run build` (PASS; main JS `391.27 kB` minified / `111.53 kB` gzip; CSS `185.83 kB` minified / `39.36 kB` gzip). This change was accessibility semantics only and did not modify runtime/business behavior (B2/B3/B6/B7/B8 were not rerun after this one-line aria fix).
-- Visual Evidence:
-  - `frontend/screenshots_ui_light_redesign/`: 32 reviewed PNG screenshots covering desktop, mobile (390×844), and tablet (768×1024) across auth, dashboard, resources, resource detail, Day/Week/Month calendar, booking modal, booking conflict, booking success, own bookings, operations, approval, handover, return, history, notifications, incidents, monitoring, admin users, admin resources.
-  - `frontend/screenshots_ui_final_review/`: preserved as the previous 23-image evidence set from the master polish pass.
-  - Historical Batch screenshots remain unchanged.
-- Boundaries & Closure:
-  - Frontend source is CLOSED. No further frontend polish is planned without a demonstrated regression and explicit user authorization.
-  - Real hardware verification remains **PENDING REAL HARDWARE**.
-  - No Batch 9 or Batch 10 exists.
-  - Next expected work: defense preparation, graduation report, slides, demo/run checklist, and real hardware verification when hardware is available—NOT another UI pass.
-
-## VERIFIED REQUIRED CORE
-
-- Canonical PostgreSQL/Prisma persistence and database conflict protection.
-- Database authentication, exact four-role RBAC, ownership, and laboratory
-  scope through `UserLabAssignment`.
-- Resource CRUD, canonical categories, operational state, schedule, history,
-  maintenance, retirement, and classification review.
-- Dynamic Day/Week/Month availability and booking calendar with timezone,
-  policy, maintenance, privacy, and `[startAt,endAt)` enforcement.
-- Persisted booking creation, approval/rejection, before-condition, checkout,
-  after-condition, return, completion, notifications, and auditable history.
-- Persisted incidents and real operational dashboard aggregates.
-- Official production-like 10-step graduation workflow through
-  Nginx/Express/PostgreSQL 16 and Chromium.
-
-## VERIFIED SUPPORTING
-
-- Ordinary `prisma migrate deploy` on clean PostgreSQL 16; all nine migrations
-  and migration status verified without a compatibility bridge.
-- Production health, readiness, CORS, Helmet/security headers, and fail-closed
-  environment validation.
-- Optional research frontend dependency isolation and default
-  `VITE_ENABLE_RESEARCH_FEATURES=false`.
-- Pinned local frontend/backend quality tooling and zero production dependency
-  vulnerabilities.
-- Per-source telemetry identity with hashed credentials, activation, rotation,
-  and server-resolved source/lab/resource scope.
-- Persisted source health, accepted-sample history, lab/resource thresholds,
-  alert episodes, acknowledgement/resolution, incident provenance, camera
-  metadata, and camera-access auditing.
-- Truthful `HEALTHY`, `WARNING`, `STALE`, `UNAVAILABLE`, and `NO_DATA` states;
-  no synthetic production samples and no fake live camera stream.
-
-## Historical verified gates (2026-09-21 baseline)
-
-Backend, each on a fresh isolated PostgreSQL 16 database:
-
-- core: 27/27 PASS;
-- Batch 1 concurrency: 1/1 PASS;
-- Batch 1 persistence: 1/1 PASS;
-- Batch 1E: 11/11 PASS;
-- Batch 2: 10/10 PASS;
-- Batch 3: 9/9 PASS;
-- Batch 4/4.1: 30/30 PASS;
-- Batch 5: 13/13 PASS;
-- Batch 6: 11/11 PASS;
-- Batch 7: 6/6 PASS;
-- Batch 8: 12/12 PASS.
-
-Frontend/release:
-
-- frontend lint PASS with zero errors and 14 existing warnings;
-- TypeScript check PASS;
-- production build PASS; main entry 391.27 kB minified / 111.53 kB gzip;
-- Batch 2/3/4/5/6 frontend E2E regressions PASS;
-- Batch 8 smart-monitoring desktop/scope/denial/mobile E2E PASS;
-- Batch 7 official 10-step production E2E PASS with canonical upcoming
-  reminder threshold 10080 minutes;
-- production Compose frontend/backend/PostgreSQL health PASS;
-- `/health`, `/api/health`, `/api/health/ready` HTTP 200;
-- allowed/denied CORS and Helmet header checks PASS;
-- production Batch 8 monitoring E2E PASS;
-- backend and frontend production dependency audits: 0 vulnerabilities.
-
-## OPTIONAL/RESEARCH
-
-AI, advanced analytics, payment/VietQR, Digital Twin, simulation, Pareto,
-GA/NSGA-II, optimization, orchestration, and showcase modules are not required
-release authority. Frontend research modules are lazy-loaded only behind the
-explicit research flag, which is off by default. Legacy payment/mock-store and
-local fake-showcase modules must be rewritten against real services before any
-future activation; they do not participate in the core workflow.
-
-## PENDING REAL HARDWARE VERIFICATION
-
-No physical sensor or camera was connected to this environment. Controlled
-isolated fixtures verified source protocol, authentication, persistence,
-classification, threshold policy, alert deduplication, incident provenance,
-RBAC, camera audit, frontend behavior, production routing, and mobile layout.
-
-Physical-device ingestion and real camera connectivity remain:
-
-**PENDING REAL HARDWARE**.
-
-The early-warning UI is explicitly non-certified, not a fire alarm, and not a
-replacement for physical safety systems or laboratory procedures.
-
-## Known Non-Blocking Debt
-
-- Resource listing uses a 250-row cap instead of cursor pagination.
-- Five resources remain intentionally unclassified pending an authoritative
-  human review decision.
-- Frontend lint has 14 existing hook/fast-refresh warnings and zero errors.
-- ESLint 9.39.5 is audit-clean but npm marks the major line unsupported; a
-  future tooling-only upgrade must move ESLint and its React/TypeScript plugins
-  together and re-run the complete lint gate.
-- The main entry bundle is approximately 391.27 kB minified; older core UI still
-  has scoped refactoring opportunities.
-- Dedicated immutable audit models are not present for every administrative
-  and laboratory metadata mutation.
-- Optional/legacy modules and their old tests require explicit
-  keep/rewrite/retire decisions before activation.
-- Physical sensor and camera evidence is pending real hardware.
-
-## Final Verdict
-
-- Batch 7: GO.
-- Batch 8 implementation: GO.
-- Required graduation scenario: GO.
-- Historical Final UI/UX Master Polish: GO.
-- Post-Closure Light UI & Motion Redesign: **VERIFIED GO; SOURCE CLOSED** (current accepted baseline `ff85dc76e74d40fa4a9b6cdf185e9815a6b8c3a7`).
-- Real hardware verification: PENDING REAL HARDWARE.
-
-## Do Not Start Without Explicit Approval
-
-- any newly defined Batch 9 or Batch 10
-- another UI polish pass without a demonstrated regression and explicit request
-- framework migration or repository-wide restructure
-- AI as business authority
-- Digital Twin, simulation, optimization, Pareto, GA/NSGA-II, or showcase
-  activation
-- payment as a required booking state
-- optional/research module restoration
-- historical migration edits or shared-database `prisma db push`
-
-## Canonical Handoff Reading
-
-Before future work, read `AGENTS.md`, the `.agent/` rules, this file,
-`docs/DECISIONS.md`, the Batch 7 and Batch 8 reports/walkthroughs, and
-`docs/FINAL_ASSIGNMENT_CLOSURE_AUDIT.md`.
-
-## 2026-09-24 — Open LAB quick booking checkpoint
-
-Code checkpoint implemented for external quick booking: public catalog detail can collect external customer identity, Vietnamese administrative address, email OTP, quote, booking creation, and handoff to bookings/payment; normal registration/profile now persist default address and profile exposes spending/loyalty signals from real payment/booking data. External customers keep canonical role `STUDENT` with `customerType=EXTERNAL`; no new role or booking status was introduced.
-
-Verification completed without live DB: Prisma validate/generate, backend lint, frontend lint/typecheck/build, and address source smoke. Local `DATABASE_URL` points to PostgreSQL on `localhost:5432`, but that server and Docker Desktop are not running in the current environment, so `prisma migrate deploy`, OTP live flow, booking creation, and browser smoke remain pending. SMTP variables are also absent; OTP must fail with `EMAIL_NOT_CONFIGURED` until real SMTP is configured.
-
-## 2026-09-25 — Phase D guest integrity closure
-
-Guest quick booking is now verified on isolated PostgreSQL 16. OTP challenges
-are HMAC-only, single-use, limited to five persistent failures, serialized by
-normalized email/purpose, protected by a 60-second resend cooldown, and retain
-invalidated history. Required email remains fail-closed.
-
-Successful completion uses one database transaction for valid OTP, new account
-and address persistence, the canonical booking rules, and OTP consumption.
-Booking failure rolls back the entire business outcome. Existing accounts are
-reused without public profile or `customerType` overwrite; `INTERNAL` remains
-`INTERNAL`. Existing accounts receive no OTP-derived JWT. New accounts retain
-the approved temporary phone credential, while backend middleware limits the
-session to password setup/me/logout until a real password is established.
-
-Verification: guest PostgreSQL suite 13/13, migration safety 14/14, core 33/33,
-Batch 4 32/32, all backend batches green, frontend lint/typecheck/build green,
-and browser Batch 2/3/4/5/6/8 green. No schema or migration changed.
-
-## Shared project shell — local continuation, 2026-10-04–05
-
-User-authorized local work on `codex/lab-workspace-ui-draft`, starting from HEAD
-`43b18328f80a1297c236b69e5496cc8afce86d72`; no new numbered Batch. Landing,
-registration and authenticated pages now share LAB identity and useful footer
-destinations. The workspace header presents the current localized canonical role.
-VI/EN uses the existing catalogs and preserves registration/booking drafts.
-The incumbent `PRODUCT.md`, `DESIGN.md` and `.impeccable/design.json` are unchanged.
-The checks below were recorded on 4 October; documentation completed on 5 October.
-
-Local frontend required gate passes: 2,131 matching VI/EN keys, eight locale/network
-tests, lint with zero errors/nine existing warnings, TypeScript and production build.
-Live checks at `http://127.0.0.1:15181/` with API `http://127.0.0.1:15005/api`
-and the existing demo database confirm all four role identities, real footer
-destinations and draft continuity. Twelve reviewed viewport captures cover public,
-registration, workspace, footer and VI/EN presentation; narrow checks found no
-horizontal overflow in the inspected views. Desktop web remains the priority.
-
-Initial finish review requested three P2 focus corrections. The same reviewer
-scored all three resolved: active input survives an eight-second real catalog read,
-mobile assistant/refresh returns to the persistent account trigger, and same-tab
-footer navigation focuses main before continuing through content. Its `ship`
-disposition covers those fixes only. Backup SHA256 checks match all 11 preserved
-files. See [scope, checks and limits](../artifacts/local-project-shell-20261004/REPORT.md)
-and [fix verdict](../artifacts/local-project-shell-20261004/FIX_VERDICT.md).
-
-No commit, push, deployment, backend/RBAC/schema/migration change or database setup
-is included. No full business mutation regression was rerun. SMTP, live payment,
-image/video upload and shipping remain unverified. The later requested sequence
-is desktop UI completion, then media, paid booking/quote/payment, then mail; it is future intent
-and does not start another task or outrank the required graduation workflow.
-
-## Approved desktop LAB UI — local continuation, 2026-10-05
-
-The user confirmed the researched direction: desktop text navigation, one LAB
-image on landing, and calendar/queues as the main workspace tasks. Implemented
-locally on the existing `codex/lab-workspace-ui-draft` branch with no commit/push
-or new numbered Batch. Existing local changes are preserved in hashed backups.
-
-The persistent sidebar starts at 1100px; narrower layouts retain the accessible
-menu. Landing now uses a labelled AI illustration. Calendar controls and booking
-cards have a clearer hierarchy and fewer repeated labels/icons. Shared styling
-carries the existing navy/IBM Plex identity and header/footer into role homes.
-Backend, RBAC, schema, migrations and canonical statuses are unchanged.
-
-Observed recovery issues are fixed: failed API logout still clears the local
-workspace; denied private resource details leave the authorized catalogue visible.
-This does not assert server revocation after failed logout or grant staff new LABs.
-
-Frontend required gates pass with 2,138 matching VI/EN keys, eight locale/API tests,
-zero lint errors/nine existing warnings, typecheck and build. Four-role navigation
-passes 121 checks; bilingual browser verification passes 315 checks. Isolated
-PostgreSQL queue regression passes six backend tests and 58 browser checks.
-Temporary test listeners/database were removed after testing.
-The main demo UI remains at `http://127.0.0.1:15181/` with API port 15005.
-
-The fresh finish reviewer returned `ship` for landing, calendar, booking queue and
-shared role-home styling. Broader legacy card/metric drift remains recorded. This
-does not mean all 50 proposed screen frames were redesigned or every business
-mutation was rerun. Approved structural changes are documented in `DESIGN.md`
-and its sidecar with the existing token frontmatter preserved. Evidence is recorded
-in the [local build report](../artifacts/local-final-ui-20261005/REPORT.md) and
-[finish review](../artifacts/local-final-ui-20261005/FINISH_REVIEW.md).
-
-
-## Catalogue, resource dossier and profile — local refinement, 2026-10-05
-
-Continuation on `codex/lab-workspace-ui-draft`; no new Batch or Git publication.
-The user rejected permanent filter forms, repetitive tall resource cards and
-internal classification codes in account screens. Desktop catalogue now uses
-aligned records with attributed thumbnail, resource name, LAB, current
-availability and detail/calendar actions. Search and filters open on demand and
-retain values when closed. Resource name opens the dossier directly.
-
-Resource information/schedule no longer wait for private activity history. The
-dossier requests history only in its selected section; outside-scope staff receive
-403 feedback there while allowed detail/calendar access remains available.
-Backend LAB authorization, canonical roles/statuses and persistence are unchanged.
-Profile separates personal information, security, access requirements and activity,
-preserving mounted form drafts across sections and languages. Classification copy
-uses plain language without granting verified institutional authority.
-
-Required frontend gates pass with 2,155 matching locale keys, eight unit tests,
-zero lint errors/nine existing warnings, typecheck and production build. Targeted
-four-role browser verification passed 133 checks; after the catalogue composition
-fix, the staff path passed 38 checks. These cover disclosure, public details versus
-restricted history, history retry, exact resource calendar navigation, account
-sections and draft continuity. Seven keyboard checks additionally verify native
-activation, modal focus wrap and Escape restoration; the detail opener is now
-remembered before loading disables it. These checks do not retest every business mutation.
-
-Main local listeners were found stopped and restarted against the existing demo
-database, without migration, reset or seed. UI remains on port 15181, API on 15005.
-Existing sessions need a fresh login after the runtime restart. External reference
-media may load slowly or fail; it is not verified institutional photography.
-See [the refinement report](../artifacts/catalog-profile-refinement-20261005/REPORT.md).
-
-
-### Collapsible navigation — 2026-10-06
-
-Implemented in C:/Projects/lab-resource-manager (codex/lab-workspace-ui-draft), preview 5173. Comparison main at 5180 is unchanged. Desktop defaults to compact shortcuts with searchable modal menu; optional persistent pin keeps navigation beside interactive content. Close clears pin. Narrow layouts use horizontal shortcuts and the same drawer. Existing role/feature gating remains intact.
-
-Validation: typecheck, production build and i18n tests passed; lint has 0 errors and 9 existing warnings. Browser suite passed 129 checks across all four roles, VI/EN, 375/768/1024/1440px, keyboard, routing and API failure states. Evidence: artifacts/navigation-20261006/results.json and screenshots. Earlier failure.json records superseded attempts: initial API host mismatch in test configuration, then API 429 caused by burst test traffic; successful run used the actual localhost API and 25-second spacing between roles. No rate limits were weakened.
-
-
-### Shared local Docker runtime — 2026-10-06
-
-Supersedes the isolated main-comparison runtime above, at the user's request.
-Both frontends (branch 5173, main 5180) now use the branch backend on 8000 and
-existing lrm-local-review_review-data. Schema/migration files and frontend API
-wrapper match main a5472d4; this setup compares frontend versions, not backend
-versions. Main checkout has only local package scripts changed to call the shared
-launcher. npm run dev has no Docker commands on its normal path; it checks API
-readiness and starts Vite. npm run dev:backend starts the fixed Compose project
-with --no-build. Explicit dev:backend:rebuild is available when required.
-
-User explicitly approved deletion of old databases/unused volumes while retaining
-the active LAB database. Removed three obsolete containers, six old volumes
-(including legacy LAB, movie-ticket, anonymous volumes and comparison DB), two old
-networks, three unused images and all builder cache. Kept two healthy containers,
-two required images, one data volume. No filesystem cleanup or migration edits.
-Only startup configuration/scripts and corresponding documentation were edited.
-
-Verified repeated up and stop/start preserve both container IDs and keep image
-count at two/cache at zero. Both actual npm run dev commands started their expected
-ports. Browser login/overview/resource page passed for both versions against only
-API 8000 with no browser exceptions; staff/lecturer/student API logins also passed.
-Full business mutation suite and external AI/payment integrations were not rerun.
+# Trạng thái dự án hiện tại
+
+Cập nhật 13/10/2026. Đây là checkpoint gọn; hợp đồng đầy đủ ở SRS, DECISIONS,
+hai guideline, schema/migrations và source/tests liên quan.
+
+## Chỉ đạo hiện hành
+
+Refactor UI toàn hệ thống đã dừng. Ngày 12/10 người dùng giao riêng phần danh mục
+tài nguyên: thêm phòng/thiết bị mẫu, tách nhóm, lưới ba cột và hồ sơ chi tiết.
+Phạm vi này đã thực hiện bên dưới; rollout/điều phối UI cũ không tự mở lại.
+Sau đó người dùng giao triển khai mô phỏng thực tế chức năng giám sát tài nguyên.
+Người dùng đã bác bỏ màn kịch bản demo. Chỉ đạo mới 12/10: UI ít chữ, chi tiết
+on-demand, booking tự xác nhận, bảng giá từng tài nguyên, chu kỳ bảo trì có
+cảnh báo staff/admin. Người dùng làm rõ áp dụng trên toàn hệ thống: đã rà luồng
+đặt lịch, projections và cách trình bày các màn hình chính; checkpoint bên dưới.
+Người dùng sẽ giao redesign tiếp cho Claude khi hồi limit;
+Claude tự quyết thiết kế, kế hoạch và cách code. Hướng mỹ thuật, queue, brief,
+allowlist và lịch điều phối cũ đã hủy; automation đã xóa, không tạo lại.
+Không coi lịch sử hoặc backlog là task mới. Không có whole-system UI PASS.
+Chỉ đạo 13/10: chuyển hệ thống sang CUSTOMER/LAB_STAFF/ADMIN, đăng ký bằng
+email/password và lấy thông tin liên hệ khi đặt lịch; checkpoint riêng bên dưới.
+Giữ nghiệp vụ, API/RBAC, dữ liệu thật và kiến trúc; ưu tiên laptop VI/EN/ba role,
+1366x768/1440x900. Bảo toàn responsive; mobile matrix deferred.
+
+## Phạm vi và kiến trúc
+
+Đề tài: **Xây dựng hệ thống đặt lịch và giám sát tài nguyên phòng thí nghiệm**.
+Hai năng lực bắt buộc là điều phối sử dụng tài nguyên và giám sát tài nguyên.
+React/Vite ở `frontend/`; Express/Prisma ở `backend/`; PostgreSQL 16.
+Cấu trúc ánh xạ với hướng dẫn giảng viên nằm trong PROJECT_STRUCTURE.md.
+
+Ba vai trò: ADMIN, LAB_STAFF, CUSTOMER (ADR-033). Backend quyết định quyền,
+phạm vi lab, điều kiện, trạng thái và dữ liệu. Schema thay đổi bằng forward migration; giữ baseline và
+lịch sử migration; không dùng db push, sửa migration đã áp dụng hay reset DB.
+Booking dùng khoảng `[startAt,endAt)` và khóa chống trùng ở database.
+`Resource.operationalStatus` là trạng thái vật lý; availability được suy ra.
+NO_SHOW là outcome/event. Xem SRS, DECISIONS và hai guideline cho hợp đồng đầy đủ.
+
+## Tài khoản khách hàng và đăng ký — 13/10/2026
+
+Theo yêu cầu mới: ba vai trò thật, CUSTOMER thay STUDENT/LECTURER. Migration
+20261012001000 đã áp dụng trên local; 4 tài khoản giữ ID/credentials, 4 booking,
+2 payment và 128 audit giữ nguyên số lượng. Audit snapshot role giữ text lịch sử.
+Auth đăng ký chỉ email/password; tên chưa nhập được giữ trống, header dùng email.
+Booking yêu cầu họ tên/phone, lưu contactSnapshot/profile cùng transaction.
+CUSTOMER chỉ own scope; staff chỉ assigned LAB; ADMIN global. Màn học phần và
+mutation ngừng dùng, archive ADMIN-only giữ dữ liệu. UI VI/EN, ba trang chủ,
+user role controls, header/footer, profile/booking/support đã đổi contract;
+form giữ label/error và bỏ ví dụ placeholder dài. Đặt lịch hợp lệ vẫn CONFIRMED.
+
+Verification: backend required 88, frontend required 20, customer integration 8,
+auth/RBAC 10, booking/calendar 32, resource care 15, support 9, email 10 và
+workspace/archive 4 tests pass. Lint/typecheck/build pass; hai lint warnings FE
+cũ còn nguyên. Browser kiểm tra đăng nhập thật ba vai trò, VI/EN, 390/1440px;
+đăng ký hai trường, lỗi đúng trường/focus và booking thật CONFIRMED có contact
+snapshot/phí 20.000đ qua API + PostgreSQL test riêng. Không có pageerror trong
+các context QA. Migration fixture giữ IDs/password hashes và audit role lịch sử.
+SMTP được kiểm tra bằng loopback protocol fixture, chưa có nhà cung cấp gửi thật;
+VNPAY NCB Sandbox đã xác minh trong checkpoint thanh toán bên dưới; email gửi thật chưa được xác minh.
+Không deploy production, không tự mở batch mới.
+
+## Checkout và runtime
+
+- Chỉ C:/Projects/lab-resource-manager, claude/lrm-redesign-v2. Working tree có
+  nhiều sửa/xóa/untracked từ trước; giữ nguyên, không quy toàn bộ diff cho mình.
+- Không sửa worktree497f, commit/push/merge/deploy hoặc sửa dữ liệu trong lượt dọn.
+- Runtime đã dùng: frontend5173, bản so sánh5180; Docker backend8000 và PostgreSQL
+  dùng chung, DB lab_resources_local_demo. Phải kiểm tra trạng thái live trước khi dùng.
+- Tái dùng server; startup backend có migration/demo seed, không coi đó là QA.
+  Không reset/down -v/seed tự động khi QA, sửa migration đã áp dụng hay prisma db push.
+  Lượt danh mục 12/10 được người dùng yêu cầu thêm mẫu và dùng seed local có guard.
+
+## Chức năng đang có
+
+| Nhóm | Implementation và ranh giới |
+|---|---|
+| Tài khoản | Đăng nhập, quản trị tài khoản/phân công lab; backend kiểm tra active user. |
+| Tài nguyên | Catalog công khai an toàn, hồ sơ/media, trạng thái, lịch và quản trị. |
+| Booking | Tự xác nhận sau kiểm tra chính sách/đào tạo/chống trùng/bảo trì; đổi lịch, hủy, bàn giao/hoàn trả và lịch sử. Duyệt/từ chối dành cho bản ghi legacy. |
+| Vận hành | Bảo trì, sự cố, thông báo, audit, hàng đợi phân trang và tổng đúng scope. |
+| Kho/học phần | Ledger vật tư và nhóm/hoạt động học tập đã được người dùng chấp thuận. |
+| Giám sát | Nguồn xác thực, mẫu lưu DB, freshness, ngưỡng, alert episode, sự cố liên kết, camera metadata/audit; thiếu nguồn không hiện số đo giả. |
+| Báo cáo | Tổng hợp 7/30 ngày từ actualStartAt/actualEndAt, lịch hủy, sự cố và bảo trì; không suy ra giờ CPU/motor hay occupancy. |
+| AI | MCP read-only có RBAC, tra cứu lịch/nguồn, tóm tắt và ngữ cảnh hội thoại hữu hạn. Provider thật chưa được kiểm chứng. |
+| Tích hợp tùy chọn | Guest OTP, pricing/VNPAY và media; NCB Sandbox local đã kiểm chứng, production và các provider khác cần xác minh riêng. |
+
+### Vận hành, đặt lịch, bảng giá và chu kỳ — 12/10/2026
+
+Checkout claude/lrm-redesign-v2, HEAD bd83a97; bảo toàn thay đổi có trước.
+Đã gỡ simulator/preview/panel/brief cũ và hai resource SIM cùng dữ liệu thử.
+Giữ applied migration 00300–00500 bất biến. Lifecycle qua 00600–00800; lượt này
+thêm 00900 (intervalUses, warningPercent, Resource.maxBookingMinutes), 25 migrations.
+
+Booking mới qua conflict/maintenance/training/policy/state/duration checks rồi
+CONFIRMED tự động (approvedAt server, approvedById null). Legacy PENDING_APPROVAL
+và API xử lý vẫn giữ; staff home/booking queue ưu tiên bàn giao. Đã sửa chốt
+bookingState != bookable và lab ngừng phục vụ, không bỏ qua đào tạo/inspection.
+Staff/admin đổi lịch CONFIRMED với lý do + expectedStartAt, giữ duration/fee,
+kiểm tra lại conflicts và eligibility, audit/log/reminders/owner notification.
+Calendar week dùng giờ Việt Nam rõ +07:00; không dùng timezone host. Slots chỉ
+mở trong giờ LAB, phản ánh hard state/maintenance/cycle. API quote + booking
+cùng giới hạn thời lượng resource/LAB; snapshot booking cũ giữ nguyên khi đổi giá.
+
+Chu kỳ dùng giờ actualStartAt → actualEndAt, phiên còn mượn đến thời điểm đọc;
+lượt = bàn giao đã hoàn trả sau baseline, không đếm requests/đổi workload.
+Mốc 80% gần hạn, 100% đến hạn; tài nguyên đến hạn chặn booking/bàn giao. Notices
+lưu DB một lần/resource/baseline/stage/recipient cho admin và staff đúng LAB;
+transaction giữ resource lock, cảnh báo cũ được đánh dấu đã đọc sau inspection.
+Popup polling 30s trong app; worker kiểm tra 30s, không hứa push tức thì.
+Inspection sau job completed và xử lý hết incident/linh kiện hỏng giữ nguyên.
+Thời gian mượn không phải đo giờ motor/điện năng; UI dùng nhãn giờ sử dụng.
+
+configureLocalRentalCatalog.mjs có guard đúng local DB, đã cấu hình 25 resources:
+2.000–250.000 VND/giờ, max 2–12h theo loại; bốn purpose cùng rate. 23 resources
+có chu kỳ ngày/giờ/lượt + warning 80%; vật tư giữ ledger riêng. Giữ baseline,
+booking/payment cũ và trạng thái có chứng cứ. Chỉ ba trạng thái khởi tạo
+EQ-02 CALIBRATION, EQ-03 OFFLINE, MC-02 MAINTENANCE chưa có history/job/incident/
+booking được chuyển AVAILABLE qua status history/audit. Không tự clear lỗi thật.
+Giá/chu kỳ là cấu hình nội bộ do user giao; không tuyên bố giá thị trường/spec hãng.
+
+FE: giá ngay trên thẻ, bảng giá riêng 25 resources public và theo nhóm workspace;
+ADMIN sửa giá+duration qua transaction, có UI tại quản lý tài nguyên/payments.
+Details chỉ hiện mục được hover/focus/click; metadata/guide/credits/care controls
+mở theo nhu cầu. Bỏ boilerplate demo khỏi màn khách; provenance vẫn giữ DB/docs.
+Maintenance page có tổng gần hạn/đến hạn và danh sách chu kỳ mở khi chọn; không
+đưa cấu hình dài ra mặc định. Monitoring hiển thị tiến độ giờ/lượt và facts ngắn.
+
+Kiểm chứng: backend required 89 tests + lint; integration PostgreSQL riêng
+12/12 (auth/scope, concurrent start/booking, lifecycle, cycles/notices/dedupe,
+tariff/snapshot/limit, VN calendar, scoped move/stale/conflict); frontend required
+20 tests + lint/typecheck/build, VI/EN 3095 keys, hai warnings cũ. ERD check đạt.
+Browser: hover đúng panel, giá 30k máy hiện sóng, VI/EN; bảng giá public đủ 25,
+GPU 180k/giờ max2h; details/table/maintenance 390px không overflow. Staff xem
+23 chu kỳ. Customer UI đặt camera 13/10 10–11h nhận CONFIRMED, fee25k;
+504647ab-8bc1-46c5-965b-502ed1c43ffa đã CANCELLED sau QA bằng owner API. Lịch/
+charge/notifications/audit giữ chứng cứ, không fake paid. DB hiện 25 resources,
+4 bookings, 2 payments (thêm đúng lượt QA/charge, ba booking cũ giữ nguyên).
+
+Lượt làm rõ toàn hệ thống: resource/calendar/AI đều chiếu requiresApproval=false;
+AI kiểm tra chu kỳ và giới hạn thuê, không gợi ý slot cho tài nguyên đến hạn.
+Sửa availability chỉ tính booking/maintenance giao với khoảng truy vấn, thay vì
+khóa danh mục vì có lịch tương lai. LAB inactive chặn cả catalogue/calendar.
+Home student/lecturer, queue staff và progress ưu tiên xác nhận/bàn giao; bộ lọc
+pending chỉ hiện nếu có bản ghi cũ. HelpDisclosure thu gọn hướng dẫn ở resources,
+payments/checkout, profile, users, notifications, teaching, materials và home;
+thẻ tài nguyên thu gọn specs, booking dossier thu gọn identity/purpose. Lỗi, giá,
+trạng thái và trường bắt buộc vẫn hiện; chi tiết tài nguyên giữ hover/focus/click.
+
+Kiểm chứng bổ sung: integration 15/15 (gồm 20 booking cho 5 category × 4 role),
+Batch4 32/32 trên lab_resources_b4_booking_autoconfirm_20261012 ở PG test riêng,
+backend required 89 + lint, frontend required 20 + lint/typecheck/build; VI/EN
+3098 keys. Các assertion approval cũ của Batch4 được cập nhật theo ADR-032;
+không thêm APPROVE giả vào history. Browser: ba home customer/staff/lecturer
+không có bước chờ duyệt mặc định; 9 màn hình chính, Help bàn phím, VI/EN, card
+specs mở/đóng, danh mục student/staff 390px không overflow, không pageerror mới.
+Mọi dữ liệu tạo thêm lượt này nằm ở DB test; local vẫn 25 resources/23 care
+profiles/4 bookings/2 payments. Runtime5173 đã bật lại; backend8000 healthy.
+
+Giới hạn: không kiểm thử load lớn hoặc phần cứng; VNPAY/SMTP/provider vẫn cần
+kiểm chứng riêng. Không coi lượt này là whole-system/production PASS; không
+mở batch khác hoặc deploy. Nguồn/tests/schema hiện hành là hợp đồng kế tiếp.
+
+## UI/source và bằng chứng cần giữ
+
+Source đã có các màn public/auth, bốn role home, resources/detail/selection,
+calendar/booking, queue/dossier, maintenance/incidents, materials/teaching,
+users/profile/notifications và các nhánh monitoring/payments tùy điều kiện.
+Các màn/locale/route/shared shell đã thay đổi nhiều trong working tree; các
+chỉ thị palette, sidebar, composition và thứ tự rollout cũ không còn bắt buộc.
+
+Selection dùng quote/API từng tài nguyên, không atomic/group success; timeout
+hoặc kết quả không chắc chắn cần kiểm tra booking, không tự thử lại để ghi trùng.
+GET /api/dashboard/trends?period=day|week|month: ADMIN/LAB_STAFF, scope lab từ
+UserLabAssignment. Actual use từ bàn giao/hoàn trả; requests từ createdAt,
+không phải lượt truy cập. Collections chỉ ADMIN, payment bật, VND thành công
+có paidAt và không manual_review; không gọi khoản chờ thu/net revenue là doanh thu.
+
+Bằng chứng gần nhất R4-C (trước lượt dọn tài liệu): frontend test:required;
+backend test:required/lint và năm trends tests pass. Hai lint warnings cũ ở
+ResourceStatusModal/LocaleProvider. Actual API admin/staff và student403;
+16 overview captures (4roles×VI/EN×2laptop), catalogue/detail/selection/form,
+shortlist/title draft và disclosure đã kiểm. QA không submit booking thành công.
+Evidence ngoài Git: C:/Users/Admin/.codex/lab-controller/joint-review-20261009/codex/R4-C-*.
+Đây là bằng chứng cũ theo phạm vi, không chứng minh redesign mới hay mọi màn PASS.
+
+## Danh mục phòng/thiết bị — 12/10/2026
+
+- Local demo hiện có 25 tài nguyên: 6 ROOM, 10 EQUIPMENT, 4 MACHINE,
+  3 EXPERIMENT_KIT, 2 MATERIAL. Thêm 14 bản ghi; bổ sung mô tả/thông số/hướng dẫn
+  mặc định của 11 bản ghi LOCAL DEMO. Không thay tên, lab, trạng thái, booking,
+  giá hay thông số đã chỉnh; không tạo lịch, thanh toán hoặc lịch sử giả.
+- `seedLocalDemo.mjs` gọi `localDemoCatalog.mjs`; chỉ chạy ở
+  `DEMO_MODE=true`, DB local `lab_resources_local_demo`, không có migration mới.
+  Kiểm chứng thực: hash toàn bộ booking/payment/pricing/log/history/sự cố/telemetry
+  giữ nguyên; ID và trạng thái 11 tài nguyên cũ giữ nguyên. Seed lần hai không đổi
+  resource/media/version/updatedAt hoặc dữ liệu nghiệp vụ.
+- Catalog đăng nhập có Phòng / Thiết bị / Vật tư & khác. Nhóm Thiết bị bao gồm
+  EQUIPMENT/MACHINE/EXPERIMENT_KIT; nhóm khác giữ MATERIAL và category chưa xác định.
+  Không suy ra category từ subtype. Lưới 3 cột ở desktop, 2 ở tablet, 1 ở mobile.
+  `catalogueGroup` lưu vào URL khi đổi nhóm, giữ qua reload/detail/back/selection.
+- Hồ sơ có nhận diện, sức chứa/số lượng, thông số JSON lồng nhau và phụ kiện,
+  hướng dẫn/chính sách, giá theo purpose từ API và lịch thật. Giá lỗi hiển thị
+  lỗi/retry; không biến thành miễn phí. Quote/booking vẫn do backend tính.
+  History vẫn tải theo yêu cầu và quyền hiện hành. Public/admin modal dùng cùng
+  renderer thông số; LOCAL DEMO và hướng dẫn minh họa có nhãn rõ.
+- Kiểm chứng: frontend required 20 tests + i18n/lint/typecheck/build; backend
+  required 86 tests + lint; catalogue browser fixtures 30 assertions (375/768/
+  1108/1440, nhóm/bộ lọc/back/VI-EN/pricing failure/history403). Actual browser/API
+  local student đọc 25 mẫu, nhóm 6/17/2, hồ sơ và giá ROOM-01 50.000đ/giờ.
+  Dossier fixtures 23 assertions pass, gồm public media/guide, giữ draft VI/EN,
+  sửa hướng dẫn giữ specs, mở/đóng modal; cập nhật locator cho shell/route hiện hành.
+  Không chứng minh toàn UI, thanh toán VNPAY hay thiết bị thật đã hoạt động.
+- Ảnh cũ là minh họa ngoài hệ thống, có nguồn trong gallery; tài nguyên mới chưa
+  có ảnh thực tế nên dùng biểu tượng. List API hiện giới hạn 250, chưa thêm phân trang.
+
+## Giới hạn đã biết
+
+- Toàn bộ UI chưa đạt mong muốn người dùng; cần actual browser/flow verification
+  khi Claude thực hiện redesign. Populated queues/events và mobile chưa đủ coverage.
+- Payments mặc định tắt; phiên local bật theo yêu cầu đã kiểm chứng thành công
+  NCB Sandbox ngày13/10 (checkpoint bên dưới). Provider AI, SMTP gửi thật,
+  VNPAY production/phương thức khác, object storage và phần cứng/camera thật
+  còn cần xác minh riêng.
+- Vận hành ảo dùng workload/occupancy khai báo và thời gian server. Chưa có đo
+  cảm biến vật lý; không suy ra sức khỏe máy, nhiệt độ hoặc hiệu suất năng lượng.
+- JWT revocation/rotation và guest setup recovery còn cần thiết kế/kiểm chứng;
+  kiểm tra hợp đồng/source trước khi thay đổi. Không tự mở các mục backlog.
+
+## Kết nối VNPAY Sandbox local — cập nhật 13/10/2026
+
+Checkout C:/Projects/lab-resource-manager, claude/lrm-redesign-v2, HEAD bd83a97;
+giữ thay đổi có trước. Phạm vi: nạp cấu hình merchant mới và kiểm thử thanh toán
+local thật trên Sandbox; chưa deploy. Backend8000/DB lab_resources_local_demo,
+frontend5173 bật bằng --payments. Credentials nằm trong backend/.env gitignored.
+
+Terminal hiện tại 3G9D8W0K đã được nạp lại vào Docker. Ngrok HTTPS
+projector-blaspheme-angelfish.ngrok-free.dev forward8000; Return
+/api/payments/vnpay/return, IPN /api/payments/vnpay/ipn. Merchant mới đã lưu và
+mở lại kiểm tra IPN/GET/HMACSHA512. Đường dẫn cấu hình: tên tài khoản → Thông tin
+tài khoản → dòng Terminal → bút sửa. Biến môi trường không tự đăng ký callback.
+
+Lượt ép VNPAYQR bị cổng từ chối mã76 (trace PJYGIVdFji, 13:16:42 giờ Việt Nam).
+Thêm VNPAY_BANK_CODE: không khai báo giữ QR; khai báo rỗng bỏ bankCode để khách
+chọn phương thức merchant hỗ trợ. Local hiện dùng rỗng. Backend ký đúng code
+được cấu hình; guard FE giữ HTTPS/domain và từ chối bankCode trùng/sai định dạng.
+UI dùng nhãn VNPAY; .env examples/production Compose giữ được giá trị rỗng.
+Không thay thuật toán HMAC hoặc dùng QueryDr/Return để settle.
+
+Luồng thật qua UI CUSTOMER: booking720a720e-e2cb-4d67-9b95-ea600d1704ea,
+LOCAL-ROOM-03, 14/10/2026 10:00–11:00, SERVICE 90.000đ, tự CONFIRMED. Khách mở
+VNPAY, chọn NCB, dùng thẻ/OTP Sandbox công khai từ tài liệu VNPAY. Provider trả
+00/00. IPN hợp lệ đã lưu payment8eeeb0de-ed9d-4906-b7d7-4058ccf7ed53,
+txnRef F335328542BFC65B65B4, status success, vnpTransactionNo15702944,
+paidAt2026-10-13T06:33:39Z (13:33:39 giờ Việt Nam), bankNCB/ATM,
+reconciliationStatus none. Booking vẫn CONFIRMED. Return ký hợp lệ hiển thị link
+đúng booking; bấm link về checkout và làm mới vẫn hiện đã xác minh90.000đ.
+Ngrok Free có trang Visit Site lần đầu trên trình duyệt; IPN server đã đến LAB.
+Không giả callback, chỉnh success thủ công hay ghi raw signed URL/secret vào log.
+
+Verification: backend required92/92 +lint; frontend required26/26,
+typecheck/build đạt, hai lint warnings cũ. Thêm4 unit regression về bankCode và
+chữ ký, mở rộng6 tests payment guard; i18n3137 keys đạt. Compose kiểm riêng
+unset/blank/NCB. Metadata gọn gitignored ở backend/logs/vnpay-latest-flow.json;
+log gates ở backend/logs và frontend/logs. Đây là PASS luồng thành công NCB
+Sandbox local, không suy ra mọi phương thức hoặc production đã được xác minh.
+
+IPN enqueue đúng một PAYMENT_RECEIPT. Email còn PENDING, attempts0,
+SMTP_NOT_CONFIGURED, chưa gửi thật. Chưa chạy luồng hủy/thất bại/duplicate IPN
+thật hoặc production/QueryDr/refund tự động trong lượt này. Tunnel phải tiếp tục
+chạy để callback local tới được LAB; muốn QR cần VNPAY bật phương thức cho
+merchant. Khi deploy thay Return/IPN/PAYMENT_APP_URL, đăng ký lại IPN và thử lại;
+domain chính thức không tự biến Sandbox thành production. Dừng ở batch thanh toán.
+
+Lịch sử chẩn đoán: Terminal cũ TV6PYXRB từng trả70/Sai chữ ký (trace QyLdVKnK4s),
+QueryDr trả97. Test call IPN merchant có hash9 ký tự chỉ chứng minh routing.
+Khoản thử cũ không bị sửa thành success. Merchant mới đã vượt qua lỗi chữ ký và
+hoàn tất luồng nói trên; không kết luận key cũ bị VNPAY thay đổi.
+
+## Chat hỗ trợ người dùng → staff → admin — 12/10/2026
+
+Checkout C:/Projects/lab-resource-manager, claude/lrm-redesign-v2, HEAD bd83a97;
+giữ thay đổi có trước và checkpoint VNPAY. User yêu cầu bản đầu chat thật cho
+người đã đăng nhập, tự trỏ staff rảnh, nhiều staff đồng thời, hàng đợi #1/#2
+và admin xem lịch sử. Không triển khai upgrade/provider/deploy tiếp theo.
+
+Đã thêm SupportSession/Message/Presence và migration forward
+20261012000100_support_chat. Partial unique indexes: một request mở/customer,
+một ACTIVE/staff trên toàn bộ LAB. Dispatch FIFO theo lab hợp lệ, current
+UserLabAssignment và heartbeat; gửi/kết thúc có transaction/row locks và
+retry UUID. Staff bật sẵn sàng, nhập kết quả khi kết thúc; mẫu trả lời chỉ
+chèn bản nháp. Admin đọc lịch sử/handling events và requeue kèm lý do.
+
+Backend support routes/service, server-owned assistant display handoff; frontend
+SupportPage/supportApi, route/sidebar/AI handoff, locale VI/EN đã nối. Truy cập
+/workspace/support hoặc nút Chat với nhân viên hỗ trợ trong trợ lý. Khách chọn
+LAB, mô tả vấn đề và quyết định chia sẻ ngữ cảnh trợ lý. Tin nhắn lưu PostgreSQL,
+không giả trạng thái booking/payment hoặc cấp quyền qua browser.
+
+Verification: Prisma validate/generate, backend required/lint, frontend required
+(routes/auth/i18n/lint/typecheck/build), ERD generate/check đạt; giữ hai warnings
+frontend cũ. Chín integration tests qua Express/PostgreSQL thật kiểm hai agent,
+FIFO/position, concurrency/multi-lab capacity, RBAC/revocation, durable messages,
+pagination, stale presence/requeue, AI handoff privacy, DB constraints và rate
+limits riêng cho polling. Browser
+20 assertions đạt với bảy session độc lập: AI→human consent, chat hai chiều,
+mẫu draft, admin history, completion→next FIFO, reload, XSS text, network recovery,
+draft/locale, VI/EN ở 1440/375px và admin requeue phản ánh đúng màn staff/khách.
+Harness forward request tới Express/Prisma thật
+trên DB lab_resources_support_test; không mock response thành công. Migration
+safety matrix 14 cases đạt trên DB support_migration_test tách biệt.
+CI đã thêm job support-chat để chạy hai suite này; chưa dispatch GitHub Actions.
+
+Shared Docker local được rebuild qua launcher chính thức với --payments;
+volume lab_resources_local_demo giữ nguyên, forward migration áp dụng và
+readiness đạt. Không reset/shared-seed chat thử trong DB nghiệp vụ. API/UI
+local vẫn 8000/5173. Test container lrm-support-test dùng PG16/25439, chỉ DB test;
+log/screenshot ngoài Git nằm trong backend/logs/support-*.
+Shared API/UI smoke qua tài khoản staff thật đạt: LAB assignment, màn hỗ trợ,
+hàng đợi trống, không lỗi trình duyệt. Không chèn phiên hỗ trợ thử vào DB chung.
+Đã dừng riêng container test sau kiểm thử (docker start lrm-support-test để
+chạy lại); backend/database local chung vẫn healthy, frontend5173 tiếp tục chạy.
+
+Giới hạn bản đầu: polling 2 giây, heartbeat 15 giây, presence TTL45 giây;
+giữ trang staff mở. Phiên ACTIVE mất kết nối vẫn giữ handler, admin có thể
+requeue; chưa tự chuyển phiên dở, read receipts, attachments hoặc WebSocket.
+Trợ lý/provider giữ chế độ cấu hình hiện có, chưa kiểm chứng AI provider thật.
+Checkpoint chat không giải quyết mã70 VNPAY; merchant mới đã được kiểm chứng
+riêng trong checkpoint thanh toán13/10. Dừng ở feature chat.
+
+## Email đăng ký và thanh toán tự động — 12/10/2026
+
+User yêu cầu gửi mail khi đăng ký thành công và thanh toán lịch sử dụng thiết
+bị thành công. Đã thêm EmailDelivery, migration forward
+20261012000200_email_deliveries, transaction enqueue tại public registration,
+new guest account sau OTP và verified VNPAY success IPN. Snapshot không chứa
+password/hash/OTP/token. Thư welcome hướng dẫn mật khẩu đã chọn/setup; biên
+nhận có mã lịch, thiết bị/LAB, giờ UTC+7, số tiền và mã giao dịch. Return,
+callback sai/thất bại, account reuse không tạo thêm thư. Lịch đã hủy giữ nguyên
+và thư báo đối soát. Không backfill tài khoản hoặc khoản thanh toán cũ.
+
+Worker riêng mỗi 10 giây, SMTP sau commit; dedupeKey, SKIP LOCKED và lease token
+điều phối concurrent workers. Thiếu cấu hình giữ PENDING không tăng attempts;
+lỗi gửi thử lại tối đa 5 lần rồi FAILED, CLI email:retry hỗ trợ operator sau
+khi kiểm tra nguyên nhân. Đã loại Ethereal/console fake-success. CLI email:check
+đọc config flags, verify SMTP không gửi thư và queue summary/failed IDs, không
+echo credential/nội dung mail. Registration VI/EN theo request; receipt mặc
+định VI. Không thêm giao diện quản trị mail hoặc password recovery mới.
+
+Verification: 10 integration cases đạt trên PG16 lab_resources_email_test với
+Express/Prisma và SMTP loopback thật: welcome/escaping/no password, thiếu SMTP,
+backoff/5 failures, concurrent worker/lease recovery, atomic rollback account
+và payment, verified/duplicate IPN, Return, invalid/failed callbacks, cancelled
+late success, guest OTP/new account/reuse. Backend required 86 tests + lint,
+frontend required (20 tests, i18n/lint/typecheck/build; hai warnings cũ), Prisma
+generate và ERD generate/check đạt. Migration safety matrix 14 cases đạt trên
+email_migration_test riêng. Production configuration check đạt sau tách fixture
+khỏi key VNPAY trong .env; production Compose config đạt. CI thêm suite email
+vào fresh-database job; chưa dispatch GitHub Actions.
+
+Shared local backend đã rebuild bằng launcher --payments, apply forward
+migration, readiness đạt. Giữ volume lab_resources_local_demo, không tạo
+account/thanh toán/email thử trong DB chung. backend/.env đã thêm sẵn SMTP
+fields trống và EMAIL_APP_URL=http://localhost:5173. Kiểm tra runtime:
+automationEnabled=true, smtpConfigured=false, queue trống. User xác nhận chưa
+có nhà cung cấp/tài khoản SMTP; chưa gửi/xác minh inbox thật. SMTP SENT chỉ
+chứng minh server nhận thư; crash sau acceptance trước DB write vẫn có thể
+gửi lại, Message-ID ổn định không bảo đảm exactly-once. Lượt thanh toán13/10
+đã enqueue một biên nhận từ IPN thật; thư PENDING/SMTP_NOT_CONFIGURED, chưa gửi.
+Hướng dẫn bật SMTP nằm trong README; dừng ở feature email.
+
+## Dọn tài liệu và skill — 10/10/2026
+
+Đã gỡ skill LAB thiết kế tự viết .claude/skills/lab-product-redesign, tài liệu
+DESIGN trùng chỉ đạo, brief/spec/controller/rules mỹ thuật cũ và output tạm.
+Giữ skill GitHub đã cài, tim-dung-file, lab-task/lab-handoff/lab-preflight và
+quy tắc nghiệp vụ. Skill không liên quan LAB chuyển sang gọi thủ công trong
+project; không sửa nội dung skill GitHub, provider/model hoặc permissions.
+Rút lịch sử UI khỏi checkpoint và guideline; giữ contract, giới hạn và chỉ dẫn
+token. Nguồn giảng viên, SRS, ERD, security, runbooks, source/tests/assets/DB giữ nguyên.
+
+Backup có hash trước lượt này:
+C:/Users/Admin/.codex/lab-controller/archive-custom-design-20261010-131325.
+Backup lượt dọn467file trước:
+C:/Users/Admin/.codex/lab-controller/archive-free-design-20261010-130641.
+Prompt chờ người dùng gửi:
+C:/Users/Admin/.codex/lab-controller/claude-autonomous-redesign-prompt.txt.
+Lượt này chỉ sửa tài liệu/config/helper preflight, không sửa ứng dụng. Backup/hash
+đạt;389file skill cá nhân không đổi; JSON/link/tham chiếu/diff đạt. Node syntax
+check và preflight exit0, UI/API HTTP200/database ready. Đây không phải UI/E2E PASS.

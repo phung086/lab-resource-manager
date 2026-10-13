@@ -44,7 +44,7 @@ async function seed() {
     { id: fixture.labs.assigned, buildingId: fixture.building, code: `PELA-${marker}`, name: "Phase E Assigned Lab" },
     { id: fixture.labs.foreign, buildingId: fixture.building, code: `PELF-${marker}`, name: "Phase E Foreign Lab" }
   ] });
-  const roles = { admin: "ADMIN", staff: "LAB_STAFF", foreignStaff: "LAB_STAFF", unassignedStaff: "LAB_STAFF", student: "STUDENT", otherStudent: "STUDENT", lecturer: "LECTURER", temporary: "STUDENT" };
+  const roles = { admin: "ADMIN", staff: "LAB_STAFF", foreignStaff: "LAB_STAFF", unassignedStaff: "LAB_STAFF", student: "CUSTOMER", otherStudent: "CUSTOMER", lecturer: "CUSTOMER", temporary: "CUSTOMER" };
   await isolated.user.createMany({ data: Object.entries(fixture.users).map(([name, userId]) => ({
     id: userId, email: `${name}-${marker}@example.test`.toLowerCase(), fullName: `Phase E ${name}`, role: roles[name], passwordHash,
     isActive: true, passwordResetRequired: name === "temporary", customerType: name === "student" ? "INTERNAL" : "EXTERNAL"
@@ -115,7 +115,7 @@ test("Phase E privacy and identity governance", { timeout: 180000 }, async (t) =
         email: `declared-${customerType.toLowerCase()}-${marker}@example.test`, password, fullName: `Declared ${customerType}`, customerType
       });
       assert.equal(registered.status, 201, JSON.stringify(registered.body));
-      assert.equal(registered.body.user.role, "STUDENT");
+      assert.equal(registered.body.user.role, "CUSTOMER");
       assert.equal(registered.body.user.customerType, customerType);
       assert.equal(registered.body.user.customerTypeSemantics, "SELF_DECLARED_UNVERIFIED");
       assert.equal((await request(app).get("/api/users").set(bearer(registered.body.accessToken))).status, 403);
@@ -125,13 +125,13 @@ test("Phase E privacy and identity governance", { timeout: 180000 }, async (t) =
     const protectedPatch = await request(app).patch("/api/users/me").set(bearer(tokens.student)).send({ role: "ADMIN", isActive: false, customerType: "EXTERNAL" });
     assert.equal(protectedPatch.status, 400);
     const unchanged = await isolated.user.findUnique({ where: { id: fixture.users.student } });
-    assert.equal(unchanged.role, "STUDENT");
+    assert.equal(unchanged.role, "CUSTOMER");
     assert.equal(unchanged.isActive, true);
     assert.equal(unchanged.customerType, "INTERNAL");
     const declaration = await request(app).patch("/api/users/me").set(bearer(tokens.student)).send({ customerType: "EXTERNAL" });
     assert.equal(declaration.status, 200);
     assert.equal(declaration.body.customerTypeSemantics, "SELF_DECLARED_UNVERIFIED");
-    assert.equal((await isolated.user.findUnique({ where: { id: fixture.users.student } })).role, "STUDENT");
+    assert.equal((await isolated.user.findUnique({ where: { id: fixture.users.student } })).role, "CUSTOMER");
   });
 
   await t.test("temporary credential session fails closed until password change", async () => {

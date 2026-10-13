@@ -1,7 +1,8 @@
+import '../styles/calendar-workspace.css';
 import type { LocaleMessage } from "../providers/LocaleProvider";
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Calendar, AlertCircle, CheckCircle2, ArrowRight, ShieldAlert, Shield, RefreshCw } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.js";
 import { LabPolicySummary } from "./LabPolicySummary";
@@ -10,9 +11,35 @@ import {
   toVietnamDateString,
   toVietnamTimeString,
   vietnamTimeToIso,
+  getVietnamTodayDateString,
   getVietnamTomorrowDateString
 } from "../utils/timezone.js";
 
+function bookingTimeErrors(date: string, start: string, end: string): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (!date) errors['booking-date'] = 'ui.enter_a_date_and_time_72a12ba5';
+  if (!start) errors['booking-start-time'] = 'ui.enter_start_and_end_times_dd573c8f';
+  if (!end) errors['booking-end-time'] = 'ui.enter_start_and_end_times_dd573c8f';
+  if (Object.keys(errors).length) return errors;
+  try {
+    const startIso = vietnamTimeToIso(date, start);
+    const endIso = vietnamTimeToIso(date, end);
+    if (toVietnamDateString(startIso) !== date || toVietnamTimeString(startIso) !== start || toVietnamTimeString(endIso) !== end) {
+      errors['booking-date'] = 'ui.invalid_date_or_time_e55672a4';
+    } else if (date < getVietnamTodayDateString()) {
+      errors['booking-date'] = 'ui.the_booking_date_cannot_be_f83fc184';
+    } else if (new Date(startIso).getTime() <= Date.now()) {
+      errors['booking-start-time'] = 'ui.calendarWorkspace.futureTime';
+    } else if (new Date(startIso).getTime() >= new Date(endIso).getTime()) {
+      errors['booking-end-time'] = 'ui.start_time_must_be_before_fe9fe060';
+    }
+  } catch {
+    errors['booking-date'] = 'ui.invalid_date_or_time_e55672a4';
+  }
+  return errors;
+}
+
+export type BookingDraft = { date: string; start: string; end: string; title: string; purpose: string; purposeCode: string };
 export interface QuickBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,6 +71,11 @@ export interface QuickBookingModalProps {
   onConfirmBooking?: (booking: any) => void;
   onViewBookings?: () => void;
   onProceedPayment?: (booking: any) => void;
+  initialDraft?: BookingDraft;
+  onDraftChange?: (draft: BookingDraft) => void;
+  onQuoteChanged?: (quote: { amountVnd: number; version: string } | null) => void;
+  onAttempt?: () => void;
+  onBookingError?: (message: LocaleMessage, uncertain: boolean) => void;
 }
 
 export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
@@ -53,9 +85,20 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   resources: passedResources,
   onConfirmBooking,
   onViewBookings,
-  onProceedPayment
+  onProceedPayment,
+  initialDraft, onDraftChange, onQuoteChanged, onAttempt, onBookingError
 }) => {
   const { tr } = useLocale();
+  const [contact, setContact] = useState({ fullName: '', phone: '' });
+  const [contactLoading, setContactLoading] = useState(true), [contactError, setContactError] = useState(''), [contactRetry, setContactRetry] = useState(0);
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController(); setContactLoading(true); setContactError('');
+    apiRequest('/auth/me', { signal: controller.signal }).then(user => { if (!controller.signal.aborted) setContact({ fullName: user.fullName || '', phone: user.phone || '' }); })
+      .catch(cause => { if (!controller.signal.aborted) setContactError(cause.message || 'ui.customer.contactLoadFailed'); })
+      .finally(() => { if (!controller.signal.aborted) setContactLoading(false); });
+    return () => controller.abort();
+  }, [isOpen, contactRetry]);
   const [resources, setResources] = useState<any[]>(passedResources || []);
   const [loadingResources, setLoadingResources] = useState(passedResources === undefined);
   const [resourceError, setResourceError] = useState("");
@@ -67,6 +110,8 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionUncertain, setSubmissionUncertain] = useState(false);
+  const submittingRef=useRef(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<LocaleMessage>("");
@@ -75,21 +120,25 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   const [quote, setQuote] = useState<any>(null);
   const [quoteError, setQuoteError] = useState("");
   const [pricingLoaded, setPricingLoaded] = useState(false);
+  const [pricingRetry, setPricingRetry] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const timeErrors = bookingTimeErrors(selectedDate, startTime, endTime);
+  const timeIsValid = Object.keys(timeErrors).length === 0;
 
   useEffect(() => {
     let active = true;
-    setPricingRules([]); setPurposeCode(""); setQuote(null); setPricingLoaded(false);
+    setPricingRules([]); setPurposeCode(""); setQuote(null); setPricingLoaded(false); setQuoteError("");
     if (isOpen && resourceId) apiRequest(`/booking-pricing/${encodeURIComponent(resourceId)}`)
-      .then(rows => { if (active) { setPricingRules(rows); setPurposeCode(rows[0]?.purposeCode || ""); setPricingLoaded(true); } })
+      .then(rows => { if (active) { setPricingRules(rows); setPurposeCode(rows.some((row: any) => row.purposeCode === initialDraft?.purposeCode) ? initialDraft!.purposeCode : rows[0]?.purposeCode || ""); setPricingLoaded(true); } })
       .catch(e => { if (active) setQuoteError(e.message); });
     return () => { active = false; };
-  }, [isOpen, resourceId]);
+  }, [isOpen, resourceId, pricingRetry, initialDraft]);
 
   const quoteKey = `${resourceId}|${purposeCode}|${selectedDate}|${startTime}|${endTime}`;
   useEffect(() => {
     let active = true;
     setQuote(null); setQuoteError("");
-    if (!isOpen || !resourceId || !selectedDate || !pricingLoaded || (pricingRules.length > 0 && !purposeCode)) return;
+    if (!isOpen || !resourceId || !selectedDate || !timeIsValid || !pricingLoaded || (pricingRules.length > 0 && !purposeCode)) return;
     const timer = setTimeout(async () => {
       try {
         const result = await apiRequest("/booking-pricing/quote", { method: "POST", body: JSON.stringify({ resourceId, ...(purposeCode ? { purposeCode } : {}), startAt: vietnamTimeToIso(selectedDate, startTime), endAt: vietnamTimeToIso(selectedDate, endTime) }) });
@@ -97,7 +146,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       } catch (e: any) { if (active) setQuoteError(e.message || "ui.could_not_calculate_the_fee_f0898d04"); }
     }, 200);
     return () => { active = false; clearTimeout(timer); };
-  }, [isOpen, resourceId, purposeCode, selectedDate, startTime, endTime, pricingLoaded, pricingRules.length, quoteKey, tr]);
+  }, [isOpen, resourceId, purposeCode, selectedDate, startTime, endTime, pricingLoaded, pricingRules.length, quoteKey, timeIsValid]);
 
   // Load resources if not passed or empty
   useEffect(() => {
@@ -142,11 +191,21 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     return () => { active = false; };
   }, [passedResources, isOpen, initialSlot?.resourceId, resourceRetry]);
 
+  useEffect(() => {
+    if (isOpen && selectedDate) onDraftChange?.({ date: selectedDate, start: startTime, end: endTime, title, purpose, purposeCode });
+  }, [isOpen, selectedDate, startTime, endTime, title, purpose, purposeCode, onDraftChange]);
+  useEffect(() => {
+    onQuoteChanged?.(quote?.key === quoteKey ? { amountVnd: quote.amountVnd, version: quote.version } : null);
+  }, [quote, quoteKey, onQuoteChanged]);
+
   // Handle initialSlot prepopulation
   useEffect(() => {
     if (!isOpen) return;
 
-    if (initialSlot?.startAt) {
+    if (initialDraft) {
+      setSelectedDate(initialDraft.date); setStartTime(initialDraft.start); setEndTime(initialDraft.end);
+      setTitle(initialDraft.title); setPurpose(initialDraft.purpose);
+    } else if (initialSlot?.startAt) {
       const slotDate = toVietnamDateString(initialSlot.startAt);
       const slotStart = toVietnamTimeString(initialSlot.startAt);
       if (slotDate) setSelectedDate(slotDate);
@@ -179,23 +238,49 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     }
 
     setErrorMessage("");
+    setFieldErrors({});
     setShowSuccess(false);
     setCreatedBooking(null);
-  }, [initialSlot, isOpen]);
+    setSubmissionUncertain(false);
+  }, [initialSlot, isOpen, initialDraft]);
 
   if (!isOpen) return null;
 
   const currentResource = resources.find((r) => r.id === resourceId) || null;
   const currentPolicy = currentResource?.labPolicy || currentResource?.laboratory?.labPolicy || null;
 
-  const effectiveRequiresApproval = Boolean(
-    currentResource?.effectiveRequiresApproval ??
-    (currentResource?.requiresApproval || currentPolicy?.requiresApproval)
-  );
+  const effectiveRequiresApproval = false;
+
+  const validateFields = (): Record<string, string> => {
+    const errors = bookingTimeErrors(selectedDate, startTime, endTime);
+    if (!contact.fullName.trim()) errors['booking-contact-name'] = 'ui.customer.nameRequired';
+    else if (contact.fullName.trim().length < 2 || contact.fullName.trim().length > 255) errors['booking-contact-name'] = 'ui.customer.nameInvalid';
+    if (!contact.phone.trim()) errors['booking-contact-phone'] = 'ui.customer.phoneRequired';
+    else if (!/^(?:0\d{9}|\+[1-9]\d{7,14})$/.test(contact.phone.trim())) errors['booking-contact-phone'] = 'ui.customer.phoneInvalid';
+    if (!resourceId || !resources.some(r => r.id === resourceId)) errors['booking-resource-select'] = 'ui.choose_a_laboratory_resource_88e754b2';
+    if (title.trim().length < 2 || title.trim().length > 255) errors['booking-title'] = 'ui.calendarWorkspace.titleLength';
+    if (purpose.trim().length > 2000) errors['booking-purpose'] = 'ui.calendarWorkspace.purposeLength';
+    return errors;
+  };
+  const validateField = (id: string) => {
+    const next = validateFields();
+    setFieldErrors(previous => { const updated = { ...previous }; if (next[id]) updated[id] = next[id]; else delete updated[id]; return updated; });
+  };
+  const clearFieldError = (id: string) => {
+    setFieldErrors(previous => { const updated = { ...previous }; delete updated[id]; return updated; });
+  };
+  const fieldFeedback = (id: string) => fieldErrors[id] && <p className="booking-field-error" id={id + '-error'}>{tr(fieldErrors[id])}</p>;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (submittingRef.current || submissionUncertain || contactLoading || contactError) return;
+    const errors = validateFields();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      setErrorMessage('');
+      document.getElementById(Object.keys(errors)[0])?.focus();
+      return;
+    }
     if (!quote || quote.key !== quoteKey) { setErrorMessage("ui.wait_for_the_fee_to_e7e5a7f0"); return; }
     setErrorMessage("");
 
@@ -210,6 +295,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
     let startAtIso: string;
     let endAtIso: string;
+    let requestStarted = false;
     try {
       startAtIso = vietnamTimeToIso(selectedDate, startTime);
       endAtIso = vietnamTimeToIso(selectedDate, endTime);
@@ -226,11 +312,13 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       return;
     }
 
+    submittingRef.current=true;
     setIsSubmitting(true);
 
     try {
       const payload = {
         resourceId,
+        contact: { fullName: contact.fullName.trim(), phone: contact.phone.trim() },
         title: title.trim() || translate("ui.booking_1ca81eb4", { value0: currentResource?.name || tr("ui.resource_9a35ef53") }),
         purpose: purpose.trim() || tr("ui.research_laboratory_practice_c62c993a"),
         ...(purposeCode ? { purposeCode } : {}),
@@ -239,10 +327,16 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
         endAt: endAtIso
       };
 
+      onAttempt?.();
+      requestStarted = true;
       const booking = await apiRequest("/bookings", {
         method: "POST",
         body: JSON.stringify(payload)
       });
+
+      if (!booking?.id || booking.resourceId !== resourceId || !["CONFIRMED", "PENDING_APPROVAL"].includes(booking.status)) {
+        throw new Error("ui.resourceSelection.uncertain");
+      }
 
       setCreatedBooking(booking);
       setShowSuccess(true);
@@ -255,7 +349,20 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       }
     } catch (err: any) {
       const msg = err instanceof ApiError ? err.message : err?.message || tr("ui.could_not_create_the_booking_ead473e4");
-      if (err?.code === "BOOKING_CONFLICT") {
+      const uncertain = requestStarted && (!(err instanceof ApiError) || err.status === 0 || err.status === 408 || err.status >= 500);
+      setSubmissionUncertain(uncertain);
+      onBookingError?.(msg, uncertain);
+      if (err?.code === 'BOOKING_CONTACT_REQUIRED' || err?.code === 'VALIDATION_ERROR') {
+        const mapped: Record<string,string> = {};
+        const fields: Record<string,string> = { fullName: 'booking-contact-name', phone: 'booking-contact-phone', title: 'booking-title', purpose: 'booking-purpose', resourceId: 'booking-resource-select', startAt: 'booking-start-time', endAt: 'booking-end-time' };
+        for (const [field,id] of Object.entries(fields)) if (err.details?.fieldErrors?.[field]?.length || err.details?.field === field) mapped[id] = field === 'fullName' ? 'ui.customer.nameInvalid' : field === 'phone' ? 'ui.customer.phoneInvalid' : 'ui.auth_check_field';
+        // Zod nests contact errors under the contact object.
+        for (const issue of err.details?.issues || []) {
+          if (issue.field === 'contact.fullName') mapped['booking-contact-name'] = 'ui.customer.nameInvalid';
+          if (issue.field === 'contact.phone') mapped['booking-contact-phone'] = 'ui.customer.phoneInvalid';
+        }
+        setFieldErrors(mapped); document.getElementById(Object.keys(mapped)[0])?.focus(); setErrorMessage(mapped && Object.keys(mapped).length ? '' : msg);
+      } else if (err?.code === "BOOKING_CONFLICT") {
         setErrorMessage("ui.booking_conflict_this_time_slot_13af8e52");
       } else if (err?.code === "MAINTENANCE_CONFLICT" || err?.code === "CALIBRATION_CONFLICT") {
         setErrorMessage("ui.this_resource_has_maintenance_or_2b9a78e7");
@@ -263,10 +370,13 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
         setErrorMessage({ key: "ui.policy_violation_63125cb4", params: { value0: { key: msg } } });
       } else if (err?.code === "RESOURCE_UNAVAILABLE") {
         setErrorMessage("ui.this_resource_is_offline_or_595adcc9");
+      } else if (uncertain) {
+        setErrorMessage("ui.resourceSelection.uncertain");
       } else {
         setErrorMessage(msg);
       }
     } finally {
+      submittingRef.current=false;
       setIsSubmitting(false);
     }
   }
@@ -293,10 +403,11 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               onClick={onClose}
               className="booking-modal-complete-button"
             >
-              {tr("ui.completed_b0484236")}</button>
+              {tr("ui.close_5d54c2a1")}</button>
           </div>
         ) : (
           <>
+            {submissionUncertain && onViewBookings && <button type="button" className="secondary-button" onClick={onViewBookings}>{tr("ui.view_my_bookings_7130520e")}</button>}
             <button
               type="button"
               onClick={onClose}
@@ -307,7 +418,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             <button
               type="submit"
               form="quick-booking-form"
-              disabled={isSubmitting || loadingResources || resources.length === 0 || !resourceId || !quote || quote.key !== quoteKey}
+              disabled={contactLoading || !!contactError || submissionUncertain || isSubmitting || loadingResources || resources.length === 0 || !resourceId || !quote || quote.key !== quoteKey}
               className="btn btn-primary text-xs px-5 py-2.5 flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>{isSubmitting ? tr("ui.submitting_abf01d43") : tr("ui.confirm_booking_f6a19e97")}</span>
@@ -362,7 +473,13 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>{tr("ui.agreed_fee_e147e0c0")}{createdBooking.feeAmountVnd.toLocaleString("vi-VN")} {tr("ui.vnd_789721c8")}{createdBooking.status === "PENDING_APPROVAL" ? tr("ui.payment_is_created_after_staff_0ff3ea14") : tr("ui.complete_payment_before_handover_94ef0241")}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>{tr("ui.view_booking_payment_3a007567")}</button>}</div>}
         </div>
       ) : (
-        <form id="quick-booking-form" onSubmit={handleSubmit} className="booking-form">
+        <form id="quick-booking-form" onSubmit={handleSubmit} className="booking-form booking-workspace" noValidate>
+          <fieldset className="booking-contact" disabled={isSubmitting || contactLoading}><legend>{tr('ui.customer.contactTitle')}</legend>
+            {contactLoading && <p role="status">{tr('ui.loading_42d77f3a')}</p>}
+            {contactError && <p role="alert">{tr(contactError)} <button type="button" onClick={()=>setContactRetry(value=>value+1)}>{tr('ui.retry_c58d068c')}</button></p>}
+            <div className="booking-contact-grid">{[{field:'fullName',id:'booking-contact-name',label:'ui.full_name_03de764f',type:'text',auto:'name',max:255},{field:'phone',id:'booking-contact-phone',label:'ui.customer.phoneLabel',type:'tel',auto:'tel',max:20}].map(item=><div key={item.id} className="booking-field"><label htmlFor={item.id} className="booking-label">{tr(item.label)}</label><input id={item.id} className="booking-input" type={item.type} autoComplete={item.auto} required maxLength={item.max} value={contact[item.field as keyof typeof contact]} aria-invalid={!!fieldErrors[item.id]} aria-describedby={fieldErrors[item.id]?item.id+'-error':undefined} onBlur={()=>validateField(item.id)} onChange={event=>{setContact(value=>({...value,[item.field]:event.target.value}));clearFieldError(item.id);}} />{fieldFeedback(item.id)}</div>)}</div>
+          </fieldset>
+          {Object.keys(fieldErrors).length > 0 && <div className="booking-error-summary" role="alert"><strong>{tr("ui.calendarWorkspace.checkFields")}</strong><ul>{Object.entries(fieldErrors).map(([id, key]) => <li key={id}><button type="button" onClick={() => document.getElementById(id)?.focus()}>{tr(key)}</button></li>)}</ul></div>}
           {errorMessage && (
             <div className="alert danger" role="alert">
               <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
@@ -400,17 +517,17 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                 id="booking-resource-select"
                 aria-label={tr("ui.choose_a_resource_1ba6fed9")}
                 value={resourceId}
-                onChange={(e) => setResourceId(e.target.value)}
+                onChange={(e) => { setResourceId(e.target.value); clearFieldError("booking-resource-select"); }}
+                onBlur={() => validateField("booking-resource-select")}
+                aria-invalid={Boolean(fieldErrors["booking-resource-select"])}
+                aria-describedby={fieldErrors["booking-resource-select"] ? "booking-resource-select-error" : undefined}
                 required
               >
                 {!resourceId && (
                   <option value="">{tr("ui.choose_a_laboratory_resource_027a2e88")}</option>
                 )}
                 {resources.map((r) => {
-                  const rApproval = Boolean(
-                    r.effectiveRequiresApproval ??
-                    (r.requiresApproval || r.laboratory?.labPolicy?.requiresApproval || r.labPolicy?.requiresApproval)
-                  );
+                  const rApproval = false;
                   return (
                     <option key={r.id} value={r.id}>
                       {r.code} — {r.name}{rApproval ? tr("ui.approval_required_b136f084") : tr("ui.immediate_e80f0a67")}
@@ -421,35 +538,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             )}
           </div>
 
-          {/* Booking Title */}
-          <div className="booking-field">
-            <label htmlFor="booking-title" className="booking-label">
-              {tr("ui.session_title_87c59f6e")}<span aria-hidden="true">*</span>
-            </label>
-            <input
-              id="booking-title"
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={tr("ui.example_circuit_measurements_robotics_practical_24f8cb43")}
-            />
-          </div>
-
-          {/* Purpose */}
-          {pricingRules.length > 0 && <label className="booking-field">{tr("ui.pricing_purpose_f1a0b490")}<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{pricingRules.map(rule => <option key={rule.id} value={rule.purposeCode}>{rule.label} — {rule.hourlyRateVnd.toLocaleString("vi-VN")} {tr("ui.vnd_hour_c2aca1ee")}</option>)}</select></label>}
-          <div className="alert" aria-live="polite">{quoteError ? <span role="alert">{translate(quoteError)}</span> : quote?.key === quoteKey ? <span>{tr("ui.usage_fee_10b23fee")}<strong>{quote.amountVnd.toLocaleString("vi-VN")} {tr("ui.vnd_bf502a39")}</strong>{quote.amountVnd > 0 ? tr("ui.pay_after_confirmation_and_before_2effbba2") : tr("ui.no_payment_required_a44e1364")}</span> : tr("ui.updating_usage_fee_be66cd3f")}</div>
-          <div className="booking-field">
-            <label htmlFor="booking-purpose" className="booking-label">
-              {tr("ui.usage_purpose_701ce708")}</label>
-            <textarea
-              id="booking-purpose"
-              rows={2}
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              placeholder={tr("ui.describe_your_purpose_project_course_ca281177")}
-            />
-          </div>
+          {fieldFeedback("booking-resource-select")}
 
           {/* Date and Time Grid */}
           <div className="booking-time-grid">
@@ -462,8 +551,13 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                 type="date"
                 required
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                min={getVietnamTodayDateString()}
+                onChange={(e) => { setSelectedDate(e.target.value); clearFieldError("booking-date"); clearFieldError("booking-start-time"); }}
+                onBlur={() => validateField("booking-date")}
+                aria-invalid={Boolean(fieldErrors["booking-date"])}
+                aria-describedby={fieldErrors["booking-date"] ? "booking-date-error" : undefined}
               />
+              {fieldFeedback("booking-date")}
             </div>
 
             <div className="booking-field">
@@ -475,8 +569,12 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                 type="time"
                 required
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={(e) => { setStartTime(e.target.value); clearFieldError("booking-start-time"); clearFieldError("booking-end-time"); }}
+                onBlur={() => validateField("booking-start-time")}
+                aria-invalid={Boolean(fieldErrors["booking-start-time"])}
+                aria-describedby={fieldErrors["booking-start-time"] ? "booking-start-time-error" : undefined}
               />
+              {fieldFeedback("booking-start-time")}
             </div>
 
             <div className="booking-field">
@@ -488,13 +586,58 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                 type="time"
                 required
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                onChange={(e) => { setEndTime(e.target.value); clearFieldError("booking-end-time"); }}
+                onBlur={() => validateField("booking-end-time")}
+                aria-invalid={Boolean(fieldErrors["booking-end-time"])}
+                aria-describedby={fieldErrors["booking-end-time"] ? "booking-end-time-error" : undefined}
               />
+              {fieldFeedback("booking-end-time")}
             </div>
           </div>
 
-          <p className="booking-review-note">{tr("ui.times_are_in_vietnam_time_bccdbeb2")}{effectiveRequiresApproval ? tr("ui.your_request_will_await_lab_3a2ae485") : tr("ui.your_booking_will_be_confirmed_67024f75")}</p>
-          <LabPolicySummary policy={currentPolicy} requiresApproval={currentResource ? effectiveRequiresApproval : undefined} />
+          {/* Booking Title */}
+          <div className="booking-field">
+            <label htmlFor="booking-title" className="booking-label">
+              {tr("ui.session_title_87c59f6e")}<span aria-hidden="true">*</span>
+            </label>
+            <input
+              id="booking-title"
+              type="text"
+              required
+              value={title}
+              minLength={2}
+              maxLength={255}
+              onChange={(e) => { setTitle(e.target.value); clearFieldError("booking-title"); }}
+              onBlur={() => validateField("booking-title")}
+              aria-invalid={Boolean(fieldErrors["booking-title"])}
+              aria-describedby={fieldErrors["booking-title"] ? "booking-title-error" : undefined}
+            />
+          </div>
+
+          {fieldFeedback("booking-title")}
+
+          {/* Purpose */}
+          {pricingRules.length > 0 && new Set(pricingRules.map(rule => rule.hourlyRateVnd)).size > 1 && <label className="booking-field">{tr("ui.pricing_purpose_f1a0b490")}<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{pricingRules.map(rule => <option key={rule.id} value={rule.purposeCode}>{rule.label} — {rule.hourlyRateVnd.toLocaleString("vi-VN")} {tr("ui.vnd_hour_c2aca1ee")}</option>)}</select></label>}
+          <div className="alert" aria-live="polite">{quoteError ? <span role="alert">{translate(quoteError)} <button className="secondary-button" type="button" onClick={() => setPricingRetry(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></span> : quote?.key === quoteKey ? <span>{tr("ui.usage_fee_10b23fee")}<strong>{quote.amountVnd.toLocaleString("vi-VN")} {tr("ui.vnd_bf502a39")}</strong>{quote.amountVnd > 0 ? tr("ui.pay_after_confirmation_and_before_2effbba2") : tr("ui.no_payment_required_a44e1364")}</span> : !timeIsValid ? tr("ui.calendarWorkspace.validTimeForFee") : tr("ui.updating_usage_fee_be66cd3f")}</div>
+          <div className="booking-field">
+            <label htmlFor="booking-purpose" className="booking-label">
+              {tr("ui.usage_purpose_701ce708")}</label>
+            <textarea
+              id="booking-purpose"
+              rows={2}
+              value={purpose}
+              maxLength={2000}
+              onChange={(e) => { setPurpose(e.target.value); clearFieldError("booking-purpose"); }}
+              onBlur={() => validateField("booking-purpose")}
+              aria-invalid={Boolean(fieldErrors["booking-purpose"])}
+              aria-describedby={fieldErrors["booking-purpose"] ? "booking-purpose-error" : undefined}
+
+            />
+          </div>
+
+          {fieldFeedback("booking-purpose")}
+          <p className="booking-review-note">{tr("ui.rental.quickConfirm")}</p>
+          <LabPolicySummary policy={{...currentPolicy, maxBookingMinutes: currentResource?.maxBookingMinutes ?? currentPolicy?.maxBookingMinutes}} requiresApproval={currentResource ? effectiveRequiresApproval : undefined} />
         </form>
       )}
     </BaseModal2026>

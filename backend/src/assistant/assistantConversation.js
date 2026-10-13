@@ -11,7 +11,9 @@ function boundedText(value, bytes) {
 }
 
 // This is temporary conversational context, never a business record or an
-// authorization cache. No bearer credential or private tool output is retained.
+// authorization cache. No bearer credential or raw tool result is retained.
+// A bounded display transcript is separate from provider history and can be
+// shared only through an explicit, owner-validated human-support request.
 export class AssistantConversationStore {
   constructor({ now = Date.now, limits = CONVERSATION_LIMITS, sweepMs = 60_000 } = {}) {
     this.now = now; this.limits = limits; this.sessions = new Map();
@@ -22,7 +24,7 @@ export class AssistantConversationStore {
   owner({ actorId, authorization, actorRole }) { return `${actorId}:${digest(authorization)}:${actorRole || ''}`; }
   open(id, context) {
     this.prune();
-    if (!id) return { id: randomUUID(), owner: this.owner(context), actorId: context.actorId, session: digest(context.authorization), turns: [], resources: [], slots: [] };
+    if (!id) return { id: randomUUID(), owner: this.owner(context), actorId: context.actorId, session: digest(context.authorization), turns: [], supportTranscript: [], resources: [], slots: [] };
     const row = this.sessions.get(id);
     if (!row || row.owner !== this.owner(context)) throw expired();
     return structuredClone(row);
@@ -32,6 +34,14 @@ export class AssistantConversationStore {
     row.turns.push({ question: boundedText(question, 5000), reply: safeReply });
     row.turns = row.turns.slice(-this.limits.maxTurns);
     while (row.turns.length > 1 && Buffer.byteLength(JSON.stringify(row.turns)) > this.limits.maxBytes) row.turns.shift();
+    // Explicit human handoff may copy these server-owned display messages.
+    // They are never replayed to the model as current business evidence.
+    const createdAt = new Date(this.now()).toISOString();
+    row.supportTranscript = [...(row.supportTranscript || []),
+      { kind: 'CUSTOMER', body: boundedText(question, 5000), createdAt },
+      { kind: 'ASSISTANT', body: boundedText(response.answer || '', 5000), createdAt },
+    ].slice(-this.limits.maxTurns * 2);
+    while (row.supportTranscript.length > 2 && Buffer.byteLength(JSON.stringify(row.supportTranscript)) > this.limits.maxBytes) row.supportTranscript.splice(0, 2);
     const results = response.toolResults || [];
     const slots = results.flatMap(({ result }) => result.slots || []);
     const resources = results.flatMap(({ result }) => Array.isArray(result.resources) ? result.resources : result.resource ? [result.resource] : []);

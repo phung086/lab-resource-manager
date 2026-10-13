@@ -1,3 +1,7 @@
+import { HelpDisclosure } from "../../base/HelpDisclosure";
+import { ArrowRight } from "lucide-react";
+import { navigateApp, readRouteParams, workspacePathForTab } from "../../../workspaceRoutes.js";
+import { paymentSessionStatus, safeVnpayUrl, validatePaymentAction } from "../../../utils/paymentValidation";
 import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
@@ -25,6 +29,7 @@ type Payment = {
   booking: {
     id: string;
     title: string;
+    status: string;
     resource: { code: string; name: string };
   } | null;
   user: { fullName: string };
@@ -53,7 +58,7 @@ export default function PaymentsPage(props: {
   bookingId?: string;
   onClearBooking?: () => void;
 }) {
-  return props.bookingId ? <BookingCheckout bookingId={props.bookingId} onClearBooking={props.onClearBooking} /> : <PaymentsLedger {...props} />;
+  return props.bookingId ? <BookingCheckout user={props.user} bookingId={props.bookingId} onClearBooking={props.onClearBooking} /> : <PaymentsLedger {...props} />;
 }
 
 function PaymentsLedger({
@@ -67,6 +72,8 @@ function PaymentsLedger({
 }) {
   const { tr } = useLocale();
   const admin = user.role === "ADMIN";
+  const loadAbort = useRef<AbortController | null>(null), busyRef = useRef(false), selectionRef = useRef(readRouteParams().get("transaction") || ""), notesRef = useRef<Record<string,string>>({}), dossierRef = useRef<HTMLElement>(null);
+  const [formErrors,setFormErrors] = useState<Record<string,string>>({});
   const [rows, setRows] = useState<Payment[]>([]),
     [providers, setProviders] = useState({ vnpay: false, vietqr: false });
   const [loading, setLoading] = useState(true),
@@ -86,8 +93,9 @@ function PaymentsLedger({
     transaction: Payment;
     generatedAt: string;
   } | null>(null);
-  const [bookings, setBookings] = useState<{ id: string; title: string }[]>([]);
+  const [bookings, setBookings] = useState<{ id: string; title: string; status: string; feeAmountVnd: number }[]>([]);
   async function load() {
+    loadAbort.current?.abort(); const controller = new AbortController(); loadAbort.current = controller;
     setLoading(true);
     setError("");
     try {
@@ -97,13 +105,14 @@ function PaymentsLedger({
       if (provider) q.set("provider", provider);
       if (search) q.set("search", search);
       const data = await apiRequest(
-        `/payments/${admin ? "admin/transactions" : "my"}?${q}`,
+        `/payments/${admin ? "admin/transactions" : "my"}?${q}`, { signal: controller.signal }
       );
+      if (controller.signal.aborted) return;
       setRows(data.transactions);
       setProviders(data.providers);
-      if (selected) {
+      if (selectionRef.current) {
         const refreshed =
-          data.transactions.find((r: Payment) => r.id === selected.id) || null;
+          data.transactions.find((r: Payment) => r.id === selectionRef.current) || null;
         setSelected(refreshed);
         if (refreshed?.status !== "pending") {
           setQr(null);
@@ -112,45 +121,51 @@ function PaymentsLedger({
         }
       }
     } catch (e) {
-      setError((e as Error).message);
+      if (!controller.signal.aborted) setError((e as Error).message);
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }
   const loadRef = useRef(load);
   loadRef.current = load;
   useEffect(() => {
-    void loadRef.current();
-    if (admin)
-      apiRequest("/bookings")
-        .then(setBookings)
-        .catch(() => setError("ui.unable_to_load_bookings_23dea77f"));
-  }, [admin, bookingId]);
+    const controller=new AbortController(); void loadRef.current();
+    if(admin) apiRequest("/bookings",{signal:controller.signal}).then(setBookings).catch((cause:Error)=>{if(!controller.signal.aborted)setError(cause.message);});
+    return()=>{controller.abort();loadAbort.current?.abort();};
+  },[admin,bookingId]);
+  useEffect(()=>{const sync=()=>{const id=readRouteParams().get('transaction') || '';notesRef.current[selectionRef.current]=reconciliationReason;selectionRef.current=id;setSelected(rows.find(row=>row.id===id)||null);setReconciliationReason(notesRef.current[id]||'');setQr(null);setUrl('');setCopied('');setFormErrors({});};window.addEventListener('popstate',sync);return()=>window.removeEventListener('popstate',sync);},[rows,reconciliationReason]);
+  function choose(row: Payment) {
+    if(busyRef.current)return;
+    notesRef.current[selectionRef.current]=reconciliationReason; selectionRef.current=row.id;
+    setSelected(row);setReconciliationReason(notesRef.current[row.id]||'');setQr(null);setUrl('');setCopied('');setError('');setFormErrors({});
+    const params=readRouteParams();params.set('transaction',row.id);navigateApp(workspacePathForTab('payments',params),{notify:false});
+    if(window.matchMedia('(max-width:1000px)').matches)requestAnimationFrame(()=>{dossierRef.current?.scrollIntoView({block:'start'});dossierRef.current?.focus({preventScroll:true});});
+  }
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busyRef.current) return;
     const form = event.currentTarget;
     const data = new FormData(form);
-    setBusy("charge");
+    const checked=validatePaymentAction("charge",{bookingId:String(data.get("bookingId")||""),description:String(data.get("description")||"")},bookings.filter(row=>row.status==="CONFIRMED"&&row.feeAmountVnd>0).map(row=>row.id));
+    setFormErrors(checked.errors); if(!checked.data){form.querySelector<HTMLElement>('[name="'+Object.keys(checked.errors)[0]+'"]')?.focus();return;}
+    busyRef.current=true;setBusy("charge");
     setError("");
     try {
       await apiRequest("/payments/charges", {
         method: "POST",
-        body: JSON.stringify({
-          bookingId: data.get("bookingId"),
-          description: data.get("description"),
-        }),
+        body: JSON.stringify(checked.data),
       });
       form.reset();
       await load();
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy("");
+      busyRef.current=false;setBusy("");
     }
   }
   async function initiate(method: string) {
-    if (!selected || busy) return;
+    if (!selected || busyRef.current || selected.userId !== user.id || selected.booking?.status !== 'CONFIRMED' || !['pending','failed','expired'].includes(selected.status)) return;
+    busyRef.current=true;
     setBusy(method);
     setError("");
     setQr(null);
@@ -162,37 +177,35 @@ function PaymentsLedger({
       });
       setSelected(data.transaction);
       if (data.vietqr) setQr(data.vietqr);
-      if (data.paymentUrl) setUrl(data.paymentUrl);
-      setRows((previous) =>
-        previous.map((row) =>
-          row.id === data.transaction.id ? data.transaction : row,
-        ),
-      );
+      if (data.paymentUrl) { const safe=safeVnpayUrl(data.paymentUrl);if(!safe)throw new Error("ui.invalid_vnpay_payment_address_please_bed3b506");setUrl(safe); }
+      selectionRef.current=data.transaction.id;const params=readRouteParams();params.set("transaction",data.transaction.id);navigateApp(workspacePathForTab("payments",params),{notify:false});
+      setRows(previous => previous.some(row=>row.id===data.transaction.id)?previous.map(row=>row.id===data.transaction.id?data.transaction:row):[data.transaction,...previous]);
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy("");
+      busyRef.current=false;setBusy("");
     }
   }
   async function openReceipt(row: Payment) {
-    setBusy(row.id);
+    if(busyRef.current)return;busyRef.current=true;setBusy(row.id);
     setError("");
     try {
       setReceipt(await apiRequest(`/payments/${row.id}/receipt`));
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy("");
+      busyRef.current=false;setBusy("");
     }
   }
   async function resolveReconciliation() {
-    if (!selected || busy || reconciliationReason.trim().length < 3) return;
+    if (!selected || busyRef.current) return;
+    const checked=validatePaymentAction("reconcile",{reason:reconciliationReason});setFormErrors(checked.errors);if(!checked.data){document.getElementById("payment-reason")?.focus();return;}busyRef.current=true;
     setBusy("reconciliation");
     setError("");
     try {
       const saved = await apiRequest(`/payments/${selected.id}/reconciliation/resolve`, {
         method: "POST",
-        body: JSON.stringify({ reason: reconciliationReason.trim() }),
+        body: JSON.stringify(checked.data),
       });
       setSelected(saved);
       setReconciliationReason("");
@@ -200,7 +213,7 @@ function PaymentsLedger({
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy("");
+      busyRef.current=false;setBusy("");
     }
   }
   async function copy(value: string, label: string) {
@@ -214,8 +227,8 @@ function PaymentsLedger({
     }
   }
   return (
-    <section className="content-stack payment-page">
-      {admin && <ResourcePricingEditor />}
+    <section className="content-stack payment-page payment-ledger">
+
       <header className="page-section-header">
         <div>
           <h1>
@@ -225,8 +238,7 @@ function PaymentsLedger({
                 ? translate("ui.payment_ledger_49cf3f23")
                 : translate("ui.my_payments_dae6e05a")}
           </h1>
-          <p className="section-description">
-             {translate("ui.charges_use_the_confirmed_booking_d4c0b90a")} </p>
+          <HelpDisclosure>{translate("ui.charges_use_the_confirmed_booking_d4c0b90a")}</HelpDisclosure>
         </div>
         <button
           className="secondary-button"
@@ -255,34 +267,41 @@ function PaymentsLedger({
       {admin && (
         <details className="panel payment-charge">
           <summary>{translate("ui.create_a_payment_request_7a755c80")}</summary>
-          <form onSubmit={create} className="booking-form">
+          <form onSubmit={create} className="booking-form" noValidate>
+            <fieldset disabled={!!busy}>
+            {Object.keys(formErrors).some(key=>key!=="reason") && <div className="alert danger" role="alert"><ul>{Object.entries(formErrors).filter(([key])=>key!=="reason").map(([key,value])=><li key={key}>{tr(value)}</li>)}</ul></div>}
             <label>
               {tr("ui.bookings_00f5b333")}<select
                 name="bookingId"
                 required
                 defaultValue={bookingId || ""}
                 key={bookingId || "all"}
+                aria-invalid={!!formErrors.bookingId}
+                aria-describedby={formErrors.bookingId?"payment-booking-error":undefined}
               >
                 <option value="">{translate("ui.select_a_booking_ee647416")}</option>
-                {bookings.map((b) => (
+                {bookings.filter(b=>b.status==="CONFIRMED"&&b.feeAmountVnd>0).map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.title} · {b.id}
                   </option>
                 ))}
               </select>
+              {formErrors.bookingId && <small id="payment-booking-error" className="payment-field-error">{tr(formErrors.bookingId)}</small>}
             </label>
             <label>
                {translate("ui.request_description_6784151f")} <input
                 name="description"
+                aria-invalid={!!formErrors.description}
+                aria-describedby={formErrors.description?"payment-description-error":undefined}
                 minLength={3}
                 maxLength={500}
                 required
               />
+              {formErrors.description && <small id="payment-description-error" className="payment-field-error">{tr(formErrors.description)}</small>}
             </label>
-            <p>
-               {translate("ui.the_amount_always_comes_from_cde307a2")} </p>
             <button className="primary-button" disabled={!!busy}>
               {tr("ui.request_created_a7754180")}</button>
+            </fieldset>
           </form>
         </details>
       )}
@@ -298,7 +317,7 @@ function PaymentsLedger({
             value={search}
             maxLength={100}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={translate("ui.transaction_or_booking_reference_50e37320")}
+
           />
         </label>
         <label>
@@ -306,7 +325,7 @@ function PaymentsLedger({
             <option value="">{tr("ui.all_49c73a31")}</option>
             {Object.entries(labels).map(([k, v]) => (
               <option key={k} value={k}>
-                {v}
+                {tr(v)}
               </option>
             ))}
           </select>
@@ -325,6 +344,7 @@ function PaymentsLedger({
         <button className="secondary-button" disabled={loading}>
            {translate("ui.filter_transactions_d79035fe")} </button>
       </form>
+      <div className="payment-ledger-layout"><div className="payment-ledger-main">
       {loading ? (
         <p role="status">{translate("ui.loading_transactions_68570a8d")}</p>
       ) : !rows.length ? (
@@ -334,115 +354,26 @@ function PaymentsLedger({
             : translate("ui.no_matching_payment_requests_4df227bf")}
         </p>
       ) : (
-        <div className="payment-list">
-          {rows.map((row) => (
-            <article className="panel payment-card" key={row.id}>
-              <div className="payment-card-heading">
-                <h2>{row.booking?.title || translate("ui.booking_no_longer_linked_6ba25274")}</h2>
-                <span className={`payment-state payment-${row.status}`}>
-                  {tr(labels[row.status])}
-                </span>
-              </div>
-              <p>
-                {row.booking?.resource.code} · {row.booking?.resource.name}
-              </p>
-              <strong className="payment-amount">{money(row.amount)}</strong>
-              <dl>
-                <dt>{translate("ui.transaction_reference_717b27eb")}</dt>
-                <dd>{row.txnRef}</dd>
-                <dt>{translate("ui.payer_9f6325a0")}</dt>
-                <dd>{row.user.fullName}</dd>
-                <dt>{translate("ui.method_2d29dd82")}</dt>
-                <dd>
-                  {row.provider === "vnpay"
-                    ? "VNPAY · SANDBOX"
-                    : row.provider === "vietqr"
-                      ? row.status === "pending"
-                        ? translate("ui.vietqr_awaiting_reconciliation_38b30832")
-                        : "VietQR"
-                      : translate("ui.not_selected_e5f50074")}
-                </dd>
-                <dt>{translate("ui.created_at_b1415fd5")}</dt>
-                <dd>{formatVietnamDateTime(row.createdAt)}</dd>
-                {row.paidAt && (
-                  <>
-                    <dt>{translate("ui.paid_at_bd0811f0")}</dt>
-                    <dd>{formatVietnamDateTime(row.paidAt)}</dd>
-                  </>
-                )}
-                {row.reconciliationStatus !== "none" && (
-                  <>
-                    <dt>{translate("ui.reconciliation_e262387b")}</dt>
-                    <dd>{row.reconciliationStatus === "manual_review" ? translate("ui.manual_review_required_680d6657") : tr("ui.resolved_6023373b")}</dd>
-                  </>
-                )}
-              </dl>
-              <p>{row.description}</p>
-              <div className="payment-actions">
-                {row.status === "pending" && row.userId === user.id && (
-                  <button
-                    className="primary-button"
-                    onClick={() => {
-                      setSelected(row);
-                      setQr(null);
-                      setUrl("");
-                      setError("");
-                    }}
-                  >
-                     {translate("ui.view_payment_request_61463436")} </button>
-                )}
-                {row.status === "success" && (
-                  <button
-                    className="secondary-button"
-                    disabled={!!busy}
-                    onClick={() => openReceipt(row)}
-                  >
-                     {translate("ui.open_receipt_68f863f1")} </button>
-                )}
-                {admin && row.reconciliationStatus === "manual_review" && (
-                  <button
-                    className="primary-button"
-                    onClick={() => {
-                      setSelected(row);
-                      setReconciliationReason("");
-                      setError("");
-                    }}
-                  >
-                     {translate("ui.review_reconciliation_1c73909a")} </button>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
+        <div className="table-wrap payment-register"><table><caption className="sr-only">{tr('ui.payment_ledger_49cf3f23')}</caption><thead><tr><th>{tr('ui.bookings_00f5b333')}</th><th>{tr('ui.amount_4cbdc55b')}</th><th>{tr('ui.status_cb31de81')}</th></tr></thead><tbody>{rows.map(row=><tr key={row.id} className={selected?.id===row.id?'is-selected':''}><td><button type="button" disabled={!!busy} onClick={()=>choose(row)} aria-pressed={selected?.id===row.id}><span><strong>{row.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</strong><small>{row.txnRef}</small><small>{row.user?.fullName} · {formatVietnamDateTime(row.createdAt)}</small></span><ArrowRight size={16} /></button></td><td>{money(row.amount)}</td><td><span className={'payment-state payment-'+paymentSessionStatus(row)}>{tr(labels[paymentSessionStatus(row)])}</span></td></tr>)}</tbody></table></div>
       )}
-      <p className="section-description">
-         {translate("ui.showing_up_to_100_recent_6f1a8435")} </p>
-      <BaseModal2026
-        isOpen={!!selected}
-        onClose={() => {
-          if (!busy) setSelected(null);
-        }}
-        dismissible={!busy}
-        title={translate("ui.payment_request_ec7f1b84")}
-        subtitle={translate("ui.payment_does_not_approve_or_5e1b6b4b")}
-        footer={
-          <button
-            className="secondary-button"
-            onClick={load}
-            disabled={loading || !!busy}
-          >
-             {translate("ui.refresh_status_5c5763c1")} </button>
-        }
-      >
+      <HelpDisclosure>{tr('ui.showing_up_to_100_recent_6f1a8435')}</HelpDisclosure>
+      </div>
+      <aside ref={dossierRef} tabIndex={-1} className="payment-dossier" aria-label={tr('ui.payment_request_ec7f1b84')}>
+        <header><h2>{tr('ui.payment_request_ec7f1b84')}</h2></header>
+        {!selected && <p className="empty-state">{tr('ui.payments.selectTransaction')}</p>}
+        {selected && <button type="button" className="btn btn-secondary" onClick={()=>void load()} disabled={loading||!!busy}>{tr('ui.refresh_status_5c5763c1')}</button>}
         {selected && (
           <div className="payment-detail">
             <h2>{selected.booking?.title}</h2>
             <p>{selected.booking?.resource.name}</p>
+            <p>{selected.description}</p>
+            <p>{tr("ui.payer_9f6325a0")}: {selected.user?.fullName}</p>
+            {selected.booking && <a className="table-action" href={workspacePathForTab("bookings",new URLSearchParams({booking:selected.booking.id}))}>{tr("ui.bookings_00f5b333")} <ArrowRight size={16} /></a>}
             <strong className="payment-amount">{money(selected.amount)}</strong>
-            <span className={`payment-state payment-${selected.status}`}>
+            <span className={`payment-state payment-${paymentSessionStatus(selected)}`}>
               {selected.provider === "vietqr" && selected.status === "pending"
                 ? translate("ui.awaiting_reconciliation_06361b86")
-                : tr(labels[selected.status])}
+                : tr(labels[paymentSessionStatus(selected)])}
             </span>
             <p className="payment-ref">{translate("ui.transaction_reference_05a9f7a2")} {selected.txnRef}</p>
             {selected.reconciliationStatus !== "none" && (
@@ -453,15 +384,15 @@ function PaymentsLedger({
             )}
             <ol className="payment-timeline" aria-label={translate("ui.payment_progress_280450c6")}>
               <li className="is-complete"><strong>{translate("ui.request_created_8af32592")}</strong><time dateTime={selected.createdAt}>{formatVietnamDateTime(selected.createdAt)}</time></li>
-              <li className={selected.provider !== "unselected" ? "is-complete" : ""}><strong>{selected.provider !== "unselected" ? translate("ui.method_selected_ef6b1341") : translate("ui.choose_method_da36b3c9")}</strong><span>{selected.provider === "vnpay" ? "VNPAY Sandbox" : selected.provider === "vietqr" ? "VietQR" : translate("ui.not_initiated_fd25f9ff")}</span></li>
-              <li className={selected.status === "success" ? "is-complete" : ""}><strong>{selected.status === "success" ? tr("ui.verified_662e363d") : selected.status === "failed" ? translate("ui.transaction_failed_46b69156") : translate("ui.awaiting_verification_74870609")}</strong><span>{selected.paidAt ? formatVietnamDateTime(selected.paidAt) : translate("ui.no_verified_successful_payment_8b0b9cfd")}</span></li>
+              <li className={selected.provider !== "unselected" ? "is-complete" : ""}><strong>{selected.provider !== "unselected" ? translate("ui.method_selected_ef6b1341") : translate("ui.choose_method_da36b3c9")}</strong><span>{selected.provider === "vnpay" ? tr('ui.vnpay_sandbox_667598b8') : selected.provider === "vietqr" ? "VietQR" : translate("ui.not_initiated_fd25f9ff")}</span></li>
+              <li className={selected.status === "success" ? "is-complete" : ""}><strong>{tr(labels[paymentSessionStatus(selected)])}</strong>{selected.paidAt && <time dateTime={selected.paidAt}>{formatVietnamDateTime(selected.paidAt)}</time>}</li>
             </ol>
             {error && (
               <p className="alert danger" role="alert">
                 {translate(error)}
               </p>
             )}
-            {selected.status === "pending" && (
+            {['pending','failed','expired'].includes(selected.status) && selected.userId === user.id && selected.booking?.status === 'CONFIRMED' && (
               <>
                 <div className="payment-provider-choices">
                   <button
@@ -473,7 +404,7 @@ function PaymentsLedger({
                     }
                     onClick={() => initiate("vnpay")}
                   >
-                     {translate("ui.vnpay_sandbox_667598b8")} <small>{translate("ui.sandbox_test_environment_e18f63fb")}</small>
+                     {translate("ui.vnpay_sandbox_667598b8")}
                   </button>
                   <button
                     className="secondary-button"
@@ -487,20 +418,12 @@ function PaymentsLedger({
                      {translate("ui.vietqr_d3f03ab0")} <small>{translate("ui.bank_transfer_952fce3f")}</small>
                   </button>
                 </div>
-                {(!providers.vnpay || !providers.vietqr) && (
-                  <p>
-                     {translate("ui.disabled_methods_have_not_been_09179a99")} </p>
-                )}
-                <p>
-                   {translate("ui.after_initiation_the_method_is_e228edda")} </p>
               </>
             )}
             {busy && <p role="status">{translate("ui.processing_79eb2035")}</p>}
             {selected.status === "pending" && url && (
               <div className="alert">
                 <strong>{translate("ui.vnpay_sandbox_00e87848")}</strong>
-                <p>
-                   {translate("ui.no_result_has_been_verified_e5466f99")} </p>
                 <a
                   className="primary-button"
                   href={url}
@@ -555,7 +478,7 @@ function PaymentsLedger({
                 className="primary-button"
                 onClick={() => {
                   void openReceipt(selected);
-                  setSelected(null);
+
                 }}
               >
                  {translate("ui.open_receipt_68f863f1")} </button>
@@ -564,16 +487,20 @@ function PaymentsLedger({
               <div className="booking-form">
                 <label>
                    {translate("ui.manual_resolution_outcome_06042ed2")} <textarea
+                    id="payment-reason"
+                    aria-invalid={!!formErrors.reason}
+                    aria-describedby={formErrors.reason?"payment-reason-error":undefined}
                     value={reconciliationReason}
                     minLength={3}
                     maxLength={500}
                     onChange={(event) => setReconciliationReason(event.target.value)}
-                    placeholder={translate("ui.record_external_resolution_evidence_or_397a40a1")}
+
                   />
+                  {formErrors.reason && <small id="payment-reason-error" className="payment-field-error">{tr(formErrors.reason)}</small>}
                 </label>
                 <button
                   className="primary-button"
-                  disabled={!!busy || reconciliationReason.trim().length < 3}
+                  disabled={!!busy}
                   onClick={() => void resolveReconciliation()}
                 >
                    {translate("ui.mark_as_resolved_de951dcd")} </button>
@@ -582,7 +509,8 @@ function PaymentsLedger({
             )}
           </div>
         )}
-      </BaseModal2026>
+      </aside></div>
+      {admin && <ResourcePricingEditor />}
       <BaseModal2026
         isOpen={!!receipt}
         onClose={() => setReceipt(null)}
@@ -598,7 +526,7 @@ function PaymentsLedger({
             <p className="payment-state payment-success">
               {tr(labels[receipt.transaction.status])} ·{" "}
               {receipt.transaction.provider === "vnpay"
-                ? "VNPAY SANDBOX"
+                ? "VNPAY"
                 : receipt.transaction.provider}
             </p>
             <dl>
@@ -621,7 +549,7 @@ function PaymentsLedger({
                 </React.Fragment>
               ))}
             </dl>
-            <p>{receipt.disclaimer}</p>
+            <HelpDisclosure>{receipt.disclaimer}</HelpDisclosure>
           </article>
         )}
       </BaseModal2026>

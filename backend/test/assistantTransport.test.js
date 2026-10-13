@@ -21,7 +21,7 @@ async function serve(app, run) {
 function toolApp(actorId) {
   const app = express(); app.use(express.json(), localeMiddleware);
   // Transport-only harness; the real-auth/database suite remains separate.
-  app.post('/mcp', (req, res, next) => { req.user = { id: actorId, role: 'STUDENT' }; void handleMcp(req, res, next); });
+  app.post('/mcp', (req, res, next) => { req.user = { id: actorId, role: 'CUSTOMER' }; void handleMcp(req, res, next); });
   app.use(errorHandler); return app;
 }
 const call = (base, signal) => fetch(`${base}/mcp`, { method: 'POST', signal, headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', 'Accept-Language': 'en' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'search_resources', arguments: {} } }) });

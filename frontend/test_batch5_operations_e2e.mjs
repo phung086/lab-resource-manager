@@ -109,7 +109,7 @@ try {
   await staffPage.screenshot({ path: path.join(screenshotDir, "staff_operations_desktop.png"), fullPage: true });
   await staffContext.close();
 
-  console.log("=== BATCH 5 STUDENT OWNER VISIBILITY ===");
+  console.log("=== BATCH 5 CUSTOMER OWNER VISIBILITY ===");
   const studentContext = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const studentPage = await studentContext.newPage();
   await login(studentPage, "b5.student@lab.test");
@@ -123,7 +123,7 @@ try {
   await studentPage.getByRole("dialog").getByRole("button", { name: "Đóng hộp thoại", exact: true }).click();
   await studentContext.close();
 
-  console.log("=== BATCH 5 LECTURER REJECTION VISIBILITY ===");
+  console.log("=== BATCH 5 CUSTOMER REJECTION VISIBILITY ===");
   const lecturerContext = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const lecturerPage = await lecturerContext.newPage();
   await login(lecturerPage, "b5.lecturer@lab.test");

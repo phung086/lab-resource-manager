@@ -67,7 +67,7 @@ export function errorHandler(error, req, res, _next) {
   if (error.details?.retryAfterSeconds) res.set?.("Retry-After", String(error.details.retryAfterSeconds));
   // Zod validation errors
   if (error.name === "ZodError") {
-    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid request data", details: error.flatten() } });
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid request data", details: { ...error.flatten(), issues: error.issues.map(issue => ({ field: issue.path.join("."), code: issue.code, ...(issue.minimum != null ? { minimum: issue.minimum } : {}), ...(issue.maximum != null ? { maximum: issue.maximum } : {}) })) } } });
   }
 
   // Application-level HttpError

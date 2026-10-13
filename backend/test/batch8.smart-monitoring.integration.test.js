@@ -48,7 +48,7 @@ async function seed() {
     ]
   });
   await isolated.user.createMany({
-    data: Object.entries({ admin: "ADMIN", staff: "LAB_STAFF", foreignStaff: "LAB_STAFF", student: "STUDENT", lecturer: "LECTURER" })
+    data: Object.entries({ admin: "ADMIN", staff: "LAB_STAFF", foreignStaff: "LAB_STAFF", student: "CUSTOMER", lecturer: "CUSTOMER" })
       .map(([key, role]) => ({
         id: fixture.users[key],
         email: `${key.toLowerCase()}-${marker}@example.test`,

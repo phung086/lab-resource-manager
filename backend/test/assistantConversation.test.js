@@ -3,7 +3,7 @@ import test from 'node:test';
 import { AssistantConversationStore, CONVERSATION_LIMITS } from '../src/assistant/assistantConversation.js';
 import { createAssistantService } from '../src/assistant/assistantService.js';
 
-const context = (actorId = 'student', authorization = 'test-session') => ({ actorId, authorization, actorRole: 'STUDENT' });
+const context = (actorId = 'student', authorization = 'test-session') => ({ actorId, authorization, actorRole: 'CUSTOMER' });
 const settings = { assistantConversationEnabled: true, assistantConcurrency: 2, assistantTimeoutMs: 1000, assistantToolTimeoutMs: 300, assistantModelFailureThreshold: 2, assistantModelCooldownMs: 1000, openaiApiKey: '', openaiModel: '', port: 8000 };
 const configured = { ...settings, openaiApiKey: 'unit-only-key', openaiModel: 'unit-only-model' };
 const chatPlan = reply => ({ kind: 'CHAT', reply, selectedSlotIndex: null, reads: [] });
@@ -28,10 +28,13 @@ test('history expires, has finite session/turn/byte limits and never replays pri
   const store = new AssistantConversationStore({ sweepMs: 0, now: () => now, limits: { ...CONVERSATION_LIMITS, maxSessions: 2 } });
   const row = store.open(undefined, context());
   for (let i = 0; i < 20; i++) store.commit(row, `Question ${i}`, { answer: 'PRIVATE BOOKING TITLE', source: 'authenticated_mcp', toolResults: [{ result: { resources: [resource('a')] } }] });
-  assert.equal(row.turns.length, 10); assert.ok(!JSON.stringify(row).includes('PRIVATE BOOKING TITLE'));
+  assert.equal(row.turns.length, 10); assert.ok(!JSON.stringify(row.turns).includes('PRIVATE BOOKING TITLE'));
+  assert.equal(row.supportTranscript.at(-1).body, 'PRIVATE BOOKING TITLE');
+  assert.equal(row.supportTranscript.length, 20, 'Display transcript is separately bounded for explicit support handoff');
   assert.deepEqual(row.resources, [{ id: 'a' }]); assert.ok(!JSON.stringify(row).includes('Resource a'));
   store.commit(row, '\u0000'.repeat(2000), { answer: '\u0000'.repeat(12000), source: 'model_conversation' });
   assert.ok(Buffer.byteLength(JSON.stringify(row.turns)) <= CONVERSATION_LIMITS.maxBytes);
+  assert.ok(Buffer.byteLength(JSON.stringify(row.supportTranscript)) <= CONVERSATION_LIMITS.maxBytes);
   store.commit(row, 'No results', { answer: '', source: 'authenticated_mcp', toolResults: [{ result: { resources: [] } }] });
   assert.deepEqual(row.resources, []);
   for (const id of ['b', 'c']) store.commit(store.open(undefined, context(id)), 'Hello', { answer: '', source: 'local_guidance' });

@@ -38,7 +38,7 @@ test.before(async () => {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   config.port = server.address().port; base = `http://127.0.0.1:${config.port}`;
   const hash = await bcrypt.hash('AssistantTest!2026', 4);
-  for (const [name, role] of Object.entries({ student: 'STUDENT', peer: 'STUDENT', lecturer: 'LECTURER', staff: 'LAB_STAFF', admin: 'ADMIN', core: 'ADMIN', timeout: 'STUDENT', cancel: 'STUDENT', busy: 'STUDENT', load: 'STUDENT', rejected: 'STUDENT', rate: 'STUDENT', conversation: 'STUDENT', conversationPeer: 'STUDENT', conversationStaff: 'LAB_STAFF' })) {
+  for (const [name, role] of Object.entries({ student: 'CUSTOMER', peer: 'CUSTOMER', lecturer: 'CUSTOMER', staff: 'LAB_STAFF', admin: 'ADMIN', core: 'ADMIN', timeout: 'CUSTOMER', cancel: 'CUSTOMER', busy: 'CUSTOMER', load: 'CUSTOMER', rejected: 'CUSTOMER', rate: 'CUSTOMER', conversation: 'CUSTOMER', conversationPeer: 'CUSTOMER', conversationStaff: 'LAB_STAFF' })) {
     users[name] = await prisma.user.create({ data: { id: id(), email: `${name.toLowerCase()}-${marker}@example.test`, fullName: `Original ${name}`, role, passwordHash: hash } });
     const response = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: users[name].email, password: 'AssistantTest!2026' }) });
     assert.equal(response.status, 200); tokens[name] = (await response.json()).accessToken;

@@ -106,7 +106,7 @@ try {
     [ids.admin, "b6.admin@lab.test", "Batch 6 Admin", "ADMIN"],
     [ids.staff, "b6.staff@lab.test", "Batch 6 Staff", "LAB_STAFF"],
     [ids.foreignStaff, "b6.foreign.staff@lab.test", "Batch 6 Foreign Staff", "LAB_STAFF"],
-    [ids.student, "b6.student@lab.test", "Batch 6 Student", "STUDENT"]
+    [ids.student, "b6.student@lab.test", "Batch 6 Student", "CUSTOMER"]
   ]) {
     await prisma.user.upsert({
       where: { email },

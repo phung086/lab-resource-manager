@@ -39,8 +39,8 @@ const fixture = {
 
 const userRows = [
   ["admin", "ADMIN", true], ["staff", "LAB_STAFF", true], ["unassigned", "LAB_STAFF", true],
-  ["lecturer", "LECTURER", true], ["studentA", "STUDENT", true], ["studentB", "STUDENT", true],
-  ["inactive", "STUDENT", false], ["roleTarget", "STUDENT", true]
+  ["lecturer", "CUSTOMER", true], ["studentA", "CUSTOMER", true], ["studentB", "CUSTOMER", true],
+  ["inactive", "CUSTOMER", false], ["roleTarget", "CUSTOMER", true]
 ];
 
 async function seed() {
@@ -55,7 +55,7 @@ async function seed() {
     { id: fixture.labs.foreign, buildingId: fixture.building, name: "Foreign Lab", code: `B2LF-${marker}` }
   ] });
   await prisma.user.createMany({ data: userRows.map(([key, role, isActive]) => ({
-    id: fixture.users[key], email: `${key.toLowerCase()}-${marker}@example.test`, fullName: `Batch 2 ${key}`,
+    id: fixture.users[key], email: `${key.toLowerCase()}-${marker}@example.test`, fullName: `Batch 2 ${key}`, phone: "0901234567",
     role, isActive, passwordHash
   })) });
   await prisma.userLabAssignment.create({ data: { userId: fixture.users.staff, laboratoryId: fixture.labs.assigned } });
@@ -92,16 +92,16 @@ test("Batch 2 authentication, RBAC, ownership and lab scope", { timeout: 180000 
 
   await t.test("registration is normalized, DB-backed, and cannot request privilege", async () => {
     const email = `New.Student-${marker}@Example.Test`;
-    const created = await request(app).post("/api/auth/register").send({ email, password, fullName: "New Student" });
+    const created = await request(app).post("/api/auth/register").send({ email, password });
     assert.equal(created.status, 201);
-    assert.equal(created.body.user.role, "STUDENT");
+    assert.equal(created.body.user.role, "CUSTOMER");
     assert.equal(created.body.user.email, email.toLowerCase());
 
-    const duplicate = await request(app).post("/api/auth/register").send({ email: email.toLowerCase(), password, fullName: "Duplicate" });
+    const duplicate = await request(app).post("/api/auth/register").send({ email: email.toLowerCase(), password });
     assert.equal(duplicate.status, 409);
     assert.equal(duplicate.body.error.code, "DUPLICATE_EMAIL");
 
-    const escalation = await request(app).post("/api/auth/register").send({ email: `escalate-${marker}@example.test`, password, fullName: "Escalation", role: "ADMIN" });
+    const escalation = await request(app).post("/api/auth/register").send({ email: `escalate-${marker}@example.test`, password, role: "ADMIN" });
     assert.equal(escalation.status, 400);
     assert.equal(escalation.body.error.code, "VALIDATION_ERROR");
   });
@@ -135,14 +135,14 @@ test("Batch 2 authentication, RBAC, ownership and lab scope", { timeout: 180000 
     assert.equal((await request(app).get("/api/users").set(bearer(tokens.studentA))).status, 403);
     assert.equal((await request(app).get("/api/users").set(bearer(tokens.lecturer))).status, 403);
     assert.equal((await request(app).get(`/api/users/${fixture.users.studentA}`).set(bearer(tokens.admin))).status, 200);
-    assert.equal((await request(app).patch(`/api/users/${fixture.users.roleTarget}/role`).set(bearer(tokens.studentA)).send({ role: "LECTURER" })).status, 403);
+    assert.equal((await request(app).patch(`/api/users/${fixture.users.roleTarget}/role`).set(bearer(tokens.studentA)).send({ role: "CUSTOMER" })).status, 403);
     assert.equal((await request(app).patch(`/api/users/${fixture.users.roleTarget}/role`).set(bearer(tokens.admin)).send({ role: "INSTRUCTOR" })).status, 400);
-    const updated = await request(app).patch(`/api/users/${fixture.users.roleTarget}/role`).set(bearer(tokens.admin)).send({ role: "LECTURER" });
+    const updated = await request(app).patch(`/api/users/${fixture.users.roleTarget}/role`).set(bearer(tokens.admin)).send({ role: "CUSTOMER" });
     assert.equal(updated.status, 200);
-    assert.equal(updated.body.role, "LECTURER");
+    assert.equal(updated.body.role, "CUSTOMER");
 
     const selfDemotion = await request(app).patch(`/api/users/${fixture.users.admin}/role`)
-      .set(bearer(tokens.admin)).send({ role: "STUDENT" });
+      .set(bearer(tokens.admin)).send({ role: "CUSTOMER" });
     assert.equal(selfDemotion.status, 409);
     assert.equal(selfDemotion.body.error.code, "SELF_LOCKOUT_FORBIDDEN");
 
@@ -166,10 +166,10 @@ test("Batch 2 authentication, RBAC, ownership and lab scope", { timeout: 180000 
 
   await t.test("LAB_STAFF scope rejects foreign path, body, query and booking indirection", async () => {
     const assigned = await request(app).patch(`/api/resources/${fixture.resources.assigned}/operational-status`)
-      .set(bearer(tokens.staff)).send({ operationalStatus: "CALIBRATION", reason: "Batch 2 scope verification" });
+      .set(bearer(tokens.staff)).send({ operationalStatus: "OFFLINE", reason: "Batch 2 scope verification" });
     assert.equal(assigned.status, 200);
     await request(app).patch(`/api/resources/${fixture.resources.assigned}/operational-status`)
-      .set(bearer(tokens.admin)).send({ operationalStatus: "AVAILABLE" });
+      .set(bearer(tokens.admin)).send({ operationalStatus: "AVAILABLE", reason: "Restore after authorized availability scope check" });
 
     const foreignPath = await request(app).patch(`/api/resources/${fixture.resources.foreign}/operational-status`)
       .set(bearer(tokens.staff)).send({ operationalStatus: "MAINTENANCE", reason: "Forbidden foreign lab" });

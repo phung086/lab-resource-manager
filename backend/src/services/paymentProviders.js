@@ -12,6 +12,7 @@ export function paymentConfiguration() {
       returnUrl: process.env.VNPAY_RETURN_URL || "",
       ipnUrl: process.env.VNPAY_IPN_URL || "",
       version: process.env.VNPAY_VERSION || "2.1.0",
+      bankCode: process.env.VNPAY_BANK_CODE ?? "VNPAYQR",
     },
     vietqr: {
       enabled: process.env.VIETQR_ENABLED === "true",
@@ -45,6 +46,7 @@ export function requireVnpay() {
     !/^[a-zA-Z0-9]{8}$/.test(c.tmnCode) ||
     !c.secret ||
     c.version !== "2.1.0" ||
+    !/^(?:[A-Z0-9]{3,20})?$/.test(c.bankCode) ||
     paymentUrl.protocol !== "https:" ||
     paymentUrl.username ||
     paymentUrl.password ||
@@ -174,9 +176,9 @@ export function buildVnpayUrl(row, ip, now = new Date(), expiresAt = new Date(no
     vnp_CurrCode: "VND",
     vnp_TxnRef: row.txnRef,
     vnp_OrderInfo: `LRM ${row.txnRef}`,
-      vnp_OrderType: "other",
-      // VNPAY renders the scannable QR on its hosted checkout page.
-      vnp_BankCode: "VNPAYQR",
+    vnp_OrderType: "other",
+    // Omit the bank code to let the configured merchant offer its supported methods.
+    ...(c.bankCode ? { vnp_BankCode: c.bankCode } : {}),
     vnp_Locale: "vn",
     vnp_ReturnUrl: c.returnUrl,
     vnp_IpAddr: ip?.replace(/^::ffff:/, "") || "127.0.0.1",

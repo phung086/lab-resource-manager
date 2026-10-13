@@ -4,7 +4,7 @@ import { useLocale } from '../../providers/LocaleProvider';
 
 type Props = { href?: string; onNavigate?: () => void };
 
-export function ProjectBrand({ href = '#dau-trang', onNavigate }: Props) {
+export function ProjectBrand({ href = '/', onNavigate }: Props) {
   const { t } = useLocale();
   const content = <><FlaskConical aria-hidden="true" /><span>{t('ui.lab_7a62e3ac')}<span>{t('ui.resource_manager_ae0bb64a')}</span></span></>;
   return onNavigate

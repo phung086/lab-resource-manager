@@ -315,4 +315,5 @@ const service = createAssistantService();
 export const answerAssistantQuestion = (data, context) => service.answer(data, context);
 export const removeAssistantConversation = (id, context) => service.removeConversation(id, context);
 export const forgetAssistantSession = context => service.forgetSession(context);
+export const getAssistantSupportTranscript = (id, context) => service.conversations.open(id, context).supportTranscript || [];
 export const assistantConversationLimits = CONVERSATION_LIMITS;

@@ -32,6 +32,7 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
       where: resourceWhere,
       include: includeTelemetry ? {
         monitoringThreshold: true,
+        telemetrySources: { orderBy: { createdAt: "desc" }, take: 1 },
         laboratory: { include: { monitoringThreshold: true } },
         telemetrySamples: {
           include: { telemetrySource: true },
@@ -74,7 +75,7 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
       select: { resourceId: true, startAt: true, endAt: true, actualStartAt: true, actualEndAt: true }
     }),
     client.incident.findMany({
-      where: { resource: resourceWhere },
+      where: { resource: resourceWhere, origin: { not: "SIMULATED" } },
       select: { id: true, severity: true, status: true, detectedAt: true, resolvedAt: true }
     }),
     client.notification.count({ where: { userId: user.id, sentAt: { not: null }, readAt: null } }),
@@ -95,11 +96,12 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
     ["AVAILABLE", "IN_USE", "MAINTENANCE", "CALIBRATION", "BROKEN", "RETIRED", "OFFLINE"]
       .map((status) => [status, 0])
   );
-  for (const resource of resources) {
+  const operationalResources = resources.filter(resource => resource.specs?.monitoringSimulation !== true);
+  for (const resource of operationalResources) {
     statusCounts[resource.operationalStatus] = (statusCounts[resource.operationalStatus] || 0) + 1;
   }
 
-  const totalCapacityMinutes = resources.length * 30 * 24 * 60;
+  const totalCapacityMinutes = operationalResources.length * 30 * 24 * 60;
   const scheduledMinutes = periodBookings.reduce(
     (sum, booking) => sum + overlapMinutes(booking.startAt, booking.endAt, windowStart, windowEnd),
     0
@@ -116,6 +118,8 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
     ...serializeTelemetry(resource, resource.telemetrySamples[0] || null, now),
     history: resource.telemetrySamples.map((sample) => ({
       id: sample.id,
+      origin: sample.origin,
+      simulationRunId: sample.simulationRunId,
       sourceId: sample.sourceId,
       source: sample.telemetrySource?.code || sample.source,
       sampledAt: sample.sampledAt,
@@ -142,7 +146,7 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
   return {
     generatedAt: now.toISOString(),
     summary: {
-      totalResources: resources.length,
+      totalResources: operationalResources.length,
       resourcesByOperationalStatus: statusCounts,
       activeBookingsCount: activeBookingCounts.reduce((sum, row) => sum + row._count._all, 0),
       pendingApprovalCount: activeBookingCounts.find(row => row.status === "PENDING_APPROVAL")?._count._all || 0,
@@ -151,8 +155,8 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
       criticalIncidentCount: openIncidents.filter((incident) => incident.severity === "critical").length,
       unreadNotifications,
       ...(includeTelemetry ? {
-        activeMonitoringAlertCount: monitoringAlerts.filter((alert) => alert.status === "OPEN").length,
-        acknowledgedMonitoringAlertCount: monitoringAlerts.filter((alert) => alert.status === "ACKNOWLEDGED").length
+        activeMonitoringAlertCount: monitoringAlerts.filter((alert) => alert.status === "OPEN" && alert.origin !== "SIMULATED").length,
+        acknowledgedMonitoringAlertCount: monitoringAlerts.filter((alert) => alert.status === "ACKNOWLEDGED" && alert.origin !== "SIMULATED").length
       } : {})
     },
     utilization: {
@@ -176,6 +180,7 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
       }, { low: 0, medium: 0, high: 0, critical: 0 })
     },
     telemetryIncluded: includeTelemetry,
+    simulationSummary: { resources: resources.length - operationalResources.length, activeAlerts: monitoringAlerts.filter(alert => alert.origin === "SIMULATED").length },
     telemetrySummary,
     telemetry,
     monitoringAlerts,

@@ -1,3 +1,4 @@
+import { bookingContactSchema } from "../services/bookingContactService.js";
 import express from "express";
 import { z } from "zod";
 
@@ -11,15 +12,23 @@ import {
   selfReturnRoom,
   transitionBooking
 } from "../services/bookingService.js";
+import { rescheduleBooking } from "../services/bookingService.js";
 import { getResourceAvailability } from "../services/availabilityService.js";
 import { ADMIN, LAB_STAFF, STAFF_ROLES } from "../constants/roles.js";
 import { bookingListSchema, bookingPageSchema, listBookingPage, listLegacyBookings } from "../services/workspaceQueueService.js";
 
 const router = express.Router();
+router.post("/:id/reschedule", requireAuth, requireRole(ADMIN, LAB_STAFF), requireBookingLabAccess(), async (req, res, next) => {
+  try {
+    const data = z.object({ startAt: z.coerce.date(), endAt: z.coerce.date(), expectedStartAt: z.coerce.date(), reason: z.string().trim().min(5).max(500) }).strict().parse(req.body);
+    res.json(await rescheduleBooking({ bookingId: z.string().uuid().parse(req.params.id), actor: req.user, ...data }));
+  } catch (error) { next(error); }
+});
 
 const createBookingSchema = z.object({
   resourceId: z.string().min(1),
   title: z.string().min(2).max(255),
+  contact: bookingContactSchema.optional(),
   purpose: z.string().max(2000).optional().default(""),
   purposeCode: z.enum(["STUDY", "TEACHING", "RESEARCH", "SERVICE"]).optional(),
   acceptedQuote: z.object({ amountVnd: z.number().int().min(0), version: z.number().int().min(0) }).strict().optional(),
@@ -197,6 +206,7 @@ router.post("/", requireAuth, async (req, res, next) => {
     const booking = await createBooking({
       requestedById: req.user.id,
       resourceId: data.resourceId,
+      contact: data.contact,
       title: data.title,
       purpose: data.purpose,
       purposeCode: data.purposeCode,

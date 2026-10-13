@@ -5,7 +5,7 @@ Starting revision: `66e744473c940515548048d448019beb3d311e9b`.
 Continuation of [draft PR #22](https://github.com/phung086/lab-resource-manager/pull/22),
 within the requested task; no new numbered Batch, merge or deployment.
 The initial implementation was published in `7424957`; review corrections and
-their verification are recorded in [the review response](reviews/PR22_REVIEW_RESPONSE_20261003.md).
+their verification limits are maintained in [CURRENT_STATE](CURRENT_STATE.md).
 
 ## Assessment and scope
 

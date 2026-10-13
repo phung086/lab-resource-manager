@@ -91,8 +91,8 @@ try {
 
   console.log("1. ADMIN CREATES USERS AND REPRESENTATIVE RESOURCES");
   const userDefinitions = [
-    { email: "demo.student@lab.test", fullName: "Demo Student", role: "STUDENT" },
-    { email: "demo.lecturer@lab.test", fullName: "Demo Lecturer", role: "LECTURER" },
+    { email: "demo.student@lab.test", fullName: "Demo Student", role: "CUSTOMER" },
+    { email: "demo.lecturer@lab.test", fullName: "Demo Lecturer", role: "CUSTOMER" },
     { email: "demo.staff@lab.test", fullName: "Demo Lab Staff", role: "LAB_STAFF" }
   ];
 
@@ -289,7 +289,7 @@ try {
   await dialog.getByLabel("Họ và tên").fill("Demo UI Created User");
   await dialog.getByLabel("Email").fill("demo.ui.created@lab.test");
   await dialog.getByLabel("Mật khẩu ban đầu").fill("DemoUiUser!Passphrase");
-  await dialog.getByLabel("Vai trò").selectOption("STUDENT");
+  await dialog.getByLabel("Vai trò").selectOption("CUSTOMER");
   await Promise.all([
     adminPage.waitForResponse((response) => response.url().endsWith("/api/users") && response.request().method() === "POST" && response.status() === 201),
     dialog.getByRole("button", { name: "Tạo người dùng" }).click()

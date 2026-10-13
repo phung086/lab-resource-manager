@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { prisma } from "../db.js";
 import { HttpError } from "../middleware/errors.js";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "./systemAuditService.js";
+import { enqueuePaymentReceipt } from "./emailAutomationService.js";
 import {
   buildVnpayUrl,
   buildVietqr,
@@ -421,6 +422,7 @@ export async function processVnpayIpn(query) {
         },
       });
       await notifyPayment(tx, saved, "SUCCESS", { reconciliation, now: new Date() });
+      await enqueuePaymentReceipt(tx, saved);
       return { RspCode: "00", Message: "Confirm Success" };
     }
 

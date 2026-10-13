@@ -1,11 +1,11 @@
 # Core laboratory data relationships
 
 Generated from [canonical Prisma schema](../../backend/prisma/schema.prisma).
-Schema SHA-256 after LF normalization: `05474bc357ba9a6e743ffd114575a0f885e9189177e91ff7fd203980d106bccd`.
+Schema SHA-256 after LF normalization: `4dc989c5f96ddd607d43820514ef6023d2f3394e5f1d290666036bd93709d3a8`.
 Run `npm run docs:erd` in `backend/`; CI verifies `docs:erd:check`.
 This is a selected model projection, not a claim that only these tables exist.
 Foreign keys and cardinalities come from the generated Prisma data model checked
-against the source schema. The current schema contains 48 models.
+against the source schema. The current schema contains 56 models.
 
 ## Required booking operations and persisted monitoring
 
@@ -116,6 +116,7 @@ erDiagram
         string resourceId FK
     }
     TelemetrySample {
+        string simulationRunId FK
         string id PK
         string resourceId FK
         string sourceId FK
@@ -267,5 +268,106 @@ erDiagram
 Stock movements record receipts, issues and admin adjustments. A maintenance-linked
 issue must remain in the same laboratory. Teaching groups represent lecturer
 supervision; academic endorsement does not grant resource approval or handover.
+## Approved human support extension
+
+```mermaid
+erDiagram
+    Laboratory {
+        string id PK
+        string buildingId FK
+        string code UK
+    }
+    User {
+        string id PK
+        string email UK
+        Role role
+    }
+    UserLabAssignment {
+        string userId PK,FK
+        string laboratoryId PK,FK
+    }
+    SupportSession {
+        string id PK
+        int ordinal UK
+        string laboratoryId FK
+        string requesterId FK
+        string assignedStaffId FK
+        string category
+        string status
+    }
+    SupportMessage {
+        string id PK
+        int sequence UK
+        string sessionId FK
+        string senderId FK
+    }
+    SupportPresence {
+        string userId PK,FK
+    }
+    User ||--o{ UserLabAssignment : "userId"
+    Laboratory ||--o{ UserLabAssignment : "laboratoryId"
+    Laboratory ||--o{ SupportSession : "laboratoryId"
+    User ||--o{ SupportSession : "requesterId"
+    User |o--o{ SupportSession : "assignedStaffId"
+    SupportSession ||--o{ SupportMessage : "sessionId"
+    User |o--o{ SupportMessage : "senderId"
+    User ||--o| SupportPresence : "userId"
+```
+
+Support sessions retain customer messages, staff replies, handling events and
+resolution. Staff access follows current lab assignments. Partial unique indexes
+enforce one open request per customer and one active session per staff member
+across all labs. The presence heartbeat coordinates assignment; it does not prove
+the staff member has read a message. See the forward support migration for
+constraints that Prisma cannot express.
+
+## Approved automatic email extension
+
+```mermaid
+erDiagram
+    User {
+        string id PK
+        string email UK
+        Role role
+    }
+    EmailDelivery {
+        string id PK
+        string dedupeKey UK
+        string userId FK
+        string status
+    }
+    User ||--o{ EmailDelivery : "userId"
+```
+
+Registration and verified VNPAY settlement enqueue immutable, password-free
+email snapshots in the same transaction as their business event. Leased workers
+send through configured SMTP after commit. SENT records SMTP acceptance, not
+confirmed inbox delivery. Unique deduplication keys and state/attempt constraints
+are maintained by the forward email migration. See ADR-030 for retry limits.
+
+## Resource lifecycle extension
+
+```mermaid
+erDiagram
+    ResourceCareProfile {
+        string resourceId PK,FK
+        string roomId FK
+    }
+    ResourceOperation {
+        string id PK
+        string resourceId FK
+        string bookingId FK
+        string activeResourceId UK
+    }
+    ResourcePart {
+        string id PK
+        string resourceId FK
+    }
+```
+
+Virtual operations retain booking, actor, declared load and server timestamps.
+Maintenance policy and component condition belong to existing catalogue resources.
+Physical-state mutations remain explicit, scoped and history-backed.
+
 Payment, shipment, AI, camera and optimization tables are outside this diagram's
 core projection. Their presence in the schema does not certify those integrations.

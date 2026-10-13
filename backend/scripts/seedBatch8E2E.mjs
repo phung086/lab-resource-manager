@@ -76,7 +76,7 @@ try {
       [ids.admin, "b8.admin@lab.test", "Batch 8 Admin", "ADMIN"],
       [ids.staff, "b8.staff@lab.test", "Batch 8 Staff", "LAB_STAFF"],
       [ids.foreignStaff, "b8.foreign.staff@lab.test", "Batch 8 Foreign Staff", "LAB_STAFF"],
-      [ids.student, "b8.student@lab.test", "Batch 8 Student", "STUDENT"]
+      [ids.student, "b8.student@lab.test", "Batch 8 Student", "CUSTOMER"]
     ].map(([id, email, fullName, role]) => ({ id, email, fullName, role, passwordHash, isActive: true }))
   });
   await prisma.userLabAssignment.createMany({

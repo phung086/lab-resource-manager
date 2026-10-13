@@ -1,4 +1,7 @@
+import { bookingContact } from "./bookingContactService.js";
 import crypto from "crypto";
+import { assertCareReady } from "./resourceCareAccounting.js";
+import { recordSystemAuditEvent } from "./systemAuditService.js";
 import { prisma } from "../db.js";
 import { HttpError } from "../middleware/errors.js";
 import {
@@ -49,7 +52,7 @@ const bookingInclude = {
   resource: {
     include: {
       laboratory: {
-        select: { id: true, code: true, name: true }
+        select: { id: true, code: true, name: true, labPolicy: true }
       }
     }
   },
@@ -143,13 +146,13 @@ export async function checkSlotConflict(resourceId, startAt, endAt, excludeBooki
 /**
  * Creates a new booking with canonical field names and status.
  *
- * - approval-required resource → PENDING_APPROVAL
+ * - eligible resource → CONFIRMED automatically (legacy approval flags are ignored)
  * - immediate resource → CONFIRMED
  * - No payment dependency
  * - No mockStore fallback — Prisma error = explicit error
  * - Uses operationalStatus for availability check
  */
-export async function createBookingWithTransaction(tx, { requestedById, resourceId, title, purpose, startAt, endAt, purposeCode, acceptedQuote }) {
+export async function createBookingWithTransaction(tx, { requestedById, resourceId, title, purpose, startAt, endAt, purposeCode, acceptedQuote, contact }) {
   const start = new Date(startAt);
   const end = new Date(endAt);
 
@@ -167,6 +170,9 @@ export async function createBookingWithTransaction(tx, { requestedById, resource
     if (!resource) {
       throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
     }
+
+    await assertCareReady(tx, resourceId);
+    if (resource.maxBookingMinutes != null && (end - start) / 60000 > resource.maxBookingMinutes) throw new HttpError(400, "Duration exceeds the resource rental limit", { maxBookingMinutes: resource.maxBookingMinutes }, "RESOURCE_DURATION_LIMIT");
 
     if (HARD_UNAVAILABLE_RESOURCE_STATES.has(resource.operationalStatus)) {
       throw new HttpError(400, "Resource is not available for booking", undefined, "RESOURCE_UNAVAILABLE");
@@ -195,7 +201,8 @@ export async function createBookingWithTransaction(tx, { requestedById, resource
 
     assertResourceAvailable(availability);
 
-    const initialStatus = (resource.requiresApproval || resource.laboratory?.labPolicy?.requiresApproval) ? PENDING_APPROVAL : CONFIRMED;
+    const contactSnapshot = await bookingContact(tx, requestedById, contact);
+    const initialStatus = CONFIRMED;
     const booking = await tx.booking.create({
       data: {
         id: crypto.randomUUID(),
@@ -206,7 +213,9 @@ export async function createBookingWithTransaction(tx, { requestedById, resource
         startAt: start,
         endAt: end,
         status: initialStatus,
+        approvedAt: new Date(),
         feeAmountVnd: quote.amountVnd,
+        contactSnapshot: contactSnapshot || undefined,
         feeSnapshot: quote
       },
       include: bookingInclude
@@ -222,7 +231,8 @@ export async function createBookingWithTransaction(tx, { requestedById, resource
         action: "REQUEST",
         fromStatus: null,
         toStatus: initialStatus,
-        message: `Booking created with status ${initialStatus}`,
+        message: `Booking automatically confirmed after policy checks`,
+        metadata: { automaticConfirmation: true },
         messageKey: "booking_created"
       }
     });
@@ -230,15 +240,43 @@ export async function createBookingWithTransaction(tx, { requestedById, resource
     if (initialStatus === CONFIRMED) {
       await ensureBookingCharge(tx, booking);
       await scheduleBookingReminders(tx, booking);
+      await tx.notification.create({ data: { id: crypto.randomUUID(), userId: requestedById, type: "BOOKING_APPROVED", title: "Đặt lịch đã xác nhận", message: booking.resource.name, titleKey: "booking.auto_confirmed.title", messageKey: "booking.auto_confirmed.message", messageParams: { bookingId: booking.id, resourceName: booking.resource.name }, severity: "success", sentAt: new Date(), dedupeKey: `booking:${booking.id}:auto-confirmed` } });
     }
 
-    await notifyBookingEvent(tx, booking, "REQUEST");
+    await notifyBookingEvent(tx, booking, "CONFIRMED");
 
   return booking;
 }
 
 export async function createBooking(input) {
   return prisma.$transaction((tx) => createBookingWithTransaction(tx, input));
+}
+
+export async function rescheduleBooking({ bookingId, actor, startAt, endAt, expectedStartAt, reason }) {
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
+    const booking = await tx.booking.findUnique({ where: { id: bookingId }, include: bookingInclude });
+    if (!booking) throw new HttpError(404, "Booking not found", undefined, "NOT_FOUND");
+    await assertStaffScopeInTransaction(tx, { actorId: actor.id, actorRole: actor.role, resource: booking.resource });
+    if (booking.status !== CONFIRMED) throw new HttpError(409, "Only a confirmed booking can move", undefined, "BOOKING_INVALID_TRANSITION");
+    if (+booking.startAt !== +expectedStartAt) throw new HttpError(409, "Booking changed; refresh before moving", undefined, "BOOKING_CHANGED");
+    if (+startAt === +booking.startAt && +endAt === +booking.endAt) return booking;
+    if (+endAt - +startAt !== +booking.endAt - +booking.startAt) throw new HttpError(400, "Moving preserves booked duration and fee", undefined, "BOOKING_MOVE_DURATION");
+    await tx.$queryRaw`SELECT id FROM resources WHERE id = ${booking.resourceId} FOR UPDATE`;
+    await assertCareReady(tx, booking.resourceId);
+    if (booking.resource.maxBookingMinutes != null && (endAt-startAt)/60000 > booking.resource.maxBookingMinutes) throw new HttpError(400,"Duration exceeds resource rental limit",undefined,"RESOURCE_DURATION_LIMIT");
+    await assertBookingTrainingEligibility(tx,{userId:booking.requestedById,resourceId:booking.resourceId,now:new Date()});
+    checkLabPolicyCompliance({ policy: booking.resource.laboratory?.labPolicy, startAt, endAt });
+    if (+startAt < Date.now()) throw new HttpError(400, "Cannot move into the past", undefined, "POLICY_VIOLATION");
+    const availability = await getResourceAvailability(tx, { resourceId: booking.resourceId, startAt, endAt, excludeBookingId: bookingId, resource: booking.resource });
+    assertResourceAvailable(availability);
+    const updated = await tx.booking.update({ where: { id: bookingId }, data: { startAt, endAt, checkinDeadline: null }, include: bookingInclude });
+    await tx.usageLog.create({ data: { id: crypto.randomUUID(), resourceId: booking.resourceId, bookingId, userId: actor.id, action: "STATUS_CHANGE", message: "booking.rescheduled", reason, metadata: { previousStartAt: booking.startAt.toISOString(), previousEndAt: booking.endAt.toISOString(), startAt: startAt.toISOString(), endAt: endAt.toISOString() } } });
+    await recordSystemAuditEvent(tx, { actor, action: "BOOKING_RESCHEDULED", targetType: "BOOKING", targetId: bookingId, resourceId: booking.resourceId, labId: booking.resource.laboratoryId, beforeState: { startAt: booking.startAt.toISOString(), endAt: booking.endAt.toISOString() }, afterState: { startAt: startAt.toISOString(), endAt: endAt.toISOString() }, reason });
+    await scheduleBookingReminders(tx, updated);
+    await notifyBookingEvent(tx, updated, "RESCHEDULED", { includeOwner: true });
+    return updated;
+  });
 }
 
 /**
@@ -301,6 +339,7 @@ export async function transitionBooking({
       await tx.$queryRaw`SELECT id FROM resources WHERE id = ${booking.resourceId} FOR UPDATE`;
       const physical = await tx.resource.findUnique({ where: { id: booking.resourceId } });
       if (!physical) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
+      await assertCareReady(tx, booking.resourceId, now);
       if (physical.operationalStatus !== "AVAILABLE") {
         throw new HttpError(
           409,

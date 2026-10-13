@@ -8,28 +8,18 @@ web
 
 ## Users
 
-Người dùng ưu tiên của phiên bản đầu là sinh viên, giảng viên và nghiên cứu viên trong môi trường đại học/phòng thí nghiệm. Công việc chính của họ là tìm tài nguyên phù hợp, biết khi nào tài nguyên khả dụng, đáp ứng các điều kiện sử dụng và hoàn tất một booking có thể tin cậy từ đầu đến cuối.
+Người dùng đặt lịch có vai trò CUSTOMER (khách hàng). Công việc chính của họ là tìm tài nguyên phù hợp, biết khi nào tài nguyên khả dụng, đáp ứng các điều kiện sử dụng và hoàn tất một booking có thể tin cậy từ đầu đến cuối.
 
-Nhóm vận hành quan trọng thứ hai gồm cán bộ lab và quản trị viên. Họ cần dashboard và workflow riêng để duyệt lịch, quản lý tài nguyên, bảo trì, sự cố, người dùng, policy và lịch sử vận hành.
+Nhóm vận hành quan trọng thứ hai gồm cán bộ lab và quản trị viên. Họ cần dashboard và workflow riêng để bàn giao, nhận trả, di chuyển lịch, quản lý tài nguyên, bảo trì, sự cố, người dùng, policy và lịch sử vận hành.
 
 ## Product Purpose
 
-Lab Resource Manager là web app nội bộ giúp phòng thí nghiệm quản lý việc tìm kiếm, đặt lịch, phê duyệt, sử dụng và bàn giao tài nguyên dùng chung như GPU server, Raspberry Pi, UAV, camera, phòng thực hành và thiết bị nghiên cứu.
+Lab Resource Manager là web app nội bộ giúp phòng thí nghiệm quản lý việc tìm kiếm, đặt lịch tự xác nhận, sử dụng và bàn giao tài nguyên dùng chung như GPU server, Raspberry Pi, UAV, camera, phòng thực hành và thiết bị nghiên cứu.
 
-Booking là trải nghiệm trung tâm của sản phẩm. Một lifecycle hoàn chỉnh gồm:
-
-1. Tìm tài nguyên.
-2. Kiểm tra availability.
-3. Kiểm tra quyền, quota, training và policy.
-4. Tạo yêu cầu đặt lịch.
-5. Duyệt nếu tài nguyên yêu cầu approval.
-6. Thanh toán nếu policy yêu cầu.
-7. Xác nhận booking.
-8. QR check-in.
-9. Sử dụng tài nguyên.
-10. Check-out hoặc bàn giao.
-11. Hoàn tất booking.
-12. Lưu audit và history.
+Hai năng lực của sản phẩm là điều phối sử dụng và giám sát tài nguyên.
+Luồng chính: tìm tài nguyên → kiểm tra lịch/điều kiện → đặt lịch → xác nhận tự động →
+bàn giao/sử dụng → hoàn trả/hoàn tất → nhật ký. Giám sát, cảnh báo, xử lý sự cố
+và báo cáo nối với vòng đời này. Thanh toán và QR là phần mở rộng theo cấu hình.
 
 Sản phẩm thành công khi người dùng có thể hoàn tất lifecycle này rõ ràng, đúng quy tắc và không bị double-booking; đồng thời cán bộ lab có đủ dữ liệu và công cụ để vận hành tài nguyên an toàn.
 
@@ -43,10 +33,10 @@ AI là lớp decision-support dựa trên dữ liệu thật, không thay thế 
 
 - Sản phẩm được sử dụng hằng ngày trong môi trường đại học và phòng thí nghiệm, chủ yếu bằng tiếng Việt.
 - Người đặt lịch cần so sánh tài nguyên, availability, điều kiện sử dụng và trạng thái yêu cầu của mình.
-- Cán bộ lab và admin xử lý hàng đợi duyệt, bàn giao/hoàn trả, bảo trì, sự cố, người dùng và các ngoại lệ vận hành.
-- Approval và payment là policy theo tài nguyên hoặc trường hợp sử dụng; không phải booking nào cũng cần duyệt hoặc thanh toán.
+- Cán bộ lab và admin xử lý bàn giao/hoàn trả, bảo trì, sự cố, người dùng và các ngoại lệ vận hành.
+- Booking hợp lệ tự xác nhận; staff xử lý bàn giao, đổi lịch và hỗ trợ. Giá thuê và thời lượng có cấu hình theo tài nguyên.
 - Telemetry đến từ Prometheus, agent hoặc exporter được cấu hình cho tài nguyên thật. Giao diện không hiển thị telemetry giả khi chưa có dữ liệu.
-- Các module Digital Twin, simulation, optimization, Pareto, advanced analytics và nghiên cứu hiện có được giữ lại trong khu vực Advanced/Research hoặc sau feature flag, tách khỏi workflow chính.
+- Các màn hình/benchmark nghiên cứu cũ được ngừng dùng theo yêu cầu dọn dự án. Giám sát theo vòng đời tài nguyên, chu kỳ bảo trì và số liệu lưu trong database.
 
 ## Capabilities and Constraints
 
@@ -61,7 +51,7 @@ AI là lớp decision-support dựa trên dữ liệu thật, không thay thế 
 - Telemetry chỉ được hiển thị khi có dữ liệu thật từ Prometheus/agent/exporter; trạng thái thiếu dữ liệu phải được thể hiện trung thực.
 - UI phải responsive, accessible và phù hợp cho công việc lặp lại hằng ngày.
 - Không ưu tiên hiệu ứng hoặc showcase hơn tính đúng đắn nghiệp vụ.
-- Không xóa các advanced module hiện có; tổ chức lại, feature-flag hoặc chuyển chúng vào khu vực Advanced/Research.
+- Giữ chức năng và dữ liệu thuộc phạm vi đã chấp thuận; loại code không có caller, route retired và showcase không phục vụ đề tài.
 - Thứ tự ưu tiên khi có xung đột quyết định: Correctness > Security > Business Rules > UX > AI > Optimization > IoT.
 
 ## Brand Commitments
@@ -76,8 +66,8 @@ AI là lớp decision-support dựa trên dữ liệu thật, không thay thế 
 - Yêu cầu triển khai, dữ liệu thật và vận hành có trong `README.md`, `docs/REAL_DATA_RUNBOOK.md`, `docs/DEPLOYMENT.md` và `docs/PRODUCTION_READINESS.md`.
 - Threat model hiện có tại `docs/security/threat-model.md`.
 - Mẫu inventory có tại `data/resource-inventory.template.csv` và `data/ai-lab-inventory.realistic.csv`.
-- Repository đã có frontend React/Vite, backend Express, Prisma/PostgreSQL, các workflow booking, telemetry, dashboard và nhiều ảnh chụp giao diện trong `images/`.
-- Các artifact hiện có là bằng chứng về phạm vi và ý tưởng đã triển khai, không tự động chứng minh production readiness hoặc tính đúng đắn của hành vi runtime.
+- Trạng thái implementation và verification được duy trì tại `docs/CURRENT_STATE.md`; source/tests là căn cứ kiểm tra lại.
+- Báo cáo AI và ảnh chụp cũ được ngừng dùng; không viện dẫn chúng như kiểm chứng hiện tại.
 - Chưa có testimonial, benchmark vận hành thực tế hoặc số liệu sử dụng đã được xác minh; công việc tương lai không được tự tạo các bằng chứng này.
 
 ## Product Principles
@@ -86,7 +76,7 @@ AI là lớp decision-support dựa trên dữ liệu thật, không thay thế 
 2. Trung thực với trạng thái hệ thống: lỗi, thiếu dữ liệu, xung đột và điều kiện chưa đạt phải được hiển thị rõ ràng, không giả lập thành công.
 3. Policy được thực thi, không chỉ được trình bày: business rules, authorization và concurrency protection phải tồn tại ở backend và database.
 4. AI hỗ trợ quyết định: AI giải thích và đề xuất dựa trên dữ liệu thật nhưng không vượt qua policy hoặc thay thế trách nhiệm phê duyệt.
-5. Nâng cao mà không làm loãng: Advanced/Research features được bảo tồn và tách khu vực để workflow hằng ngày luôn rõ ràng.
+5. Bám sát đề tài: đặt lịch, giám sát, xử lý sự cố và AI có bằng chứng; không thêm showcase để làm tăng số màn hình.
 
 ## Accessibility & Inclusion
 

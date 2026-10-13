@@ -1,6 +1,8 @@
+import '../styles/calendar-workspace.css';
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { navigateApp, readRouteParams, workspacePathForTab } from "../workspaceRoutes.js";
 import { apiRequest } from "../api.js";
 import { QuickBookingModal } from "./QuickBookingModal.js";
 import { CalendarToolbar } from "./calendar/CalendarToolbar.js";
@@ -22,7 +24,12 @@ export interface SmartCalendarViewProps {
 
 export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOpenBooking, initialResourceId = "", refreshKey = 0 }) => {
   const { tr, locale } = useLocale();
-  const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
+  const [, setCalendarMinute] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setCalendarMinute(value => value + 1), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const [viewMode, setViewMode] = useState<"day" | "week" | "month">(() => window.matchMedia("(max-width:700px)").matches ? "day" : "week");
   const [selectedResourceId, setSelectedResourceId] = useState<string>(initialResourceId);
   const [resources, setResources] = useState<any[]>([]);
   const [resourcesLoading, setResourcesLoading] = useState(true);
@@ -88,6 +95,9 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
   useEffect(() => {
     loadResources();
   }, [loadResources]);
+
+  useEffect(()=>{if(initialResourceId)setSelectedResourceId(initialResourceId);},[initialResourceId]);
+  useEffect(()=>{const sync=()=>setSelectedResourceId(readRouteParams().get('resource') || resources[0]?.id || '');window.addEventListener('popstate',sync);return()=>window.removeEventListener('popstate',sync);},[resources]);
 
   // Compute reference anchor dates
   const getAnchorDate = useCallback(() => {
@@ -234,11 +244,12 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
   const currentDateStr = toVietnamDateString(anchor);
   const selectedResource = resources.find((r) => r.id === selectedResourceId) || null;
 
-  const blocked = selectedResource && (!["AVAILABLE", "IN_USE"].includes(selectedResource.operationalStatus) || selectedResource.bookingState !== "bookable");
+  const blocked = selectedResource && (!["AVAILABLE", "IN_USE"].includes(selectedResource.operationalStatus) || selectedResource.bookingState !== "bookable" || selectedResource.laboratory?.isActive === false || selectedResource.availability?.source === "maintenance_policy");
+  const blockedReason = selectedResource?.availability?.source === "maintenance_policy" ? "ui.rental.serviceRequired" : selectedResource?.laboratory?.isActive === false ? "ui.rental.labClosed" : selectedResource?.bookingState !== "bookable" ? "ui.rental.bookingClosed" : "ui.care." + selectedResource?.operationalStatus;
 
   return (
-    <div className="calendar-page flex flex-col gap-4 w-full">
-      <header className="calendar-page-heading"><h1>{tr('ui.room_and_equipment_calendar_cce9c071')}</h1><p>{tr('ui.final.calendarIntro')}</p></header>
+    <div className="calendar-page calendar-workspace flex flex-col gap-4 w-full">
+      <header className="calendar-page-heading"><div><h1>{tr('ui.room_and_equipment_calendar_cce9c071')}</h1><p>{tr('ui.final.calendarIntro')}</p></div><span className="calendar-timezone"><Clock size={14} aria-hidden="true" />{tr('ui.calendarWorkspace.timezone')}</span></header>
       {/* Calendar Toolbar */}
       <CalendarToolbar
         viewMode={viewMode}
@@ -264,8 +275,11 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
         }}
         resources={resources}
         selectedResourceId={selectedResourceId}
-        onResourceChange={setSelectedResourceId}
+        bookingBlocked={Boolean(blocked)}
+        onResourceChange={id=>{setSelectedResourceId(id);const params=readRouteParams();params.set('resource',id);navigateApp(workspacePathForTab('smart_calendar',params),{notify:false});}}
       />
+
+      {selectedResource && !resourcesLoading && <section className="calendar-resource-context" aria-label={tr('ui.resource_9a35ef53')}><div><strong>{selectedResource.name}</strong><span>{selectedResource.code}{selectedResource.laboratory?.name ? ` · ${selectedResource.laboratory.name}` : ''}</span></div><p>{tr(blocked ? blockedReason : 'ui.rental.selectSlot')}</p></section>}
 
       {/* Resource Load Error Notice with Retry */}
       {resourcesError && (
@@ -330,6 +344,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
         <>
           {viewMode === "week" && (
             <WeekSchedule
+              blocked={Boolean(blocked)}
               slotsData={slotsData}
               selectedResourceName={selectedResource?.name}
               onSelectSlot={handleOpenSlotBooking}
@@ -376,7 +391,7 @@ export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOp
       <BaseModal2026
         isOpen={Boolean(selectedBooking)}
         onClose={() => setSelectedBooking(null)}
-        title={selectedBooking?.title || tr("ui.booking_details_89353735")}
+        title={selectedBooking?.titleKey ? tr(selectedBooking.titleKey, selectedBooking.titleParams) : selectedBooking?.title || tr("ui.booking_details_89353735")}
         subtitle={
           selectedBooking
             ? `${selectedBooking.resourceName || ""}`

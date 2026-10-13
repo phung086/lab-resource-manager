@@ -2,6 +2,7 @@ export type IncidentSeverity = "low" | "medium" | "high" | "critical";
 export type IncidentStatus = "reported" | "triaged" | "assigned" | "investigating" | "resolved" | "verified" | "closed";
 
 export interface IncidentRecord {
+  origin?: "EXTERNAL" | "SIMULATED";
   id: string;
   resourceId: string;
   bookingId?: string | null;

@@ -399,7 +399,6 @@ export function GuestQuickBookingPanel({
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 maxLength={255}
-                placeholder={tr("ui.example_sensor_experiment_for_a_3e6f1164")}
               />
             </label>
             <label htmlFor="guest-booking-purpose">
@@ -409,7 +408,6 @@ export function GuestQuickBookingPanel({
                 onChange={(e) => setPurpose(e.target.value)}
                 required
                 maxLength={500}
-                placeholder={tr("ui.example_academic_research_collaboration_fa881f33")}
               />
             </label>
             <label htmlFor="guest-booking-date">
@@ -507,7 +505,7 @@ export function GuestQuickBookingPanel({
                 minLength={2}
                 maxLength={255}
                 autoComplete="name"
-                placeholder={tr("ui.jane_nguyen_debd1b38")}
+
               />
             </label>
             <label htmlFor="guest-email">
@@ -524,7 +522,6 @@ export function GuestQuickBookingPanel({
                 required
                 type="email"
                 autoComplete="email"
-                placeholder={translate("ui.email_example_com_2a539d65")}
               />
             </label>
             <label htmlFor="guest-phone">
@@ -537,7 +534,7 @@ export function GuestQuickBookingPanel({
                 minLength={9}
                 maxLength={20}
                 autoComplete="tel"
-                placeholder={translate("ui.0912345678_20faf05b")}
+
               />
             </label>
             <label htmlFor="guest-organization">
@@ -547,7 +544,7 @@ export function GuestQuickBookingPanel({
                 onChange={(e) => setOrganization(e.target.value)}
                 maxLength={160}
                 autoComplete="organization"
-                placeholder={tr("ui.optional_2e85bddf")}
+
               />
             </label>
           </div>
@@ -655,7 +652,7 @@ export function GuestQuickBookingPanel({
                   minLength={6}
                   maxLength={6}
                   inputMode="numeric"
-                  placeholder={tr("ui.6_digits_9046bda2")}
+
                   disabled={!otpSent || busy}
                   autoComplete="one-time-code"
                 />

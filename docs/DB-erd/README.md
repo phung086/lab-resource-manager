@@ -1,12 +1,15 @@
 # Database ERD
 
 Read [the generated core ERD](core-erd.md) for the 20 core models and a separate
-stock/course-group projection. Relations, keys and cardinality come from Prisma.
+stock/teaching archive projection. Relations, keys and cardinality come from Prisma.
+Active roles are CUSTOMER, LAB_STAFF and ADMIN (ADR-033). Teaching tables retain
+historical relationships; their presence does not restore academic screens or writes.
+Separate projections cover support, email and resource lifecycle accounting.
 
 Canonical source of truth:
 
 - `backend/prisma/schema.prisma`
-- verified Batch 1 persistence reports
+- current persistence contracts and reproducible tests
 - applied Prisma migrations
 
 Do not edit diagrams as a substitute for schema review. When the schema changes

@@ -14,7 +14,7 @@ const checks = [], evidence = [], errors = [];
 const check = (value, label) => { assert.ok(value, label); checks.push(label); };
 let businessPosts = 0;
 try {
-  for (const [name, role] of [['admin', 'ADMIN'], ['staff', 'LAB_STAFF'], ['lecturer', 'LECTURER'], ['student', 'STUDENT']]) {
+  for (const [name, role] of [['admin', 'ADMIN'], ['staff', 'LAB_STAFF'], ['lecturer', 'CUSTOMER'], ['student', 'CUSTOMER']]) {
     const auth = await fetch(`${api}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: `${name}@lrm.local`, password: process.env.UX_DEMO_PASSWORD }) });
     assert.equal(auth.status, 200); const session = await auth.json(); check(session.user.role === role, `${role}: real authenticated identity`);
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, locale: 'vi-VN' });

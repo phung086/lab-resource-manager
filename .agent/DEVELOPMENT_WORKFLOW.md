@@ -14,8 +14,12 @@ Use this workflow for every task, batch, bug fix, or documentation change.
 - Read `.agent/PROJECT_RULES.md`.
 - Read `.agent/INSTRUCTOR_BASELINE.md`.
 - Read this workflow.
-- Read `docs/CURRENT_STATE.md` and `docs/DECISIONS.md`.
-- Read relevant docs and Batch reports.
+- Use `.agent/CONTEXT_MAP.md` and the relevant FE/BE guide after the shared rules.
+- Read current scope/checkpoints in `docs/CURRENT_STATE.md` and applicable
+  decisions/clarifications in `docs/DECISIONS.md`, following root AGENTS order.
+- Read complete relevant contract sections; broaden when dependencies cross areas.
+- Reuse unchanged reading in this session rather than reloading whole documents.
+- Read relevant maintained contracts and current verification in docs/CURRENT_STATE.md.
 
 ## 3. Define Scope
 
@@ -62,12 +66,15 @@ development/shared databases.
 
 ## 8. Document
 
-- Update relevant canonical docs or Batch reports only when the change affects
+- Update relevant canonical docs only when the change affects
   contracts, workflow, architecture, or verification status.
 - Update `docs/CURRENT_STATE.md` after an approved batch changes the verified
   boundary, gates, blockers, debt, or next authorized task.
 - Add an entry to `docs/DECISIONS.md` only for an approved durable decision.
 - Do not create documentation for formality alone.
+- Before changing sessions, replace only this task's compact checkpoint in
+  CURRENT_STATE: checkout/branch/revision, scope, changed files, decisions,
+  verification and limits, blockers and next step. Preserve other checkpoints.
 
 ## 9. Report
 

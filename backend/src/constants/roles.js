@@ -7,17 +7,16 @@
 
 export const ADMIN = "ADMIN";
 export const LAB_STAFF = "LAB_STAFF";
-export const LECTURER = "LECTURER";
-export const STUDENT = "STUDENT";
+export const CUSTOMER = "CUSTOMER";
 
 /** All canonical roles. */
-export const CANONICAL_ROLES = [ADMIN, LAB_STAFF, LECTURER, STUDENT];
+export const CANONICAL_ROLES = [ADMIN, LAB_STAFF, CUSTOMER];
 
 /** Roles with staff/administrative privileges. */
 export const STAFF_ROLES = [ADMIN, LAB_STAFF];
 
 /** Roles that can only access own-scoped data. */
-export const SELF_SCOPE_ROLES = [LECTURER, STUDENT];
+export const SELF_SCOPE_ROLES = [CUSTOMER];
 
 /**
  * Validates that a role string is one of the canonical values.

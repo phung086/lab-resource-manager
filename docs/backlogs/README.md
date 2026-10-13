@@ -1,20 +1,17 @@
-# Prioritized follow-up backlog
+# Việc còn lại
 
-Source: [graduation review disposition](../reviews/GRADUATION_REVIEW_FOLLOWUP_20261003.md)
-and [PR22 verification](../reviews/PR22_REVIEW_RESPONSE_20261003.md).
-These items are deferred, not a new Batch or an implementation commitment.
+Các mục chưa hoàn thành; không tự bắt đầu triển khai khi chỉ đọc backlog.
 
-## Việc còn lại, theo ưu tiên
+1. Simulator demo có provenance, nguồn xác thực, ingestion và lưu alert/history;
+   tách môi trường/dữ liệu tổng hợp khỏi số đo phần cứng thực tế.
+2. Đánh giá AI tìm lịch/tài nguyên phù hợp và tóm tắt vận hành với dữ liệu được
+   phân quyền; kiểm chứng VI/EN, dẫn nguồn, lỗi provider và không có write.
+3. Chuẩn bị danh mục demo theo đề tài; booking/history phải tạo qua nghiệp vụ
+   có nhãn. Dự báo chỉ làm sau khi đủ dataset và tiêu chí đánh giá.
+4. Kiểm tra lại UI/locale và lifecycle trong DB test riêng. Không coi build hoặc
+   mở form là kiểm chứng đầy đủ bàn giao/hoàn trả.
+5. Auth revocation/rotation, guest recovery, dependency security và OpenAPI drift
+   theo phạm vi nhỏ; không audit fix --force hoặc đổi framework.
 
-| Ưu tiên | Việc tiếp theo | Điều kiện kiểm chứng / giới hạn |
-|---|---|---|
-| P1 | Dependency security và giảm dev dependencies trong runner | Audit hiện có brace-expansion, braces → chokidar → nodemon. npm audit đề xuất hạ major nodemon để hết nhóm cảnh báo; không áp dụng fix --force. Lập thay đổi tooling tương thích, kiểm tra dev watch và migration startup trước khi prune |
-| P1 | Session revocation/rotation và chống dò theo account | Thiết kế đồng bộ auth/frontend, test logout/password change/reuse/CSRF và expiry. JWT 8h/localStorage hiện tại chưa giải quyết rủi ro token bị đánh cắp |
-| P1 | Regression và benchmark concurrency tái hiện | Test DB riêng, báo chính xác workload, phần cứng, số conflict/commit và p95; không lấy số giả từ UI nghiên cứu |
-| P2 | OpenAPI khớp route/error/pagination | Sinh/kiểm tra hợp đồng từ nguồn có kiểm chứng; test drift. Không ghi API dự kiến như đã triển khai |
-| P2 | Router và TypeScript tăng dần ở luồng đang dùng | Test direct hash links, role navigation, browser history, unsaved form và VI/EN trước mỗi thay đổi; giữ React/Vite |
-| P2 | Đặt tên test theo chức năng, coverage và test runner nếu cần | Giữ npm scripts cũ tương thích; phân biệt gate lõi, integration DB và research; đo coverage trước khi đặt ngưỡng |
-| P2 | Logging có cấu trúc, Prettier, dependency alerts | Redact credentials/PII, tránh format lại toàn repo trong thay đổi nghiệp vụ; CI/Dependabot cần cấu hình nhỏ có thể review |
-| P3 | Hợp nhất thư mục ảnh/evidence | Rà reference trước khi move/delete; không xóa bằng chứng lịch sử hoặc viết lại Git history để đạt số dung lượng đẹp |
-
-Each implementation must define affected modules, required tests, exclusions and a stop condition before starting.
+Căn cứ: [phạm vi](../PROJECT_DIRECTION.md), [SRS](../srs.md),
+[trạng thái và giới hạn](../CURRENT_STATE.md).

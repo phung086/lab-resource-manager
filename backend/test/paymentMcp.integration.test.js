@@ -145,9 +145,9 @@ async function seed() {
   }
   for (const [who, role] of Object.entries({
     admin: "ADMIN",
-    student: "STUDENT",
-    other: "STUDENT",
-    lecturer: "LECTURER",
+    student: "CUSTOMER",
+    other: "CUSTOMER",
+    lecturer: "CUSTOMER",
     staff: "LAB_STAFF",
   })) {
     await prisma.user.create({
@@ -254,7 +254,7 @@ test(
             id: "empty",
             email: "empty@optional.test",
             fullName: "Empty catalog test",
-            role: "STUDENT",
+            role: "CUSTOMER",
             passwordHash: await bcrypt.hash(password, 4),
           },
         });

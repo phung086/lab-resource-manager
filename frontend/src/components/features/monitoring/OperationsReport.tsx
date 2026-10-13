@@ -26,7 +26,8 @@ export function OperationsReport({ refreshKey }: { refreshKey: string }) {
   const loading = !current;
   const number = new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-GB', { maximumFractionDigits: 1 });
   const duration = new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-GB', { style: 'unit', unit: 'hour', unitDisplay: 'long', maximumFractionDigits: 1 });
-  const hours = (minutes: number) => duration.format(minutes / 60);
+  const minutesFormat = new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-GB', { style: 'unit', unit: 'minute', unitDisplay: 'long', maximumFractionDigits: 1 });
+  const hours = (minutes: number) => minutes > 0 && minutes < 6 ? minutesFormat.format(minutes) : duration.format(minutes / 60);
   const used = report?.resources.filter(resource => resource.actualUsageMinutes > 0) || [];
   const visible = expanded ? (report?.resources || []) : used.slice(0, 5);
   const maxMinutes = Math.max(1, ...used.map(resource => resource.actualUsageMinutes));

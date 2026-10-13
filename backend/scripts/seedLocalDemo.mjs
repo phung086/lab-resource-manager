@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { validateLocalDemoEnvironment } from "./localDemoGuard.mjs";
+import { localDemoCatalog, seedLocalDemoCatalog } from "./localDemoCatalog.mjs";
 
 const database = validateLocalDemoEnvironment(process.env);
 const prisma = new PrismaClient();
@@ -23,8 +24,8 @@ try {
     const accounts = [
       ["admin", "ADMIN", "LRM Demo Administrator"],
       ["staff", "LAB_STAFF", "LRM Demo Lab Staff"],
-      ["lecturer", "LECTURER", "LRM Demo Lecturer"],
-      ["student", "STUDENT", "LRM Demo Student"],
+      ["lecturer", "CUSTOMER", "LRM Demo Lecturer"],
+      ["student", "CUSTOMER", "LRM Demo Student"],
     ];
     const users = {};
     for (const [name, role, fullName] of accounts) {
@@ -40,7 +41,7 @@ try {
       const code = `LOCAL-LAB-${index + 1}`;
       const lab = await tx.laboratory.upsert({ where: { code }, update: {}, create: { id: randomUUID(), code, name, buildingId: building.id, capacity: 24, openingTime: "08:00", closingTime: "20:00", description: "LOCAL DEMO — dữ liệu cấu hình minh họa, chưa kết nối phần cứng" } });
       labs.push(lab);
-      await tx.labPolicy.upsert({ where: { laboratoryId: lab.id }, update: {}, create: { id: randomUUID(), laboratoryId: lab.id, maxBookingMinutes: 480, minBookingMinutes: 15, maxAdvanceBookingDays: 30, requiresApproval: true, allowWeekend: true, workDayStartHour: 8, workDayEndHour: 20 } });
+      await tx.labPolicy.upsert({ where: { laboratoryId: lab.id }, update: {}, create: { id: randomUUID(), laboratoryId: lab.id, maxBookingMinutes: 480, minBookingMinutes: 15, maxAdvanceBookingDays: 30, requiresApproval: false, allowWeekend: true, workDayStartHour: 8, workDayEndHour: 20 } });
       await tx.userLabAssignment.upsert({ where: { userId_laboratoryId: { userId: users.staff.id, laboratoryId: lab.id } }, update: {}, create: { userId: users.staff.id, laboratoryId: lab.id } });
     }
     const resources = [
@@ -58,8 +59,9 @@ try {
     ];
     for (const [suffix, name, category, subtype, labIndex, operationalStatus, capacity] of resources) {
       const code = `LOCAL-${suffix}`;
-      await tx.resource.upsert({ where: { code }, update: {}, create: { id: randomUUID(), code, name, category, subtype, laboratoryId: labs[labIndex].id, location: labs[labIndex].name, ownerTeam: "LOCAL DEMO", operationalStatus, status: operationalStatus === "AVAILABLE" ? "available" : operationalStatus === "OFFLINE" ? "offline" : "maintenance", capacity, requiresApproval: true, bookingState: "bookable", description: "LOCAL DEMO — trạng thái cấu hình minh họa, không phải dữ liệu phần cứng thực tế.", specs: { environment: "LOCAL_DEMO" } } });
+      await tx.resource.upsert({ where: { code }, update: {}, create: { id: randomUUID(), code, name, category, subtype, laboratoryId: labs[labIndex].id, location: labs[labIndex].name, ownerTeam: "LOCAL DEMO", operationalStatus, status: operationalStatus === "AVAILABLE" ? "available" : operationalStatus === "OFFLINE" ? "offline" : "maintenance", capacity, requiresApproval: false, bookingState: "bookable", description: "LOCAL DEMO — trạng thái cấu hình minh họa, không phải dữ liệu phần cứng thực tế.", specs: { environment: "LOCAL_DEMO" } } });
     }
+    await seedLocalDemoCatalog(tx, labs);
     const illustrativeMedia = [
       ["LOCAL-ROOM-01", "IMAGE", "Phòng thực hành điện tử minh họa", "Không gian phòng lab điện tử với bàn thao tác và thiết bị đo.", "Electronics_Lab_in_realraum.jpg", "Stefan2904 / Wikimedia Commons", "CC BY-SA 4.0", 0],
       ["LOCAL-ROOM-02", "IMAGE", "Không gian chế tạo minh họa", "Phòng workshop giáo dục có máy in 3D và bàn thực hành.", "3D_printer_in_a_school_workshop.jpg", "Bex Walton / Wikimedia Commons", "CC BY-SA 4.0", 0],
@@ -102,7 +104,7 @@ try {
       } });
     }
   }, { timeout: 30000 });
-  console.log(`Local demo ready: ${database}; 4 accounts, 2 labs, 11 resources. LOCAL-ROOM-01 gets a 50,000 VND/hour STUDY demo price only when it has no pricing rules. Illustrative media is inserted idempotently from credited external sources. Existing rows preserved. No bookings, payments, incidents, telemetry or audit events are seeded.`);
+  console.log(`Local demo ready: ${database}; 4 accounts, 2 labs, ${localDemoCatalog.length} resources. LOCAL-ROOM-01 gets a 50,000 VND/hour STUDY demo price only when it has no pricing rules. Existing demo descriptions/specifications are enriched only when still at their defaults. Existing business state and pricing are preserved. No bookings, payments, incidents, telemetry or audit events are seeded.`);
 } finally {
   await prisma.$disconnect();
 }

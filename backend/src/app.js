@@ -29,8 +29,10 @@ import dashboardRouter from "./routes/dashboard.js";
 import notificationRouter from "./routes/notifications.js";
 import incidentRouter from "./routes/incidents.js";
 import telemetryRouter from "./routes/telemetry.js";
+import resourceCareRouter from "./routes/resourceCare.js";
 import paymentRouter from "./routes/payments.js";
 import assistantRouter from "./routes/assistant.js";
+import supportRouter from "./routes/support.js";
 import { handleMcp, mcpRateLimit } from "./assistant/mcpServer.js";
 import { requireAuth } from "./middleware/auth.js";
 
@@ -68,7 +70,16 @@ export function createApp() {
   // the ordinary API budget. Both ingress paths remain bounded before auth.
   const apiIngress = ingressLimit(config.rateLimitMax);
   const mcpIngress = ingressLimit(config.rateLimitMax * 10);
-  app.use((req, res, next) => (req.path.toLowerCase().replace(/\/$/, "") === "/mcp" ? mcpIngress : apiIngress)(req, res, next));
+  // Support polling by multiple signed-in people behind one campus IP must not
+  // exhaust the business API bucket. Its router also limits authenticated users.
+  const supportIngress = ingressLimit(config.rateLimitMax * 10);
+  const monitoringIngress = ingressLimit(config.rateLimitMax * 10);
+  app.use((req, res, next) => {
+    const path = req.path.toLowerCase().replace(/\/$/, "");
+    const limiter = path === "/mcp" ? mcpIngress : /^\/api\/support(?:\/|$)/.test(path) ? supportIngress
+      : /^\/api\/(?:telemetry|resource-care)(?:\/|$)/.test(path) ? monitoringIngress : apiIngress;
+    return limiter(req, res, next);
+  });
   app.use(metricsMiddleware);
 
   // Health check endpoints
@@ -130,6 +141,7 @@ export function createApp() {
   // 6. Maintenance Windows & Calibration
   app.use("/api/maintenance", maintenanceRouter);
   app.use("/api/lab-workspace", labWorkspaceRouter);
+  app.use("/api/support", supportRouter);
 
   // Optional integrations are independent of the retired research routes.
   if (config.paymentsEnabled) app.use("/api/payments", paymentRouter);
@@ -144,6 +156,7 @@ export function createApp() {
   app.use("/api/notifications", notificationRouter);
   app.use("/api/incidents", incidentRouter);
   app.use("/api/telemetry", telemetryRouter);
+  app.use("/api/resource-care", resourceCareRouter);
 
   // Error handling
   app.use(notFoundHandler);

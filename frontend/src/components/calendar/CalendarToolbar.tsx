@@ -14,6 +14,7 @@ export interface CalendarToolbarProps {
   onNewBooking: () => void;
   resources: any[];
   selectedResourceId: string;
+  bookingBlocked?: boolean;
   onResourceChange: (resourceId: string) => void;
 }
 
@@ -29,6 +30,7 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
   onNewBooking,
   resources,
   selectedResourceId,
+  bookingBlocked = false,
   onResourceChange
 }) => {
   const { tr } = useLocale();
@@ -37,7 +39,8 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
     <div className="calendar-toolbar">
       {/* Control bar */}
       <div className="calendar-toolbar-row">
-        {/* 1. Resource Selector (FIRST obvious control in workflow) */}
+        <div className="calendar-context-row">
+        {/* Resource context and the contextual booking action. */}
         <div className="calendar-resource-filter">
           <label htmlFor="calendar-resource-select" className="calendar-filter-label font-semibold">
             {tr("ui.resource_8315fccb")}</label>
@@ -60,7 +63,21 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
           </select>
         </div>
 
-        {/* 2. Navigation & Header Title */}
+        {/* 4. Action: New Booking */}
+        <button
+          type="button"
+          onClick={onNewBooking}
+          disabled={bookingBlocked || !selectedResourceId || resources.length === 0}
+          className="btn btn-primary calendar-new-booking-btn disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label={tr("ui.book_a_time_slot_0003e14b")}
+          title={bookingBlocked ? tr("ui.this_resource_is_not_accepting_7365dfdb") : !selectedResourceId ? tr("ui.choose_a_resource_before_booking_3cc84f6f") : tr("ui.book_a_time_slot_3ea4909d")}
+        >
+          <Plus size={14} aria-hidden="true" />
+          <span>{tr("ui.book_a_time_slot_0003e14b")}</span>
+        </button>
+        </div>
+        <div className="calendar-navigation-row">
+        {/* Date context and view controls. */}
         <div className="calendar-nav-group">
           <div className="calendar-nav-controls">
             <button
@@ -97,6 +114,7 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
             <button
               type="button"
               onClick={onRefresh}
+              disabled={loading}
               className="calendar-refresh-btn"
               title={tr("ui.refresh_calendar_5cd617b0")}
               aria-label={tr("ui.refresh_calendar_5cd617b0")}
@@ -128,17 +146,8 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
             {tr("ui.month_10276db1")}</button>
         </div>
 
-        {/* 4. Action: New Booking */}
-        <button
-          type="button"
-          onClick={onNewBooking}
-          disabled={!selectedResourceId || resources.length === 0}
-          className="btn btn-primary calendar-new-booking-btn disabled:opacity-50 disabled:cursor-not-allowed"
-          title={!selectedResourceId ? tr("ui.choose_a_resource_before_booking_3cc84f6f") : tr("ui.book_a_time_slot_3ea4909d")}
-        >
-          <Plus size={14} aria-hidden="true" />
-          <span>{tr("ui.book_a_time_slot_0003e14b")}</span>
-        </button>
+
+        </div>
       </div>
 
       {/* Filter & Legend bar */}

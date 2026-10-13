@@ -1,61 +1,56 @@
-# Claude LAB — cách dùng lâu dài
+# Claude LAB — local và ngữ cảnh gọn
 
-## Mở đúng môi trường
-PowerShell: `cd C:\Projects\lab-resource-manager` rồi `claude`.
-Desktop: tab Code, môi trường Local, folder trên; không chọn Cloud hoặc một worktree
-khác nếu cần giữ UI chưa commit. Chat/Cowork không tương đương phiên Code local.
-Không cần đổi nhà cung cấp để sửa file local. Giữ cấu hình gateway/model hiện có;
-tên model do proxy đặt không chứng minh danh tính model thực.
+## Môi trường
 
-## Kiểm tra trước khi làm
-Gõ `/lab-preflight`. CLI độc lập: `node .claude/scripts/preflight.mjs`.
-Trong Claude, `/mcp` phải thấy playwright. Skill chỉ xuất hiện sau khi mở phiên mới
-nếu phiên cũ chưa nhận thư mục mới. Kiểm tra `/help` trước khi dùng lệnh bổ sung;
-workflow không phụ thuộc /goal, /verify hoặc /doctor prompt-audit.
+Desktop: Code → Local → C:/Projects/lab-resource-manager,
+claude/lrm-redesign-v2. Không chọn 497f/Cloud và bỏ sót UI chưa commit.
+CLI: mở terminal tại checkout trên rồi chạy claude. Launcher:
+.claude/Open-LAB-Claude.cmd. Giữ provider/model/quyền công cụ hiện có.
 
-## Runtime
-- UI: http://localhost:5173; API: http://localhost:8000/health/ready.
-- Nếu UI đang hoạt động, mở trực tiếp bằng Browser/MCP; không launch server thứ hai.
-- Nếu chỉ UI tắt: `cd frontend` rồi `npm run dev`.
-- Desktop launch.json gọi đúng script frontend, giữ 5173 (CORS không tự đổi theo cổng).
-- Nếu API tắt: xem Docker Desktop và README. Lệnh hiện có `npm run dev:backend`
-  trong frontend khởi động nhóm lrm-local-review; startup container có migration và
-  demo seed nên kiểm tra môi trường đích trước. Không reset, down -v hoặc rebuild
-  theo phản xạ. Database và backend dùng chung với bản so sánh main 5180.
+Kiểm tra Git/runtime; /lab-preflight hoặc node .claude/scripts/preflight.mjs.
+UI dùng localhost:5173, API chung localhost:8000, readiness /api/health/ready.
+Tái dùng server đang chạy. UI tắt: frontend/npm run dev. API tắt: đọc README
+và kiểm tra Docker trước; startup backend có migration/demo seed, không chạy
+như bước QA. Không reset/down -v/seed/rebuild theo phản xạ.
+Browser/MCP phải truy cập được localhost; dùng context độc lập, không profile
+cá nhân. Không bật bypass/always-allow hoặc lách approval.
 
-## Công cụ trình duyệt
-Playwright MCP ghim 0.0.83, Chrome local, headless, isolated profile. Nó xem được
-localhost và chụp ảnh mà không dùng profile Chrome cá nhân. Dùng Browser tích hợp
-nếu Desktop hỗ trợ; đừng coi API/proxy key là đăng nhập Chrome extension.
-Quyền MCP vẫn do Claude quản lý; không bật bypass hoặc tự cấp quyền mọi tool.
-Ảnh mới lưu dưới logs/claude-browser, không đưa token/storage-state vào báo cáo.
+## Redesign tự chủ — 10/10/2026
 
-## Redesign
-1. `/lab-product-redesign audit`: khảo sát, hai hướng, chọn hướng, lập spec đề xuất;
-   không sửa source ứng dụng. Có thể chọn Plan mode khi muốn chỉ đọc hoàn toàn.
-2. Khi sẵn sàng: `/lab-product-redesign implement` và nêu rõ hướng/phạm vi đã duyệt.
-3. Phiên sau: `/lab-product-redesign resume`.
-4. Kết thúc: `/lab-product-redesign verify`.
+Kế hoạch và controller trước đây đã hủy; không còn vòng lặp hoặc queue.
+Người dùng giao task trực tiếp. Claude tự chọn design và cách triển khai,
+có thể dùng /design, impeccable, ui-ux-pro-max, design-taste-frontend và
+frontend-design khi thích hợp. Chỉ đọc skill/reference thực sự cần;
+không gọi cả bộ chỉ để chứng minh đã dùng. Skill là trợ giúp, không khóa thẩm mỹ.
+Không cần giữ palette, template, sidebar, trình tự rollout hay file ownership cũ.
+Các chức năng, hợp đồng nghiệp vụ, RBAC và dữ liệu vẫn theo AGENTS/SRS.
+Không tự bắt đầu redesign khi người dùng mới yêu cầu chuẩn bị prompt.
 
-Spec và progress do Claude tạo từ khảo sát thực, không được điền sẵn như đã phê duyệt.
-Giữ task scope, canonical contracts và chức năng bắt buộc. TasteSkill chỉ bổ trợ
-landing/visual quality; không ép landing patterns lên calendar/table/operations.
-Settings mặc định acceptEdits; lệnh shell chưa cho phép vẫn có thể hỏi. Deny patterns
-chỉ là rào chắn bổ sung, không chặn mọi biến thể shell/script; không lách chúng.
+## Token và tiếp tục
 
-## Xác minh
-Frontend: npm run lint, npm run typecheck, npm run test:i18n, npm run build.
-Đọc test trước khi chạy: một số test UI tạo booking hoặc seed database.
-Demo users và giới hạn nằm trong docs/LOCAL_DEMO_REVIEW_20260930.md.
-Không gửi .env hoặc khoá nhà cung cấp vào chat/project instructions.
+Tìm đúng file bằng rg, đọc phạm vi liên quan, theo callers/imports khi cần.
+Tái dùng tài liệu chưa đổi; không dump repo/catalog/log hay các checkpoint cũ.
+Dùng công cụ xác định thay cho nhiều lượt suy đoán. Chỉ chụp màn hình cần để
+ra quyết định hoặc chứng minh kiểm thử. Output tạm lưu ngoài Git.
+Checkpoint ngắn ở CURRENT_STATE; /lab-handoff trước /compact khi cần.
+Giữ yêu cầu, quyết định, file/symbol, test thật, giới hạn và bước tiếp theo.
+Không thay model/provider hoặc tắt suy luận cần thiết để đạt quota hình thức.
 
-## Phạm vi setup
-Đã thêm hướng dẫn/skills/rules/preview/preflight; không cài lại TasteSkill,
-không đổi proxy/model, không sửa application source hoặc tự bắt đầu redesign.
-Backup CLAUDE.md ban đầu và bảng hash trước setup nằm trong
-C:/Users/Admin/.claude/backups/lab-setup-20261006-210644.
+## Kiểm chứng
 
-## Mở nhanh
-Nhấp `.claude/Open-LAB-Claude.cmd` để mở Claude tại đúng repository, hoặc chạy
-`.claude\Open-LAB-Claude.cmd` từ PowerShell. Script không gửi prompt và không tự
-khởi động redesign. Frontend có thể chạy từ preview launcher hoặc npm run dev.
+Đọc tác động của test trước khi chạy; một số suite seed/tạo booking.
+Không ghi dữ liệu nghiệp vụ hợp lệ vào DB demo trong QA. Chạy gate phù hợp
+trong package.json, giữ exit code/failures. Xem UI thật; build không chứng minh UX.
+Tái kiểm tra khi có thay đổi/lỗi mới. Báo ngắn kết quả, coverage và giới hạn.
+Laptop 1366x768/1440x900, VI/EN và bốn role là ưu tiên hiện hành;
+bảo toàn responsive, matrix mobile deferred, không ghi PASS chưa kiểm.
+
+## Skill đã cài trên máy
+
+22 skill cá nhân ở C:/Users/Admin/.claude/skills; project chỉ giữ lab-task,
+lab-handoff và lab-preflight. Skill LAB thiết kế tự viết đã gỡ.
+Đã đối chiếu entrypoint và supporting files ngày 10/10/2026 với Codex, trùng nhau.
+Đây là xác nhận file local, không chứng minh phiên đang mở đã nạp skill.
+Trong phiên mới kiểm tra menu /skills hoặc công cụ liệt kê skill sẵn có.
+Chat/Cowork dùng skill được bật trong tài khoản; thư mục local không chứng minh
+đã bật chúng tại Customize → Skills. Không gọi mô hình tốn quota để kiểm tra file.

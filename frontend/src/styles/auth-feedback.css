@@ -1,0 +1,7 @@
+.auth-screen .auth-field-error, .vietnam-address-selector .auth-field-error { color: #9f2437; font: 500 14px/1.5 var(--font-sans); margin: 4px 0 0; }
+.auth-screen .auth-error-summary { color: #812033; background: #fff1f2; border: 1px solid #d89ca6; border-radius: 12px; padding: 14px 16px; margin-block: 16px; font: 500 14px/1.6 var(--font-sans); overflow-wrap: anywhere; }
+.auth-screen .auth-form-input[aria-invalid="true"] { border-color: #9f2437; }
+.auth-screen .auth-password-hint { color: var(--lab-ink-muted, #51465e); font-size: 13px; line-height: 1.6; }
+.vietnam-address-selector .address-retry { min-height: 44px; color: var(--lab-primary, #6441d9); border: 1px solid currentColor; border-radius: 10px; padding: 6px 12px; margin-block: 8px; font: 600 14px/1.5 var(--font-sans); background: transparent; }
+.vietnam-address-selector .address-retry:focus-visible, .auth-error-summary:focus-visible { outline: 2px solid var(--lab-primary, #6441d9); outline-offset: 3px; }
+@media (max-width: 540px) { .auth-screen form > .grid, .vietnam-address-selector > .grid { grid-template-columns: minmax(0, 1fr); } }

@@ -72,7 +72,7 @@ for (const database of databases) {
       } });
       await setup.user.create({ data: {
         id: fixture.user, email: `b1d-concurrency-${token}@example.test`,
-        fullName: "B1D Concurrency User", role: "LECTURER", passwordHash: "TEST_ONLY",
+        fullName: "B1D Concurrency User", role: "CUSTOMER", passwordHash: "TEST_ONLY",
       } });
       for (let index = 0; index < fixture.resources.length; index += 1) {
         await setup.resource.create({ data: {

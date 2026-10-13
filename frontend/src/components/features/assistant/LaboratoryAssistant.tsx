@@ -5,6 +5,7 @@ import { X, Send } from 'lucide-react';
 import { apiRequest } from '../../../api.js';
 import { hasMessage } from '../../../i18n.js';
 import { vietnamTimeToIso } from '../../../utils/timezone';
+import { navigateApp, workspacePathForTab } from '../../../workspaceRoutes.js';
 import './assistant.css';
 
 type Slot = { resourceId: string; startAt: string; endAt: string; resourceName?: string; resourceCode?: string };
@@ -144,7 +145,7 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
       <details ref={contextFields} className="assistant-context-disclosure"><summary>{tr('assistant.context')}{resourceId && <span>{resources.find(resource => resource.id === resourceId)?.code}</span>}</summary>
         <div className="assistant-context">
           <label>{tr('assistant.resource')}<select ref={resourceInput} value={resourceId} onChange={event => setResourceId(event.target.value)}><option value="">{tr('assistant.inferResource')}</option>{resources.map(resource => <option value={resource.id} key={resource.id}>{resource.code} · {resource.name}</option>)}</select></label>
-          <label>{tr('assistant.duration')}<input type="number" min={15} max={480} step={1} value={duration} placeholder={tr('assistant.durationAuto')} aria-describedby="assistant-duration-help" onChange={event => setDuration(event.target.value)} /><small id="assistant-duration-help">{tr('assistant.durationHelp')}</small></label>
+          <label>{tr('assistant.duration')}<input type="number" min={15} max={480} step={1} value={duration}  aria-describedby="assistant-duration-help" onChange={event => setDuration(event.target.value)} /><small id="assistant-duration-help">{tr('assistant.durationHelp')}</small></label>
           <label>{tr('assistant.start')}<input type="datetime-local" value={startAt} onChange={event => setStartAt(event.target.value)} /></label>
           <label>{tr('assistant.end')}<input type="datetime-local" value={endAt} onChange={event => setEndAt(event.target.value)} /></label>
         </div>
@@ -189,9 +190,10 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
       {error && <p className="alert danger" role="alert">{tr(error)}</p>}
     </div>
     <div className="assistant-bottom">
+      <button type="button" className="secondary-button" disabled={busy} onClick={() => { dismiss(false); navigateApp(workspacePathForTab('support', conversationId.current && !conversationExpired ? { conversation: conversationId.current } : {})); }}>{tr('support.handoff')}</button>
       <form className="assistant-compose" onSubmit={event => { event.preventDefault(); void send(question); }}>
         <label className="sr-only" htmlFor="assistant-question">{tr('assistant.question')}</label>
-        <textarea ref={questionInput} id="assistant-question" maxLength={2000} minLength={2} required rows={2} value={question} onChange={event => setQuestion(event.target.value)} placeholder={tr('assistant.placeholder')} />
+        <textarea ref={questionInput} id="assistant-question" maxLength={2000} minLength={2} required rows={2} value={question} onChange={event => setQuestion(event.target.value)}  />
         {busy ? <button type="button" className="secondary-button" onClick={cancel}>{tr('assistant.cancel')}</button> : <button type="submit" className="primary-button" disabled={conversationExpired || question.trim().length < 2} aria-label={tr('assistant.send')}><Send size={18} aria-hidden="true" /></button>}
       </form>
       <p className="assistant-boundary">{tr('assistant.boundary')}</p>

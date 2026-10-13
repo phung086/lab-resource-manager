@@ -25,9 +25,8 @@ export function LabPolicySummary({ policy, requiresApproval }: { policy?: LabPol
     [tr("ui.saturday_sunday_c5351448"), policy?.allowWeekend == null ? unknown : policy.allowWeekend ? tr("ui.bookings_allowed_63479843") : tr("ui.bookings_not_allowed_0d5af69d")],
     [tr("ui.approve_e94fc148"), requiresApproval == null ? unknown : requiresApproval ? tr("ui.authorized_staff_approval_required_5027029a") : tr("ui.confirm_when_policy_checks_pass_ca70c307")],
   ];
-  return <section className="lab-policy-summary" aria-label={tr("ui.laboratory_booking_policy_37816f8d")}>
-    <h4>{tr("ui.laboratory_booking_policy_37816f8d")}</h4>
+  return <details className="lab-policy-summary" aria-label={tr("ui.laboratory_booking_policy_37816f8d")}>
+    <summary>{tr("ui.laboratory_booking_policy_37816f8d")}</summary>
     <dl>{entries.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
-    <p>{tr("ui.time_slots_also_depend_on_acd0f9f3")}</p>
-  </section>;
+  </details>;
 }

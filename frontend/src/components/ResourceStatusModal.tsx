@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Archive, Wrench } from "lucide-react";
 
 import { BaseModal2026 } from "./BaseModal2026";
+import "../styles/resource-workspace.css";
 
 export interface ResourceStatusModalProps {
   isOpen: boolean;
@@ -94,7 +95,7 @@ export const ResourceStatusModal: React.FC<ResourceStatusModalProps> = ({
         <label htmlFor="resource-target-status">
           <span>{tr("ui.new_status_96c219fc")}</span>
           <select id="resource-target-status" value={targetStatus} onChange={(event) => setTargetStatus(event.target.value)} disabled={destructive}>
-            {statuses.map((status) => <option key={status} value={status}>{labels[status] || status}</option>)}
+            {statuses.map((status) => <option key={status} value={status}>{tr(labels[status]) || status}</option>)}
           </select>
         </label>
         <label htmlFor="resource-status-reason">
@@ -106,7 +107,7 @@ export const ResourceStatusModal: React.FC<ResourceStatusModalProps> = ({
             required={reasonRequired.has(targetStatus)}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder={destructive ? tr("ui.explain_why_the_resource_is_02754c76") : tr("ui.describe_the_reason_or_operational_4675e7ef")}
+
           />
         </label>
         {destructive && <p className="resource-destructive-note">{tr("ui.the_resource_is_retained_with_860d628b")}</p>}

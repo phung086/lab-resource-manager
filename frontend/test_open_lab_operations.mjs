@@ -67,7 +67,7 @@ try {
   await transitionBooking({ bookingId: booking.id, toStatus: "CONFIRMED", actorId: "admin", actorRole: "ADMIN" });
   await transitionBooking({ bookingId: booking.id, toStatus: "CHECKED_OUT", actorId: "staff", actorRole: "LAB_STAFF", conditionBefore: "Browser fixture condition" });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await signIn("other", "LECTURER", `#/workspace/booking?booking=${booking.id}`);
+  await signIn("other", "CUSTOMER", `#/workspace/booking?booking=${booking.id}`);
   await page.getByRole("button", { name: "Trả phòng và hoàn tất", exact: true }).click();
   await page.locator("#booking-condition-evidence").fill("Đã rời phòng, tắt thiết bị, bàn ghế nguyên vẹn.");
   await page.screenshot({ path: fileURLToPath(new URL("self-return-evidence.png", out)), animations: "disabled" });
@@ -87,11 +87,11 @@ try {
   await page.getByRole("button", { name: "Lưu mức phí", exact: true }).click();
   await page.getByText("Đã lưu bảng giá. Mức phí của booking đã tạo được giữ nguyên.").waitFor();
   const freeBooking = await prisma.booking.findFirstOrThrow({ where: { requestedById: "owner", resourceId: "room", feeAmountVnd: 0 } });
-  await signIn("owner", "STUDENT", `#/workspace/thanh-toan?booking=${freeBooking.id}`);
+  await signIn("owner", "CUSTOMER", `#/workspace/thanh-toan?booking=${freeBooking.id}`);
   await page.getByText(/Lịch đặt này không có phí sử dụng/).waitFor();
   assert.equal(await page.getByRole("button", { name: /Thanh toán.*VNPAY-QR/ }).count(), 0);
   await page.screenshot({ path: fileURLToPath(new URL("booking-free.png", out)), animations: "disabled" });
-  await signIn("owner", "STUDENT", "#/workspace/lich-dat");
+  await signIn("owner", "CUSTOMER", "#/workspace/lich-dat");
   await page.locator("#calendar-resource-select").selectOption("ui-priced");
   await page.getByRole("button", { name: "Đặt Khung Giờ Mới", exact: true }).click();
   await page.locator("#booking-title").fill("Paid room UI test");

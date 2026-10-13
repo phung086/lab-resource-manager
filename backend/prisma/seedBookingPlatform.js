@@ -67,7 +67,7 @@ async function main() {
         email: "student@lab.local",
         fullName: "Phạm Minh Khôi",
         passwordHash: studentPasswordHash,
-        role: "STUDENT",
+        role: "CUSTOMER",
         monthlyQuotaHours: 30.0,
         usedQuotaHours: 28.0,
         reputationScore: 88,

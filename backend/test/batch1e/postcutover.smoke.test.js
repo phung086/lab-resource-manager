@@ -47,7 +47,7 @@ test("Batch 1E-R development post-cutover smoke", { timeout: 60000 }, async () =
     await prisma.user.createMany({ data: [
       { id: ids.admin, email: `b1e-admin-${marker}@example.test`, fullName: "B1E Admin", role: "ADMIN", passwordHash },
       { id: ids.staff, email: `b1e-staff-${marker}@example.test`, fullName: "B1E Staff", role: "LAB_STAFF", passwordHash },
-      { id: ids.student, email: `b1e-student-${marker}@example.test`, fullName: "B1E Student", role: "STUDENT", passwordHash }
+      { id: ids.student, email: `b1e-student-${marker}@example.test`, fullName: "B1E Student", role: "CUSTOMER", passwordHash }
     ] });
     await prisma.userLabAssignment.create({ data: { userId: ids.staff, laboratoryId: ids.lab } });
     await prisma.resource.createMany({ data: [

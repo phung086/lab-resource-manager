@@ -8,7 +8,17 @@ import { buildDashboard } from "../services/dashboardService.js";
 import { buildOperationsReport } from "../services/operationsReportService.js";
 import { dispatchDueNotifications } from "../services/notificationService.js";
 
+import { buildWorkspaceTrends } from '../services/workspaceTrendsService.js';
+import { config } from '../config.js';
+
 const router = express.Router();
+router.get('/trends', requireAuth, requireRole(ADMIN, LAB_STAFF), async (req,res,next) => {
+  try {
+    const { period } = z.object({period:z.enum(['day','week','month']).default('week')}).strict().parse(req.query);
+    res.setHeader('Cache-Control','private, no-store');
+    res.json(await buildWorkspaceTrends(prisma,req.user,{period,paymentsEnabled:config.paymentsEnabled}));
+  } catch(error) { next(error); }
+});
 
 router.get("/report", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {

@@ -93,9 +93,9 @@ async function seed() {
     ["admin", "ADMIN"],
     ["staff", "LAB_STAFF"],
     ["foreignStaff", "LAB_STAFF"],
-    ["studentA", "STUDENT"],
-    ["studentB", "STUDENT"],
-    ["lecturer", "LECTURER"]
+    ["studentA", "CUSTOMER"],
+    ["studentB", "CUSTOMER"],
+    ["lecturer", "CUSTOMER"]
   ];
   await isolated.user.createMany({
     data: users.map(([key, role]) => ({

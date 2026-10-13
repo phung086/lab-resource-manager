@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ADMIN, LAB_STAFF, STUDENT } from "../../src/constants/roles.js";
+import { ADMIN, LAB_STAFF, CUSTOMER } from "../../src/constants/roles.js";
 import { requireLabAccess } from "../../src/middleware/labScope.js";
 
 test("requireLabAccess allows ADMIN unconditionally", async () => {
@@ -21,7 +21,7 @@ test("requireLabAccess allows ADMIN unconditionally", async () => {
 test("requireLabAccess rejects non-staff roles with 403 FORBIDDEN", async () => {
   const middleware = requireLabAccess("params.id");
   const req = {
-    user: { id: "student-1", role: STUDENT },
+    user: { id: "student-1", role: CUSTOMER },
     params: { id: "any-resource-id" }
   };
   let errorReceived = null;
