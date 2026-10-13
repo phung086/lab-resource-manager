@@ -180,6 +180,8 @@ test('durable request ownership, current business knowledge and read-only bounda
   const context = await requests.context(grant, job.id);
   assert.ok(context.businessKnowledge.topics.some(t => t.id === 'booking' && t.rules.includes('automatically')));
   assert.ok(context.tools.some(t => t.name === 'get_my_payment_status'));
+  assert.equal(context.timeContext.timeZone, 'Asia/Ho_Chi_Minh');
+  assert.equal(Date.parse(context.timeContext.nowVietnam), clock.getTime());
   assert.ok(!JSON.stringify(context).includes(alice.email));
   await assert.rejects(requests.readTool(grant, { requestId: job.id, tool: 'get_monitoring_summary', input: {} }), error => error.code === 'BRIDGE_TOOL_NOT_ALLOWED');
   await assert.rejects(requests.readTool(grant, { requestId: job.id, tool: 'get_my_bookings', input: { userId: bob.id } }), error => error.code === 'VALIDATION_ERROR');

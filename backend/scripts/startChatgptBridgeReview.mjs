@@ -32,7 +32,10 @@ Object.assign(process.env, {
   CHATGPT_BRIDGE_ENABLED: 'true', CHATGPT_BRIDGE_SECRET_KEY: privateConfig.bridgeKey,
   CHATGPT_BRIDGE_UI_ORIGIN: 'http://127.0.0.1:5174',
   CORS_ORIGINS: 'http://127.0.0.1:5174', PORT: '8001', LOG_FORMAT: 'dev',
-  MCP_ASSISTANT_ENABLED: 'true', PAYMENTS_ENABLED: 'false', VNPAY_ENABLED: 'false',
+  MCP_ASSISTANT_ENABLED: 'true',
+  // Optional isolated quote/pending-charge checks; no provider can transfer money.
+  PAYMENTS_ENABLED: process.env.CHATGPT_BRIDGE_REVIEW_PRICING_ENABLED === 'true' ? 'true' : 'false',
+  VNPAY_ENABLED: 'false',
   OPENAI_API_KEY: '', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '', EMAIL_ENABLED: 'false'
 });
 const db = new PrismaClient({ datasources: { db: { url: dbUrl.href } } });

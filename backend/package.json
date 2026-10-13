@@ -61,7 +61,7 @@
     "test:loyalty": "node --test test/loyalty.test.js",
     "test:loyalty:integration": "node --test test/loyalty.integration.test.js",
     "test:accounts:integration": "node --test test/accountSecurity.integration.test.js",
-    "test:chatgpt-bridge": "node --test test/chatgptBridgeNetwork.test.js",
+    "test:chatgpt-bridge": "node --test test/chatgptBridgeNetwork.test.js test/chatgptBridgeTime.test.js",
     "test:chatgpt-bridge:prepare": "node scripts/prepareChatgptBridgeTest.mjs",
     "test:chatgpt-bridge:integration": "node --test --test-concurrency=1 test/chatgptBridge.integration.test.js test/chatgptBridgeEvents.integration.test.js",
     "chatgpt-bridge:package": "node scripts/buildChatgptBridgePlugin.mjs"

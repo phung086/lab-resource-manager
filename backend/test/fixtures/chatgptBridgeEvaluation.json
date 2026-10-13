@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-13.2",
+  "version": "2026-10-14.1",
   "purpose": "Live model evaluation inventory; transport fixtures are not GPT accuracy evidence.",
   "cases": [
     { "question": "Đặt lịch trống có phải đợi nhân viên duyệt không?", "expected": "Auto confirmation after all checks; no new pending approval step.", "reads": [] },

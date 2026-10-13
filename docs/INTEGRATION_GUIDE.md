@@ -118,6 +118,12 @@ theo HTTPS origin đã xác minh. Gói private hiện dùng endpoint review tạ
 cập nhật kết nối sang domain ổn định trước vận hành. Không push/merge/deploy vào
 checkout chính trong batch này.
 
+Checkpoint 14/10: checkout chính đã được công việc khác commit thành 0de9471;
+68 file trong snapshot đầu phiên đổi hash, gồm contracts/schema/migrations.
+Đọc lại PROJECT_RULES và các phần contracts đã đổi trước merge, so sánh cả hai
+nhánh và giữ nguyên migrations đã áp dụng. Không dùng snapshot bd83a97 để kết
+luận checkout chính hiện vẫn chưa đổi. Thay đổi bridge chỉ nằm ở worktree riêng.
+
 Integration tests chỉ dùng CHATGPT_BRIDGE_TEST_DATABASE_URL loopback, DB
 `lab_resources_chatgpt_bridge_test` hoặc `lab_resources_chatgpt_actions_test`, mọi
 user kết thúc `@bridge.test`. Dùng DB actions riêng khi còn OAuth review đang mở:
@@ -134,5 +140,10 @@ Merge cả customerProposals/requests/MCP schema, chatgptBridgeProposals/API,
 Assistant/AppLayout/App, QuickBookingModal và SupportPage. Chỉ hai loại đề xuất
 xem trước; không ghép tool AI vào endpoint business writes. Giữ bước khách xác
 nhận, lấy lại quote và kiểm tra cuối của API booking/support. Kiến thức phiên bản
-2026-10-13.2 và plugin 0.1.2 đi cùng contract optional proposals. Chạy 21 tình
+2026-10-14.1 và plugin portable 0.1.3 đi cùng contract optional proposals/timeContext.
+Gói Cloud phải map app ID đăng ký đúng tài khoản; không bê ID private cũ sang.
+Chạy 21 tình
 huống model thật sau OAuth + Events; test protocol không thay thế bước này.
+Đã có 9 câu nhận reply thật nhưng 2 câu sai ngày mai, đã sửa múi giờ và chưa thử
+lại model. Còn 11 tình huống chưa chạy và một câu bị hủy khi hết Work quota.
+Không gộp subset này thành PASS toàn bộ hoặc bật cho khách thật trước nghiệm thu.

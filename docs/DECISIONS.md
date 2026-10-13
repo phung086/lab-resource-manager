@@ -679,6 +679,11 @@ chuyển staff, hủy, đổi credential hoặc revoke đều từ chối phản
 13 lần đọc và 24 KB dữ liệu động/câu hỏi; lịch sử ngữ cảnh tối đa 10 lượt/30 phút.
 Đây là grounding có kiểm soát, không fine-tuning hoặc sao chép toàn DB sang GPT.
 
+Làm rõ 14/10: thời gian tương đối trong câu khách phải lấy từ `timeContext`
+Asia/Ho_Chi_Minh (nowVietnam/today/tomorrow), không suy ngày từ UTC `now` hay lịch
+sử hội thoại. Nêu ngày cụ thể trước khi tra lịch. Context version tăng khi sửa
+quy tắc này; host vẫn phải đọc context mới trước publish.
+
 Callback HTTPS được kiểm tra toàn bộ DNS/IP công khai và ghim IP khi kết nối;
 không redirect. Subscription xác minh challenge ký, bí mật mã hóa tại DB và TTL
 24 giờ; worker lease/SKIP LOCKED, tối đa 5 lần gửi. Bốn MCP lượt đang chạy/process,

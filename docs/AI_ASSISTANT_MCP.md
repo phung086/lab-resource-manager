@@ -183,7 +183,7 @@ This implementation executes validated plans through its authenticated local MCP
 bridge. It does not expose localhost to a remote provider or use remote MCP
 authorization to bypass current backend scope.
 
-## ChatGPT account bridge — 13 October 2026
+## ChatGPT account bridge — 14 October 2026
 
 ADR-036 adds the requested optional customer question → ChatGPT Work/Cloud →
 LAB reply path. It is separate from JWT-protected internal `/mcp` and Responses.
@@ -205,7 +205,10 @@ records, private support transcripts or global operational audit are projected.
 code: roles/registration/OTP, catalogue, auto confirmation, interval/policy/care,
 prices, verified payments, handover/moves/cancellation, incidents, loyalty, FIFO
 support, emails and privacy. Context includes this version, fresh time and safe
-navigation paths. Dynamic values require a fresh scoped tool read; prior answers
+navigation paths. `timeContext` supplies Asia/Ho_Chi_Minh time and explicit today/
+tomorrow dates; relative dates must use these values rather than the UTC calendar
+or conversation history. Version 2026-10-14.1 adds this rule after two live answers
+selected the wrong next-day date. Dynamic values require a fresh scoped tool read; prior answers
 are conversation only. Publish requires the current context version. This is
 retrieval/grounding, not fine-tuning, and does not certify model accuracy.
 
@@ -240,25 +243,38 @@ Private package source is `plugins/lab-support-bridge`. Build its endpoint confi
 with `backend/scripts/buildChatgptBridgePlugin.mjs`; the script checks HTTPS/OAuth
 metadata and anonymous rejection before producing the package in ignored logs.
 No credentials belong in plugin files. Installation alone is not a connection.
-The private workflow plugin [LAB Customer Support](https://chatgpt.com/plugins/plugins_6ace18242404819191817976606cf5ce)
-is at version 0.1.2. Read-back confirms the original metadata/audience/MCP config,
-review-draft guidance and general-question evidence/uncertainty rules.
-Its web listing currently exposes a desktop-only launch. The private web app
-[LAB Support Connection](https://chatgpt.com/plugins/plugin_asdk_app_6ace1b6f93dc8191b806163d21a005d7)
-completed client registration and real user consent in Chrome. Authorization and
-token requests now ignore unknown extensions per RFC6749 while keeping required
-security fields exact. A real ChatGPT Chat call for an unknown request ID returned
-NOT_FOUND. Work Cloud reports exhausted usage; no event subscription or automatic
-website answer has been certified. ADMIN status separates authorized from ready
-(an active event subscription). Account replacement is awaiting the user's login.
+Portable source is version 0.1.3. For Work Cloud, first register the custom app
+in the target account, then build with its registered app ID or add the same skill
+to that app's exported package without changing OAuth or other app metadata.
+The private app [LAB Support Connection 14-10](https://chatgpt.com/plugins/plugin_asdk_app_6ace700c035081919aaecc37ed2c87db)
+completed real consent and a VERIFIED event subscription. Its exported package
+was updated to 1.0.1 (Apps 1, Skills 1), preserving the app ID and metadata.
+Authorization/token requests ignore unknown RFC6749 extensions while keeping
+required security fields exact. ADMIN status separates authorized from ready.
 
-Verified local checks: 26 backend bridge/security/protocol cases, nine frontend
+Actual automatic Work replies were observed for nine customer questions, with
+the first submitted and displayed in the website UI. Two selected the wrong
+Vietnamese next-day date; the timeContext fix passed automated checks but awaits
+a new live retest. Remaining answers passed within the empty-customer fixture's
+limits; positive booking/payment/staff data and model proposals are not certified.
+Case ten received its event but stopped before replying when shared Work quota
+became exhausted. It was cancelled via the owning CUSTOMER API, not marked PASS.
+Eleven scenarios, including outside-LAB questions, remain unrun. Fresh usage showed
+0% remaining five-hour quota and 69% weekly; the user chose another account.
+The replacement account PĐ HƯNG Plus now shows 79% five-hour and 65% weekly
+remaining. Its old app endpoint is stale, so [LAB Support Connection Current](https://chatgpt.com/plugins/plugin_asdk_app_6ace7c55a1b0819184522db6d50521e5)
+was registered at the current review endpoint. Skill 1.0.1 was saved and read
+back through Plugin Creator with unchanged app mapping/metadata. Fresh ADMIN
+consent and subscription remain pending; no tests are dispatched before them.
+
+Verified local checks: 28 backend bridge/security/protocol/time cases, nine frontend
 poll/cancellation/redirect/proposal cases; protocol replies use labelled test fixtures.
 Canonical booking/support HTTP confirmations were also checked in the isolated
 DB: changed quotes and overlaps rejected, valid booking automatically CONFIRMED,
 payment remained pending, duplicate support request IDs created one WAITING session.
 The 21 live-model evaluation scenarios are versioned in
-`backend/test/fixtures/chatgptBridgeEvaluation.json`; they have not been graded.
+`backend/test/fixtures/chatgptBridgeEvaluation.json`; the live subset and failures
+above must not be replaced by protocol fixtures or treated as a full-suite pass.
 A guarded PostgreSQL `lab_resources_chatgpt_bridge_test` and loopback review
 8001/8002/5174 do not use the shared business database. Only OAuth/MCP gateway
 paths are public in the temporary review tunnel; business endpoints return 404.
@@ -266,9 +282,10 @@ See AI_ASSISTANT_SETUP and INTEGRATION_GUIDE before enabling on the real runtime
 Repeatable integration testing may use the separately guarded
 `lab_resources_chatgpt_actions_test`, leaving the OAuth review database untouched.
 
-Official sources checked 13 October 2026:
+Official sources checked 14 October 2026:
 - [MCP Events](https://developers.openai.com/plugins/build/mcp-events)
 - [Connect and test](https://developers.openai.com/plugins/deploy/connect-chatgpt)
 - [OAuth](https://developers.openai.com/plugins/build/auth)
-- [Plan-usage boundaries](https://developers.openai.com/siwc/token-sharing-open-source)
+- [Plugin package and registered apps](https://developers.openai.com/plugins/build/plugins)
+- [Shared usage and pricing](https://learn.chatgpt.com/docs/pricing)
 - [Guardrails and human review](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)

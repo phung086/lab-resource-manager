@@ -7,6 +7,7 @@ import { quoteBooking, PURPOSE_CODES } from '../services/bookingPricingService.j
 import { assertNotAborted } from '../assistant/assistantRuntime.js';
 import { activeUser, assertGrant, bridgeLocks, bridgeError } from './access.js';
 import { businessKnowledge } from './knowledge.js';
+import { bridgeTimeContext } from './timeContext.js';
 import { customerProposalSchema, prepareCustomerProposals } from './customerProposals.js';
 import { isDeepStrictEqual } from 'node:util';
 
@@ -134,9 +135,11 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
         conversationId: job.conversationId, generation: job.generation, status: 'ANSWERED', createdAt: { gte: new Date(now().getTime() - 30 * 60000) } },
         select: { message: true, answer: true }, orderBy: { createdAt: 'desc' }, take: 10 });
       while (byteLength(history) > 12000) history.pop();
+      const currentTime = now();
       const value = { requestId: job.id, generation: job.generation, question: job.message, locale: job.locale,
-        formContext: job.context, history: history.reverse(), historyIsUnverified: true, now: now().toISOString(),
-        businessKnowledge, tools: bridgeReadTools, remainingReads: Math.max(0, 12 - job.readCount), dataSource: 'current_request' };
+        formContext: job.context, history: history.reverse(), historyIsUnverified: true, now: currentTime.toISOString(),
+        timeContext: bridgeTimeContext(currentTime), businessKnowledge, tools: bridgeReadTools,
+        remainingReads: Math.max(0, 12 - job.readCount), dataSource: 'current_request' };
       await budget(tx, job, byteLength({ question: value.question, formContext: value.formContext, history: value.history }));
       await tx.chatgptBridgeRequest.update({ where: { id: job.id }, data: { context: { ...job.context, knowledgeVersion: businessKnowledge.version } } });
       return value;

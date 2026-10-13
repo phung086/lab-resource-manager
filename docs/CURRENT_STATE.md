@@ -114,7 +114,7 @@ merge/deploy. Thanh toán VNPAY thật đã PASS riêng ở checkpoint trước,
 nguyên trong snapshot; test loyalty callback là fixture ký trên DB test, không
 phải một lượt thanh toán provider mới. Dừng ở phạm vi batch đã yêu cầu.
 
-## Kết nối chatbot với tài khoản ChatGPT — chờ cấp quyền thật, 13/10/2026
+## Kết nối chatbot với tài khoản ChatGPT — kiểm thử thật, 14/10/2026
 
 Nhánh codex/chatgpt-plugin-bridge trong worktree customer-security-loyalty kế thừa
 d2f1ff4. Đã triển khai OAuth S256, MCP Events, câu hỏi bền vững, publish reply theo
@@ -124,9 +124,13 @@ không cấp quyền sửa booking/thanh toán/tài khoản/bảo trì. Đổi k
 tin xác thực thu hồi quyền và chặn công việc cũ. Forward migration bảy bảng mới
 chỉ được áp dụng trên DB test lab_resources_chatgpt_bridge_test và DB integration
 lab_resources_chatgpt_actions_test; DB nghiệp vụ,
-runtime chính, cấu hình SMTP/VNPAY/ngrok và checkout chính được giữ nguyên.
+runtime chính và cấu hình SMTP/VNPAY/ngrok không bị thay đổi bởi batch bridge.
+Checkout chính đã được công việc khác commit thành 0de9471; 68 file trong snapshot
+ban đầu đổi hash, gồm contracts/schema/migrations. Trước merge phải đọc lại các
+contracts mới và đối chiếu diff; không ghi đè migration đã áp dụng. Batch này chỉ
+sửa worktree riêng, chưa merge/push/deploy.
 
-Kiến thức phiên bản 2026-10-13.2 gồm 16 nhóm nghiệp vụ; dữ liệu giá, lịch, payment,
+Kiến thức phiên bản 2026-10-14.1 gồm 16 nhóm nghiệp vụ; dữ liệu giá, lịch, payment,
 loyalty và sự cố phải đọc mới từ 16 read tools có giới hạn. Đây là context nghiệp
 vụ được duyệt theo code, không fine-tuning hoặc sao chép toàn DB sang ChatGPT.
 Giới hạn: câu hỏi 10 phút, history cùng khách 30 phút/10 lượt/12 KB, tổng dữ liệu
@@ -139,41 +143,49 @@ Nút Xem và xác nhận mở form thường, khách gửi mới có booking/yê
 không được đổi giá, actor, role hoặc gọi business write. Đã sửa lỗi gửi lặp cùng
 đề xuất do JSONB đổi thứ tự trường. Đề xuất không thay thế checks cuối của API.
 
-Kiểm thử bridge: 26 backend (21 integration + 5 network), 9 frontend đều PASS;
+Kiểm thử bridge: 28 backend (21 integration + 5 network + 2 time), 9 frontend đều PASS;
 required backend/frontend, lint, typecheck, build, locale và ERD PASS. Frontend
 còn hai lint warnings có sẵn. Fixture protocol/provider không là bằng chứng
-GPT trả lời thật. Bộ 21 tình huống đánh giá nằm trong chatgptBridgeEvaluation.json,
-chưa chấm chất lượng model vì chưa nhận được reply từ ChatGPT thật.
+GPT trả lời thật. Bộ 21 tình huống đánh giá nằm trong chatgptBridgeEvaluation.json.
 Kiểm tra xác nhận qua API booking/support thật trên DB actions: giá thay đổi bị
 409/PRICING_CHANGED, quote mới tạo CONFIRMED/payment pending, trùng lịch bị 409;
 support gửi lặp cùng requestId tạo một WAITING và giữ nguyên nội dung khách.
 
-Đã xác minh user đăng nhập ChatGPT Plus, tạo private LAB Customer Support 0.1.2
-(plugins_6ace18242404819191817976606cf5ce) và app LAB Support Connection
-(asdk_app_6ace1b6f93dc8191b806163d21a005d7). Plugin 0.1.2 đã được đọc lại: metadata,
-audience và MCP giữ nguyên, thêm hướng dẫn đề xuất có xác nhận và trả lời ngoài
-LAB theo bằng chứng. Package hiện desktop-only;
-app connection có màn OAuth trên web. DCR thành công. Chrome đã tới backend nhưng
-authorize trả invalid_request do schema từ chối tham số mở rộng. Đã sửa authorize,
-code/refresh exchange để bỏ tham số không hỗ trợ theo RFC6749; vẫn kiểm tra S256,
-client, callback/audience/scope chính xác và ADMIN consent. Kiểm thử HTTP cả tham
-số bổ sung/giả mạo/lặp PASS; public tunnel trả 302 đúng màn LAB consent. Backend
-review đã restart; user đã tự cấp quyền bằng review-admin trên Chrome, grant và
-access token thật được tạo, ChatGPT khám phá đủ ba tools. Work Cloud hiện báo hết
-hạn mức, UI hiển thị reset 22:48; chưa tạo Events subscription hoặc reply thật.
-Browser trong ứng dụng từng chặn navigation bằng ERR_BLOCKED_BY_CLIENT. Không coi
-cài plugin, OAuth hoặc webhook 2xx là chatbot tự động đã hoạt động.
-ChatGPT Chat thật đã gọi get_question_context cho UUID không tồn tại và nhận
-NOT_FOUND, không tạo/sửa dữ liệu. ADMIN UI phân biệt authorized với connected
-(có subscription); grant đơn thuần không hiển thị sẵn sàng. Đã xuất ZIP portable
-0.1.2 có endpoint đã xác minh, không chứa credential/app ID của tài khoản cũ.
-User chọn đổi tài khoản còn hạn mức Work; đang chờ tự hoàn tất đăng nhập mới.
+Đã chuyển sang tài khoản Market Agri Plus, kiểm tra mới thấy ban đầu còn 83% hạn
+mức 5 giờ, tạo app LAB Support Connection 14-10
+(asdk_app_6ace700c035081919aaecc37ed2c87db), user tự cấp quyền review-admin. Work
+chat Đăng ký webhook LAB tạo một subscription VERIFIED và monitor Tiếp nhận hỗ trợ
+LAB. Đã nhận 9 phản hồi model tự động; câu đầu gửi từ UI CUSTOMER, các câu tiếp
+gửi qua API CUSTOMER thật. Kiểm tra nội dung/DB và câu đầu hiển thị trên website.
+Hai câu về ngày mai dùng sai ngày Việt Nam: thêm timeContext với giờ Việt Nam,
+today/tomorrow, cập nhật kiến thức và skill; unit/integration PASS, chưa thử lại
+model sau sửa. Các câu còn lại đúng trong phạm vi fixture, nhưng chưa chứng minh
+luồng dữ liệu booking/payment/staff dương vì khách review chưa có lịch và LAB
+chưa có staff được phân công. Câu 10 đã nhận event nhưng chưa có reply khi Work
+hết quota; hủy qua API CUSTOMER, không chấm PASS. Còn 11 tình huống chưa chạy,
+gồm câu ngoài LAB và đề xuất có xác nhận. Không kết luận chất lượng từ webhook 2xx.
+
+App cùng tài khoản đã cập nhật 1.0.1 qua Upload new version: Apps 1, Skills 1;
+giữ nguyên app ID/OAuth/metadata, thêm skill. Source portable 0.1.3 không gắn app
+ID tài khoản. Fresh usage sau lượt kiểm tra hiển thị 0% hạn mức 5 giờ, 69% tuần,
+reset khoảng 01:59 ngày 14/10; đây là quota dùng chung, không quy toàn bộ cho
+suite này. User đã đổi sang PĐ HƯNG Plus; fresh usage còn 79% hạn mức 5 giờ và
+65% tuần. Kết nối cũ trên tài khoản này trỏ tunnel đã ngừng, không có sửa URL
+trong màn Manage; tạo app LAB Support Connection Current
+(asdk_app_6ace7c55a1b0819184522db6d50521e5) tới endpoint hiện tại. Skill 1.0.1
+đã cập nhật qua Plugin Creator và đọc lại, giữ app mapping/metadata. Đang chờ
+user tự bấm consent ADMIN của app mới; chưa tạo consumer/test mới trước cấp quyền.
+
+Đã thêm fixture cấu hình phòng/giá SERVICE 60.000đ/giờ và staff phân công trong
+DB review riêng; không tạo telemetry/audit/lịch sử vận hành hay kết quả model.
+Runtime review bật riêng kiểm tra quote/pending charge, vẫn tắt VNPAY/SMTP/
+schedulers thanh toán. Chưa xác nhận booking/support từ các fixture mới.
 
 Review riêng: API8001, gateway OAuth/MCP8002, frontend5174; test-only tunnel
-finance-montgomery-hull-meet.trycloudflare.com. Domain này tạm thời, không dùng
+quilt-anyway-electronic-copyrighted.trycloudflare.com. Domain này tạm thời, không dùng
 production. Quy trình tích hợp và cấu hình ở AI_ASSISTANT_SETUP, AI_ASSISTANT_MCP,
-INTEGRATION_GUIDE và ADR-036. Chưa merge/push/deploy; phải kiểm chứng end-to-end
-ChatGPT Events → dữ liệu khách → reply hiển thị trước khi bật cho khách thật.
+INTEGRATION_GUIDE và ADR-036. Chưa bật cho khách thật: cần hoàn tất các tình huống
+chưa chạy, thử lại ngày tương đối và xác nhận đề xuất qua form CUSTOMER.
 
 ## Checkout và runtime
 

@@ -235,6 +235,14 @@ chat và subscribe lại. Kết nối cũ bị thu hồi. Với domain backend �
 Plugin private của tài khoản cũ không tự xuất hiện trên tài khoản mới. Dùng gói
 portable từ `chatgpt-bridge:package` để import lại hoặc đăng ký cùng endpoint
 MCP trên tài khoản mới; giữ skill customer-support và context version hiện tại.
+Gói portable 0.1.3 chỉ chứa endpoint/skill, không chứa app ID hay credential của
+tài khoản. Với Work Cloud, đăng ký custom MCP app trên tài khoản đích trước;
+gói app có `.app.json` phải trỏ đúng registered app của tài khoản đó. Có thể build
+gói Cloud bằng `CHATGPT_BRIDGE_REGISTERED_APP_ID=asdk_app_<registered-id>` cùng
+`CHATGPT_BRIDGE_PUBLIC_ORIGIN`; script tạo thư mục `lab-support-bridge-chatgpt`
+trong logs và vẫn kiểm tra discovery/401. Biến này chỉ dùng khi build, không
+phải cấu hình runtime hay ID dùng chung cho mọi tài khoản. Khi cập nhật app đã
+export, giữ metadata/OAuth/app mapping gốc, chỉ thêm skill/version cần thiết.
 Tài khoản ChatGPT phải còn quyền/hạn mức Work Cloud. ADMIN UI báo Đã cấp quyền
 khi OAuth xong, Sẵn sàng nhận câu hỏi chỉ khi có subscription còn hiệu lực.
 Tunnel thử tạm thời không có cam kết uptime và không thay thế domain production.
@@ -242,3 +250,7 @@ Tunnel thử tạm thời không có cam kết uptime và không thay thế doma
 Môi trường review có guard `@bridge.test`, đúng DB test và loopback; script
 `startChatgptBridgeReview.mjs` không đọc `.env` thật hoặc khởi động scheduler mail/
 thanh toán/vận hành. Không dùng script review để triển khai production.
+Có thể bật riêng `CHATGPT_BRIDGE_REVIEW_PRICING_ENABLED=true` để thử quote và
+pending charge trên DB review; mặc định tắt. VNPAY/SMTP và scheduler vẫn tắt,
+không có thanh toán provider hoặc mail thật. Không dùng fixture làm dữ liệu
+nghiệp vụ hay tạo lịch sử/audit giả để minh chứng vận hành.
