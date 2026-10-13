@@ -1,12 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { askChatgptBridge, bridgeRedirectUrl } from './src/services/chatgptBridgeApi.ts';
+import { parseBridgeProposals, reviewBridgeProposal } from './src/services/chatgptBridgeProposals.ts';
+import { randomUUID } from 'node:crypto';
 
 const originalStorage = globalThis.localStorage;
 test.before(() => { globalThis.localStorage = { getItem: () => 'old-customer-session' }; });
 test.after(() => { if (originalStorage === undefined) delete globalThis.localStorage; else globalThis.localStorage = originalStorage; });
 const pending = () => ({ id: 'request-one', status: 'PENDING', expiresAt: new Date(Date.now() + 60000).toISOString() });
 const question = { message: 'Tôi muốn đặt phòng.', locale: 'vi' };
+const bookingDraft = () => ({ kind: 'BOOKING', id: randomUUID(), resourceId: randomUUID(), resourceName: 'Phòng điện tử', resourceCode: 'LAB-01',
+  expiresAt: new Date(Date.now() + 300000).toISOString(), startAt: new Date(Date.now() + 86400000).toISOString(), endAt: new Date(Date.now() + 90000000).toISOString(),
+  title: 'Đặt phòng', purpose: 'Thực hành điện tử', purposeCode: 'SERVICE', quote: { amountVnd: 60000, currency: 'VND', version: 1 } });
 
 test('receipt stays pending until a genuine request-bound reply is returned', async () => {
   const job = pending(), calls = [], observations = [];
@@ -70,4 +75,26 @@ test('OAuth redirects remain on exact supported ChatGPT paths', () => {
   for (const url of ['https://attacker.example/connector_platform_oauth_redirect', 'https://chatgpt.com.evil.test/connector/oauth/x',
     'https://chatgpt.com/other', 'https://chatgpt.com/connector/oauth/x#secret', 'https://user@chatgpt.com/connector/oauth/x'])
     assert.throws(() => bridgeRedirectUrl(url), { code: 'bridge.invalidRedirect' });
+});
+
+test('customer proposals open review data without submitting business mutations', async () => {
+  const job = pending(), proposal = bookingDraft(), methods = [];
+  const result = await askChatgptBridge(question, { signal: new AbortController().signal, pollMs: 1, transport: async (_path, options = {}) => {
+    methods.push(options.method || 'GET');
+    return options.method === 'POST' ? job : { ...job, status: 'ANSWERED', provider: 'chatgpt', source: 'chatgpt_bridge', answer: 'Xem đề xuất.', proposals: [proposal] };
+  } });
+  assert.deepEqual(reviewBridgeProposal(result.proposals[0]), proposal);
+  assert.deepEqual(methods, ['POST', 'GET']);
+});
+
+test('expired proposals, forged actor/price fields, unsupported writes and duplicates fail closed', () => {
+  const proposal = bookingDraft();
+  assert.throws(() => reviewBridgeProposal(proposal, Date.parse(proposal.expiresAt)), { code: 'bridge.proposalExpired' });
+  for (const item of [{ ...proposal, userId: randomUUID() }, { ...proposal, confirmUrl: 'https://attacker.example' },
+    { ...proposal, kind: 'REFUND' }, { ...proposal, quote: { ...proposal.quote, amountVnd: -1 } }, { ...proposal, endAt: proposal.startAt }])
+    assert.throws(() => parseBridgeProposals([item]), { code: 'bridge.invalidResponse' });
+  assert.throws(() => parseBridgeProposals([proposal, proposal]), { code: 'bridge.invalidResponse' });
+  const support = { kind: 'STAFF_SUPPORT', id: randomUUID(), expiresAt: proposal.expiresAt, laboratoryId: randomUUID(), laboratoryName: 'LAB điện tử', category: 'BOOKING', message: 'Tôi cần hỗ trợ đặt lịch.' };
+  assert.deepEqual(reviewBridgeProposal(support), support);
+  assert.throws(() => parseBridgeProposals([{ ...support, category: 'ADMIN' }]), { code: 'bridge.invalidResponse' });
 });

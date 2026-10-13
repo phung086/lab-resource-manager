@@ -205,6 +205,12 @@ restart. Không dùng key VNPAY/JWT. UI phát triển có thể là loopback HTT
 phải HTTPS. Chỉ thêm callback `/connector/oauth/<id>` sau khi xác minh đúng URL
 trong ChatGPT, không wildcard. Frontend cần `VITE_ENABLE_AI_ASSISTANT=true`.
 
+Nếu Connect trả `invalid_request`, kiểm tra log `chatgpt_oauth_rejected` theo mã/
+trường lỗi; không gửi URL OAuth đầy đủ hoặc token vào log/chat. Authorize/token
+bỏ tham số mở rộng chưa hỗ trợ theo RFC6749, còn client/callback/S256/resource/
+scope vẫn phải hợp lệ. Sau sửa backend, restart đúng runtime rồi Connect lại để
+tạo ticket mới; không mở lại ticket cũ đã hết hạn.
+
 1. Kiểm tra protected-resource/authorization-server discovery và endpoint OAuth
    bằng client MCP; anonymous POST `/mcp/support-bridge` phải 401.
 2. Tạo/cài plugin từ gói đã build hoặc Add custom MCP server, OAuth DCR, cả ba
@@ -217,10 +223,20 @@ trong ChatGPT, không wildcard. Frontend cần `VITE_ENABLE_AI_ASSISTANT=true`.
 5. Dùng CUSTOMER kiểm thử: hỏi lịch/giá, follow-up, payment pending, yêu cầu ngoài
    phạm vi, hủy trong lúc chờ và chuyển staff. Kiểm tra reply ở DB/UI, không coi
    webhook 2xx hoặc protocol fixture là bằng chứng GPT đã trả lời thật.
+   Chạy bộ 21 tình huống chatgptBridgeEvaluation.json: gồm câu hỏi ngoài LAB,
+   dữ kiện cần search, injection và đề xuất đặt lịch/hỗ trợ. Kiểm chứng mở form,
+   sửa/đóng draft không ghi nghiệp vụ, gửi xác nhận mới tạo booking/support; thử
+   lại khi giá/lịch thay đổi và khi đề xuất quá 5 phút. Không kết luận chất lượng
+   model từ pass unit/integration hoặc lời trả lời do fixture sinh ra.
 
 Đổi tài khoản: cài/connect trên ChatGPT mới, ADMIN cho phép grant mới, chạy Work
 chat và subscribe lại. Kết nối cũ bị thu hồi. Với domain backend ổn định không cần
 đổi source; đổi domain thì phải cập nhật endpoint của kết nối và OAuth audience.
+Plugin private của tài khoản cũ không tự xuất hiện trên tài khoản mới. Dùng gói
+portable từ `chatgpt-bridge:package` để import lại hoặc đăng ký cùng endpoint
+MCP trên tài khoản mới; giữ skill customer-support và context version hiện tại.
+Tài khoản ChatGPT phải còn quyền/hạn mức Work Cloud. ADMIN UI báo Đã cấp quyền
+khi OAuth xong, Sẵn sàng nhận câu hỏi chỉ khi có subscription còn hiệu lực.
 Tunnel thử tạm thời không có cam kết uptime và không thay thế domain production.
 
 Môi trường review có guard `@bridge.test`, đúng DB test và loopback; script

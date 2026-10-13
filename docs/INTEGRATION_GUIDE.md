@@ -119,7 +119,8 @@ cập nhật kết nối sang domain ổn định trước vận hành. Không p
 checkout chính trong batch này.
 
 Integration tests chỉ dùng CHATGPT_BRIDGE_TEST_DATABASE_URL loopback, DB
-`lab_resources_chatgpt_bridge_test`, mọi user kết thúc `@bridge.test`:
+`lab_resources_chatgpt_bridge_test` hoặc `lab_resources_chatgpt_actions_test`, mọi
+user kết thúc `@bridge.test`. Dùng DB actions riêng khi còn OAuth review đang mở:
 
 ```powershell
 npm --prefix backend run test:chatgpt-bridge:prepare
@@ -129,3 +130,9 @@ npm --prefix frontend run test:chatgpt-bridge
 
 Không chạy các integration tests này trong lúc người dùng đang thử OAuth trên
 cùng DB review: setup chủ động thu hồi grants fixture cũ để kiểm thử lặp lại.
+Merge cả customerProposals/requests/MCP schema, chatgptBridgeProposals/API,
+Assistant/AppLayout/App, QuickBookingModal và SupportPage. Chỉ hai loại đề xuất
+xem trước; không ghép tool AI vào endpoint business writes. Giữ bước khách xác
+nhận, lấy lại quote và kiểm tra cuối của API booking/support. Kiến thức phiên bản
+2026-10-13.2 và plugin 0.1.2 đi cùng contract optional proposals. Chạy 21 tình
+huống model thật sau OAuth + Events; test protocol không thay thế bước này.

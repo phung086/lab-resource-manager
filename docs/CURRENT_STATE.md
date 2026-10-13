@@ -122,30 +122,52 @@ request/generation, polling/cancel phía CUSTOMER và màn quản lý kết nố
 Bridge mặc định tắt; một kết nối hoạt động, đọc bằng quyền CUSTOMER của câu hỏi,
 không cấp quyền sửa booking/thanh toán/tài khoản/bảo trì. Đổi kết nối hoặc thông
 tin xác thực thu hồi quyền và chặn công việc cũ. Forward migration bảy bảng mới
-chỉ được áp dụng trên DB test lab_resources_chatgpt_bridge_test; DB nghiệp vụ,
+chỉ được áp dụng trên DB test lab_resources_chatgpt_bridge_test và DB integration
+lab_resources_chatgpt_actions_test; DB nghiệp vụ,
 runtime chính, cấu hình SMTP/VNPAY/ngrok và checkout chính được giữ nguyên.
 
-Kiến thức phiên bản 2026-10-13.1 gồm 16 nhóm nghiệp vụ; dữ liệu giá, lịch, payment,
-loyalty và sự cố phải đọc mới từ 15 read tools có giới hạn. Đây là context nghiệp
+Kiến thức phiên bản 2026-10-13.2 gồm 16 nhóm nghiệp vụ; dữ liệu giá, lịch, payment,
+loyalty và sự cố phải đọc mới từ 16 read tools có giới hạn. Đây là context nghiệp
 vụ được duyệt theo code, không fine-tuning hoặc sao chép toàn DB sang ChatGPT.
 Giới hạn: câu hỏi 10 phút, history cùng khách 30 phút/10 lượt/12 KB, tổng dữ liệu
 động 24 KB và 13 lần đọc. Chat text được lưu để hỗ trợ hội thoại; chưa có chính
 sách xóa tự động hoặc chuyển transcript bridge sang nhân viên.
 
-Kiểm thử bridge: 20 backend (15 integration + 5 network), 7 frontend đều PASS;
+Đã thêm đề xuất BOOKING/STAFF_SUPPORT theo schema chặt, server kiểm tra lại lịch,
+policy/care/training/quote hoặc LAB có staff hoạt động; chỉ lưu nháp tối đa 5 phút.
+Nút Xem và xác nhận mở form thường, khách gửi mới có booking/yêu cầu hỗ trợ. Bot
+không được đổi giá, actor, role hoặc gọi business write. Đã sửa lỗi gửi lặp cùng
+đề xuất do JSONB đổi thứ tự trường. Đề xuất không thay thế checks cuối của API.
+
+Kiểm thử bridge: 26 backend (21 integration + 5 network), 9 frontend đều PASS;
 required backend/frontend, lint, typecheck, build, locale và ERD PASS. Frontend
 còn hai lint warnings có sẵn. Fixture protocol/provider không là bằng chứng
-GPT trả lời thật. Bộ 12 tình huống đánh giá nằm trong chatgptBridgeEvaluation.json,
+GPT trả lời thật. Bộ 21 tình huống đánh giá nằm trong chatgptBridgeEvaluation.json,
 chưa chấm chất lượng model vì chưa nhận được reply từ ChatGPT thật.
+Kiểm tra xác nhận qua API booking/support thật trên DB actions: giá thay đổi bị
+409/PRICING_CHANGED, quote mới tạo CONFIRMED/payment pending, trùng lịch bị 409;
+support gửi lặp cùng requestId tạo một WAITING và giữ nguyên nội dung khách.
 
-Đã xác minh user đăng nhập ChatGPT Plus, tạo private LAB Customer Support 0.1.1
+Đã xác minh user đăng nhập ChatGPT Plus, tạo private LAB Customer Support 0.1.2
 (plugins_6ace18242404819191817976606cf5ce) và app LAB Support Connection
-(asdk_app_6ace1b6f93dc8191b806163d21a005d7). Plugin 0.1.1 đã được đọc lại: metadata,
-audience và MCP giữ nguyên, thêm bảng chọn evidence theo câu hỏi. Package hiện desktop-only;
-app connection có màn OAuth trên web. DCR thành công, nhưng browser trong ứng dụng
-chặn navigation /oauth/chatgpt/authorize bằng ERR_BLOCKED_BY_CLIENT; chưa có grant,
-Events subscription hoặc reply thật. User được hướng dẫn tự Connect/cấp quyền
-trong Chrome. Không coi cài plugin hoặc webhook 2xx là chatbot đã hoạt động.
+(asdk_app_6ace1b6f93dc8191b806163d21a005d7). Plugin 0.1.2 đã được đọc lại: metadata,
+audience và MCP giữ nguyên, thêm hướng dẫn đề xuất có xác nhận và trả lời ngoài
+LAB theo bằng chứng. Package hiện desktop-only;
+app connection có màn OAuth trên web. DCR thành công. Chrome đã tới backend nhưng
+authorize trả invalid_request do schema từ chối tham số mở rộng. Đã sửa authorize,
+code/refresh exchange để bỏ tham số không hỗ trợ theo RFC6749; vẫn kiểm tra S256,
+client, callback/audience/scope chính xác và ADMIN consent. Kiểm thử HTTP cả tham
+số bổ sung/giả mạo/lặp PASS; public tunnel trả 302 đúng màn LAB consent. Backend
+review đã restart; user đã tự cấp quyền bằng review-admin trên Chrome, grant và
+access token thật được tạo, ChatGPT khám phá đủ ba tools. Work Cloud hiện báo hết
+hạn mức, UI hiển thị reset 22:48; chưa tạo Events subscription hoặc reply thật.
+Browser trong ứng dụng từng chặn navigation bằng ERR_BLOCKED_BY_CLIENT. Không coi
+cài plugin, OAuth hoặc webhook 2xx là chatbot tự động đã hoạt động.
+ChatGPT Chat thật đã gọi get_question_context cho UUID không tồn tại và nhận
+NOT_FOUND, không tạo/sửa dữ liệu. ADMIN UI phân biệt authorized với connected
+(có subscription); grant đơn thuần không hiển thị sẵn sàng. Đã xuất ZIP portable
+0.1.2 có endpoint đã xác minh, không chứa credential/app ID của tài khoản cũ.
+User chọn đổi tài khoản còn hạn mức Work; đang chờ tự hoàn tất đăng nhập mới.
 
 Review riêng: API8001, gateway OAuth/MCP8002, frontend5174; test-only tunnel
 finance-montgomery-hull-meet.trycloudflare.com. Domain này tạm thời, không dùng

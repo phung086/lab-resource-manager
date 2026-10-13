@@ -665,11 +665,15 @@ OAuth public client dùng PKCE S256, audience cụ thể, ba scope read/reply/ev
 ADMIN đồng ý grant 30 ngày và có thể thu hồi. Access 15 phút, refresh 7 ngày xoay
 một lần; replay thu hồi cả grant. Đổi chủ kết nối thu hồi grant/subscription và
 câu hỏi đang chờ của kết nối cũ. Không sử dụng JWT nội bộ làm token cho ChatGPT.
+Authorize và code/refresh exchange bỏ tham số mở rộng không hỗ trợ theo RFC6749
+3.1/3.2, không lưu hoặc chuyển tiếp chúng. Trường đã hỗ trợ vẫn kiểm tra kiểu,
+S256/client/callback/audience/scope; tham số bảo mật bị lặp bị từ chối.
 
 Câu hỏi và outbox được lưu cùng transaction, gắn CUSTOMER/authVersion và generation
 của grant. Event chỉ chứa requestId; 2xx là nhận sự kiện, chưa phải trả lời. Work
 chat đọc bộ nghiệp vụ có phiên bản và dữ liệu hiện hành trong phạm vi khách đó;
-tool publish chỉ ghi nội dung chat, không đổi booking, tài khoản, payment hay care.
+tool publish ghi nội dung chat và tối đa hai đề xuất xem trước (BOOKING,
+STAFF_SUPPORT, mỗi loại một đề xuất), không đổi booking, tài khoản, payment hay care.
 Chưa đọc context đúng phiên bản không được publish. Câu hỏi hết hạn sau 10 phút;
 chuyển staff, hủy, đổi credential hoặc revoke đều từ chối phản hồi muộn. Tối đa
 13 lần đọc và 24 KB dữ liệu động/câu hỏi; lịch sử ngữ cảnh tối đa 10 lượt/30 phút.
@@ -683,3 +687,13 @@ Tin nhắn được lưu bền trong DB; TTL ngữ cảnh không phải chính s
 AI transcript của bridge chưa được sao chép tự động vào phiên staff; khách dùng
 nút hỗ trợ hiện có. Plugin phải được cài, OAuth consent và Work chat subscribe;
 cài plugin đơn thuần chưa bảo đảm chatbot chạy hoặc đổi account đã hoàn tất.
+
+Theo yêu cầu bổ sung 13/10: bot hỗ trợ khách thao tác bằng form điền sẵn. Server
+kiểm tra đề xuất theo quyền CUSTOMER và dữ liệu hiện hành; tên LAB/tài nguyên và
+giá lấy từ DB, không nhận giá/actor/URL từ model. Đề xuất hết hạn sau tối đa 5 phút;
+khách mở form thường, kiểm tra rồi tự gửi. QuickBookingModal lấy lại quote và API
+kiểm tra policy/certification/availability/phiên bản giá tại thời điểm gửi. Support
+giữ requestId/idempotency/FIFO/presence hiện có; không dispatch từ tool AI. Không
+ghi đè yêu cầu hỗ trợ đã mở hoặc nội dung khách đang nhập. Không có endpoint hay
+migration mới cho business writes. Câu hỏi chung ngoài LAB được trả lời khi có
+bằng chứng phù hợp; dữ kiện biến động cần host search thực có hoặc nêu giới hạn.

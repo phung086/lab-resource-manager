@@ -3,6 +3,7 @@ import { MessageCircle, Send, RefreshCw, CheckCircle, Circle, Headphones } from 
 import { useLocale } from '../../../providers/LocaleProvider';
 import { navigateApp, workspacePathForTab } from '../../../workspaceRoutes.js';
 import { supportApi, type SupportDetail, type SupportList, type SupportMetadata, type SupportSession } from '../../../services/support';
+import { reviewBridgeProposal, type BridgeSupportDraft } from '../../../services/chatgptBridgeProposals';
 import './support.css';
 
 type User = { id: string; role: string; fullName: string };
@@ -10,7 +11,7 @@ const statuses = ['WAITING', 'ACTIVE', 'CLOSED', 'CANCELLED'];
 const categories = ['BOOKING', 'PAYMENT', 'ACCOUNT', 'RESOURCE', 'OTHER'];
 const errorKey = (error: unknown) => error instanceof Error ? error.message : 'api.API_REQUEST_FAILED';
 
-export default function SupportPage({ user, conversationId, sessionId }: { user: User; conversationId?: string; sessionId?: string }) {
+export default function SupportPage({ user, conversationId, sessionId, initialDraft, onDraftApplied }: { user: User; conversationId?: string; sessionId?: string; initialDraft?: BridgeSupportDraft; onDraftApplied?: () => void }) {
   const { tr, locale } = useLocale();
   const staff = user.role === 'LAB_STAFF', admin = user.role === 'ADMIN', customer = !staff && !admin;
   const [metadata, setMetadata] = useState<SupportMetadata | null>(null);
@@ -113,6 +114,18 @@ export default function SupportPage({ user, conversationId, sessionId }: { user:
     finally { busyRef.current = false; if (mounted.current) setBusy(false); }
   }
   const openRequest = Boolean(list?.summary.WAITING || list?.summary.ACTIVE);
+  const appliedDraft = useRef('');
+  useEffect(() => {
+    if (!initialDraft || !metadata || !list || appliedDraft.current === initialDraft.id) return;
+    appliedDraft.current = initialDraft.id;
+    try {
+      reviewBridgeProposal(initialDraft);
+      if (!customer || openRequest || requestMessage.trim()) throw new Error('bridge.supportDraftConflict');
+      if (!metadata.laboratories.some(lab => lab.id === initialDraft.laboratoryId)) throw new Error('bridge.unavailable');
+      setLaboratoryId(initialDraft.laboratoryId); setCategory(initialDraft.category); setRequestMessage(initialDraft.message); setShareContext(false);
+    } catch (cause) { setError(errorKey(cause)); }
+    onDraftApplied?.();
+  }, [initialDraft, metadata, list, customer, openRequest, requestMessage, onDraftApplied]);
   const current = detail?.session;
   const canSend = current && ['WAITING', 'ACTIVE'].includes(current.status) && (customer || (staff && current.assignedStaffId === user.id && current.status === 'ACTIVE'));
   async function request() {

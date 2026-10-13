@@ -10,14 +10,17 @@ const registration = z.object({ client_name: z.string().trim().min(1).max(80).op
   redirect_uris: z.array(z.string().max(1024)).min(1).max(8), token_endpoint_auth_method: z.literal('none').optional(),
   grant_types: z.array(z.enum(['authorization_code', 'refresh_token'])).optional(),
   response_types: z.array(z.literal('code')).optional(), scope: z.string().max(200).optional() }).strict();
+// RFC 6749 sections 3.1/3.2 require unknown request parameters to be ignored.
+// Strip extensions rather than persist or forward them; known security fields
+// still require their exact types and the checks below.
 const authorization = z.object({ response_type: z.literal('code'), client_id: clientId, redirect_uri: z.string().max(1024),
   state: z.string().min(8).max(1024), code_challenge: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
-  code_challenge_method: z.literal('S256'), resource: z.string().max(2048), scope: z.string().max(200) }).strict();
+  code_challenge_method: z.literal('S256'), resource: z.string().max(2048), scope: z.string().max(200) }).strip();
 const codeExchange = z.object({ grant_type: z.literal('authorization_code'), client_id: clientId,
   code: opaque, redirect_uri: z.string().max(1024), resource: z.string().max(2048),
-  code_verifier: z.string().min(43).max(128).regex(/^[A-Za-z0-9._~-]+$/) }).strict();
+  code_verifier: z.string().min(43).max(128).regex(/^[A-Za-z0-9._~-]+$/) }).strip();
 const refreshExchange = z.object({ grant_type: z.literal('refresh_token'), client_id: clientId,
-  refresh_token: opaque, resource: z.string().max(2048), scope: z.string().max(200).optional() }).strict();
+  refresh_token: opaque, resource: z.string().max(2048), scope: z.string().max(200).optional() }).strip();
 const oauthError = (error = 'invalid_grant') => Object.assign(bridgeError(400, 'BRIDGE_OAUTH_INVALID'), { oauthError: error });
 
 export function createBridgeOAuth({ prisma, settings, now = () => new Date() }) {
@@ -151,11 +154,12 @@ export function createBridgeOAuth({ prisma, settings, now = () => new Date() }) 
     });
   }
   async function listConnections(actor) {
-    if (!settings.enabled) return { enabled: false, connected: false, connections: [] };
+    if (!settings.enabled) return { enabled: false, authorized: false, connected: false, connections: [] };
     await admin(prisma, actor);
     const rows = await prisma.chatgptBridgeGrant.findMany({ where: { revokedAt: null, expiresAt: { gt: now() } },
       include: { owner: true, client: true, subscriptions: { where: { status: 'VERIFIED', expiresAt: { gt: now() } } } } });
-    return { enabled: true, publicUrl: settings.resource, connected: rows.some(g => activeUser(g.owner, 'ADMIN', g.ownerAuthVersion) && g.subscriptions.length),
+    return { enabled: true, publicUrl: settings.resource, authorized: rows.some(g => activeUser(g.owner, 'ADMIN', g.ownerAuthVersion)),
+      connected: rows.some(g => activeUser(g.owner, 'ADMIN', g.ownerAuthVersion) && g.subscriptions.length),
       connections: rows.map(g => ({ id: g.id, clientName: g.client.name, createdAt: g.createdAt.toISOString(),
         expiresAt: g.expiresAt.toISOString(), subscriptionCount: activeUser(g.owner, 'ADMIN', g.ownerAuthVersion) ? g.subscriptions.length : 0 })) };
   }

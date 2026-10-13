@@ -92,6 +92,7 @@ function Application() {
     navigateApp(publicPathForSection(page, returnTo ? { returnTo } : {}));
   }
   const [activeGlobalModal, setActiveGlobalModal] = useState(null);
+  const [assistantSupportDraft, setAssistantSupportDraft] = useState(null);
 
   const routeParams = new URLSearchParams(route.search);
   const catalogueContext = context => {
@@ -179,7 +180,7 @@ function Application() {
         if (active) setAuthChecking(false);
       }
     }
-    const invalidateSession = () => setUser(null);
+    const invalidateSession = () => { setUser(null); setAssistantSupportDraft(null); setActiveGlobalModal(null); };
     window.addEventListener("lrm:session-invalid", invalidateSession);
     bootstrapSession();
     return () => {
@@ -291,6 +292,7 @@ function Application() {
   }
   return (
     <AppLayout
+      key={`${user.id}:${user.role}:${user.authVersion ?? 0}`}
       activeTab={activeTab}
       onSelectTab={(tabId) => {
         if (canAccessTab(user.role, tabId)) {
@@ -310,6 +312,7 @@ function Application() {
       loading={loading}
       onRefresh={loadData}
       onAssistantPrefill={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
+      onAssistantSupportDraft={(draft) => { setAssistantSupportDraft({ actorId: user.id, draft }); navigateApp(workspacePathForTab('support')); }}
       onLogout={async () => {
         try {
           await logout();
@@ -317,6 +320,7 @@ function Application() {
           // logout already clears local credentials, even if server revocation fails.
           console.warn('Server sign-out could not be confirmed', requestError?.status);
         } finally {
+          setAssistantSupportDraft(null); setActiveGlobalModal(null);
           setUser(null);
           navigateApp("/login", { replace: true });
         }
@@ -377,7 +381,7 @@ function Application() {
         />
       )}
       {activeTab === "profile" && <ProfilePage user={user} onUserUpdated={setUser} />}
-      {!user.passwordResetRequired && activeTab === "support" && <React.Suspense fallback={<p role="status">{translate("support.loading")}</p>}><SupportPage user={user} conversationId={routeParams.get("conversation") || undefined} sessionId={routeParams.get("session") || undefined} /></React.Suspense>}
+      {!user.passwordResetRequired && activeTab === "support" && <React.Suspense fallback={<p role="status">{translate("support.loading")}</p>}><SupportPage user={user} conversationId={routeParams.get("conversation") || undefined} sessionId={routeParams.get("session") || undefined} initialDraft={assistantSupportDraft?.actorId === user.id ? assistantSupportDraft.draft : undefined} onDraftApplied={() => setAssistantSupportDraft(null)} /></React.Suspense>}
       {!user.passwordResetRequired && activeTab === 'stock' && canAccessTab(user.role, 'stock') && <StockPage locale={locale} user={user} maintenance={maintenance} />}
       {!user.passwordResetRequired && PAYMENT_FEATURES_ENABLED && activeTab === "payments" && (
         <React.Suspense fallback={<p role="status">{translate("ui.loading_payments_b1f91304")}</p>}>

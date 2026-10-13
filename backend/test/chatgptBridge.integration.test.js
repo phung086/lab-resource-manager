@@ -3,18 +3,33 @@ import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import express from 'express';
+import request from 'supertest';
+import bcrypt from 'bcryptjs';
 import { PROTOCOL_VERSION_META_KEY, CLIENT_CAPABILITIES_META_KEY } from '@modelcontextprotocol/server';
 import { buildBridgeConfig, CHATGPT_STABLE_REDIRECT } from '../src/chatgptBridge/config.js';
 import { createBridgeOAuth } from '../src/chatgptBridge/oauth.js';
 import { createBridgeEvents, EVENT_NAME } from '../src/chatgptBridge/events.js';
-import { buildBridgeMcp } from '../src/chatgptBridge/mcp.js';
 import { pkceChallenge } from '../src/chatgptBridge/crypto.js';
 
 const url = new URL(process.env.CHATGPT_BRIDGE_TEST_DATABASE_URL || '');
-assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname)); assert.equal(url.pathname, '/lab_resources_chatgpt_bridge_test');
-process.env.DATABASE_URL = url.href;
+assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname)); assert.ok(['/lab_resources_chatgpt_bridge_test', '/lab_resources_chatgpt_actions_test'].includes(url.pathname));
+// Configure the guarded database before importing any module that owns a Prisma
+// client. Optional provider integrations stay off; charges are pending only.
+Object.assign(process.env, { DATABASE_URL: url.href, NODE_ENV: 'test', LOG_FORMAT: 'dev',
+  JWT_SECRET: 'bridge-actions-isolated-contract-test-secret-32-characters', PAYMENTS_ENABLED: 'true', VNPAY_ENABLED: 'false',
+  EMAIL_ENABLED: 'false', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '', OPENAI_API_KEY: '', CHATGPT_BRIDGE_ENABLED: 'false', MCP_ASSISTANT_ENABLED: 'false' });
+const { buildBridgeMcp } = await import('../src/chatgptBridge/mcp.js');
 const { createBridgeRequests } = await import('../src/chatgptBridge/requests.js');
 const { prisma: toolDatabase } = await import('../src/db.js');
+const { createApp } = await import('../src/app.js');
+const { requireAuth } = await import('../src/middleware/auth.js');
+const { createBridgeOAuthRouters } = await import('../src/chatgptBridge/routes.js');
+const businessApp = createApp();
+let customerBearer;
+const customerHttp = (method, path, body) => {
+  const call = request(businessApp)[method]('/api' + path).set('Authorization', `Bearer ${customerBearer}`);
+  return body ? call.send(body) : call;
+};
 const prisma = new PrismaClient({ datasources: { db: { url: url.href } } });
 const settings = buildBridgeConfig({ NODE_ENV: 'test', CHATGPT_BRIDGE_ENABLED: 'true', CHATGPT_BRIDGE_PUBLIC_ORIGIN: 'https://lab.example', CHATGPT_BRIDGE_SECRET_KEY: randomBytes(32).toString('base64') });
 let clock = new Date(), owner, alice, bob, client, grant, access, server, origin, fixtureLab, fixtureBooking;
@@ -44,13 +59,13 @@ const rpc = async (method, params = {}, bearer = access) => {
   return { status: response.status, challenge: response.headers.get('www-authenticate'), body: await response.json() };
 };
 test.before(async () => {
-  assert.equal((await prisma.$queryRaw`SELECT current_database() AS name`)[0].name, 'lab_resources_chatgpt_bridge_test');
+  assert.equal((await prisma.$queryRaw`SELECT current_database() AS name`)[0].name, url.pathname.slice(1));
   assert.ok((await prisma.user.findMany({ select: { email: true } })).every(row => row.email.endsWith('@bridge.test')));
   await prisma.chatgptBridgeGrant.updateMany({ where: { revokedAt: null }, data: { revokedAt: clock } });
   await prisma.chatgptBridgeRequest.updateMany({ where: { status: 'PENDING' }, data: { status: 'CANCELLED' } });
   await prisma.chatgptBridgeDelivery.updateMany({ where: { status: 'PENDING' }, data: { status: 'CANCELLED' } });
   const marker = randomUUID();
-  const user = role => prisma.user.create({ data: { id: randomUUID(), email: `${role}-${randomUUID()}@bridge.test`, fullName: role, role, passwordHash: 'test-only-not-a-password' } });
+  const user = role => prisma.user.create({ data: { id: randomUUID(), email: `${role.toLowerCase()}-${randomUUID()}@bridge.test`, fullName: role, role, passwordHash: 'test-only-not-a-password' } });
   owner = await user('ADMIN'); alice = await user('CUSTOMER'); bob = await user('CUSTOMER');
   client = await oauth.register({ client_name: 'Integration fixture', redirect_uris: [CHATGPT_STABLE_REDIRECT], token_endpoint_auth_method: 'none' });
   const campus = await prisma.campus.create({ data: { id: randomUUID(), code: 'BRIDGE-' + marker, name: 'Bridge Test Campus' } });
@@ -61,10 +76,49 @@ test.before(async () => {
   fixtureBooking = await prisma.booking.create({ data: { id: randomUUID(), resourceId: resource.id, requestedById: bob.id, title: 'Private Bob booking',
     purpose: 'Private', startAt: new Date(clock.getTime() + 86400000), endAt: new Date(clock.getTime() + 90000000), status: 'CONFIRMED', feeAmountVnd: 60000 } });
   const app = express(); app.use(express.json()); app.post('/mcp/support-bridge', buildBridgeMcp({ oauth, requests, events, settings }));
+  app.use(createBridgeOAuthRouters({ oauth, requireAuth }).publicRouter);
   app.use((error, _req, res, _next) => res.status(error.status || 500).json({ error: { code: error.code || 'FAILED' } }));
   server = await new Promise(resolve => { const http = app.listen(0, '127.0.0.1', () => resolve(http)); }); origin = 'http://127.0.0.1:' + server.address().port;
 });
 test.after(async () => { await new Promise(resolve => server?.close(resolve)); await prisma.$disconnect(); await toolDatabase.$disconnect(); });
+
+test('OAuth HTTP ignores extensions without bypassing consent or required security fields', async () => {
+  const required = { response_type: 'code', client_id: client.client_id, redirect_uri: CHATGPT_STABLE_REDIRECT,
+    state: 'extension-connection-state', code_challenge: pkceChallenge(verifier), code_challenge_method: 'S256',
+    resource: settings.resource, scope: settings.scopes.join(' ') };
+  const beforeGrants = await prisma.chatgptBridgeGrant.count();
+  const beforeCodes = await prisma.chatgptBridgeCode.count();
+  const extension = 'ignored-oauth-extension-marker';
+  const response = await fetch(origin + '/oauth/chatgpt/authorize?' + new URLSearchParams({ ...required,
+    prompt: 'consent', extension_hint: extension, role: 'ADMIN', return_to: 'https://attacker.example' }), { redirect: 'manual' });
+  assert.equal(response.status, 302); assert.equal(response.headers.get('cache-control'), 'no-store');
+  const target = new URL(response.headers.get('location'));
+  assert.equal(target.origin, settings.uiOrigin); assert.equal(target.pathname, '/workspace/chatgpt-bridge');
+  assert.deepEqual([...target.searchParams.keys()], ['ticket']);
+  const ticket = target.searchParams.get('ticket');
+  assert.ok((await oauth.inspectConsent(ticket, owner)).scopes.includes('lab.assistant.read'));
+  assert.equal(await prisma.chatgptBridgeGrant.count(), beforeGrants);
+  const persisted = await prisma.chatgptBridgeCode.findFirst({ where: { state: required.state } });
+  assert.ok(!JSON.stringify(persisted).includes(extension));
+  const denied = new URL((await oauth.consent(ticket, owner, false)).redirectUrl);
+  assert.equal(denied.origin + denied.pathname, CHATGPT_STABLE_REDIRECT);
+  assert.equal(denied.searchParams.get('state'), required.state);
+  assert.equal(denied.searchParams.get('error'), 'access_denied');
+  assert.deepEqual([...denied.searchParams.keys()].sort(), ['error', 'iss', 'state']);
+  for (const changed of [
+    { response_type: 'token' }, { client_id: 'unregistered-client' }, { redirect_uri: 'https://attacker.example/callback' },
+    { resource: 'https://attacker.example' }, { scope: 'lab.assistant.read' }, { code_challenge_method: 'plain' },
+    { code_challenge: 'invalid' }, { state: '' },
+  ]) {
+    const invalid = await fetch(origin + '/oauth/chatgpt/authorize?' + new URLSearchParams({ ...required, ...changed,
+      extension_hint: extension }), { redirect: 'manual' });
+    assert.equal(invalid.status, 400); assert.equal(invalid.headers.get('location'), null);
+  }
+  const duplicate = new URLSearchParams(required); duplicate.append('resource', settings.resource);
+  assert.equal((await fetch(origin + '/oauth/chatgpt/authorize?' + duplicate, { redirect: 'manual' })).status, 400);
+  assert.equal(await prisma.chatgptBridgeCode.count(), beforeCodes + 1);
+  assert.equal(await prisma.chatgptBridgeGrant.count(), beforeGrants);
+});
 
 test('OAuth exact callback, audience, S256 and administrator consent fail closed', async () => {
   await assert.rejects(oauth.register({ redirect_uris: ['https://attacker.example/callback'] }));
@@ -73,8 +127,16 @@ test('OAuth exact callback, audience, S256 and administrator consent fail closed
   await assert.rejects(oauth.consent(pending.ticket, owner, true));
   await assert.rejects(oauth.exchange({ grant_type: 'authorization_code', client_id: client.client_id, code: pending.code,
     redirect_uri: CHATGPT_STABLE_REDIRECT, resource: settings.resource, code_verifier: randomBytes(48).toString('base64url') }));
-  const tokens = await exchange(pending.code); access = tokens.access_token;
+  const exchanged = await fetch(origin + '/oauth/chatgpt/token', { method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'authorization_code', client_id: client.client_id, code: pending.code,
+      redirect_uri: CHATGPT_STABLE_REDIRECT, resource: settings.resource, code_verifier: verifier,
+      extension_hint: 'ignored-token-extension' }) });
+  assert.equal(exchanged.status, 200); assert.equal(exchanged.headers.get('cache-control'), 'no-store');
+  const tokens = await exchanged.json(); access = tokens.access_token;
   grant = (await oauth.authenticate(access)).grant;
+  const connection = await oauth.listConnections(owner);
+  assert.equal(connection.authorized, true); assert.equal(connection.connected, false);
   await assert.rejects(exchange(pending.code));
   const stored = await prisma.chatgptBridgeToken.findMany({ where: { grantId: grant.id } });
   assert.ok(stored.every(row => row.tokenHash !== access && row.tokenHash.length === 64));
@@ -89,6 +151,8 @@ test('modern MCP discovery advertises Events and authenticated tools on the wire
   const tools = await rpc('tools/list'); assert.deepEqual(tools.body.result.tools.map(t => t.name).sort(), ['get_question_context', 'publish_question_reply', 'read_question_data']);
   const sub = await rpc('events/subscribe', { name: EVENT_NAME, arguments: {}, delivery: { mode: 'webhook', url: 'https://receiver.example/questions', secret: 'whsec_' + randomBytes(32).toString('base64') } });
   assert.ok(sub.body.result?.id, JSON.stringify(sub.body.error));
+  const connection = await oauth.listConnections(owner);
+  assert.equal(connection.authorized, true); assert.equal(connection.connected, true);
 });
 
 test('authenticated older clients discover the same tools without losing OAuth checks', async () => {
@@ -181,6 +245,98 @@ test('parallel data reads reserve a finite per-question budget', async () => {
   await requests.cancel(alice, job.id);
 });
 
+test('booking review drafts use live rules and quotes without creating bookings or payments', async () => {
+  const proposal = { kind: 'BOOKING', resourceId: fixtureBooking.resourceId, title: 'Khách đặt phòng', purpose: 'Sử dụng phòng thí nghiệm', purposeCode: 'SERVICE',
+    startAt: new Date(clock.getTime() + 3 * 86400000).toISOString(), endAt: new Date(clock.getTime() + 3 * 86400000 + 3600000).toISOString() };
+  const job = await ask(); await requests.context(grant, job.id);
+  const counts = await Promise.all([prisma.booking.count(), prisma.paymentTransaction.count(), prisma.supportSession.count()]);
+  await assert.rejects(requests.reply(grant, { requestId: job.id, generation: grant.generation, answer: 'Xem đề xuất.', proposals: [{ ...proposal, userId: bob.id }] }));
+  const input = { requestId: job.id, generation: grant.generation, answer: 'Xem và xác nhận khung giờ.', proposals: [proposal] };
+  const response = await rpc('tools/call', { name: 'publish_question_reply', arguments: input });
+  assert.equal(response.body.result?.structuredContent?.status, 'ANSWERED', JSON.stringify(response.body));
+  const draft = (await requests.read(alice, job.id)).proposals[0];
+  assert.equal(draft.resourceName, 'Test booking resource'); assert.equal(draft.quote.amountVnd, 75000); assert.equal(draft.quote.version, 2);
+  assert.equal(Date.parse(draft.expiresAt) - clock.getTime(), 5 * 60000);
+  assert.deepEqual(await Promise.all([prisma.booking.count(), prisma.paymentTransaction.count(), prisma.supportSession.count()]), counts);
+  assert.equal((await requests.reply(grant, input)).alreadyPublished, true);
+  await assert.rejects(requests.reply(grant, { ...input, proposals: [{ ...proposal, title: 'Đề xuất khác' }] }), error => error.code === 'BRIDGE_REPLY_CONFLICT');
+});
+
+test('review preparation rejects overlap, operational blocks, duration, past times and unsupported writes', async () => {
+  const proposal = { kind: 'BOOKING', resourceId: fixtureBooking.resourceId, title: 'Đặt phòng kiểm thử', purpose: 'Sử dụng phòng thí nghiệm', purposeCode: 'SERVICE',
+    startAt: fixtureBooking.startAt.toISOString(), endAt: fixtureBooking.endAt.toISOString() };
+  const job = await ask(); await requests.context(grant, job.id);
+  const publish = proposals => requests.reply(grant, { requestId: job.id, generation: grant.generation, answer: 'Xem đề xuất.', proposals });
+  await assert.rejects(publish([proposal]), error => error.status === 409);
+  const clear = { ...proposal, startAt: new Date(clock.getTime() + 4 * 86400000).toISOString(), endAt: new Date(clock.getTime() + 4 * 86400000 + 3600000).toISOString() };
+  await prisma.resource.update({ where: { id: clear.resourceId }, data: { operationalStatus: 'BROKEN' } });
+  await assert.rejects(publish([clear]), error => error.status === 409);
+  await prisma.resource.update({ where: { id: clear.resourceId }, data: { operationalStatus: 'AVAILABLE' } });
+  await assert.rejects(publish([{ ...clear, endAt: new Date(Date.parse(clear.startAt) + 180 * 60000).toISOString() }]), error => error.code === 'RESOURCE_DURATION_LIMIT');
+  await assert.rejects(publish([{ ...clear, startAt: new Date(clock.getTime() - 3600000).toISOString(), endAt: clock.toISOString() }]), error => error.code === 'INVALID_BOOKING_TIME');
+  for (const extra of [{ requestedById: bob.id }, { feeAmountVnd: 1 }, { kind: 'CANCEL_BOOKING' }, { role: 'ADMIN' }]) await assert.rejects(publish([{ ...clear, ...extra }]));
+  await assert.rejects(publish([clear, clear]));
+  assert.equal((await requests.read(alice, job.id)).status, 'PENDING'); await requests.cancel(alice, job.id);
+});
+
+test('staff-support review uses assigned active staff and does not dispatch until customer submission', async () => {
+  const job = await ask(); await requests.context(grant, job.id);
+  const proposal = { kind: 'STAFF_SUPPORT', laboratoryId: fixtureLab.id, category: 'BOOKING', message: 'Tôi cần trợ giúp chọn lịch phù hợp.' };
+  const publish = () => requests.reply(grant, { requestId: job.id, generation: grant.generation, answer: 'Xem yêu cầu hỗ trợ.', proposals: [proposal] });
+  await assert.rejects(publish(), error => error.code === 'SUPPORT_NO_STAFF');
+  const staff = await prisma.user.create({ data: { id: randomUUID(), email: `${randomUUID()}@bridge.test`, fullName: 'Support fixture', role: 'LAB_STAFF', passwordHash: 'fixture-only' } });
+  await prisma.userLabAssignment.create({ data: { userId: staff.id, laboratoryId: fixtureLab.id } });
+  const options = await requests.readTool(grant, { requestId: job.id, tool: 'get_support_options', input: {} });
+  assert.ok(options.data.laboratories.some(lab => lab.id === fixtureLab.id)); assert.ok(!JSON.stringify(options).includes(staff.email));
+  const before = await prisma.supportSession.count(); await publish();
+  assert.equal(await prisma.supportSession.count(), before);
+  assert.equal((await requests.read(alice, job.id)).proposals[0].laboratoryName, fixtureLab.name);
+  await prisma.user.update({ where: { id: staff.id }, data: { isActive: false } });
+});
+
+test('explicit normal booking confirmation rechecks changed price and overlapping reservations', async () => {
+  const password = 'BridgeActions!2026';
+  await prisma.user.update({ where: { id: alice.id }, data: { passwordHash: await bcrypt.hash(password, 4) } });
+  const login = await request(businessApp).post('/api/auth/login').send({ email: alice.email, password });
+  assert.equal(login.status, 200, JSON.stringify(login.body)); customerBearer = login.body.accessToken;
+  const proposal = { kind: 'BOOKING', resourceId: fixtureBooking.resourceId, title: 'Khách xác nhận phòng', purpose: 'Sử dụng phòng thí nghiệm', purposeCode: 'SERVICE',
+    startAt: new Date(clock.getTime() + 5 * 86400000).toISOString(), endAt: new Date(clock.getTime() + 5 * 86400000 + 3600000).toISOString() };
+  const job = await ask(); await requests.context(grant, job.id);
+  await requests.reply(grant, { requestId: job.id, generation: grant.generation, answer: 'Kiểm tra rồi xác nhận.', proposals: [proposal] });
+  const draft = (await requests.read(alice, job.id)).proposals[0];
+  await prisma.resourcePricingRule.updateMany({ where: { resourceId: proposal.resourceId }, data: { hourlyRateVnd: 90000, version: { increment: 1 } } });
+  const { kind: _kind, ...bookingInput } = proposal;
+  const body = { ...bookingInput, acceptedQuote: { amountVnd: draft.quote.amountVnd, version: draft.quote.version }, contact: { fullName: 'Khách kiểm thử', phone: '0900000001' } };
+  const changed = await customerHttp('post', '/bookings', body);
+  assert.equal(changed.status, 409); assert.equal(changed.body.error.code, 'PRICING_CHANGED');
+  const fresh = await customerHttp('post', '/booking-pricing/quote', { resourceId: proposal.resourceId, purposeCode: proposal.purposeCode, startAt: proposal.startAt, endAt: proposal.endAt });
+  assert.equal(fresh.status, 200, JSON.stringify(fresh.body));
+  body.acceptedQuote = { amountVnd: fresh.body.amountVnd, version: fresh.body.version, loyaltyPolicyVersion: fresh.body.loyaltyPolicyVersion };
+  const confirmed = await customerHttp('post', '/bookings', body);
+  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body)); assert.equal(confirmed.body.status, 'CONFIRMED');
+  assert.equal(confirmed.body.requestedById, alice.id); assert.equal(confirmed.body.feeAmountVnd, fresh.body.amountVnd);
+  assert.equal((await prisma.paymentTransaction.findFirst({ where: { bookingId: confirmed.body.id } })).status, 'pending');
+  const overlap = await customerHttp('post', '/bookings', body); assert.equal(overlap.status, 409);
+  assert.equal(await prisma.booking.count({ where: { resourceId: proposal.resourceId, startAt: new Date(proposal.startAt) } }), 1);
+});
+
+test('explicit normal staff-support submission is idempotent and preserves the customer message', async () => {
+  const staff = await prisma.user.create({ data: { id: randomUUID(), email: `${randomUUID()}@bridge.test`, fullName: 'Staff confirm fixture', role: 'LAB_STAFF', passwordHash: 'fixture-only' } });
+  await prisma.userLabAssignment.create({ data: { userId: staff.id, laboratoryId: fixtureLab.id } });
+  const proposal = { kind: 'STAFF_SUPPORT', laboratoryId: fixtureLab.id, category: 'BOOKING', message: 'Tôi cần nhân viên hỗ trợ đặt lịch.' };
+  const job = await ask(); await requests.context(grant, job.id);
+  await requests.reply(grant, { requestId: job.id, generation: grant.generation, answer: 'Kiểm tra yêu cầu rồi gửi.', proposals: [proposal] });
+  const { kind: _kind, ...supportInput } = proposal;
+  const body = { ...supportInput, requestId: randomUUID() }, before = await prisma.supportSession.count();
+  const first = await customerHttp('post', '/support/sessions', body);
+  assert.equal(first.status, 201, JSON.stringify(first.body)); assert.equal(first.body.status, 'WAITING');
+  const repeated = await customerHttp('post', '/support/sessions', body); assert.equal(repeated.status, 201); assert.equal(repeated.body.id, first.body.id);
+  assert.equal(await prisma.supportSession.count(), before + 1);
+  assert.equal((await prisma.supportMessage.findFirst({ where: { sessionId: first.body.id, kind: 'CUSTOMER' } })).body, proposal.message);
+  const cancelled = await customerHttp('post', `/support/sessions/${first.body.id}/cancel`, { reason: 'Kết thúc kiểm thử' });
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
+});
+
 test('expiry, staff handoff and customer credentials reject late replies', async () => {
   const expired = await ask(); clock = new Date(clock.getTime() + settings.requestTtlMs + 1);
   assert.equal((await requests.read(alice, expired.id)).status, 'EXPIRED');
@@ -211,10 +367,12 @@ test('administrator disconnect is audited once and unknown grants leave no audit
 test('refresh rotation detects replay and revokes the whole old connection', async () => {
   const authorized = await authorize(), tokens = await exchange(authorized.code);
   const refresh = { grant_type: 'refresh_token', client_id: client.client_id, resource: settings.resource, refresh_token: tokens.refresh_token };
-  const renewed = await oauth.exchange(refresh); assert.ok(Boolean(renewed.access_token));
+  const renewed = await oauth.exchange({ ...refresh, extension_hint: 'ignored-refresh-extension' }); assert.ok(Boolean(renewed.access_token));
   await assert.rejects(oauth.exchange(refresh));
   await assert.rejects(oauth.authenticate(renewed.access_token));
   const authorizedAgain = await authorize(), fresh = await exchange(authorizedAgain.code);
   await prisma.user.update({ where: { id: owner.id }, data: { authVersion: { increment: 1 } } });
   await assert.rejects(oauth.authenticate(fresh.access_token), error => error.code === 'BRIDGE_CONNECTION_REVOKED');
+  const connection = await oauth.listConnections({ ...owner, authVersion: owner.authVersion + 1 });
+  assert.equal(connection.authorized, false); assert.equal(connection.connected, false);
 });

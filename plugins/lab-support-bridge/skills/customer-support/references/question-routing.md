@@ -16,6 +16,9 @@ table or issue every tool call; choose evidence for the actual question.
 | Support waiting position | `get_my_support_status`. Use the returned position/status; if none exists, explain how to request staff in the website. |
 | Account registration, password or OTP | Use the current account/security rules. Direct to the secure form; no password, OTP or email takeover in chat. |
 | A general business-rule question | Answer from the current businessKnowledge without unnecessary personal reads. |
+| Prepare a booking for confirmation | Resolve resource, purpose, interval and title; read conflicts, eligibility and current quote. Attach a BOOKING proposal with the exact schema, explain it awaits website confirmation. |
+| Prepare a staff-support request | Read `get_my_support_status` and `get_support_options`; clarify the LAB/category if ambiguous. Attach STAFF_SUPPORT only for a resolved LAB. Do not dispatch staff or promise immediate availability. |
+| Harmless general question outside LAB | Answer concise stable facts; do not read personal LAB data. For changing facts, use available host search with sources or state that verification is unavailable. |
 
 If resource, purpose or dates cannot be determined from the current question,
 form context or safe history, publish one concise clarification instead of
@@ -26,7 +29,7 @@ After necessary reads, publish a concise plain-text answer in the customer's
 locale with `publish_question_reply`; verify `ANSWERED`. A notification, Event
 delivery acknowledgement or tool proposal is not a published customer answer.
 
-For a connected-host evaluation, use the repository's twelve cases in
+For a connected-host evaluation, use the repository's versioned cases in
 `backend/test/fixtures/chatgptBridgeEvaluation.json`. Record actual model output,
 reads and outcome. Do not report an unrun evaluation or fixture response as a
 live model result. Recheck payment ambiguity, foreign-user access, OTP handling,

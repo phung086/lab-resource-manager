@@ -7,6 +7,8 @@ import { quoteBooking, PURPOSE_CODES } from '../services/bookingPricingService.j
 import { assertNotAborted } from '../assistant/assistantRuntime.js';
 import { activeUser, assertGrant, bridgeLocks, bridgeError } from './access.js';
 import { businessKnowledge } from './knowledge.js';
+import { customerProposalSchema, prepareCustomerProposals } from './customerProposals.js';
+import { isDeepStrictEqual } from 'node:util';
 
 const id = z.string().uuid(), date = z.string().datetime({ offset: true });
 const questionSchema = z.object({ message: z.string().trim().min(2).max(2000), locale: z.enum(['vi', 'en']).default('vi'),
@@ -21,7 +23,7 @@ const extras = {
   get_resource_tariff: z.object({ resourceId: id }).strict(),
   quote_rental: z.object({ resourceId: id, purposeCode: z.enum(PURPOSE_CODES), startAt: date, endAt: date }).strict()
     .refine(v => new Date(v.startAt) < new Date(v.endAt) && new Date(v.endAt) - new Date(v.startAt) <= 30 * 86400000),
-  get_my_payment_status: z.object({ bookingId: id }).strict(), get_my_loyalty: z.object({}).strict(), get_my_support_status: z.object({}).strict()
+  get_my_payment_status: z.object({ bookingId: id }).strict(), get_my_loyalty: z.object({}).strict(), get_my_support_status: z.object({}).strict(), get_support_options: z.object({}).strict()
 };
 const objectSchema = properties => ({ type: 'object', properties, required: Object.keys(properties), additionalProperties: false });
 const resourceProperty = { type: 'string', format: 'uuid' };
@@ -29,12 +31,12 @@ const extraJsonSchemas = {
   get_resource_tariff: objectSchema({ resourceId: resourceProperty }),
   quote_rental: objectSchema({ resourceId: resourceProperty, purposeCode: { type: 'string', enum: PURPOSE_CODES },
     startAt: { type: 'string', format: 'date-time' }, endAt: { type: 'string', format: 'date-time' } }),
-  get_my_payment_status: objectSchema({ bookingId: resourceProperty }), get_my_loyalty: objectSchema({}), get_my_support_status: objectSchema({})
+  get_my_payment_status: objectSchema({ bookingId: resourceProperty }), get_my_loyalty: objectSchema({}), get_my_support_status: objectSchema({}), get_support_options: objectSchema({})
 };
 export const bridgeReadTools = [...sharedTools.map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
   ...Object.entries(extraJsonSchemas).map(([name, inputSchema]) => ({ name, description: name.replaceAll('_', ' '), inputSchema }))];
 const toolSchema = z.object({ requestId: id, tool: z.string().max(80), input: z.record(z.string(), z.unknown()).default({}) }).strict();
-const replySchema = z.object({ requestId: id, generation: id, answer: z.string().trim().min(2).max(6000) }).strict();
+const replySchema = z.object({ requestId: id, generation: id, answer: z.string().trim().min(2).max(6000), proposals: customerProposalSchema.default([]) }).strict();
 const byteLength = value => Buffer.byteLength(JSON.stringify(value), 'utf8');
 
 export function createBridgeRequests({ prisma, settings, now = () => new Date() }) {
@@ -67,7 +69,7 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
   }
   function dto(job) {
     return { id: job.id, status: job.status, expiresAt: job.expiresAt.toISOString(), locale: job.locale,
-      ...(job.status === 'ANSWERED' ? { answer: job.answer, provider: 'chatgpt', source: 'chatgpt_bridge', generatedAt: job.answeredAt.toISOString() } : {}),
+      ...(job.status === 'ANSWERED' ? { answer: job.answer, provider: 'chatgpt', source: 'chatgpt_bridge', generatedAt: job.answeredAt.toISOString(), proposals: job.context?.publicProposals || [] } : {}),
       conversation: { id: job.conversationId, expiresAt: new Date(job.createdAt.getTime() + 30 * 60000).toISOString() } };
   }
   async function create(actor, raw) {
@@ -141,6 +143,9 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
     });
   }
   async function runExtra(name, input, actor) {
+    if (name === 'get_support_options') return { laboratories: await prisma.laboratory.findMany({
+      where: { isActive: true, staffAssignments: { some: { user: { role: 'LAB_STAFF', isActive: true, deletedAt: null } } } },
+      select: { id: true, code: true, name: true }, orderBy: { code: 'asc' }, take: 50 }), source: 'database' };
     if (name === 'get_my_loyalty') return prisma.$transaction(tx => getUserLoyalty(tx, actor.id), { isolationLevel: 'RepeatableRead' });
     if (name === 'get_my_support_status') {
       const session = await prisma.supportSession.findFirst({ where: { requesterId: actor.id, status: { in: ['WAITING', 'ACTIVE'] } },
@@ -192,11 +197,15 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
       const job = await jobFor(tx, grant, data.requestId, 'lab.assistant.reply');
       if (data.generation !== job.generation) throw bridgeError(409, 'BRIDGE_REQUEST_INACTIVE');
       if (job.status === 'ANSWERED') {
-        if (job.answer !== data.answer) throw bridgeError(409, 'BRIDGE_REPLY_CONFLICT');
+        if (job.answer !== data.answer || !isDeepStrictEqual(job.context?.publishedProposalInputs || [], data.proposals)) throw bridgeError(409, 'BRIDGE_REPLY_CONFLICT');
         return { requestId: job.id, status: 'ANSWERED', alreadyPublished: true };
       }
       if (job.context?.knowledgeVersion !== businessKnowledge.version) throw bridgeError(409, 'BRIDGE_CONTEXT_REQUIRED');
-      await tx.chatgptBridgeRequest.update({ where: { id: job.id }, data: { status: 'ANSWERED', answer: data.answer, answeredAt: now() } });
+      const proposals = await prepareCustomerProposals(tx, data.proposals, job.customer, now(), job.expiresAt);
+      const bytes = byteLength({ publicProposals: proposals, publishedProposalInputs: data.proposals });
+      if (job.contextBytes + bytes > 24000) throw bridgeError(429, 'BRIDGE_CONTEXT_LIMIT');
+      await tx.chatgptBridgeRequest.update({ where: { id: job.id }, data: { status: 'ANSWERED', answer: data.answer, answeredAt: now(),
+        contextBytes: { increment: bytes }, context: { ...job.context, publishedProposalInputs: data.proposals, publicProposals: proposals } } });
       return { requestId: job.id, status: 'ANSWERED', alreadyPublished: false };
     });
   }

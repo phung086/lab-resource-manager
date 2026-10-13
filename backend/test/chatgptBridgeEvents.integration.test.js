@@ -7,7 +7,7 @@ import { buildBridgeConfig } from '../src/chatgptBridge/config.js';
 import { open } from '../src/chatgptBridge/crypto.js';
 
 const url = new URL(process.env.CHATGPT_BRIDGE_TEST_DATABASE_URL || '');
-assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname)); assert.equal(url.pathname, '/lab_resources_chatgpt_bridge_test');
+assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname)); assert.ok(['/lab_resources_chatgpt_bridge_test', '/lab_resources_chatgpt_actions_test'].includes(url.pathname));
 const prisma = new PrismaClient({ datasources: { db: { url: url.href } } });
 const settings = buildBridgeConfig({ NODE_ENV: 'test', CHATGPT_BRIDGE_ENABLED: 'true', CHATGPT_BRIDGE_PUBLIC_ORIGIN: 'https://lab.example',
   CHATGPT_BRIDGE_SECRET_KEY: randomBytes(32).toString('base64') });
@@ -23,7 +23,7 @@ const events = createBridgeEvents({ prisma, settings, now: () => clock, sendWebh
 const subscribe = () => events.subscribe(grant, { name: EVENT_NAME, arguments: {}, delivery: { mode: 'webhook', url: 'https://receiver.example/callback', secret }, cursor: null });
 
 test.before(async () => {
-  assert.equal((await prisma.$queryRaw`SELECT current_database() AS name`)[0].name, 'lab_resources_chatgpt_bridge_test');
+  assert.equal((await prisma.$queryRaw`SELECT current_database() AS name`)[0].name, url.pathname.slice(1));
   assert.ok((await prisma.user.findMany({ select: { email: true } })).every(row => row.email.endsWith('@bridge.test')));
   // Expire/revoke only previous fixtures in this dedicated database; no reset or
   // delete of business records, and no fabricated GPT/provider reply.

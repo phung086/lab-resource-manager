@@ -52,6 +52,9 @@ export interface QuickBookingModalProps {
     date?: string;
     time?: string;
     resourceName?: string;
+    title?: string;
+    purpose?: string;
+    purposeCode?: string;
   } | null;
   resources?: Array<{
     id: string;
@@ -131,10 +134,15 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     let active = true;
     setPricingRules([]); setPurposeCode(""); setQuote(null); setPricingLoaded(false); setQuoteError("");
     if (isOpen && resourceId) apiRequest(`/booking-pricing/${encodeURIComponent(resourceId)}`)
-      .then(rows => { if (active) { setPricingRules(rows); setPurposeCode(rows.some((row: any) => row.purposeCode === initialDraft?.purposeCode) ? initialDraft!.purposeCode : rows[0]?.purposeCode || ""); setPricingLoaded(true); } })
+      .then(rows => { if (active) {
+        const desired = initialDraft?.purposeCode || initialSlot?.purposeCode;
+        setPricingRules(rows);
+        setPurposeCode(desired && rows.some((row: any) => row.purposeCode === desired) ? desired : initialSlot?.purposeCode ? "" : rows[0]?.purposeCode || "");
+        setPricingLoaded(true);
+      } })
       .catch(e => { if (active) setQuoteError(e.message); });
     return () => { active = false; };
-  }, [isOpen, resourceId, pricingRetry, initialDraft]);
+  }, [isOpen, resourceId, pricingRetry, initialDraft, initialSlot?.purposeCode]);
 
   const quoteKey = `${resourceId}|${purposeCode}|${selectedDate}|${startTime}|${endTime}`;
   useEffect(() => {
@@ -208,6 +216,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       setSelectedDate(initialDraft.date); setStartTime(initialDraft.start); setEndTime(initialDraft.end);
       setTitle(initialDraft.title); setPurpose(initialDraft.purpose);
     } else if (initialSlot?.startAt) {
+      setTitle(initialSlot.title || ""); setPurpose(initialSlot.purpose || "");
       const slotDate = toVietnamDateString(initialSlot.startAt);
       const slotStart = toVietnamTimeString(initialSlot.startAt);
       if (slotDate) setSelectedDate(slotDate);

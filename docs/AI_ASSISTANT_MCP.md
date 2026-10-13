@@ -193,9 +193,10 @@ It is disabled unless explicitly configured. No API key is needed for this path,
 but an installed connection, ADMIN OAuth consent and subscribed Work chat are.
 
 Three remote tools: `get_question_context`, `read_question_data` and
-`publish_question_reply`. The last writes chat text only. Read schemas allow
+`publish_question_reply`. The last writes chat text and optional review drafts,
+never business records. Read schemas allow
 catalogue/detail/slots/conflicts/eligibility, owned bookings/notifications/incidents,
-resource tariff/rental quote and owned payment/loyalty/support status. Business
+resource tariff/rental quote, active LAB support options and owned payment/loyalty/support status. Business
 reads use the request's current CUSTOMER identity, not the OAuth owner's ADMIN
 scope. No passwords, tokens, contact snapshots, provider URLs, other customers'
 records, private support transcripts or global operational audit are projected.
@@ -207,6 +208,16 @@ support, emails and privacy. Context includes this version, fresh time and safe
 navigation paths. Dynamic values require a fresh scoped tool read; prior answers
 are conversation only. Publish requires the current context version. This is
 retrieval/grounding, not fine-tuning, and does not certify model accuracy.
+
+Optional `proposals` is a strict discriminated union: at most one BOOKING and one
+STAFF_SUPPORT. Server checks current resource/LAB, policy, overlap, care, training
+and quote, or active assigned staff. It derives display names and quote itself;
+model-supplied actor, price, URL or unsupported action is rejected. Drafts expire
+after five minutes or request expiry, whichever comes first. Identical answer and
+proposal replay is idempotent after PostgreSQL JSONB key reordering. The customer
+opens the ordinary booking or support form; only its explicit submission performs
+the business action. Those APIs retain current auth/RBAC, version/quote checks,
+booking exclusion and support idempotency/dispatch. A typed yes does not submit.
 
 OAuth: exact configured ChatGPT callbacks, S256 PKCE, explicit audience/scopes,
 ADMIN consent, hashed code/access/refresh tokens, refresh rotation/replay revocation
@@ -230,25 +241,34 @@ with `backend/scripts/buildChatgptBridgePlugin.mjs`; the script checks HTTPS/OAu
 metadata and anonymous rejection before producing the package in ignored logs.
 No credentials belong in plugin files. Installation alone is not a connection.
 The private workflow plugin [LAB Customer Support](https://chatgpt.com/plugins/plugins_6ace18242404819191817976606cf5ce)
-is at version 0.1.1. Read-back confirms the original metadata/audience/MCP config
-and adds an intent-to-evidence routing guide for the customer-support skill.
+is at version 0.1.2. Read-back confirms the original metadata/audience/MCP config,
+review-draft guidance and general-question evidence/uncertainty rules.
 Its web listing currently exposes a desktop-only launch. The private web app
 [LAB Support Connection](https://chatgpt.com/plugins/plugin_asdk_app_6ace1b6f93dc8191b806163d21a005d7)
-completed client registration. In-app browser navigation to the review OAuth
-authorize endpoint fails with `ERR_BLOCKED_BY_CLIENT`; user consent in Chrome
-is pending. No live GPT answer has been certified.
+completed client registration and real user consent in Chrome. Authorization and
+token requests now ignore unknown extensions per RFC6749 while keeping required
+security fields exact. A real ChatGPT Chat call for an unknown request ID returned
+NOT_FOUND. Work Cloud reports exhausted usage; no event subscription or automatic
+website answer has been certified. ADMIN status separates authorized from ready
+(an active event subscription). Account replacement is awaiting the user's login.
 
-Verified local checks: 20 backend bridge/security/protocol cases, seven frontend
-poll/cancellation/redirect cases; protocol replies use labelled test fixtures.
-The twelve live-model evaluation scenarios are versioned in
+Verified local checks: 26 backend bridge/security/protocol cases, nine frontend
+poll/cancellation/redirect/proposal cases; protocol replies use labelled test fixtures.
+Canonical booking/support HTTP confirmations were also checked in the isolated
+DB: changed quotes and overlaps rejected, valid booking automatically CONFIRMED,
+payment remained pending, duplicate support request IDs created one WAITING session.
+The 21 live-model evaluation scenarios are versioned in
 `backend/test/fixtures/chatgptBridgeEvaluation.json`; they have not been graded.
 A guarded PostgreSQL `lab_resources_chatgpt_bridge_test` and loopback review
 8001/8002/5174 do not use the shared business database. Only OAuth/MCP gateway
 paths are public in the temporary review tunnel; business endpoints return 404.
 See AI_ASSISTANT_SETUP and INTEGRATION_GUIDE before enabling on the real runtime.
+Repeatable integration testing may use the separately guarded
+`lab_resources_chatgpt_actions_test`, leaving the OAuth review database untouched.
 
 Official sources checked 13 October 2026:
 - [MCP Events](https://developers.openai.com/plugins/build/mcp-events)
 - [Connect and test](https://developers.openai.com/plugins/deploy/connect-chatgpt)
 - [OAuth](https://developers.openai.com/plugins/build/auth)
 - [Plan-usage boundaries](https://developers.openai.com/siwc/token-sharing-open-source)
+- [Guardrails and human review](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)

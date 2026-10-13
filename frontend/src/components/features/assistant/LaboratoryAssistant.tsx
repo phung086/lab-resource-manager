@@ -7,17 +7,18 @@ import { hasMessage } from '../../../i18n.js';
 import { vietnamTimeToIso } from '../../../utils/timezone';
 import { navigateApp, workspacePathForTab } from '../../../workspaceRoutes.js';
 import { askChatgptBridge, type BridgeRequest } from '../../../services/chatgptBridgeApi';
+import { reviewBridgeProposal, type BridgeProposal, type BridgeSupportDraft } from '../../../services/chatgptBridgeProposals';
 import './assistant.css';
 
-type Slot = { resourceId: string; startAt: string; endAt: string; resourceName?: string; resourceCode?: string };
+type Slot = { resourceId: string; startAt: string; endAt: string; resourceName?: string; resourceCode?: string; title?: string; purpose?: string; purposeCode?: string };
 type Action = { type: string; labelKey: string; payload?: Slot };
 type Segment = { text?: string; key?: string; params?: Record<string, unknown>; labels?: Record<string, string>; times?: Record<string, string> };
 type Resource = { id: string; name: string; code: string; category?: string; operationalStatus?: string };
 type Source = { chunkId: string; excerpt: string; document: { title: string; version?: string; fileName?: string } };
-type Answer = { answer: string; summary: Segment[]; locale: string; provider: string; modelStatus: string; source: string; toolsUsed: string[]; actions: Action[]; toolResults: { tool: string; result: Record<string, unknown> }[]; conversation?: { id: string; expiresAt: string; retainedTurns?: number } };
-type Props = { isOpen: boolean; onClose: () => void; onPrefill: (slot: Slot) => void; onNavigate: (tab: string) => void; workspaceTab?: string; actorRole?: string };
+type Answer = { answer: string; summary: Segment[]; locale: string; provider: string; modelStatus: string; source: string; toolsUsed: string[]; actions: Action[]; toolResults: { tool: string; result: Record<string, unknown> }[]; proposals?: BridgeProposal[]; conversation?: { id: string; expiresAt: string; retainedTurns?: number } };
+type Props = { isOpen: boolean; onClose: () => void; onPrefill: (slot: Slot) => void; onSupportDraft?: (draft: BridgeSupportDraft) => void; onNavigate: (tab: string) => void; workspaceTab?: string; actorRole?: string };
 
-export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavigate, workspaceTab, actorRole }: Props) {
+export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onSupportDraft, onNavigate, workspaceTab, actorRole }: Props) {
   const { locale, tr, changeLocale } = useLocale();
   const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
   const panel = useRef<HTMLElement>(null), content = useRef<HTMLDivElement>(null), contextFields = useRef<HTMLDetailsElement>(null);
@@ -142,7 +143,7 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
       if (usesBridge) {
         const work = askChatgptBridge(body, { signal: controller.signal }); bridgeWork.current = work;
         const result = await work;
-        response = { answer: result.answer!, locale: result.locale || locale, provider: 'chatgpt', source: 'chatgpt_bridge', modelStatus: 'ANSWERED', summary: [], toolsUsed: [], toolResults: [], actions: [], conversation: result.conversation };
+        response = { answer: result.answer!, locale: result.locale || locale, provider: 'chatgpt', source: 'chatgpt_bridge', modelStatus: 'ANSWERED', summary: [], toolsUsed: [], toolResults: [], actions: [], conversation: result.conversation, proposals: result.proposals };
       } else response = await apiRequest('/assistant/chat', { method: 'POST', signal: controller.signal, body: JSON.stringify(body) });
       if (!mounted.current || controller.signal.aborted) return;
       if (usesBridge) bridgeConversationId.current = response.conversation?.id;
@@ -160,6 +161,15 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
       ...Object.fromEntries(Object.entries(segment.times || {}).map(([key, value]) => [key, time(value)])) });
   }
   function navigate(tab: 'bookings' | 'resources') { dismiss(false); onNavigate(tab); }
+  function review(proposal: BridgeProposal) {
+    try {
+      const draft = reviewBridgeProposal(proposal);
+      if (draft.kind === 'STAFF_SUPPORT' && !onSupportDraft) throw new Error('bridge.unavailable');
+      dismiss(false);
+      if (draft.kind === 'BOOKING') onPrefill(draft);
+      else onSupportDraft?.(draft);
+    } catch (failure) { setError((failure as Error).message); }
+  }
   if (!isOpen) return null;
 
   return createPortal(<section id="lab-assistant-panel" className={`lab-assistant${messages.length ? ' has-conversation' : ''}`} ref={panel} role="dialog" aria-modal="false" aria-labelledby="lab-assistant-title"
@@ -195,6 +205,14 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
           <div className="assistant-answer">
             {['openai', 'chatgpt'].includes(turn.response.provider) && <><p>{turn.response.answer}</p>{turn.response.locale !== locale && <small>{tr('assistant.previousLanguage', { locale: turn.response.locale.toUpperCase() })}</small>}</>}
             {!['openai', 'chatgpt'].includes(turn.response.provider) && <p>{segments.map(labelText).join('\n')}</p>}
+            {turn.response.proposals?.map(proposal => <div className="assistant-slot-result" key={proposal.id}>
+              <strong>{proposal.kind === 'BOOKING' ? proposal.resourceName : tr('support.handoff')}</strong>
+              {proposal.kind === 'BOOKING' ? <>
+                <p><time dateTime={proposal.startAt}>{time(proposal.startAt)}</time> → <time dateTime={proposal.endAt}>{time(proposal.endAt)}</time></p>
+                <small>{new Intl.NumberFormat(locale === 'en' ? 'en-GB' : 'vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(proposal.quote.amountVnd)}</small>
+              </> : <small>{proposal.laboratoryName}</small>}
+              <button type="button" className="secondary-button" disabled={busy} onClick={() => review(proposal)}>{tr('bridge.reviewProposal')}</button>
+            </div>)}
             {foundResources.map(resource => <article className="assistant-resource-result" key={resource.id}><strong>{resource.name}</strong><small>{resource.code} · {label(`enum.operational.${resource.operationalStatus}`)}</small></article>)}
             {!!foundResources.length && <button type="button" className="secondary-button" onClick={() => navigate('resources')}>{tr('assistant.viewResources')}</button>}
             {slots.map(slot => {

@@ -1,9 +1,11 @@
 import { apiRequest } from '../api.js';
+import { parseBridgeProposals, type BridgeProposal } from './chatgptBridgeProposals.ts';
 
 export type BridgeRequest = {
   id: string; status: 'PENDING' | 'ANSWERED' | 'EXPIRED' | 'CANCELLED' | 'HANDED_OFF';
   expiresAt: string; answer?: string; locale?: string; generatedAt?: string;
   provider?: 'chatgpt'; source?: 'chatgpt_bridge';
+  proposals?: BridgeProposal[];
   conversation?: { id: string; expiresAt: string; retainedTurns?: number };
 };
 export type BridgeQuestion = {
@@ -26,7 +28,7 @@ export function bridgeRedirectUrl(value: unknown) {
   return url.href;
 }
 
-export type BridgeConnectionState = { enabled: boolean; connected: boolean; publicUrl?: string;
+export type BridgeConnectionState = { enabled: boolean; authorized: boolean; connected: boolean; publicUrl?: string;
   connections: { id: string; clientName: string; createdAt: string; expiresAt: string; subscriptionCount: number }[] };
 export type BridgeConsent = { clientName: string; scopes: string[]; expiresAt: string; replacesConnection: boolean };
 export const getBridgeConnections = (signal?: AbortSignal): Promise<BridgeConnectionState> => apiRequest('/chatgpt-bridge/connections', { signal });
@@ -38,6 +40,8 @@ function validateRequest(value: unknown): BridgeRequest {
   const request = value as BridgeRequest;
   if (!request || !REQUEST_ID.test(request.id) || !['PENDING', 'ANSWERED', 'EXPIRED', 'CANCELLED', 'HANDED_OFF'].includes(request.status) || !Number.isFinite(Date.parse(request.expiresAt))) throw failure('bridge.invalidResponse');
   if (request.status === 'ANSWERED' && (typeof request.answer !== 'string' || !request.answer.trim() || request.source !== 'chatgpt_bridge' || request.provider !== 'chatgpt')) throw failure('bridge.invalidResponse');
+  if (request.status === 'ANSWERED') request.proposals = parseBridgeProposals(request.proposals);
+  else if (request.proposals?.length) throw failure('bridge.invalidResponse');
   return request;
 }
 function pause(milliseconds: number, signal: AbortSignal) {

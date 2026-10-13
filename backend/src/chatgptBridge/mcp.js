@@ -4,6 +4,7 @@ import { CallbackError } from './network.js';
 import { bridgeError } from './access.js';
 import { z } from 'zod';
 import { RequestGate } from '../assistant/assistantRuntime.js';
+import { customerProposalJsonSchema } from './customerProposals.js';
 const uuid = { type: 'string', format: 'uuid' };
 const schema = properties => fromJsonSchema({ type: 'object', properties, required: Object.keys(properties), additionalProperties: false });
 const arbitraryObject = fromJsonSchema({ type: 'object', additionalProperties: true });
@@ -37,8 +38,10 @@ export function buildBridgeMcp({ oauth, requests, events, settings }) {
           inputSchema: schema({ requestId: uuid, tool: { type: 'string', maxLength: 80 }, input: { type: 'object', additionalProperties: true } }),
           annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
         (input, ctx) => reply(() => requests.readTool(identity.grant, input, { signal: globalThis.AbortSignal.any([controller.signal, ctx.signal].filter(Boolean)) })));
-        server.registerTool('publish_question_reply', { description: 'Publish a plain-text AI reply to this pending question. No account, booking, payment, resource or staff mutations. Identical replay is idempotent.',
-          inputSchema: schema({ requestId: uuid, generation: uuid, answer: { type: 'string', minLength: 2, maxLength: 6000 } }),
+        server.registerTool('publish_question_reply', { description: 'Publish a plain-text reply with optional BOOKING or STAFF_SUPPORT review drafts. Drafts do not execute; the customer reviews and confirms through normal LAB forms/APIs. No payment/account/operator mutations. Identical replay is idempotent.',
+          inputSchema: fromJsonSchema({ type: 'object', properties: { requestId: uuid, generation: uuid,
+            answer: { type: 'string', minLength: 2, maxLength: 6000 }, proposals: customerProposalJsonSchema },
+            required: ['requestId', 'generation', 'answer'], additionalProperties: false }),
           annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
         input => reply(() => requests.reply(identity.grant, input)));
         for (const method of ['list', 'subscribe', 'unsubscribe']) {
