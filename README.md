@@ -440,3 +440,26 @@ trước khi tiếp tục dùng chung backend. Không reset/force checkout.
 Docker cũ, image không dùng, cache build và volume cũ đã được dọn theo xác nhận
 người dùng. Chỉ volume `lrm-local-review_review-data` được giữ. Không dùng Compose
 cũ để chạy thêm một bộ môi trường khi kiểm thử giao diện; dùng nhóm local nêu trên.
+
+## Quản lý khách hàng, OTP và loyalty
+
+ADMIN quản lý mọi tài khoản; staff quản lý tất cả CUSTOMER trong màn Tài khoản.
+Sửa liên hệ, bật/tắt và xóa mềm có kiểm tra quyền; email đăng ký chỉ đọc. Xóa
+khách có booking đang hoạt động bị chặn, lịch sử vẫn giữ. Đổi mật khẩu tại Hồ sơ
+hoặc hỗ trợ khách bắt buộc OTP gửi email hiện tại; self-service còn cần mật khẩu
+cũ. Mã có hạn 10 phút, gửi lại sau 60 giây, tối đa 5 lần sai. Không có bypass.
+
+Dùng các SMTP_HOST/PORT/USER/PASS/EMAIL_FROM đã mô tả ở trên, sau đó chạy
+npm --prefix backend run email:check -- --verify. Chỉ điền bí mật trực tiếp vào
+môi trường backend; không đưa vào Git/chat. SMTP chưa cấu hình thì OTP báo
+SMTP_NOT_CONFIGURED và mật khẩu giữ nguyên. Verify không chứng minh nhận trong
+inbox. Khôi phục public khi mất phiên và đổi email cần luồng riêng.
+
+Loyalty ở Hồ sơ lấy chi tiêu đã thanh toán hợp lệ; ADMIN bật/sửa chính sách trong
+màn Tài khoản. Mặc định tắt, ngưỡng Plus/Priority 1.500.000/5.000.000đ và giảm
+3%/5%, tùy cấu hình. Guest booking giữ giá public; đăng nhập trước đặt để nhận
+ưu đãi theo hạng. Giá đã lưu của lịch/thanh toán cũ không đổi.
+
+Đọc [hướng dẫn tích hợp](docs/INTEGRATION_GUIDE.md) trước merge: bản mới hiện ở
+nhánh isolated codex/customer-security-loyalty, chứa snapshot đầy đủ code local.
+Không áp dụng migration, chép .env hay git pull trực tiếp vào checkout đang bẩn.

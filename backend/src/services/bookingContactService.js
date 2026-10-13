@@ -12,6 +12,7 @@ export const bookingContactSchema = z.object({
 export async function bookingContact(tx, userId, supplied) {
   const user = await tx.user.findUnique({ where: { id: userId } });
   if (!user) throw new HttpError(401, 'Account not found', undefined, 'AUTH_INVALID');
+  if (!user.isActive || user.deletedAt) throw new HttpError(401, 'Account inactive', undefined, 'ACCOUNT_INACTIVE');
   if (user.role !== CUSTOMER && !supplied) return null;
   const parsed = bookingContactSchema.safeParse(supplied || { fullName: user.fullName, phone: user.phone || '' });
   if (!parsed.success) {

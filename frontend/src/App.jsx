@@ -35,14 +35,12 @@ const StockPage = React.lazy(() => import("./pages/LabWorkspace").then(module =>
 const ResourceDetailPage = React.lazy(() => import("./pages/ResourceDetailPage.tsx").then(module => ({ default: module.ResourceDetailPage })));
 const SelectionPage = React.lazy(() => import("./pages/SelectionPage.tsx").then(module => ({ default: module.SelectionPage })));
 
-const ADMIN_ONLY_TABS = new Set(["users"]);
-const STAFF_ONLY_TABS = new Set(["admin_management", "dashboard", "maintenance", "monitoring"]);
+const STAFF_ONLY_TABS = new Set(["users", "admin_management", "dashboard", "maintenance", "monitoring"]);
 
 function canAccessTab(role, tabId) {
   if (tabId === 'stock') return ['ADMIN', 'LAB_STAFF'].includes(role);
   if (tabId === 'teaching') return false;
   if (!isTabEnabled(tabId)) return false;
-  if (ADMIN_ONLY_TABS.has(tabId)) return role === "ADMIN";
   if (STAFF_ONLY_TABS.has(tabId)) return role === "ADMIN" || role === "LAB_STAFF";
   return true;
 }
@@ -327,10 +325,8 @@ function Application() {
           const freshUser = await getCurrentUser();
           localStorage.setItem("lrm_user", JSON.stringify(freshUser));
           setUser(freshUser);
-        } catch {
-          const updatedUser = { ...user, passwordResetRequired: false };
-          localStorage.setItem("lrm_user", JSON.stringify(updatedUser));
-          setUser(updatedUser);
+        } catch (requestError) {
+          setError(requestError?.message || "api.API_REQUEST_FAILED");
         }
       }}
     >
@@ -424,7 +420,7 @@ function Application() {
       {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage locale={locale} resources={resources} maintenance={maintenance} onChanged={loadData} onBookings={() => setActiveTab('bookings')} />}
       {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage userRole={user.role} dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {activeTab === "users" && <AccessUserManagement key={routeHash} />}
+      {activeTab === "users" && <AccessUserManagement key={routeHash} actorRole={user.role} actorId={user.id} />}
 
       </React.Suspense>
 

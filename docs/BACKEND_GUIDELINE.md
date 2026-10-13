@@ -197,3 +197,55 @@ explicitly Asia/Ho_Chi_Minh. Read-only `email:check -- --verify --queue` checks
 configuration/SMTP and queue states without sending mail. Integration tests
 must guard the dedicated localhost `lab_resources_email_test` database and use
 loopback SMTP, never real business data or customer inboxes. See ADR-030/README.
+
+## Account management and password verification
+
+ADMIN manages all accounts; LAB_STAFF manages every CUSTOMER, regardless of LAB
+assignment, only through the account endpoints. Resource/booking/support scope
+is unchanged (ADR-034). List/get use safe projections; password hashes, OTP data
+and authVersion are private. PATCH /users/:id accepts contact only (fullName,
+phone, organization), never email, role or credentials. DELETE accepts reason
+and soft-deletes; active bookings block removal. Removed accounts cannot activate.
+
+POST /auth/password-otp/request: {currentPassword}.
+POST /auth/change-password: {challengeId,otp,currentPassword,newPassword}; returns
+{accessToken,tokenType,user}, replacing the former 204 contract.
+POST /users/:id/password-otp/request: {reason}.
+POST /users/:id/password-otp/confirm: {challengeId,otp,newPassword} -> {success:true}.
+Request returns {challengeId,maskedEmail,expiresAt,resendAfter}; dates are ISO UTC.
+Confirmation requires actual SMTP acceptance, current bound context and one-use
+code. Wrong attempts commit even when confirmation fails. Never return/log code
+or credentials. SMTP runs outside the transaction; password/challenge consumption
+and audit commit together. Strict validation, cooldown and account/auth rate
+limits bound mutations; do not automatically retry them. Store only code hashes.
+
+JWT authVersion must match the active current DB user. Sign with authTokens.js;
+never mint an unversioned token after a credential change. Recheck actor inside
+accountWrite to serialize credential/role/activation/delete and last-admin guards.
+Applied migrations are unchanged; new forward account_security migration is required.
+
+## Spending-based loyalty and pricing
+
+GET /loyalty/me returns {tier,points,discountBps,totalSpendVnd,completedBookings,
+basis,progress,nextTier,nextThreshold,remainingToNext,policyVersion,enabled} for
+current actor only. GET /loyalty/policy is authenticated; PUT is ADMIN-only with
+strict fields enabled,plusThreshold,priorityThreshold,plusDiscountBps,
+priorityDiscountBps,expectedVersion. Always derive spend from eligible settlements
+(ADR-035), not persisted user loyalty fields. Optimistic policy conflicts return
+409 LOYALTY_POLICY_CHANGED; unavailable/unsafe totals return LOYALTY_UNAVAILABLE.
+
+Private quote must authenticate a supplied bearer header strictly. Client userId
+cannot select a discount owner. AcceptedQuote includes amountVnd,version and
+loyaltyPolicyVersion for discounted quotes. Fee snapshot additionally stores
+baseAmountVnd,discountAmountVnd,discountBps,loyaltyTier,loyaltyPolicyVersion;
+amountVnd is the net. Check again under existing booking/resource and policy locks.
+Public guest creation explicitly preserves accepted list price. Free bookings do
+not fabricate payment rows. See tests/accountSecurity.integration.test.js and
+loyalty.integration.test.js; both refuse business databases.
+
+Account removal and booking creation share User FOR UPDATE; booking/support
+creation rechecks active/deleted/version after locking. Support dispatch lock
+serializes account removal with requests; open sessions block removal/deactivation
+and role change. Account permission checks precede these state guards.
+Audit metadata is nullable in Prisma to match the existing applied SQL; services
+still write sanitized objects. No historical audit data or migration was rewritten.

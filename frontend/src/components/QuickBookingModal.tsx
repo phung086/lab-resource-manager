@@ -6,6 +6,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Calendar, AlertCircle, CheckCircle2, ArrowRight, ShieldAlert, Shield, RefreshCw } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.js";
 import { LabPolicySummary } from "./LabPolicySummary";
+import { QuoteDiscountSummary } from "./features/payments/QuoteDiscountSummary";
+import "../styles/loyalty-account.css";
 import { apiRequest, ApiError } from "../api.js";
 import {
   toVietnamDateString,
@@ -619,6 +621,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           {/* Purpose */}
           {pricingRules.length > 0 && new Set(pricingRules.map(rule => rule.hourlyRateVnd)).size > 1 && <label className="booking-field">{tr("ui.pricing_purpose_f1a0b490")}<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{pricingRules.map(rule => <option key={rule.id} value={rule.purposeCode}>{rule.label} — {rule.hourlyRateVnd.toLocaleString("vi-VN")} {tr("ui.vnd_hour_c2aca1ee")}</option>)}</select></label>}
           <div className="alert" aria-live="polite">{quoteError ? <span role="alert">{translate(quoteError)} <button className="secondary-button" type="button" onClick={() => setPricingRetry(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></span> : quote?.key === quoteKey ? <span>{tr("ui.usage_fee_10b23fee")}<strong>{quote.amountVnd.toLocaleString("vi-VN")} {tr("ui.vnd_bf502a39")}</strong>{quote.amountVnd > 0 ? tr("ui.pay_after_confirmation_and_before_2effbba2") : tr("ui.no_payment_required_a44e1364")}</span> : !timeIsValid ? tr("ui.calendarWorkspace.validTimeForFee") : tr("ui.updating_usage_fee_be66cd3f")}</div>
+          <QuoteDiscountSummary quote={quote?.key === quoteKey ? quote : null} />
           <div className="booking-field">
             <label htmlFor="booking-purpose" className="booking-label">
               {tr("ui.usage_purpose_701ce708")}</label>

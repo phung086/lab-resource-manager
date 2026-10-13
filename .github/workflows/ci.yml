@@ -358,6 +358,62 @@ jobs:
         if: failure()
         run: cat "$RUNNER_TEMP/workspace-demo.log" || true
 
+  account-security-loyalty:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 25439:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGPASSWORD: postgres
+      ACCOUNT_SECURITY_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:25439/lab_resources_account_security_test?schema=public
+      LOYALTY_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:25439/lab_resources_loyalty_test?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:25439/lab_resources_account_security_test?schema=public
+      BATCH2_DATABASE: lab_resources_b2_auth_security_test
+      GUEST_PHASE_D_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:25439/lab_resources_guest_security_test?schema=public
+      ACCOUNT_SECURITY_UI_OUTPUT: ../logs/account-security-ui-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Prepare guarded PostgreSQL databases
+        run: |
+          psql -h 127.0.0.1 -p 25439 -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE "lab_resources_account_security_test";'
+          psql -h 127.0.0.1 -p 25439 -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE "lab_resources_loyalty_test";'
+          psql -h 127.0.0.1 -p 25439 -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE "lab_resources_b2_auth_security_test";'
+          psql -h 127.0.0.1 -p 25439 -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE "lab_resources_guest_security_test";'
+          (cd backend && npm ci && npm run db:generate)
+          (cd backend && DATABASE_URL="$ACCOUNT_SECURITY_TEST_DATABASE_URL" npm run db:migrate)
+          (cd backend && DATABASE_URL="$LOYALTY_TEST_DATABASE_URL" npm run db:migrate)
+          (cd backend && DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:25439/lab_resources_b2_auth_security_test?schema=public npm run db:migrate)
+          (cd backend && DATABASE_URL="$GUEST_PHASE_D_DATABASE_URL" npm run db:migrate)
+      - name: Verify accounts, actual loopback SMTP and loyalty settlement contracts
+        run: |
+          (cd backend && npm run test:accounts:integration && npm run test:loyalty:integration && npm run test:batch2 && npm run test:guest-integrity)
+          (cd frontend && npm ci && npx playwright-core install --with-deps chromium && npm run test:accounts && npm run test:ui:accounts)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: account-security-ui
+          path: logs/account-security-ui-ci
+          if-no-files-found: ignore
+
   docker:
     runs-on: ubuntu-latest
     steps:

@@ -1,6 +1,6 @@
 # Laboratory application threat model
 
-Updated 2026-10-03 from the current Express/Prisma implementation. This replaces
+Updated 2026-10-13 from the current Express/Prisma implementation. This replaces
 the old Smart Lab V2 assumptions. It is a control inventory, not penetration-test
 certification. Required booking operations take priority over optional integrations.
 
@@ -8,12 +8,15 @@ certification. Required booking operations take priority over optional integrati
 
 | Surface / threat | Implemented control | Limit or remaining work |
 |---|---|---|
-| Forged role, inactive account, cross-lab access | HS256 bearer verification; current persisted active user/role; canonical ADMIN/LAB_STAFF/LECTURER/STUDENT; owner/lab checks in queries and services | Client navigation and CORS are not authorization; every new route needs equivalent checks |
+| Forged role, inactive account, cross-lab access | HS256 bearer verification; current persisted active user/role; canonical ADMIN/LAB_STAFF/CUSTOMER; owner/lab checks in queries and services | Client navigation and CORS are not authorization; every new route needs equivalent checks |
 | Old records hidden by recent caps | Scoped server paging, counts/groups and rows in one repeatable-read transaction | Resource and stock-history lists have separate caps; offset pages can move between requests during concurrent writes |
 | Double booking / invalid transitions | Resource row locks, PostgreSQL exclusion constraint, half-open intervals and transition validation | No universal booking idempotency claim; stock movement IDs separately provide replay protection |
 | Login guessing | Public registration/password changes use bcrypt cost 12; auth IP limit defaults to 10/15min in production; general API 180/min with separate MCP bucket | No account lockout or refresh rotation; IP limiting alone cannot stop distributed guessing |
-| Guessable guest setup credential | Password login rejects EXTERNAL accounts with passwordResetRequired, using generic AUTH_INVALID; the email-verified booking session can complete password setup | Losing the setup session has no self-service recovery yet. Previously issued bearer tokens are not revoked by this change; do not treat this as a session-revocation fix |
-| Stolen session / XSS | Bearer header, React text escaping, validated inputs, Helmet API headers, restricted production origins | Frontend stores bearer in localStorage; JWT default 8h. Logout discards the client token without server revocation; password change does not revoke all issued tokens. Session redesign needs coherent migration/tests |
+| Guessable guest setup credential | Password login rejects EXTERNAL accounts with passwordResetRequired, using generic AUTH_INVALID; the email-verified booking session can complete password setup | Losing the setup session has no self-service recovery yet. Password setup now requires a fresh delivered OTP; authVersion revokes previous tokens |
+| Stolen session / XSS | Bearer header, React text escaping, validated inputs, Helmet API headers, restricted production origins | Frontend stores bearer in localStorage; JWT default 8h. Logout discards the client token without server revocation; password/role/activation changes revoke earlier authVersion tokens; refresh rotation remains separate work |
+| Assisted reset abuse / OTP guessing | Immutable registered email, actor/target/purpose/version-bound HMAC, actual SMTP acceptance, 10-minute expiry, 60-second resend cooldown, five attempts and transaction-coupled audit; no administrator bypass | Consent depends on the customer retaining control of their email and sharing a code only for requested assistance; external inbox not verified |
+| Account removal racing booking/support | Shared User row locks and current active/version check; open bookings/support prevent removal, support also blocks deactivation/role change | Soft removal retains history; public recovery/email change remain separate work |
+| Loyalty/price tampering | Eligible settled VND spending, current authenticated owner, policy/tariff versions and immutable base/discount/net snapshot | Guest keeps accepted public price; points are informational, not redeemable credit |
 | Input / information disclosure | Zod contracts for sensitive flows; stable API errors and guarded DB failures; public-safe schedule/identity projections | Review coverage per endpoint; do not claim universal strict schemas or penetration testing |
 | Metrics disclosure | Production exact bearer check with timing-safe comparison; absent configuration returns 503; query tokens do not authorize | Development remains public unless configured. Optional Prometheus host UI binds loopback; restrict host access |
 | Container privilege | Production API node user (UID 1000); image creates writable app/data directory | Mount ownership, host/network security remain required. Current runner still packages development dependencies |
@@ -34,6 +37,11 @@ certification. Required booking operations take priority over optional integrati
 - `test:lab-workspace`, `test:batch8`, `test:guest-integrity`, `test:phase-h`:
   stock/teaching, monitoring, OTP and optional payment contracts.
 
+- test:accounts:integration and test:loyalty:integration: OTP transport/binding/attempts,
+  session revocation, concurrent removal, audit rollback and verified spend/policy.
+- Frontend test_api_request.mjs guards stale 401 after session renewal;
+  test:ui:accounts uses the actual isolated API and loopback SMTP.
+
 These identify relevant checks; consult [current state](../CURRENT_STATE.md) and
 review follow-up (historical run output; retired) for checks actually run
 on this working tree. Worker counts, coverage and physical-device claims require
@@ -41,7 +49,7 @@ real evidence.
 
 ## Remaining security work
 
-Prioritize session revocation/rotation, account-level abuse controls, dependency
+Prioritize refresh rotation, account-level abuse controls, dependency
 alerts and targeted authenticated API regression coverage. Review full and
 production-only audits: unused development dependencies are still packaged in
 the current runner. Do not apply `npm audit fix --force` or downgrade tooling to

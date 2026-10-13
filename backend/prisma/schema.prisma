@@ -270,6 +270,8 @@ model User {
   fullName                     String @default("")
   role                         Role
   passwordHash                 String
+  authVersion                  Int                   @default(0)
+  deletedAt                    DateTime?
   studentId                    String?
   department                   String?
   phone                        String?
@@ -313,8 +315,46 @@ model User {
   supportMessages              SupportMessage[]
   supportPresence              SupportPresence?
   emailDeliveries              EmailDelivery[]
+  requestedPasswordChallenges  PasswordChallenge[]   @relation("PasswordChallengeActor")
+  receivedPasswordChallenges   PasswordChallenge[]   @relation("PasswordChallengeTarget")
 
   @@map("users")
+}
+
+model LoyaltyPolicy {
+  id                  String   @id @default("SYSTEM")
+  enabled             Boolean  @default(false)
+  plusThreshold       Int      @default(1500000)
+  priorityThreshold   Int      @default(5000000)
+  plusDiscountBps     Int      @default(300)
+  priorityDiscountBps Int      @default(500)
+  version             Int      @default(0)
+  updatedAt           DateTime @updatedAt
+
+  @@map("loyalty_policy")
+}
+
+model PasswordChallenge {
+  id            String    @id
+  actorId       String
+  targetUserId  String
+  email         String
+  purpose       String
+  actorVersion  Int
+  targetVersion Int
+  codeHash      String
+  reason        String
+  attempts      Int       @default(0)
+  expiresAt     DateTime
+  deliveredAt   DateTime?
+  consumedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  actor         User      @relation("PasswordChallengeActor", fields: [actorId], references: [id], onDelete: Restrict)
+  target        User      @relation("PasswordChallengeTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
+
+  @@index([targetUserId, createdAt])
+  @@index([actorId, createdAt])
+  @@map("password_challenges")
 }
 
 model EmailDelivery {
@@ -1318,7 +1358,7 @@ model SystemAuditEvent {
   beforeState       Json?     @map("before_state")
   afterState        Json?     @map("after_state")
   reason            String?
-  metadata          Json      @default("{}")
+  metadata          Json?     @default("{}")
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   actor      User?        @relation("SystemAuditActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: Cascade)

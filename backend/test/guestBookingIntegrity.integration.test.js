@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import test from "node:test";
 import bcrypt from "bcryptjs";
 import request from "supertest";
+import { startPasswordOtpSmtp } from "./helpers/passwordOtpSmtp.js";
 
 import {
   configureGuestPhaseDTestEnvironment,
@@ -10,6 +11,7 @@ import {
 } from "./helpers/guestPhaseDDatabase.js";
 
 const environment = configureGuestPhaseDTestEnvironment();
+const smtp = await startPasswordOtpSmtp();
 const [{ createApp }, { prisma }, guestService, { HttpError }] = await Promise.all([
   import("../src/app.js"),
   import("../src/db.js"),
@@ -39,10 +41,6 @@ const verifiedAddress = {
   version: "v2-post-2025-07"
 };
 
-guestService.configureGuestOtpTestDelivery(async ({ to, code }) => {
-  deliveredCodes.set(to, code);
-  return { success: true, messageId: `test-${crypto.randomUUID()}` };
-});
 guestService.configureGuestAddressTestValidation(async () => verifiedAddress);
 
 function email(label) {
@@ -78,6 +76,7 @@ function completionPayload(targetEmail, resourceId, offset, overrides = {}) {
 async function issueOtp(targetEmail) {
   const response = await request(app).post("/api/guest-booking/otp").send({ email: targetEmail, fullName: "Phase D Guest" });
   assert.equal(response.status, 202, JSON.stringify(response.body));
+  deliveredCodes.set(targetEmail, smtp.codeFor(targetEmail));
   assert.match(deliveredCodes.get(targetEmail), /^\d{6}$/);
   return deliveredCodes.get(targetEmail);
 }
@@ -212,7 +211,7 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
     assert.equal(await isolated.booking.count({ where: { requestedById: user.id } }), 1);
     const phoneLogin = await request(app).post("/api/auth/login").send({ email: target, password: phone });
     assert.equal(phoneLogin.status, 401);
-    assert.equal(phoneLogin.body.error.code, "AUTH_INVALID");
+    assert.equal(phoneLogin.body.error.code, "AUTH_INVALID_CREDENTIALS");
     assert.equal(phoneLogin.body.accessToken, undefined);
     assert.equal((await request(app).post("/api/auth/change-password")
       .send({ currentPassword: phone, newPassword: "AttackerPassword!123" })).status, 401);
@@ -222,8 +221,18 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
     assert.equal(blocked.status, 403);
     assert.equal(blocked.body.error.code, "PASSWORD_RESET_REQUIRED");
     assert.equal((await request(app).post("/api/auth/change-password").set(bearer)
-      .send({ currentPassword: phone, newPassword: password })).status, 204);
-    assert.equal((await request(app).get("/api/bookings/my-bookings").set(bearer)).status, 200);
+      .send({ currentPassword: phone, newPassword: password })).status, 400);
+    const challenge = await request(app).post("/api/auth/password-otp/request").set(bearer)
+      .send({ currentPassword: phone });
+    assert.equal(challenge.status, 200, JSON.stringify(challenge.body));
+    assert.equal(challenge.body.otp, undefined);
+    const changed = await request(app).post("/api/auth/change-password").set(bearer)
+      .send({ challengeId: challenge.body.challengeId, otp: smtp.codeFor(target), currentPassword: phone, newPassword: password });
+    assert.equal(changed.status, 200, JSON.stringify(changed.body));
+    assert.ok(changed.body.accessToken);
+    assert.equal((await request(app).get("/api/auth/me").set(bearer)).status, 401);
+    assert.equal((await request(app).get("/api/bookings/my-bookings")
+      .set("Authorization", `Bearer ${changed.body.accessToken}`)).status, 200);
     const normalLogin = await request(app).post("/api/auth/login").send({ email: target, password });
     assert.equal(normalLogin.status, 200, JSON.stringify(normalLogin.body));
     assert.ok(normalLogin.body.accessToken);
@@ -256,7 +265,7 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
     const target = email("existing-internal");
     const userId = id();
     await isolated.user.create({
-      data: { id: userId, email: target, fullName: "Trusted Internal", role: "CUSTOMER", passwordHash: await bcrypt.hash(password, 4), customerType: "INTERNAL" }
+      data: { id: userId, email: target, fullName: "Trusted Internal", phone: "0987654321", role: "CUSTOMER", passwordHash: await bcrypt.hash(password, 4), customerType: "INTERNAL" }
     });
     await issueOtp(target);
     const response = await request(app).post("/api/guest-booking/book")
@@ -264,7 +273,9 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
     assert.equal(response.status, 201, JSON.stringify(response.body));
     assert.equal(response.body.accessToken, null);
     assert.equal(response.body.requiresLogin, true);
-    assert.equal((await isolated.user.findUnique({ where: { id: userId } })).customerType, "INTERNAL");
+    const saved = await isolated.user.findUniqueOrThrow({ where: { id: userId } });
+    assert.equal(saved.customerType, "INTERNAL");
+    assert.equal(saved.phone, "0987654321");
   });
 
   await t.test("booking failures roll back OTP consumption and new account creation", async () => {
@@ -366,20 +377,22 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
   });
 
   await t.test("required OTP email fails closed and leaves no active challenge when SMTP is unavailable", async () => {
-    guestService.configureGuestOtpTestDelivery(null);
-    const target = email("smtp-unavailable");
-    const response = await request(app).post("/api/guest-booking/otp").send({ email: target });
-    assert.equal(response.status, 503);
-    assert.equal(response.body.error.code, "EMAIL_DELIVERY_FAILED");
-    const otp = await isolated.emailOtp.findFirst({ where: { email: target } });
-    assert.ok(otp.consumedAt);
-    guestService.configureGuestOtpTestDelivery(async ({ to, code }) => {
-      deliveredCodes.set(to, code);
-      return { success: true };
-    });
+    const settings = Object.fromEntries(["SMTP_HOST", "SMTP_USER", "SMTP_PASS"].map((key) => [key, process.env[key]]));
+    for (const key of Object.keys(settings)) delete process.env[key];
+    try {
+      const target = email("smtp-unavailable");
+      const response = await request(app).post("/api/guest-booking/otp").send({ email: target });
+      assert.equal(response.status, 503);
+      assert.equal(response.body.error.code, "EMAIL_DELIVERY_FAILED");
+      const otp = await isolated.emailOtp.findFirst({ where: { email: target } });
+      assert.ok(otp.consumedAt);
+    } finally {
+      Object.assign(process.env, settings);
+    }
   });
 });
 
 test.after(async () => {
   await Promise.allSettled([prisma.$disconnect(), isolated.$disconnect()]);
+  await smtp.close();
 });

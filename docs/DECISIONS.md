@@ -607,3 +607,51 @@ liên hệ. Lần sau dùng thông tin đã lưu. Địa chỉ/tổ chức khôn
 đến LAB. Validation giữ field/issue codes an toàn, chỉ rõ trường lỗi, focus đúng
 trường; placeholder form không chứa ví dụ dài. Quote, thanh toán, xung đột, care
 readiness, tự CONFIRMED và scope staff/owner của ADR-032 vẫn bắt buộc.
+
+## ADR-034 — Quản lý khách hàng và đổi mật khẩu có OTP (13/10/2026)
+
+User cho phép ADMIN quản lý mọi tài khoản và LAB_STAFF quản lý tất cả CUSTOMER,
+kể cả khách chưa đặt ở LAB được phân công. Ngoại lệ này chỉ áp dụng tài khoản:
+tạo, đọc, sửa liên hệ, kích hoạt/ngừng và xóa mềm, hỗ trợ đổi mật khẩu. Staff
+không được đổi role, LAB assignment, sửa/xem tài khoản ADMIN/LAB_STAFF; phạm vi
+LAB của tài nguyên, lịch, vận hành, giám sát và chat không thay đổi.
+
+Email đăng ký không thể đổi từ màn quản lý hoặc PATCH profile: nếu staff đổi
+email rồi tự nhận OTP thì mất ý nghĩa đồng ý của khách. Mỗi thay đổi mật khẩu
+bắt buộc OTP gửi tới email hiện tại. Tự đổi còn cần mật khẩu hiện tại; hỗ trợ
+cần lý do 5–500 ký tự. OTP 6 số, hiệu lực 10 phút, gửi lại sau 60 giây, tối đa
+5 lần nhập sai; hash gắn actor/target/email/purpose/credential versions, dùng
+một lần. SMTP thiếu hoặc từ chối phải báo thất bại; không gửi code qua response,
+log hay outbox và không có admin bypass. Đổi mật khẩu ghi audit cùng transaction
+và tăng authVersion để vô hiệu hóa mọi phiên cũ; self-service trả JWT mới.
+
+Role/activation cũng tăng authVersion khi đổi. Các token cũ thiếu version chỉ
+hợp lệ khi tài khoản còn version 0. Xóa mềm có deletedAt, không xóa lịch sử và
+không phục hồi qua activate. Cần xử lý hết booking/loan đang hoạt động trước
+khi xóa; lượt hỗ trợ đang mở chặn xóa/ngừng/đổi role cho đến khi đóng hoặc
+chuyển handler phù hợp. Tạo lịch/chat khóa User và kiểm tra lại active/version,
+không cho in-flight request tạo công việc cho tài khoản đã xóa; tự khóa ADMIN và mất ADMIN hoạt động cuối cùng bị chặn. Account writes
+và policy writes dùng cùng advisory lock, recheck actor trong transaction.
+Khôi phục mật khẩu public khi mất phiên đăng nhập không thuộc batch này; khách
+liên hệ nhân viên hỗ trợ và xác thực email. Đổi email cần luồng riêng đã xác minh.
+
+## ADR-035 — Loyalty theo chi tiêu đã xác thực (13/10/2026)
+
+User chọn chi tiêu làm tiêu chí xét hạng; ADMIN cấu hình ngưỡng và mức giảm.
+Một LoyaltyPolicy SYSTEM có version; mặc định tắt ưu đãi, ngưỡng LAB_PLUS
+1.500.000đ và LAB_PRIORITY 5.000.000đ, mức giảm tương ứng 3%/5%. UI công khai
+trạng thái bật/tắt. Ngưỡng nguyên 1..2.000.000.000đ, priority lớn hơn plus;
+mức giảm 0..50%. Save phải có expectedVersion và audit, không ghi đè thay đổi
+đồng thời. Điểm hiển thị = floor(chi tiêu/10.000), không phải số dư đổi quà.
+
+Chi tiêu chỉ lấy payment success, VND, paidAt tồn tại, provider vnpay/vietqr,
+reconciliation none, đúng chủ booking và amount bằng fee đã lưu; loại booking
+CANCELLED/REJECTED, refunded, pending, orphan và dữ liệu sai. Profile và loyalty
+đọc cùng snapshot RepeatableRead; user loyalty fields cũ không cấp ưu đãi/quyền.
+Quote authenticated CUSTOMER dùng chi tiêu hiện hành; public/operator list price.
+Báo giá và tạo lịch kiểm tra lại amount, tariff version và loyalty policy version;
+feeSnapshot lưu giá gốc, giảm và giá ròng, không đổi booking/payment cũ.
+Refund hoặc đổi chính sách làm quote cũ không hợp lệ nếu giá/hợp đồng đổi.
+Guest quick booking giữ giá public đã chấp nhận, tránh đổi phí sau OTP; muốn
+nhận giảm theo hạng thì đăng nhập trước đặt. Không suy đoán thanh toán thành công
+và không trao thêm quyền LAB hay độ ưu tiên hàng đợi hỗ trợ theo hạng.

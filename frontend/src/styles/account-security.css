@@ -1,0 +1,17 @@
+.account-security-form { display:grid; gap:16px; max-width:480px; }
+.account-security-form fieldset { display:grid; gap:16px; min-width:0; margin:0; padding:0; border:0; }
+.account-security-form label { display:grid; gap:7px; font-size:.875rem; font-weight:600; }
+.account-security-form input { width:100%; min-width:0; min-height:44px; padding:10px 12px; border:1px solid var(--workspace-border,var(--color-border,#d8d2e1)); border-radius:8px; background:var(--workspace-surface,var(--color-surface,#fff)); color:inherit; font:inherit; font-weight:400; }
+.account-security-form :is(input,button,a):focus-visible { outline:2px solid var(--workspace-accent,var(--color-primary,#7258c7)); outline-offset:3px; }
+.account-security-form input[aria-invalid=true] { border-color:#a53245; }
+.account-security-form .btn { min-height:44px; gap:8px; justify-self:start; }
+.account-security-hint,.account-security-form small { margin:0; color:var(--workspace-text-muted,var(--color-text-secondary,#625b70)); font-size:.875rem; line-height:1.6; }
+.account-security-recipient { display:flex; align-items:center; gap:8px; margin:0; overflow-wrap:anywhere; font-size:.875rem; }
+.account-security-recipient svg { flex-shrink:0; }
+.account-security-delivery { margin:0; line-height:1.6; overflow-wrap:anywhere; }
+.account-security-error,.account-security-success { border:1px solid #eccbd1; border-radius:8px; padding:12px 14px; margin:0; line-height:1.6; font-size:.875rem; color:#982d3f; background:#fff0f1; }
+.account-security-success { color:#276249; background:#e6f2ed; border-color:#c3dfd2; }
+.account-security-error ul { margin:8px 0 0; padding-left:20px; }
+.account-security-error a { color:inherit; text-underline-offset:3px; }
+.account-security-field-error { color:#982d3f; font-size:.8rem; font-weight:400; }
+.account-security-actions { display:flex; gap:10px; flex-wrap:wrap; }

@@ -51,3 +51,12 @@ test('expired sessions still clear credentials and notify the shared shell', asy
   await assert.rejects(apiRequest('/auth/me'), { status: 401 });
   assert.equal(stored.has('lrm_token'), false); assert.deepEqual(events, ['lrm:session-invalid']);
 });
+
+
+test('an old 401 cannot discard a new credential session installed while its request was pending', async () => {
+  stored.set('lrm_token','before-change');const previousEvents=events.length;
+  let resolve;globalThis.fetch=()=>new Promise(r=>{resolve=r;});
+  const pending=apiRequest('/users/me');stored.set('lrm_token','after-change');stored.set('lrm_user','new-user');
+  resolve(new Response(JSON.stringify({error:{code:'AUTH_INVALID'}}),{status:401,headers:{'Content-Type':'application/json'}}));
+  await assert.rejects(pending,{status:401});assert.equal(stored.get('lrm_token'),'after-change');assert.equal(stored.get('lrm_user'),'new-user');assert.equal(events.length,previousEvents);
+});

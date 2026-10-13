@@ -245,3 +245,63 @@ configuration without repetitive demo disclaimers; retain provenance in stored
 data/docs and never invent telemetry or business history. ResourcePricingSummary reads actual purpose rates
 independently from resource/schedule/history. An unconfigured rate is not a failed
 read or proof of free usage; the backend quote remains authoritative for booking.
+
+## Account security and loyalty interface
+
+Staff CUSTOMER management reuses AccessUserManagement; server enforces global
+CUSTOMER-only scope. Hide role/LAB assignment controls from staff, read email
+without edit, show contact changes separately, and request a reason before remove
+or assisted reset. Removed account actions stay unavailable. Use the shared
+PasswordChangeForm from shell, profile and assisted reset: password draft then
+six-digit OTP, masked recipient, expiry and resend cooldown. Paste/autocomplete
+are allowed. Field errors stay next to their field and receive focus. Never
+retry credential mutations automatically. On self success store renewed token
+before fetching profile; old session is revoked. Missing SMTP remains an error.
+
+Profile renders server-derived loyalty only; show tier, spend and next-tier
+progress compactly. Admin policy lives behind an explicit expandable section.
+Quotes/checkout show actual stored base, discount and net; omit a breakdown for
+legacy snapshots lacking those fields. Never calculate an assumed discount in
+UI. Default policy is disabled. Guest booking retains accepted public price.
+
+## UI research direction — 13/10/2026, proposal only
+
+Current source has separate role homes and shared routing/components, so retain
+React/Vite and the shell. A full redesign has not been implemented in this batch.
+
+| View | Recommended first screen | Secondary content |
+|---|---|---|
+| CUSTOMER | Search, category, date/duration, price, availability and Book action | Own next booking, history, loyalty and support |
+| LAB_STAFF | Handover, return and inspection queues, overdue items, due care | Incidents, available support handler state, customers |
+| ADMIN | Cross-LAB exceptions, pending care, staff assignments and support activity | Accounts/policy, drill-down audit and reports |
+
+Recommendation: a compact service catalogue for customers, an operations table
+for staff, and an exception dashboard for admins. Use the same typography,
+spacing, status colors and interaction primitives; preserve the existing brand.
+All five categories stay discoverable; CustomerHome shortcuts currently cover
+ROOM/EQUIPMENT/EXPERIMENT_KIT, so MACHINE/MATERIAL need clear access in a future
+home refinement. Customer cards should show image, name/LAB, hourly fee and one
+primary action; technical specs expand in detail. Details use explicit tabs or
+anchors activated by click/keyboard; optional hover preview must not be the sole
+way to open information. Hover navigation alone causes accidental jumps on touch
+or while scanning.
+
+Keep room availability visual and equipment in a responsive 3/2/1-column grid;
+show true conflict/maintenance reasons on the selected interval. Staff care rows
+need a cycle progress meter (hours/uses), near/due badge and next action; detailed
+configuration belongs in an edit disclosure. Show unread care notifications as
+small alerts with direct resource links. No count/history may be invented to make
+a page look busy. New bookings auto-confirm; only render legacy approval when
+actual PENDING_APPROVAL exists. Loading, empty, error and forbidden states need
+short copy and an appropriate retry/next action.
+
+Suggested acceptance for a later redesign: from discovery to an available priced
+booking with one clear primary action per step; keyboard focus and mobile reach;
+retained drafts/deep links/VI-EN; complete scoped totals; no fabricated telemetry
+or widening permissions. UI research is based on source and the user's screenshots;
+new account screens have their own browser QA, which does not certify a whole
+system redesign. See INTEGRATION_GUIDE for contract dependencies before changes.
+
+A 401 from an earlier request must not clear a newly installed session: apiRequest
+clears only when its captured token is still the current token. Password/contact
+error focus runs after the fieldset has been enabled and rendered.

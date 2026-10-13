@@ -33,6 +33,7 @@ export interface BookingResourceSummary {
 export interface BookingRecord {
   contactSnapshot?: { fullName: string; phone: string; email: string } | null;
   feeAmountVnd?: number;
+  feeSnapshot?: { baseAmountVnd?: number; discountAmountVnd?: number; discountBps?: number; loyaltyTier?: string; loyaltyPolicyVersion?: number; amountVnd?: number } | null;
   id: string;
   bookingCode?: string | null;
   resourceId: string;

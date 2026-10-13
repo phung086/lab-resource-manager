@@ -1,11 +1,11 @@
 # Core laboratory data relationships
 
 Generated from [canonical Prisma schema](../../backend/prisma/schema.prisma).
-Schema SHA-256 after LF normalization: `4dc989c5f96ddd607d43820514ef6023d2f3394e5f1d290666036bd93709d3a8`.
+Schema SHA-256 after LF normalization: `242d4f73a32844b3086b7848abcc402762e09d570a90569f7ea32a241edade48`.
 Run `npm run docs:erd` in `backend/`; CI verifies `docs:erd:check`.
 This is a selected model projection, not a claim that only these tables exist.
 Foreign keys and cardinalities come from the generated Prisma data model checked
-against the source schema. The current schema contains 56 models.
+against the source schema. The current schema contains 58 models.
 
 ## Required booking operations and persisted monitoring
 
@@ -266,8 +266,9 @@ erDiagram
 ```
 
 Stock movements record receipts, issues and admin adjustments. A maintenance-linked
-issue must remain in the same laboratory. Teaching groups represent lecturer
-supervision; academic endorsement does not grant resource approval or handover.
+issue must remain in the same laboratory. Teaching groups retain historical
+academic records; their runtime mutations are retired under ADR-033. They grant
+CUSTOMER no operator privileges.
 ## Approved human support extension
 
 ```mermaid
@@ -320,6 +321,34 @@ enforce one open request per customer and one active session per staff member
 across all labs. The presence heartbeat coordinates assignment; it does not prove
 the staff member has read a message. See the forward support migration for
 constraints that Prisma cannot express.
+
+## Account security and spending policy
+
+```mermaid
+erDiagram
+    User {
+        string id PK
+        string email UK
+        Role role
+    }
+    PasswordChallenge {
+        string id PK
+        string actorId FK
+        string targetUserId FK
+    }
+    LoyaltyPolicy {
+        string id PK
+    }
+    User ||--o{ PasswordChallenge : "actorId"
+    User ||--o{ PasswordChallenge : "targetUserId"
+```
+
+Password challenges bind the requesting actor, target, registered email and both
+credential versions. Only a hash is stored; expiry, attempts and consumption are
+persisted. Credential changes, deactivation and role changes revoke prior JWTs.
+Soft deletion retains bookings, support and audit history. LoyaltyPolicy is a
+versioned singleton; spending is derived from eligible settled payments rather
+than mutable legacy user loyalty fields. See ADR-034/035.
 
 ## Approved automatic email extension
 

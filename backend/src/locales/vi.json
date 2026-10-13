@@ -387,6 +387,17 @@
     "notification.booking.event.RESCHEDULED.message": "{title} ({resourceCode}) đã được chuyển sang khung giờ mới.",
     "notification.booking.auto_confirmed.title": "Đặt lịch đã xác nhận",
     "notification.booking.auto_confirmed.message": "Lịch sử dụng {resourceName} đã được xác nhận.",
-    "api.BOOKING_CONTACT_REQUIRED": "Bổ sung họ tên và số điện thoại để đặt lịch."
+    "api.BOOKING_CONTACT_REQUIRED": "Bổ sung họ tên và số điện thoại để đặt lịch.",
+    "api.ACCOUNT_REMOVED": "Tài khoản đã ngừng hoạt động và không thể sử dụng.",
+    "api.LAST_ADMIN_FORBIDDEN": "Phải giữ lại ít nhất một quản trị viên đang hoạt động.",
+    "api.LOYALTY_POLICY_CHANGED": "Ưu đãi thành viên đã thay đổi. Hãy lấy báo giá mới trước khi đặt lịch.",
+    "api.OTP_CONTEXT_CHANGED": "Thông tin tài khoản hoặc phiên đăng nhập đã thay đổi. Hãy yêu cầu mã mới.",
+    "api.OTP_COOLDOWN": "Vui lòng chờ trước khi yêu cầu mã xác nhận mới.",
+    "api.OTP_NOT_SENT": "Không thể gửi mã xác nhận. Hãy thử lại sau.",
+    "api.PASSWORD_UNCHANGED": "Mật khẩu mới phải khác mật khẩu hiện tại.",
+    "api.SMTP_NOT_CONFIGURED": "Chưa cấu hình dịch vụ email để gửi mã xác nhận.",
+    "api.ACCOUNT_HAS_ACTIVE_BOOKINGS": "Tài khoản còn lịch đặt hoặc phiên sử dụng chưa kết thúc. Hãy xử lý các lịch này trước khi xóa.",
+    "api.LOYALTY_UNAVAILABLE": "Chưa thể tính ưu đãi. Vui lòng thử lại.",
+    "api.ACCOUNT_HAS_OPEN_SUPPORT": "Hãy kết thúc hoặc chuyển lượt hỗ trợ trước."
   }
 }

@@ -8,6 +8,7 @@ const PASSWORD_RESET_ALLOWLIST = new Set([
   "GET /api/auth/me",
   "GET /api/users/me",
   "POST /api/auth/change-password",
+  "POST /api/auth/password-otp/request",
   "POST /api/auth/logout"
 ]);
 
@@ -62,8 +63,12 @@ export async function requireAuth(req, res, next) {
     return res.status(401).json({ error: { code: "AUTH_INVALID", message: "User not found" } });
   }
 
-  if (!user.isActive) {
+  if (!user.isActive || user.deletedAt) {
     return res.status(401).json({ error: { code: "ACCOUNT_INACTIVE", message: "User account is inactive" } });
+  }
+
+  if (!Number.isInteger(payload.authVersion ?? 0) || (payload.authVersion ?? 0) !== user.authVersion) {
+    return res.status(401).json({ error: { code: "AUTH_INVALID", message: "Session is no longer valid" } });
   }
 
   // Reject unsupported role values
@@ -119,7 +124,8 @@ export async function optionalAuth(req, res, next) {
     return res.status(503).json({ error: { code: "DATABASE_UNAVAILABLE", message: "Authentication service unavailable" } });
   }
 
-  req.user = user && user.isActive && isCanonicalRole(user.role) ? user : null;
+  req.user = user && user.isActive && !user.deletedAt && isCanonicalRole(user.role) &&
+    Number.isInteger(payload.authVersion ?? 0) && (payload.authVersion ?? 0) === user.authVersion ? user : null;
   return next();
 }
 

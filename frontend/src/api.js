@@ -36,7 +36,8 @@ export async function apiRequest(path, options = {}) {
 
     if (!response.ok) {
       const error = body?.error || {};
-      if (response.status === 401 && !["/auth/login", "/auth/register"].includes(path)) {
+      if (response.status === 401 && !["/auth/login", "/auth/register"].includes(path) &&
+          token === localStorage.getItem("lrm_token")) {
         clearSession();
         window.dispatchEvent(new CustomEvent("lrm:session-invalid"));
       }

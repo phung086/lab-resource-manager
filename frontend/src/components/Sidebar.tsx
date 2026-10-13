@@ -54,14 +54,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, 
       { id: "profile", labelKey: "ui.my_profile_700b5272",  icon: UserRound },
       { id: "payments", labelKey: "ui.payments_d4b946cc",  icon: ClipboardCheck },
       { id: "admin_management", labelKey: "ui.resource_management_44713fdd",  icon: Server },
-      { id: "users", labelKey: "ui.users_and_assignments_291dd22c",  icon: Users },
+      { id: "users", labelKey: role === "ADMIN" ? "ui.users_and_assignments_291dd22c" : "account.users.customers",  icon: Users },
       { id: "logs", labelKey: "ui.audit_logs_883aea8a",  icon: ClipboardCheck },
     ] },
   ];
   function allowed(id: string) {
     if (!isTabEnabled(id)) return false;
     if (id === "teaching") return false;
-    if (["users", "logs"].includes(id)) return role === "ADMIN";
+    if (id === "logs") return role === "ADMIN";
+    if (id === "users") return staff;
     if (["stock", "dashboard", "monitoring", "maintenance", "admin_management"].includes(id)) return staff;
     return true;
   }

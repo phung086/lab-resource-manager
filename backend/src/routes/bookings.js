@@ -31,7 +31,7 @@ const createBookingSchema = z.object({
   contact: bookingContactSchema.optional(),
   purpose: z.string().max(2000).optional().default(""),
   purposeCode: z.enum(["STUDY", "TEACHING", "RESEARCH", "SERVICE"]).optional(),
-  acceptedQuote: z.object({ amountVnd: z.number().int().min(0), version: z.number().int().min(0) }).strict().optional(),
+  acceptedQuote: z.object({ amountVnd: z.number().int().min(0), version: z.number().int().min(0), loyaltyPolicyVersion: z.number().int().min(0).nullable().optional() }).strict().optional(),
   startAt: z.string().or(z.date()),
   endAt: z.string().or(z.date())
 }).strict();
@@ -205,6 +205,7 @@ router.post("/", requireAuth, async (req, res, next) => {
     const data = createBookingSchema.parse(req.body);
     const booking = await createBooking({
       requestedById: req.user.id,
+      expectedAuthVersion: req.user.authVersion,
       resourceId: data.resourceId,
       contact: data.contact,
       title: data.title,

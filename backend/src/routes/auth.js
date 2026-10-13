@@ -1,7 +1,6 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import express from "express";
-import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 
@@ -13,6 +12,8 @@ import { CUSTOMER, isCanonicalRole } from "../constants/roles.js";
 import { publicCustomerUser } from "../services/guestBookingService.js";
 import { forgetAssistantSession } from "../assistant/assistantService.js";
 import { enqueueRegistrationEmail } from "../services/emailAutomationService.js";
+import { signUserToken } from "../services/authTokens.js";
+import { requestPasswordOtp, confirmPasswordOtp } from "../services/passwordSecurityService.js";
 
 const router = express.Router();
 
@@ -35,6 +36,8 @@ const registerSchema = z.object({
 }).strict();
 
 const changePasswordSchema = z.object({
+  challengeId: z.string().uuid(),
+  otp: z.string().regex(/^\d{6}$/),
   currentPassword: z.string().min(8).max(128),
   newPassword: z.string().min(8).max(128)
 }).strict().refine((value) => value.currentPassword !== value.newPassword, {
@@ -82,10 +85,7 @@ router.post("/register", authRateLimit, async (req, res, next) => {
       return created;
     });
 
-    const token = jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, {
-      algorithm: "HS256",
-      expiresIn: config.tokenExpiresIn
-    });
+    const token = signUserToken(user);
 
     res.status(201).json({ accessToken: token, tokenType: "Bearer", user: publicUser(user) });
   } catch (error) {
@@ -127,7 +127,7 @@ router.post("/login", authRateLimit, async (req, res, next) => {
       throw new HttpError(401, "Email or password is incorrect", undefined, "AUTH_INVALID_CREDENTIALS");
     }
 
-    if (!user.isActive) {
+    if (!user.isActive || user.deletedAt) {
       throw new HttpError(401, "User account is inactive", undefined, "ACCOUNT_INACTIVE");
     }
 
@@ -137,10 +137,7 @@ router.post("/login", authRateLimit, async (req, res, next) => {
       throw new HttpError(403, "User role is not recognized", undefined, "FORBIDDEN");
     }
 
-    const token = jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, {
-      algorithm: "HS256",
-      expiresIn: config.tokenExpiresIn
-    });
+    const token = signUserToken(user);
 
     res.json({ accessToken: token, tokenType: "Bearer", user: publicUser(user) });
   } catch (error) {
@@ -162,16 +159,19 @@ router.post("/logout", requireAuth, (req, res) => {
   res.status(204).end();
 });
 
-router.post("/change-password", requireAuth, async (req, res, next) => {
+router.post("/password-otp/request", authRateLimit, requireAuth, async (req, res, next) => {
+  try {
+    const data = z.object({ currentPassword: z.string().min(8).max(128) }).strict().parse(req.body);
+    res.json(await requestPasswordOtp(req.user, { ...data, locale: req.locale }));
+  } catch (error) { next(error); }
+});
+
+router.post("/change-password", authRateLimit, requireAuth, async (req, res, next) => {
   try {
     const data = changePasswordSchema.parse(req.body);
-    const currentMatches = await bcrypt.compare(data.currentPassword, req.user.passwordHash);
-    if (!currentMatches) {
-      throw new HttpError(400, "Current password is incorrect", { field: "currentPassword" }, "CURRENT_PASSWORD_INVALID");
-    }
-    const passwordHash = await bcrypt.hash(data.newPassword, 12);
-    await prisma.user.update({ where: { id: req.user.id }, data: { passwordHash, passwordResetRequired: false } });
-    res.status(204).end();
+    const user = await confirmPasswordOtp(req.user, data);
+    forgetAssistantSession({ actorId: req.user.id, authorization: req.headers.authorization });
+    res.json({ accessToken: signUserToken(user), tokenType: "Bearer", user: publicUser(user) });
   } catch (error) {
     next(error);
   }

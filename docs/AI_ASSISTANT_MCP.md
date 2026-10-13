@@ -182,3 +182,31 @@ configuration, especially dates, follow-up intent, privacy and cost.
 This implementation executes validated plans through its authenticated local MCP
 bridge. It does not expose localhost to a remote provider or use remote MCP
 authorization to bypass current backend scope.
+
+## ChatGPT connection research — 13 October 2026
+
+The website already calls Responses through assistantModel and validated plans
+through the authenticated local MCP bridge. Retain this path for the LAB chatbot:
+server-only API key/model, bounded output, store:false, current identity/LAB scope,
+and existing human handoff. No live provider call was verified in this batch.
+
+A ChatGPT plugin exposes LAB tools/UI inside ChatGPT or Codex. For private LAB
+data the current bearer-protected /mcp endpoint needs remote HTTPS deployment,
+OAuth 2.1 with PKCE, protected-resource and authorization-server discovery,
+audience/scope checks and account linking before it can be connected. Reusing
+read-only tools is feasible; do not publish today's local JWT as a shared token
+or bypass account/LAB access. This is an implementation direction, not a deployed
+plugin. See [MCP server](https://developers.openai.com/plugins/build/mcp-server)
+and [authentication requirements](https://developers.openai.com/plugins/build/auth).
+
+ChatKit offers an embeddable chat UI, with a custom server integration currently
+using its Python SDK; replacing this project's Express chat route would require
+an additional adapter/service and fresh auth/history/handoff tests. Do not migrate
+frameworks for it. For new work, avoid the retiring Agent Builder-hosted path;
+its shutdown is scheduled for 30 November 2026. See
+[ChatKit](https://developers.openai.com/api/docs/guides/chatkit).
+
+Sign in with ChatGPT has website identity and eligible plan-usage integrations.
+Eligibility/registration for LAB has not been verified; do not assume a paid
+ChatGPT account alone supplies website API access. See
+[Sign in with ChatGPT](https://developers.openai.com/siwc/quickstart).

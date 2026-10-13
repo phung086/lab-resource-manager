@@ -1,14 +1,13 @@
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
 import { Header } from "./Header.tsx";
 import { ProjectFooter } from "./features/ProjectFooter";
-import { KeyRound, Check, ShieldAlert } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.tsx";
 import "../styles/home-structure.css";
-import { validatePassword } from "../utils/profileValidation";
-import { apiRequest } from "../api.js";
+import { PasswordChangeForm } from './features/accounts/PasswordChangeForm';
 import { AI_ASSISTANT_ENABLED } from "../config/featureFlags";
 import { AssistantLauncher } from './features/assistant/AssistantLauncher';
 import { MaintenanceNoticeToast } from './features/monitoring/MaintenanceNoticeToast';
@@ -74,14 +73,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantMounted, setAssistantMounted] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [passwordError, setPasswordError] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
-  const passwordBusyRef = useRef(false);
-  const [passwordFields, setPasswordFields] = useState<Record<string,string>>({});
 
   useEffect(() => {
     setNavigationOpen(false);
@@ -125,8 +118,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     if (passwordBusy) return;
     if (user?.passwordResetRequired && !passwordSuccess) return;
     setChangePasswordOpen(false);
-    setPasswordFields({});
-    setPasswordError("");
     setPasswordSuccess(false);
   }
 
@@ -162,38 +153,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     incidents: tr("ui.resource_incidents_0cba217b"),
     training: translate("ui.lab_training_and_safety_26f5f367"),
     logs: translate("ui.audit_logs_da29e2f6"),
-    users: translate("ui.user_administration_4150792e")
+    users: tr(user?.role === "ADMIN" ? "ui.user_administration_4150792e" : "account.users.customers")
   };
 
   const currentTitle = tr(tabTitles[activeTab]) || tr("core.app.name");
   const unreadCount = notifications.filter((n) => !n.readAt).length;
-
-  async function handlePasswordSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (passwordBusyRef.current) return;
-    setPasswordError('');
-    const checked=validatePassword({currentPassword,newPassword,confirmPassword});
-    setPasswordFields(checked.errors);
-    if (!checked.data) { const ids:Record<string,string>={currentPassword:'current-password',newPassword:'new-password',confirmPassword:'confirm-password'}; document.getElementById(ids[Object.keys(checked.errors)[0]])?.focus(); return; }
-    passwordBusyRef.current=true;
-    setPasswordBusy(true);
-    try {
-      await apiRequest("/auth/change-password", {
-        method: "POST",
-        body: JSON.stringify(checked.data)
-      });
-      setPasswordSuccess(true);
-      onPasswordChanged?.();
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error: any) {
-      setPasswordError(error?.message || "ui.could_not_change_your_password_6c44efd3");
-    } finally {
-      passwordBusyRef.current=false;
-      setPasswordBusy(false);
-    }
-  }
 
   return (
     <div className="app-shell-2026 workspace-shell">
@@ -254,79 +218,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         maxWidth="max-w-md"
         footer={<>
           {(!user?.passwordResetRequired || passwordSuccess) && <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>{tr("ui.close_5d54c2a1")}</button>}
-          {!passwordSuccess && <button type="submit" form="change-password-form" className="btn btn-primary" disabled={passwordBusy}>{passwordBusy ? tr("ui.updating_01c0991e") : tr("ui.update_password_a9f9616f")}</button>}
         </>}
       >
-            <form id="change-password-form" onSubmit={handlePasswordSubmit} className="booking-form password-setup-form" noValidate>
-              {Object.keys(passwordFields).length>0 && <div className="alert danger" role="alert"><ul>{Object.entries(passwordFields).map(([field,message])=><li key={field}>{tr(message)}</li>)}</ul></div>}
-              {passwordError && (
-                <div className="alert danger text-xs flex items-center gap-2" role="alert">
-                  <ShieldAlert size={14} aria-hidden="true" />
-                  <span>{translate(passwordError)}</span>
-                </div>
-              )}
-              {passwordSuccess && (
-                <div className="alert success text-xs flex items-center gap-2" role="status">
-                  <Check size={14} aria-hidden="true" />
-                  <span>{tr("ui.your_password_has_been_updated_90d53208")}</span>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="current-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.current_password_7f06b3a5")}</label>
-                <input
-                  id="current-password"
-                  maxLength={128}
-                  disabled={passwordBusy || passwordSuccess}
-                  aria-invalid={!!passwordFields.currentPassword}
-                  aria-describedby={passwordFields.currentPassword?'current-password-error':undefined}
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-
-                  autoComplete="current-password"
-                  required
-                />
-                {passwordFields.currentPassword && <small className="password-field-error" id="current-password-error">{tr(passwordFields.currentPassword)}</small>}
-              </div>
-
-              <div>
-                <label htmlFor="new-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.new_password_8f6cace3")}</label>
-                <input
-                  id="new-password"
-                  maxLength={128}
-                  disabled={passwordBusy || passwordSuccess}
-                  aria-invalid={!!passwordFields.newPassword}
-                  aria-describedby={passwordFields.newPassword?'new-password-error':undefined}
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-
-                  autoComplete="new-password"
-                  required
-                />
-                {passwordFields.newPassword && <small className="password-field-error" id="new-password-error">{tr(passwordFields.newPassword)}</small>}
-              </div>
-
-              <div>
-                <label htmlFor="confirm-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.confirm_new_password_7a0fe0f4")}</label>
-                <input
-                  id="confirm-password"
-                  maxLength={128}
-                  disabled={passwordBusy || passwordSuccess}
-                  aria-invalid={!!passwordFields.confirmPassword}
-                  aria-describedby={passwordFields.confirmPassword?'confirm-password-error':undefined}
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-
-                  autoComplete="new-password"
-                  required
-                />
-                {passwordFields.confirmPassword && <small className="password-field-error" id="confirm-password-error">{tr(passwordFields.confirmPassword)}</small>}
-              </div>
-
-            </form>
+        <PasswordChangeForm email={user?.email} onBusyChange={setPasswordBusy} onSuccess={() => { setPasswordSuccess(true); onPasswordChanged?.(); }} />
       </BaseModal2026>
     </div>
   );

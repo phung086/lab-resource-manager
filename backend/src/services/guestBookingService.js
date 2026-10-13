@@ -1,7 +1,7 @@
 import { localize, normalizeLocale } from "../locales/index.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
+import { signUserToken } from "./authTokens.js";
 
 import { config } from "../config.js";
 import { prisma } from "../db.js";
@@ -11,6 +11,7 @@ import { sendRequiredEmail, escapeHtml } from "./emailService.js";
 import { enqueueRegistrationEmail } from "./emailAutomationService.js";
 import { validateVietnamAddress } from "./addressService.js";
 import { createBookingWithTransaction } from "./bookingService.js";
+import { getUserLoyalty } from "./loyaltyService.js";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "./systemAuditService.js";
 
 const PURPOSE = "GUEST_QUICK_BOOKING";
@@ -34,10 +35,7 @@ function codeHash(email, code) {
 }
 
 function authToken(user) {
-  return jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, {
-    algorithm: "HS256",
-    expiresIn: config.tokenExpiresIn
-  });
+  return signUserToken(user);
 }
 
 async function lockOtpIdentity(tx, email) {
@@ -67,7 +65,7 @@ export function configureGuestAddressTestValidation(handler) {
   testAddressValidation = handler;
 }
 
-export function publicCustomerUser(user) {
+export function publicCustomerUser(user, loyalty = null) {
   return {
     id: user.id,
     email: user.email,
@@ -90,12 +88,7 @@ export function publicCustomerUser(user) {
       source: user.defaultAddressSource,
       version: user.defaultAddressVersion
     } : null,
-    loyalty: {
-      tier: user.loyaltyTier || "LAB_STANDARD",
-      points: user.loyaltyPoints || 0,
-      discountBps: user.loyaltyDiscountBps || 0,
-      priorityBoost: user.priorityBoost || 0
-    }
+    loyalty
   };
 }
 
@@ -249,6 +242,10 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
 
     const booking = await createBookingWithTransaction(tx, {
       requestedById: user.id,
+      expectedAuthVersion: user.authVersion,
+      // The guest accepted a public list-price quote before identity verification.
+      // Loyalty discounts apply to subsequent authenticated owner quotes.
+      applyLoyalty: false,
       resourceId: payload.booking.resourceId,
       title: payload.booking.title,
       purpose: payload.booking.purpose,
@@ -310,7 +307,7 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
       });
     }
 
-    return { user, booking, accountCreated: !existing };
+    return { user, booking, loyalty: await getUserLoyalty(tx, user.id), accountCreated: !existing };
   });
 
   if (outcome.error) throwOtpError(outcome.error);
@@ -323,7 +320,7 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
       tokenType: null,
       requiresLogin: true
     }),
-    user: outcome.accountCreated ? publicCustomerUser(outcome.user) : null,
+    user: outcome.accountCreated ? publicCustomerUser(outcome.user, outcome.loyalty) : null,
     booking: outcome.booking
   };
 }

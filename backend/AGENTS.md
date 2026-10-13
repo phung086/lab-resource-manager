@@ -16,7 +16,8 @@ PostgreSQL 16. Đọc [backend guideline](../docs/BACKEND_GUIDELINE.md) và SRS 
 | Kiểm chứng | `package.json`, test liên quan trong `test/`, script/guard trong `scripts/` |
 
 Theo route → middleware → service → Prisma và tests của tính năng. Kiểm tra
-active user, role, ownership, UserLabAssignment; staff chưa phân lab fail closed.
+active user, role, ownership, UserLabAssignment; staff chưa phân lab fail closed
+cho nghiệp vụ LAB. ADR-034 chỉ cho staff quản lý tất cả CUSTOMER qua account API.
 Giữ overlap lock, transaction/history, physical state và error/API contract.
 Đổi response/field/status phải kiểm tra FE callers. DB task đọc schema, ADR-021
 và guarded migration workflow; không db push/reset hoặc sửa migration đã áp dụng.

@@ -46,7 +46,8 @@ authorization-relevant fields supplied by clients without server-side
 validation and authorization.
 
 `UserLabAssignment` is the source of `LAB_STAFF` laboratory scope. Unassigned
-staff must fail closed.
+staff must fail closed for laboratory operations. ADR-034 permits LAB_STAFF
+to manage all CUSTOMER accounts through account APIs only.
 
 ## Booking
 

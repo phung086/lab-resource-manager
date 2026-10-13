@@ -39,7 +39,7 @@ Lệnh chỉ đọc cấu hình, in trạng thái và tên tool; không gọi nh
 truy vấn DB và không in bí mật. `MISSING_KEY`/`MISSING_MODEL` là trạng thái dự
 kiến trước khi kết nối. `CONFIGURED_UNVERIFIED` chỉ nói đã có hai giá trị cấu hình.
 
-Trong phiên demo đang chạy, mở [ứng dụng local](http://127.0.0.1:15181/), đăng
+Trong phiên demo đang chạy, mở [ứng dụng local](http://localhost:5173/), đăng
 nhập rồi mở Trợ lý LAB. Có thể thử:
 
 1. “Bạn là ai?” → giới thiệu khả năng, không trả thống kê không liên quan.
@@ -48,7 +48,7 @@ nhập rồi mở Trợ lý LAB. Có thể thử:
 4. “Tìm lịch trống trong 60 phút” → tối đa năm khung giờ để cân nhắc.
 5. “Lấy khung thứ hai” → kiểm tra lại đúng khung giờ trước, không dùng lịch cũ
    làm bằng chứng còn trống.
-6. “Hướng dẫn thanh toán” → trạng thái cấu hình thực tế; demo hiện tắt thanh toán.
+6. “Hướng dẫn thanh toán” → trạng thái cấu hình thực tế; đọc cấu hình thanh toán của runtime đang dùng.
 
 Với ngày cụ thể, điền cả hai mốc trong “Chọn phòng, thiết bị và thời gian”. Khi
 chưa có AI, câu như “ngày mai lúc 9 giờ” cần các trường này; local planner chưa
@@ -91,7 +91,7 @@ Frontend chỉ cần flag và URL của API đang dùng, ví dụ phiên local h
 
 ```env
 VITE_ENABLE_AI_ASSISTANT=true
-VITE_API_BASE_URL=http://127.0.0.1:15005/api
+VITE_API_BASE_URL=http://localhost:8000/api
 ```
 
 Giữ key ở backend; không tạo biến `VITE_OPENAI_API_KEY`, không đưa key vào code,

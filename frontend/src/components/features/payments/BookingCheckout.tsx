@@ -5,9 +5,10 @@ import { ArrowLeft, ExternalLink, RefreshCw, ShieldCheck } from "lucide-react";
 import { canInitiateBookingPayment, paymentSessionStatus, safeVnpayUrl } from "../../../utils/paymentValidation";
 import { apiRequest } from "../../../api.js";
 import { formatVietnamDateTime } from "../../../utils/timezone";
+import { QuoteDiscountSummary } from './QuoteDiscountSummary';
 import "./payments.css";
 
-type Booking = { id: string; requestedById: string; title: string; status: string; feeAmountVnd: number; startAt: string; endAt: string; resource: { code: string; name: string } };
+type Booking = { id: string; requestedById: string; title: string; status: string; feeAmountVnd: number; feeSnapshot?: { baseAmountVnd: number; discountAmountVnd: number; discountBps: number; loyaltyTier: string; loyaltyPolicyVersion: number; amountVnd: number }; startAt: string; endAt: string; resource: { code: string; name: string } };
 type Charge = { id: string; userId: string; amount: number; currency: string; status: string; provider: string; txnRef: string; paidAt: string | null; paymentUrlExpiresAt: string | null; reconciliationStatus: string; reconciliationReason: string | null };
 const money = (amount: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
@@ -67,6 +68,7 @@ export function BookingCheckout({ user, bookingId, onClearBooking }: { user: { i
         <dt>{tr("ui.usage_fee_cdf18099")}</dt><dd><strong className="payment-amount">{money(booking.feeAmountVnd)}</strong></dd>
         {charge && <><dt>{translate("ui.payment_reference_3749e1af")}</dt><dd className="payment-ref">{charge.txnRef}</dd></>}
       </dl>
+      <QuoteDiscountSummary quote={booking.feeSnapshot} />
       </div><div className="booking-checkout-status">{booking.feeAmountVnd === 0 ? <div className="alert" role="status">{translate("ui.this_booking_is_free_and_a79ab8e0")}</div>
         : booking.status === "PENDING_APPROVAL" ? <div className="alert" role="status">{translate("ui.awaiting_lab_staff_approval_a_7acf2a8a")}</div>
         : ["REJECTED", "CANCELLED"].includes(booking.status) && charge?.status === "success" && charge.reconciliationStatus === "manual_review" ? <div className="alert warning" role="status">{translate("ui.vnpay_verified_this_payment_after_b54cfde0")} {booking.status === "REJECTED" ? tr("ui.rejected_cb6ec8af") : tr("ui.cancelled_2cdb07af")}{translate("ui.an_administrator_must_reconcile_the_682abc88")}</div>

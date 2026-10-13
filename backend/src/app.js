@@ -17,6 +17,7 @@ import addressRouter from "./routes/address.js";
 import guestBookingRouter from "./routes/guestBooking.js";
 import resourceMediaRouter from "./routes/resourceMedia.js";
 import userRouter from "./routes/users.js";
+import loyaltyRouter from "./routes/loyalty.js";
 import auditEventsRouter from "./routes/auditEvents.js";
 import resourceRouter from "./routes/resources.js";
 import laboratoryRouter from "./routes/laboratories.js";
@@ -124,6 +125,7 @@ export function createApp() {
 
   // 2. Users & Profiles
   app.use("/api/users", userRouter);
+  app.use("/api/loyalty", loyaltyRouter);
   app.use("/api/audit-events", auditEventsRouter);
 
   // 3. Resources & Catalog

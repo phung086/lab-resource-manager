@@ -7,6 +7,7 @@ export const safeUserSelect = Object.freeze({
   fullName: true,
   role: true,
   isActive: true,
+  deletedAt: true,
   createdAt: true,
   department: true,
   studentId: true,

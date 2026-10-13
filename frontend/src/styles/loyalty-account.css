@@ -1,0 +1,21 @@
+.account-loyalty { display:grid; gap:10px; padding:20px 0; border-bottom:1px solid var(--workspace-border,#d8d2e1); }
+.account-loyalty-tier { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.account-loyalty-tier strong { font-size:1rem; }
+.account-loyalty-tier span { color:var(--workspace-accent,#6046a7); font-size:.8rem; font-weight:600; }
+.account-loyalty p,.account-loyalty small { color:var(--workspace-text-muted,#625b70); margin:0; font-size:.8rem; line-height:1.6; }
+.account-loyalty progress { width:100%; height:8px; accent-color:var(--workspace-accent,#7258c7); }
+.loyalty-policy { margin-bottom:24px; border:1px solid var(--color-border,#d8d2e1); border-radius:12px; padding:16px 24px; background:var(--color-surface,#fff); }
+.loyalty-policy summary { cursor:pointer; font-weight:600; min-height:32px; display:list-item; padding:4px 0; }
+.loyalty-policy p { color:var(--color-text-secondary,#625b70); font-size:.875rem; line-height:1.6; }
+.loyalty-policy fieldset,.users-edit-form fieldset { border:0; min-width:0; margin:0; padding:0; display:grid; gap:16px; }
+.users-workspace .loyalty-policy-enabled { display:flex; flex-direction:row; align-items:center; gap:10px; }
+.users-workspace .loyalty-policy-enabled input { width:20px; min-height:20px; height:20px; padding:0; accent-color:var(--color-primary,#7258c7); }
+.loyalty-policy .users-form { margin-top:0; }
+.loyalty-policy .btn { justify-self:start; }
+.users-contact-actions { display:grid; gap:20px; border-top:1px solid var(--color-border,#e6e1ed); padding-top:20px; margin-top:20px; }
+.users-filters-customer { grid-template-columns:minmax(170px,1fr) minmax(125px,.55fr); }
+.users-edit-form { display:grid; gap:14px; }
+.booking-discount-summary { display:grid; gap:8px; margin:12px 0 0; font-size:.875rem; }
+.booking-discount-summary div { display:flex; justify-content:space-between; gap:20px; }
+.booking-discount-summary dd { margin:0; font-weight:600; }
+@media(max-width:600px) { .loyalty-policy { padding:16px; } }

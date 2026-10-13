@@ -56,10 +56,10 @@ router.put("/:resourceId", requireAuth, requireRole("ADMIN"), async (req, res, n
     }));
   } catch (error) { next(error); }
 });
-router.post("/quote", async (req, res, next) => {
+router.post("/quote", (req, res, next) => req.headers.authorization === undefined ? next() : requireAuth(req, res, next), async (req, res, next) => {
   try {
     const data = z.object({ resourceId: z.string().min(1), purposeCode: z.enum(PURPOSE_CODES).optional(), startAt: z.string().datetime({ offset: true }), endAt: z.string().datetime({ offset: true }) }).strict().parse(req.body);
-    res.json(await quoteBooking(prisma, data));
+    res.json(await prisma.$transaction(tx => quoteBooking(tx, data, { userId: req.user?.id || null }), { isolationLevel: "RepeatableRead" }));
   } catch (error) { next(error); }
 });
 export default router;

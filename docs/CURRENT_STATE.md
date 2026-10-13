@@ -59,6 +59,61 @@ SMTP được kiểm tra bằng loopback protocol fixture, chưa có nhà cung c
 VNPAY NCB Sandbox đã xác minh trong checkpoint thanh toán bên dưới; email gửi thật chưa được xác minh.
 Không deploy production, không tự mở batch mới.
 
+
+## Tài khoản, OTP, loyalty và tích hợp GitHub — 13/10/2026
+
+User yêu cầu triển khai nếu GitHub chưa có task, staff quản lý tất cả CUSTOMER,
+loyalty xét theo chi tiêu; UI redesign và ChatGPT connection chỉ nghiên cứu.
+Fetch/PR check thấy origin/main vẫn bd83a97, chưa có account/OTP changes đã push.
+Đã tạo worktree C:/Users/Admin/.codex/worktrees/customer-security-loyalty/lab-resource-manager,
+nhánh codex/customer-security-loyalty. Snapshot e2358e61 giữ nguyên toàn bộ code
+local có sẵn (roles/customer signup, booking/care, chat/email, VNPAY merchant mới).
+Feature mới là các commit sau snapshot; không pull/merge đè checkout chính.
+
+Đã thêm account service/RBAC: ADMIN mọi tài khoản; staff global CUSTOMER-only,
+không mở quyền LAB/chat. Tạo/sửa contact/active/xóa mềm, immutable email, chặn
+booking/loan và support mở, giữ history, self/last-admin guards, audit transactional.
+OTP 6 số qua email hiện tại, 10 phút/60 giây/5 lần sai, actor/target/purpose/version
+binding, hash-only, delivered evidence và one-use. Self cần mật khẩu hiện tại;
+assisted cần lý do. Credential/role/activation tăng authVersion, phiên cũ mất hiệu
+lực; self renew JWT. Shared User/dispatch locks chặn create/delete race. Frontend
+giữ JWT mới khi request cũ trả401, focus lỗi sau render, không fallback bỏ password
+gate khi refresh profile lỗi. Public recovery/đổi email chưa nằm trong batch.
+
+LoyaltyPolicy SYSTEM mặc định tắt, admin cấu hình ngưỡng/rate/version. Chi tiêu
+chỉ từ eligible settled VND payments đúng chủ, phí và trạng thái; loại pending,
+failed/refunded/orphan/reconciliation/cancelled. Quote private CUSTOMER lưu giá gốc,
+giảm/net và policy version, payment đúng net; guest giữ accepted public list price.
+Profile đọc snapshot đồng nhất, legacy user loyalty fields không là authority.
+Schema audit metadata nullable được đối chiếu với SQL đã áp dụng (mismatch cũ);
+chỉ chỉnh Prisma cho đúng DDL, không sửa audit history hoặc applied migration.
+Hai forward migrations mới: account_security và spend_loyalty_policy.
+
+Verification trên PG16/25439, DB test riêng: required backend99, accounts12,
+loyalty integration11, auth/RBAC10, guest integrity13 đều PASS, không skip; lint
+và Prisma generate, migration deploy/idempotence, schema diff0, ERD check đạt.
+Frontend required34 tests, 3202 VI/EN keys/projection, lint/typecheck/build đạt,
+còn hai warnings trước đó. Browser UI41 assertions đạt: STAFF CRUD/assistedOTP,
+ADMIN roles/policy, CUSTOMER selfOTP/session renewal/reload, mobile390/desktop1440,
+0pageerrors; SMTP loopback thật, không real inbox. Guards sai host/port/DB/protocol
+bị từ chối. Các test API18043/preview5185/SMTP được dừng sau QA.
+CI thêm job account-security-loyalty dùng guarded PG16+SMTP+browser; YAML parse
+đạt, chưa dispatch GitHub Actions. Snapshot checksum của 1164 paths, HEAD/branch/
+status checkout chính đều không đổi; không dùng primary .env/secrets/DB/runtime.
+
+Đã cập nhật SRS, ADR034/035, FE/BE guideline, threat model, ERD, README và
+[INTEGRATION_GUIDE](INTEGRATION_GUIDE.md): thứ tự đọc, dependencies và cách tích
+hợp snapshot/feature thay vì blind pull. Research UI đề xuất catalogue ưu tiên đặt
+lịch, staff operation queue và admin exception dashboard, chưa redesign toàn bộ.
+Chatbot hiện có Responses+MCP nội bộ; plugin ChatGPT remote cần OAuth/HTTPS mới,
+ChatKit là phương án khác có thêm integration; chi tiết/nguồn ở AI_ASSISTANT_MCP.
+
+Giới hạn: SMTP bên ngoài và AI provider chưa xác minh; loyalty tắt đến khi admin
+bật. Bản mới chỉ có trong worktree review, chưa đưa lên runtime chính hoặc push/
+merge/deploy. Thanh toán VNPAY thật đã PASS riêng ở checkpoint trước, được giữ
+nguyên trong snapshot; test loyalty callback là fixture ký trên DB test, không
+phải một lượt thanh toán provider mới. Dừng ở phạm vi batch đã yêu cầu.
+
 ## Checkout và runtime
 
 - Chỉ C:/Projects/lab-resource-manager, claude/lrm-redesign-v2. Working tree có

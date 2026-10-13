@@ -5,7 +5,7 @@
 | Document field | Value |
 |---|---|
 | Document ID | LRM-SRS-001 |
-| Version | 1.3 |
+| Version | 1.4 |
 | Status | Working baseline for the current project checkpoint |
 | Prepared | 28 September 2026; clarified 3 October 2026 |
 | Product | Lab Resource Manager |
@@ -62,7 +62,7 @@ At a high level, the system supports:
 | Actor | Main responsibilities | Authorization boundary |
 |---|---|---|
 | `ADMIN` | Manage users, roles, laboratory assignments, resources, policies, and cross-lab administration | Global administrative permission, enforced by backend |
-| `LAB_STAFF` | Operate resources, process bookings, maintenance, monitoring, and incidents | Limited to laboratories assigned through `UserLabAssignment` |
+| `LAB_STAFF` | Operate resources, bookings, maintenance and incidents; manage CUSTOMER accounts | Assigned LABs for operations; global CUSTOMER account management (ADR-034) |
 | `CUSTOMER` | Discover resources, book, pay and request assistance | Own bookings, incidents, profile and support history; no operator privileges |
 
 Public visitors may view explicitly public catalog and schedule projections. Public access does not grant booking mutation or account privileges.
@@ -112,6 +112,9 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | FR-AUTH-02 | Public self-registration shall create only the canonical `CUSTOMER` role using email and password only; contact details are collected when booking. |
 | FR-AUTH-03 | For each protected request, the backend shall verify the current database user exists and is active before authorizing the operation. |
 | FR-AUTH-04 | An `ADMIN` shall be able to manage user roles, activation, and laboratory assignments. |
+| FR-AUTH-07 | ADMIN shall manage all accounts; LAB_STAFF shall create/read/edit contact/deactivate/soft-remove all CUSTOMER accounts only, without acquiring global LAB permissions. |
+| FR-AUTH-08 | All password changes shall require a one-use, expiring OTP delivered to the immutable registered email; self changes also require the current password. Failure to deliver shall fail closed. |
+| FR-AUTH-09 | Credential, activation and role changes shall invalidate earlier authentication versions; removal shall retain history and block while bookings/support remain open. |
 | FR-AUTH-05 | The system shall not treat client-side route hiding or client-provided user/role/laboratory identifiers as authorization. |
 | FR-AUTH-06 | When external quick booking is enabled, the system shall verify the configured email OTP flow before creating/reusing an external account and proceeding with booking. The account shall retain role `CUSTOMER` and may carry `customerType=EXTERNAL`. |
 
@@ -301,7 +304,8 @@ Every permission is enforced by the server; navigation visibility is only a UX a
 
 | Operation | ADMIN | LAB_STAFF | CUSTOMER |
 |---|---|---|---|
-| Users, roles, lab assignments administration | Global | No | No |
+| Account/contact/activation/removal and assisted password reset | Global | All CUSTOMER only | No |
+| Roles and lab assignments administration | Global | No | No |
 | Profile/password self-service | Own | Own | Own |
 | Resources and operational state | Global | Assigned labs | Public/authenticated safe reads |
 | Read booking/incident queues | Global | Assigned labs | Own records |
@@ -416,3 +420,37 @@ See CURRENT_STATE for the actual run scope and limits.
   preference and a mail administration UI are deferred. Historical events are
   not automatically backfilled. External SMTP and live merchant verification
   remain prerequisites for inbox/end-to-end payment evidence.
+
+## Appendix H. Account security and spending loyalty (approved 2026-10-13)
+
+ADMINS manage every account; staff manage every CUSTOMER, even without a LAB
+assignment. This exception grants no global resource/booking/support access.
+Contact edits exclude email, role and credentials; role/assignment changes remain
+ADMIN-only. Removal is soft and preserves all history. Active bookings/loans block
+removal; open support blocks removal/deactivation/role change until closed or
+requeued as applicable. Self-lockout and loss of the last active admin are blocked.
+
+LAB-ACC-01: Password requests bind actor, target, purpose, registered email and
+both credential versions. OTP is 6 digits, valid 10 minutes, resend cooldown
+60 seconds, maximum 5 wrong attempts; never expose the code in API/audit/log.
+Missing/rejected SMTP reports failure, never bypasses. Confirmation and audit
+are atomic; successful self change renews JWT while prior JWTs are revoked.
+Booking/support creation rechecks the current user under shared row locks with
+removal; an in-flight request cannot create work for a removed/inactive account.
+Public forgotten-password recovery and changing email require a separate flow.
+
+LAB-LOY-01: Derive tiers from eligible verified VND spending only (ADR-035), never
+client fields or mutable legacy loyalty data. ADMIN configures enabled state,
+thresholds and discounts with optimistic version checks and immutable audit.
+Default policy is disabled; Plus/Priority defaults are 1.5m/5m VND and 3%/5%.
+Discounted authenticated CUSTOMER quotes save base/discount/net and policy version
+with the booking; provider charge uses the exact stored net. Old bookings are
+unchanged. Public/operator quotes and guest bookings use accepted list prices.
+Points show floor(spend/10,000); they cannot be redeemed or grant permissions.
+
+Acceptance: unauthorized target/role requests fail; no OTP bypass; attempts,
+expiry/replay, credential revocation, race and audit rollback are verified;
+policy conflicts and unverified/refunded payments cannot earn or alter an old fee.
+Entries: backend test:accounts:integration, test:loyalty and test:loyalty:integration;
+frontend test:accounts, test_api_request.mjs and test:ui:accounts. Live SMTP inbox
+and AI provider verification remain environment-dependent. See CURRENT_STATE.

@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { prisma } from '../db.js';
 import { HttpError } from '../middleware/errors.js';
 import { ADMIN, LAB_STAFF, CUSTOMER } from '../constants/roles.js';
+import { lockCurrentAccount } from './accountAccess.js';
 
 export const SUPPORT_CATEGORIES = ['BOOKING', 'PAYMENT', 'ACCOUNT', 'RESOURCE', 'OTHER'];
 export const SUPPORT_STATUSES = ['WAITING', 'ACTIVE', 'CLOSED', 'CANCELLED'];
@@ -98,6 +99,7 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
     const fingerprint = createHash('sha256').update(JSON.stringify(data)).digest('hex');
     return db.$transaction(async tx => {
       await lockDispatch(tx);
+      await lockCurrentAccount(tx, actor.id, actor.authVersion);
       const existing = await tx.supportSession.findUnique({ where: { id: data.requestId }, include });
       if (existing) {
         if (existing.requesterId !== actor.id || existing.requestFingerprint !== fingerprint) fail('SUPPORT_REQUEST_CHANGED');

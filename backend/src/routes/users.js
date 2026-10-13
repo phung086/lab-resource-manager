@@ -1,17 +1,26 @@
-import { localize } from '../locales/index.js';
+import { getUserLoyalty, getVerifiedSpend } from '../services/loyaltyService.js';
 import express from "express";
+import rateLimit from "express-rate-limit";
 import { z } from "zod";
 
 import { prisma } from "../db.js";
+import { config } from "../config.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
-import { ADMIN, CANONICAL_ROLES, LAB_STAFF } from "../constants/roles.js";
-import { createManagedUser, safeUserSelect } from "../services/userService.js";
+import { ADMIN, CANONICAL_ROLES, LAB_STAFF, CUSTOMER } from "../constants/roles.js";
+import { safeUserSelect } from "../services/userService.js";
+import { canManageTarget } from "../services/accountAccess.js";
+import { createAccount, editAccount, changeAccountRole, changeAccountActive, removeAccount, staffCustomerSelect } from "../services/accountManagementService.js";
+import { requestPasswordOtp, confirmPasswordOtp } from "../services/passwordSecurityService.js";
 import { validateVietnamAddress } from "../services/addressService.js";
 import { publicCustomerUser } from "../services/guestBookingService.js";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "../services/systemAuditService.js";
 
 const router = express.Router();
+const accountLimit = rateLimit({ windowMs: 60000, limit: config.isProduction ? 30 : 120, keyGenerator: req => req.user.id,
+  standardHeaders: "draft-7", legacyHeaders: false,
+  message: { error: { code: "RATE_LIMITED", message: "Too many account changes" } } });
+const phoneSchema = z.string().trim().max(20).refine(value => !value || /^(?:0\d{9}|\+[1-9]\d{7,14})$/.test(value));
 
 const addressSchema = z.object({
   addressLine: z.string().trim().min(5).max(300),
@@ -40,36 +49,27 @@ function addressData(address) {
   };
 }
 
-async function buildProfileResponse(user, locale = "vi") {
-  const [paymentStats, bookingStats, userCerts] = await Promise.all([
-    prisma.paymentTransaction.aggregate({
-      where: { userId: user.id, status: "success" },
-      _sum: { amount: true },
-      _count: { _all: true },
-      _max: { paidAt: true }
-    }),
-    prisma.booking.groupBy({
+async function buildProfileResponse(user) {
+  return prisma.$transaction(async tx => {
+  const [paymentStats, bookingStats, userCerts, loyalty] = await Promise.all([
+    getVerifiedSpend(tx, user.id),
+    tx.booking.groupBy({
       by: ["status"],
       where: { requestedById: user.id },
       _count: { _all: true }
     }),
-    prisma.userCertification.findMany({
+    tx.userCertification.findMany({
       where: { userId: user.id },
       include: {
         course: { select: { id: true, code: true, name: true } }
       },
       orderBy: { createdAt: "desc" }
-    })
+    }),
+    getUserLoyalty(tx, user.id)
   ]);
   const bookingCounts = Object.fromEntries(bookingStats.map(row => [row.status, row._count._all]));
-  const totalSpendVnd = Number(paymentStats._sum.amount || 0);
+  const totalSpendVnd = paymentStats.totalSpendVnd;
   const completedBookings = bookingCounts.COMPLETED || 0;
-  const earnedPoints = Math.floor(totalSpendVnd / 10000) + completedBookings * 10;
-  const suggestedTier = totalSpendVnd >= 5000000 || completedBookings >= 10
-    ? "LAB_PRIORITY"
-    : totalSpendVnd >= 1500000 || completedBookings >= 4
-      ? "LAB_PLUS"
-      : "LAB_STANDARD";
   return {
     ...publicCustomerUser(user),
     createdAt: user.createdAt,
@@ -84,8 +84,8 @@ async function buildProfileResponse(user, locale = "vi") {
     })),
     spending: {
       totalSpendVnd,
-      successfulPayments: paymentStats._count._all,
-      lastPaidAt: paymentStats._max.paidAt || null,
+      successfulPayments: paymentStats.successfulPayments,
+      lastPaidAt: paymentStats.lastPaidAt,
       paidCurrency: "VND"
     },
     bookingSummary: {
@@ -94,17 +94,9 @@ async function buildProfileResponse(user, locale = "vi") {
       active: (bookingCounts.PENDING_APPROVAL || 0) + (bookingCounts.CONFIRMED || 0) + (bookingCounts.CHECKED_OUT || 0) + (bookingCounts.RETURNED || 0),
       byStatus: bookingCounts
     },
-    loyalty: {
-      tier: user.loyaltyTier || suggestedTier,
-      configuredTier: user.loyaltyTier || "LAB_STANDARD",
-      suggestedTier,
-      points: Math.max(user.loyaltyPoints || 0, earnedPoints),
-      earnedPoints,
-      discountBps: user.loyaltyDiscountBps || 0,
-      priorityBoost: user.priorityBoost || 0,
-      basisKey: "profile.loyaltyBasis", basis: localize(locale, "profile.loyaltyBasis")
-    }
+    loyalty
   };
+  }, { isolationLevel: "RepeatableRead" });
 }
 
 /**
@@ -143,11 +135,12 @@ router.patch("/me", requireAuth, async (req, res, next) => {
  * GET / — Admin: List all users.
  * Requires ADMIN role. No mockStore fallback.
  */
-router.get("/", requireAuth, requireRole(ADMIN), async (req, res, next) => {
+router.get("/", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {
     const users = await prisma.user.findMany({
+      where: req.user.role === LAB_STAFF ? { role: CUSTOMER } : {},
       select: {
-        ...safeUserSelect,
+        ...(req.user.role === ADMIN ? safeUserSelect : staffCustomerSelect),
         _count: { select: { bookings: true } }
       },
       orderBy: [{ role: "asc" }, { fullName: "asc" }]
@@ -161,22 +154,22 @@ router.get("/", requireAuth, requireRole(ADMIN), async (req, res, next) => {
 
 
 const createUserSchema = z.object({
-  email: z.string().trim().email().transform((value) => value.toLowerCase()),
+  email: z.string().trim().email().max(255).transform((value) => value.toLowerCase()),
   password: z.string().min(12).max(128),
   fullName: z.string().trim().min(2).max(255),
   role: z.enum(CANONICAL_ROLES).default("CUSTOMER"),
   isActive: z.boolean().default(true),
   studentId: z.string().trim().max(50).optional(),
   department: z.string().trim().max(100).optional(),
-  phone: z.string().trim().max(20).optional(),
+  phone: phoneSchema.optional(),
   organization: z.string().trim().max(160).optional(),
   customerType: z.enum(["INTERNAL", "EXTERNAL"]).default("INTERNAL")
 }).strict();
 
-router.post("/", requireAuth, requireRole(ADMIN), async (req, res, next) => {
+router.post("/", requireAuth, requireRole(ADMIN, LAB_STAFF), accountLimit, async (req, res, next) => {
   try {
     const data = createUserSchema.parse(req.body);
-    const created = await createManagedUser(prisma, data);
+    const created = await createAccount(req.user, data, req.locale);
     res.status(201).json(created);
   } catch (error) {
     if (error?.code === "P2002") {
@@ -301,125 +294,66 @@ router.delete("/:id/lab-assignments/:laboratoryId", requireAuth, requireRole(ADM
   }
 });
 
-router.get("/:id", requireAuth, requireRole(ADMIN), async (req, res, next) => {
+router.get("/:id", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
       select: {
-        ...safeUserSelect,
-        _count: { select: { bookings: true, labAssignments: true } }
+        ...(req.user.role === ADMIN ? safeUserSelect : staffCustomerSelect),
+        _count: { select: { bookings: true } }
       }
     });
-    if (!user) throw new HttpError(404, "User not found", undefined, "NOT_FOUND");
+    if (!user || !canManageTarget(req.user, user)) throw new HttpError(404, "User not found", undefined, "NOT_FOUND");
     res.json(user);
   } catch (error) {
     next(error);
   }
 });
 
-/**
- * PATCH /:id/role — Admin: Update user role.
- * Only ADMIN can change roles.
- */
-const updateRoleSchema = z.object({
-  role: z.enum(["ADMIN", "LAB_STAFF", "CUSTOMER"])
-}).strict();
 
-router.patch("/:id/role", requireAuth, requireRole(ADMIN), async (req, res, next) => {
+const editAccountSchema = z.object({
+  fullName: z.string().trim().min(2).max(255).optional(),
+  phone: phoneSchema.optional(),
+  organization: z.string().trim().max(160).optional().nullable()
+}).strict().refine(value => Object.keys(value).length > 0, { message: "Specify a field to update" });
+const reasonSchema = z.object({ reason: z.string().trim().min(5).max(500) }).strict();
+const assistedConfirmSchema = z.object({ challengeId: z.string().uuid(), otp: z.string().regex(/^\d{6}$/),
+  newPassword: z.string().min(8).max(128) }).strict();
+
+router.patch("/:id", requireAuth, requireRole(ADMIN, LAB_STAFF), accountLimit, async (req, res, next) => {
   try {
-    const data = updateRoleSchema.parse(req.body);
-
-    if (req.params.id === req.user.id && data.role !== ADMIN) {
-      throw new HttpError(409, "You cannot remove your own administrator role", undefined, "SELF_LOCKOUT_FORBIDDEN");
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
-    if (!user) {
-      throw new HttpError(404, "User not found", undefined, "NOT_FOUND");
-    }
-
-    const updated = await prisma.$transaction(async (tx) => {
-      const saved = await tx.user.update({
-        where: { id: req.params.id },
-        data: { role: data.role }
-      });
-      if (data.role !== LAB_STAFF) {
-        await tx.userLabAssignment.deleteMany({ where: { userId: req.params.id } });
-      }
-      await recordSystemAuditEvent(tx, {
-        actor: req.user,
-        action: AUDIT_ACTIONS.USER_ROLE_CHANGED,
-        targetType: AUDIT_TARGET_TYPES.USER,
-        targetId: saved.id,
-        beforeState: { role: user.role },
-        afterState: { role: saved.role },
-        metadata: { source: "admin_user_management" }
-      });
-      return saved;
-    });
-
-    return res.json({
-      id: updated.id,
-      email: updated.email,
-      fullName: updated.fullName,
-      role: updated.role,
-      isActive: updated.isActive
-    });
-  } catch (error) {
-    next(error);
-  }
+    const data = editAccountSchema.parse(req.body);
+    if (data.phone === "") data.phone = null;
+    if (data.organization === "") data.organization = null;
+    res.json(await editAccount(req.user, req.params.id, data));
+  } catch (error) { next(error); }
 });
-
-/**
- * PATCH /:id/active — Admin: Activate/deactivate user.
- */
-const updateActiveSchema = z.object({
-  isActive: z.boolean()
-}).strict();
-
-router.patch("/:id/active", requireAuth, requireRole(ADMIN), async (req, res, next) => {
+router.delete("/:id", requireAuth, requireRole(ADMIN, LAB_STAFF), accountLimit, async (req, res, next) => {
+  try { const { reason } = reasonSchema.parse(req.body); res.json(await removeAccount(req.user, req.params.id, reason)); }
+  catch (error) { next(error); }
+});
+router.post("/:id/password-otp/request", requireAuth, requireRole(ADMIN, LAB_STAFF), accountLimit, async (req, res, next) => {
   try {
-    const data = updateActiveSchema.parse(req.body);
-
-    if (req.params.id === req.user.id && !data.isActive) {
-      throw new HttpError(409, "You cannot deactivate your own account", undefined, "SELF_LOCKOUT_FORBIDDEN");
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
-    if (!user) {
-      throw new HttpError(404, "User not found", undefined, "NOT_FOUND");
-    }
-
-    const updated = await prisma.$transaction(async (tx) => {
-      const saved = await tx.user.update({
-        where: { id: req.params.id },
-        data: { isActive: data.isActive }
-      });
-      await recordSystemAuditEvent(tx, {
-        actor: req.user,
-        action: AUDIT_ACTIONS.USER_ACTIVATION_CHANGED,
-        targetType: AUDIT_TARGET_TYPES.USER,
-        targetId: saved.id,
-        beforeState: { isActive: user.isActive },
-        afterState: { isActive: saved.isActive },
-        metadata: { source: "admin_user_management" }
-      });
-      return saved;
-    });
-
-    return res.json({
-      id: updated.id,
-      email: updated.email,
-      fullName: updated.fullName,
-      role: updated.role,
-      isActive: updated.isActive
-    });
-  } catch (error) {
-    if (error.code === "P2025") {
-      return next(new HttpError(404, "User not found", undefined, "NOT_FOUND"));
-    }
-    next(error);
-  }
+    const { reason } = reasonSchema.parse(req.body);
+    res.json(await requestPasswordOtp(req.user, { targetUserId: req.params.id, reason, locale: req.locale }));
+  } catch (error) { next(error); }
+});
+router.post("/:id/password-otp/confirm", requireAuth, requireRole(ADMIN, LAB_STAFF), accountLimit, async (req, res, next) => {
+  try {
+    const data = assistedConfirmSchema.parse(req.body);
+    await confirmPasswordOtp(req.user, { ...data, targetUserId: req.params.id });
+    res.json({ success: true });
+  } catch (error) { next(error); }
+});
+const updateRoleSchema = z.object({ role: z.enum(CANONICAL_ROLES) }).strict();
+router.patch("/:id/role", requireAuth, requireRole(ADMIN), accountLimit, async (req, res, next) => {
+  try { const { role } = updateRoleSchema.parse(req.body); res.json(await changeAccountRole(req.user, req.params.id, role)); }
+  catch (error) { next(error); }
+});
+const updateActiveSchema = z.object({ isActive: z.boolean() }).strict();
+router.patch("/:id/active", requireAuth, requireRole(ADMIN, LAB_STAFF), accountLimit, async (req, res, next) => {
+  try { const { isActive } = updateActiveSchema.parse(req.body); res.json(await changeAccountActive(req.user, req.params.id, isActive)); }
+  catch (error) { next(error); }
 });
 
 export default router;

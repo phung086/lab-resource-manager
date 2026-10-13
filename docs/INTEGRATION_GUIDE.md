@@ -1,0 +1,103 @@
+# Tích hợp các tính năng LAB
+
+Tài liệu dùng khi hợp nhất GitHub với code local; đọc cùng CURRENT_STATE cho kết
+quả kiểm thử của revision đang xét. Không thay hướng dẫn giảng viên hoặc AGENTS.
+
+## Bản phát triển hiện tại
+
+Ngày 13/10/2026, fetch GitHub cho thấy origin/main vẫn bd83a97, chưa thấy nhánh/PR
+mới về quản lý khách hàng/OTP. Theo user, đã triển khai trực tiếp trên bản tách:
+
+- Branch: codex/customer-security-loyalty.
+- Checkout: C:/Users/Admin/.codex/worktrees/customer-security-loyalty/lab-resource-manager.
+- Commit e2358e61ca89bc54b4661a6d7d338a460a21d302 là snapshot code local có sẵn,
+  gồm ba role, tự xác nhận lịch, care, hỗ trợ, email và VNPAY; không phải feature mới.
+- So sánh feature mới với e2358e61, không so với origin/main để tránh nhận nhầm
+  hàng trăm thay đổi local đã có thành thay đổi của batch này.
+- Checkout chính C:/Projects/lab-resource-manager có nhiều thay đổi chưa commit.
+  Bản tách không chứa .env, secrets, node_modules, business DB hoặc runtime logs.
+
+## Đọc trước merge, theo thứ tự
+
+1. AGENTS.md; .agent/PROJECT_RULES.md, INSTRUCTOR_BASELINE.md, DEVELOPMENT_WORKFLOW.md.
+2. docs/srs.md: actors, account/OTP, booking, payment, support và Appendix H.
+3. docs/convention.md; docs/PROJECT_STRUCTURE.md.
+4. docs/CURRENT_STATE.md; docs/DECISIONS.md: ADR-021/022/023/029/030/032/033/034/035.
+5. docs/FRONTEND_GUIDELINE.md và BACKEND_GUIDELINE.md, cùng area AGENTS.
+6. README: runtime, SMTP, VNPAY và hướng dẫn trong file này.
+7. backend/prisma/schema.prisma, forward migrations và docs/DB-erd/core-erd.md.
+8. API/service/callers/tests của account, pricing, payment, guest booking và support.
+9. AI_ASSISTANT_MCP.md và AI_ASSISTANT_SETUP.md khi sửa chatbot. UI research nằm
+   trong FRONTEND_GUIDELINE, không phải một redesign đã hoàn tất.
+
+## Các hợp đồng phải giữ đồng nhất
+
+| Phạm vi | Điểm cần đối chiếu |
+|---|---|
+| Roles | ADMIN/LAB_STAFF/CUSTOMER; giữ migration chuyển role cũ và audit lịch sử, không phục hồi student/lecturer UI |
+| Accounts | Staff quản lý mọi CUSTOMER; chỉ account APIs có scope toàn hệ thống. LAB operations/chat vẫn UserLabAssignment |
+| Credentials | OTP bắt buộc, email immutable; self change trả JWT mới, authVersion thu hồi token cũ; mọi nơi mint JWT dùng authTokens |
+| History | Xóa mềm, chặn booking/support mở; shared User lock bảo vệ in-flight create/delete; audit cùng transaction |
+| Booking | Auto CONFIRMED sau đầy đủ eligibility/conflict/policy/care checks; giữ legacy pending thật, resource locks và exclusion constraint |
+| Pricing | acceptedQuote có tariff/policy version; lưu base/discount/net, payment thu đúng net; guest giữ giá đã chấp nhận |
+| VNPAY | IPN ký đúng mới ghi success; Return chỉ dẫn về app. Giữ VNPAY_BANK_CODE trống cho chooser merchant mới, không ép QR |
+| Email | Welcome/receipt outbox không có password; OTP gửi SMTP trực tiếp, không bypass khi thiếu SMTP |
+| Locale | Sửa catalog VI/EN rồi npm --prefix frontend run i18n:sync; backend projection/manifest phải đi cùng |
+
+## Trình tự hợp nhất an toàn
+
+1. Kiểm tra HEAD/branch/status cả hai nơi, backup/snapshot các thay đổi local và
+   DB trước thao tác migration. Không reset, stash hoặc chép source đè khi chưa
+   hiểu các thay đổi đang có. Không chép .env giữa hai checkout.
+2. Fetch để biết remote thực sự có gì. Nếu local đã có toàn bộ snapshot e2358e61,
+   đối chiếu/cherry-pick chỉ feature commit sau snapshot, giải quyết xung đột theo
+   hợp đồng. Nếu xuất phát origin/main, cần tích hợp snapshot local trước, rồi
+   feature; cherry-pick feature một mình sẽ thiếu các dependencies local.
+3. Giữ migrations đã áp dụng/baseline nguyên byte. Chỉ thêm account_security và
+   spend_loyalty_policy forward migrations sau customer_roles_and_booking_contact.
+   Cài dependencies, db:generate, dùng db:migrate canonical; không db push/reset
+   hoặc sửa _prisma_migrations. Kiểm tra db:status và chạy deploy lần hai để chứng
+   minh idempotence trên DB test trước khi dùng DB có dữ liệu nghiệp vụ.
+4. Kiểm thử backend/frontend required, lint/typecheck/build, locale/ERD và các
+   integration bên dưới trên DB riêng. Browser test không sửa shared runtime.
+5. Kiểm tra diff, secrets, merge dependencies và CURRENT_STATE. Chỉ chuyển runtime
+   sang source tích hợp khi sẵn sàng; phát hành/deploy và SMTP thật cần kiểm chứng
+   riêng. Worktree hiện là bản review được, chưa được áp dụng lên runtime chính.
+
+## Lệnh kiểm thử
+
+Từ checkout đã chọn:
+
+```powershell
+npm --prefix backend run db:generate
+npm --prefix backend run test:required
+npm --prefix backend run lint
+npm --prefix backend run docs:erd:check
+npm --prefix frontend run test:required
+```
+
+ACCOUNT_SECURITY_TEST_DATABASE_URL phải là PostgreSQL loopback port25439, DB
+lab_resources_account_security_test; LOYALTY_TEST_DATABASE_URL tương tự DB
+lab_resources_loyalty_test. Tạo DB test mới và db:migrate trước chạy; không dùng
+DB nghiệp vụ. Không đưa URL chứa password vào báo cáo. Với env đã thiết lập:
+
+```powershell
+npm --prefix backend run test:accounts:integration
+npm --prefix backend run test:loyalty:integration
+npm --prefix frontend run test:ui:accounts
+```
+
+Browser test tự chạy API18043, SMTP loopback và static build preview5185, rồi dừng;
+Chrome/Edge local hoặc Chromium cài bằng playwright-core, Node22. File test/harness
+chỉ cho phép fixture email security.test và đúng DB; không tồn tại fixture endpoint
+trong API production. CI job account-security-loyalty chuẩn bị PG16/25439 và chạy
+cùng suites cùng auth/RBAC và guest OTP regressions; chưa dispatch GitHub Actions trong batch này.
+
+## Giới hạn cần cấu hình khi đưa vào sử dụng
+
+SMTP thật chưa có: thêm SMTP_HOST/PORT/USER/PASS/EMAIL_FROM backend, verify transport
+và thử hộp thư do mình quản lý; không ghi SENT thành inbox-confirmed. Ưu đãi mặc
+định tắt, ADMIN bật và chọn chính sách phù hợp trước cung cấp cho khách. Public
+forgotten-password, đổi email, đổi điểm/voucher và plugin ChatGPT remote chưa được
+triển khai. Chatbot website nên tiếp tục Responses + MCP nội bộ; nghiên cứu remote
+OAuth/ChatKit được ghi ở AI_ASSISTANT_MCP, không tự mở localhost ra provider.

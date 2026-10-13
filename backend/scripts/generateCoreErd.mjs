@@ -14,6 +14,7 @@ const coreNames = ["Campus", "Building", "Laboratory", "LabPolicy", "User", "Use
 const extensionNames = ["Resource", "User", "Booking", "MaintenanceWindow", "StockItem", "StockMovement", "TeachingGroup", "TeachingMembership", "TeachingActivity"];
 const supportNames = ["Laboratory", "User", "UserLabAssignment", "SupportSession", "SupportMessage", "SupportPresence"];
 const emailNames = ["User", "EmailDelivery"];
+const accountNames = ["User", "PasswordChallenge", "LoyaltyPolicy"];
 const simulationNames = ["ResourceCareProfile", "ResourceOperation", "ResourcePart"];
 const modelMap = new Map(Prisma.dmmf.datamodel.models.map(model => [model.name, model]));
 const types = { String: "string", Int: "int", Boolean: "boolean", DateTime: "datetime", Float: "float", Decimal: "decimal", Json: "json" };
@@ -75,8 +76,9 @@ History/audit records describe persisted events, not proof of physical inspectio
 ${diagram(extensionNames)}
 
 Stock movements record receipts, issues and admin adjustments. A maintenance-linked
-issue must remain in the same laboratory. Teaching groups represent lecturer
-supervision; academic endorsement does not grant resource approval or handover.
+issue must remain in the same laboratory. Teaching groups retain historical
+academic records; their runtime mutations are retired under ADR-033. They grant
+CUSTOMER no operator privileges.
 ## Approved human support extension
 
 ${diagram(supportNames)}
@@ -87,6 +89,17 @@ enforce one open request per customer and one active session per staff member
 across all labs. The presence heartbeat coordinates assignment; it does not prove
 the staff member has read a message. See the forward support migration for
 constraints that Prisma cannot express.
+
+## Account security and spending policy
+
+${diagram(accountNames)}
+
+Password challenges bind the requesting actor, target, registered email and both
+credential versions. Only a hash is stored; expiry, attempts and consumption are
+persisted. Credential changes, deactivation and role changes revoke prior JWTs.
+Soft deletion retains bookings, support and audit history. LoyaltyPolicy is a
+versioned singleton; spending is derived from eligible settled payments rather
+than mutable legacy user loyalty fields. See ADR-034/035.
 
 ## Approved automatic email extension
 

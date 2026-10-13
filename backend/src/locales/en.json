@@ -387,6 +387,17 @@
     "notification.booking.event.RESCHEDULED.message": "{title} ({resourceCode}) has moved to a new time.",
     "notification.booking.auto_confirmed.title": "Booking confirmed",
     "notification.booking.auto_confirmed.message": "Your booking for {resourceName} is confirmed.",
-    "api.BOOKING_CONTACT_REQUIRED": "Add your name and phone number to book."
+    "api.BOOKING_CONTACT_REQUIRED": "Add your name and phone number to book.",
+    "api.ACCOUNT_REMOVED": "This account has been removed and is no longer available.",
+    "api.LAST_ADMIN_FORBIDDEN": "At least one active administrator must remain.",
+    "api.LOYALTY_POLICY_CHANGED": "Membership discounts have changed. Get a new quote before booking.",
+    "api.OTP_CONTEXT_CHANGED": "Account details or the sign-in session have changed. Request a new code.",
+    "api.OTP_COOLDOWN": "Wait before requesting another verification code.",
+    "api.OTP_NOT_SENT": "The verification code could not be sent. Try again later.",
+    "api.PASSWORD_UNCHANGED": "The new password must differ from the current password.",
+    "api.SMTP_NOT_CONFIGURED": "Email delivery is not configured for verification codes.",
+    "api.ACCOUNT_HAS_ACTIVE_BOOKINGS": "This account has outstanding bookings or loans. Resolve them before deleting the account.",
+    "api.LOYALTY_UNAVAILABLE": "Loyalty is unavailable. Please try again.",
+    "api.ACCOUNT_HAS_OPEN_SUPPORT": "Close or reassign open support first."
   }
 }
