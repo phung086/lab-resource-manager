@@ -123,6 +123,7 @@ export function AccessUserManagement({ actorRole, actorId }: { actorRole: string
 
   return <section className="view-section users-workspace" aria-busy={loading}>
     <header className="users-heading"><div><h1>{tr(isAdmin ? 'ui.user_administration_2a750b85' : 'account.users.customers')}</h1><HelpDisclosure>{tr(isAdmin ? 'ui.users.subtitle' : 'account.users.staffScope')}</HelpDisclosure></div><div className="users-actions">
+      {isAdmin && <button type="button" className="btn btn-secondary" onClick={() => navigateApp(workspacePathForTab('chatgpt_bridge'))}>{tr('bridge.title')}</button>}
       <button type="button" className="btn btn-secondary" disabled={loading || busy} onClick={() => void load()}><RefreshCw size={16} />{tr('ui.refresh_46140fa8')}</button>
       <button type="button" className="btn btn-primary" aria-expanded={showCreate} aria-controls={formId + '-create'} disabled={busy} onClick={() => setShowCreate(value => !value)}><Plus size={16} />{tr('ui.create_user_70f60575')}</button>
     </div></header>

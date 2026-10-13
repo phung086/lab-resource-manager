@@ -1,11 +1,11 @@
 # Core laboratory data relationships
 
 Generated from [canonical Prisma schema](../../backend/prisma/schema.prisma).
-Schema SHA-256 after LF normalization: `242d4f73a32844b3086b7848abcc402762e09d570a90569f7ea32a241edade48`.
+Schema SHA-256 after LF normalization: `7599a385eaa454a6df2627b0c650eed4b2e12debed07468331e522c938e445f9`.
 Run `npm run docs:erd` in `backend/`; CI verifies `docs:erd:check`.
 This is a selected model projection, not a claim that only these tables exist.
 Foreign keys and cardinalities come from the generated Prisma data model checked
-against the source schema. The current schema contains 58 models.
+against the source schema. The current schema contains 65 models.
 
 ## Required booking operations and persisted monitoring
 

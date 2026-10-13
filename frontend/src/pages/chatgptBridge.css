@@ -1,0 +1,14 @@
+.chatgpt-connection { max-width: 850px; }
+.chatgpt-connection-heading, .chatgpt-connection-row { display:flex; justify-content:space-between; align-items:center; gap:1.5rem; }
+.chatgpt-connection-heading { margin-bottom:2rem; }
+.chatgpt-connection-heading h1 { margin-bottom:.4rem; }
+.chatgpt-connection-status { display:flex; align-items:center; gap:.7rem; padding:1rem 0; }
+.chatgpt-connection-row { padding:1.5rem 0; border-bottom:1px solid var(--border-color, #d7dce2); }
+.chatgpt-connection-row p { margin:.4rem 0; }
+.chatgpt-connection label { display:grid; gap:.5rem; margin:1.5rem 0; }
+.chatgpt-connection input { width:100%; min-width:0; }
+.chatgpt-consent { max-width:650px; padding:1.5rem 0; }
+.chatgpt-consent p { line-height:1.6; }
+.chatgpt-consent li { margin:.7rem 0; }
+.chatgpt-connection-actions { display:flex; flex-wrap:wrap; gap:.7rem; margin-top:1.5rem; }
+@media(max-width:600px) { .chatgpt-connection-heading, .chatgpt-connection-row { align-items:flex-start; flex-direction:column; gap:.7rem; } }

@@ -36,6 +36,9 @@ import assistantRouter from "./routes/assistant.js";
 import supportRouter from "./routes/support.js";
 import { handleMcp, mcpRateLimit } from "./assistant/mcpServer.js";
 import { requireAuth } from "./middleware/auth.js";
+import { bridgeOAuth, bridgeMcp, bridgeSettings } from './chatgptBridge/runtime.js';
+import { createBridgeOAuthRouters } from './chatgptBridge/routes.js';
+import bridgeRequestRouter from './routes/chatgptBridgeRequests.js';
 
 export function createApp() {
   const app = express();
@@ -61,7 +64,8 @@ export function createApp() {
   app.use(morgan(config.logFormat, {
     // VNPAY signs its GET callback query. Access logging that URL would persist
     // the one-time secure hash and provider evidence.
-    skip: (req) => /^\/api\/payments\/vnpay\/(?:ipn|return)(?:\?|$)/.test(req.originalUrl || req.url)
+    skip: (req) => /^\/api\/payments\/vnpay\/(?:ipn|return)(?:\?|$)/.test(req.originalUrl || req.url) ||
+      /^\/(?:oauth\/chatgpt|api\/chatgpt-bridge)(?:\/|\?|$)/.test(req.originalUrl || req.url)
   }));
   const ingressLimit = limit => rateLimit({
     windowMs: config.rateLimitWindowMs, limit, standardHeaders: "draft-7", legacyHeaders: false,
@@ -77,11 +81,19 @@ export function createApp() {
   const monitoringIngress = ingressLimit(config.rateLimitMax * 10);
   app.use((req, res, next) => {
     const path = req.path.toLowerCase().replace(/\/$/, "");
-    const limiter = path === "/mcp" ? mcpIngress : /^\/api\/support(?:\/|$)/.test(path) ? supportIngress
+    const limiter = path === "/mcp" || path === '/mcp/support-bridge' ? mcpIngress : /^\/api\/(?:support|assistant\/bridge)(?:\/|$)/.test(path) ? supportIngress
       : /^\/api\/(?:telemetry|resource-care)(?:\/|$)/.test(path) ? monitoringIngress : apiIngress;
     return limiter(req, res, next);
   });
   app.use(metricsMiddleware);
+  const bridgeRouters = createBridgeOAuthRouters({ oauth: bridgeOAuth, requireAuth });
+  app.use(bridgeRouters.publicRouter);
+  app.use('/api/chatgpt-bridge', bridgeRouters.adminRouter);
+  if (bridgeSettings.enabled) {
+    app.use('/api/assistant/bridge', bridgeRequestRouter);
+    app.post('/mcp/support-bridge', bridgeMcp);
+    app.all('/mcp/support-bridge', (_req, res) => res.sendStatus(405));
+  }
 
   // Health check endpoints
   const healthHandler = (_req, res) => {
@@ -147,7 +159,7 @@ export function createApp() {
 
   // Optional integrations are independent of the retired research routes.
   if (config.paymentsEnabled) app.use("/api/payments", paymentRouter);
-  if (config.mcpAssistantEnabled) {
+  if (config.mcpAssistantEnabled || bridgeSettings.enabled) {
     app.use("/api/assistant", assistantRouter);
     app.post("/mcp", requireAuth, mcpRateLimit, handleMcp);
     app.all("/mcp", requireAuth, (_req, res) => res.sendStatus(405));

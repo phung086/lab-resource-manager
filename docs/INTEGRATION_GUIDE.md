@@ -98,6 +98,34 @@ cùng suites cùng auth/RBAC và guest OTP regressions; chưa dispatch GitHub Ac
 SMTP thật chưa có: thêm SMTP_HOST/PORT/USER/PASS/EMAIL_FROM backend, verify transport
 và thử hộp thư do mình quản lý; không ghi SENT thành inbox-confirmed. Ưu đãi mặc
 định tắt, ADMIN bật và chọn chính sách phù hợp trước cung cấp cho khách. Public
-forgotten-password, đổi email, đổi điểm/voucher và plugin ChatGPT remote chưa được
-triển khai. Chatbot website nên tiếp tục Responses + MCP nội bộ; nghiên cứu remote
-OAuth/ChatKit được ghi ở AI_ASSISTANT_MCP, không tự mở localhost ra provider.
+forgotten-password, đổi email và đổi điểm/voucher chưa được triển khai.
+
+## Tích hợp bridge ChatGPT trên nhánh kế tiếp
+
+Nhánh `codex/chatgpt-plugin-bridge` kế thừa toàn bộ d2f1ff4/account/OTP/loyalty.
+Đọc ADR-036, AI_ASSISTANT_MCP, phần 8 AI_ASSISTANT_SETUP, CURRENT_STATE và các
+schema/routes/tests bridge trước merge. Thêm migration forward
+`20261013000300_chatgpt_account_bridge`; giữ nguyên baseline/migrations cũ.
+Các điểm giao nhau cần giải quyết cùng nhau: app/server lifecycle, assistant
+suggestions, authenticated CUSTOMER polling, App/route registry/layout, catalog
+VI/EN + manifest/projection và schema User relations. Không bỏ grant/authVersion
+checks để xử lý xung đột. Không chép .env hoặc endpoint tunnel tạm sang production.
+
+Bridge mặc định tắt nên runtime hiện có không bị chuyển provider ngoài ý muốn.
+Chỉ bật sau migration/config/OAuth consent/Work subscription và kiểm thử reply
+thật. Gói `plugins/lab-support-bridge` không có key; script package tạo mcp.json
+theo HTTPS origin đã xác minh. Gói private hiện dùng endpoint review tạm, cần
+cập nhật kết nối sang domain ổn định trước vận hành. Không push/merge/deploy vào
+checkout chính trong batch này.
+
+Integration tests chỉ dùng CHATGPT_BRIDGE_TEST_DATABASE_URL loopback, DB
+`lab_resources_chatgpt_bridge_test`, mọi user kết thúc `@bridge.test`:
+
+```powershell
+npm --prefix backend run test:chatgpt-bridge:prepare
+npm --prefix backend run test:chatgpt-bridge:integration
+npm --prefix frontend run test:chatgpt-bridge
+```
+
+Không chạy các integration tests này trong lúc người dùng đang thử OAuth trên
+cùng DB review: setup chủ động thu hồi grants fixture cũ để kiểm thử lặp lại.

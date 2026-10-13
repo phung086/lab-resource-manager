@@ -1,6 +1,16 @@
 {
   "locale": "vi",
   "messages": {
+    "api.BRIDGE_CONTEXT_REQUIRED": "Cần đọc ngữ cảnh câu hỏi trước khi trả lời.",
+    "api.BRIDGE_UNAVAILABLE": "ChatGPT chưa kết nối. Hãy chat với nhân viên hoặc thử lại sau.",
+    "api.BRIDGE_CONNECTION_REVOKED": "Kết nối ChatGPT đã hết hiệu lực.",
+    "api.BRIDGE_REQUEST_INACTIVE": "Câu hỏi đã dừng hoặc hết hạn.",
+    "api.BRIDGE_STAFF_SESSION_ACTIVE": "Bạn đang có phiên hỗ trợ với nhân viên.",
+    "api.BRIDGE_CONTEXT_LIMIT": "Câu hỏi đã vượt giới hạn tra cứu. Hãy bắt đầu câu hỏi mới.",
+    "api.BRIDGE_TOOL_NOT_ALLOWED": "Không được phép thực hiện yêu cầu này.",
+    "api.BRIDGE_REPLY_CONFLICT": "Câu hỏi này đã có câu trả lời.",
+    "api.BRIDGE_OAUTH_INVALID": "Liên kết kết nối đã hết hạn hoặc không hợp lệ. Hãy kết nối lại trong ChatGPT.",
+    "api.BRIDGE_REGISTRATION_LIMIT": "Tạm thời không thể đăng ký kết nối mới.",
     "api.ACCOUNT_INACTIVE": "Tài khoản đã bị khóa. Liên hệ quản trị viên.",
     "api.ACTIVITY_BOOKING_CLOSED": "Không thể gửi hoạt động từ lịch đặt đã bị từ chối hoặc hủy.",
     "api.ACTIVITY_EXISTS": "Lịch đặt này đã được gửi vào một lớp học phần.",

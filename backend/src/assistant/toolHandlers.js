@@ -149,7 +149,7 @@ export const assistantTools = [
   ),
   tool(
     "get_booking_detail",
-    "Read authorized booking detail; students/lecturers only their own.",
+    "Read authorized booking detail; customers only their own.",
     { bookingId: id },
     ["bookingId"],
     bookingDetail,

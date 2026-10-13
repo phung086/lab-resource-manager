@@ -43,7 +43,7 @@ model is instructed to acknowledge uncertainty about current external facts.
 
 Roles come from current authenticated database users, never model/browser fields.
 `LAB_STAFF` reads retain current persisted `UserLabAssignment` scope, including
-the empty scope when no lab is assigned. Student/lecturer booking reads remain
+the empty scope when no lab is assigned. CUSTOMER booking reads remain
 their own. Incident and monitoring reads retain their existing owner/role/lab
 contracts. ADMIN's existing global scope is unchanged.
 
@@ -183,30 +183,72 @@ This implementation executes validated plans through its authenticated local MCP
 bridge. It does not expose localhost to a remote provider or use remote MCP
 authorization to bypass current backend scope.
 
-## ChatGPT connection research — 13 October 2026
+## ChatGPT account bridge — 13 October 2026
 
-The website already calls Responses through assistantModel and validated plans
-through the authenticated local MCP bridge. Retain this path for the LAB chatbot:
-server-only API key/model, bounded output, store:false, current identity/LAB scope,
-and existing human handoff. No live provider call was verified in this batch.
+ADR-036 adds the requested optional customer question → ChatGPT Work/Cloud →
+LAB reply path. It is separate from JWT-protected internal `/mcp` and Responses.
+The bridge uses `/mcp/support-bridge`, protocol 2026-07-28 and MCP Events. All
+customer requests/outbox/subscriptions/grants are persisted; ingress is bounded.
+It is disabled unless explicitly configured. No API key is needed for this path,
+but an installed connection, ADMIN OAuth consent and subscribed Work chat are.
 
-A ChatGPT plugin exposes LAB tools/UI inside ChatGPT or Codex. For private LAB
-data the current bearer-protected /mcp endpoint needs remote HTTPS deployment,
-OAuth 2.1 with PKCE, protected-resource and authorization-server discovery,
-audience/scope checks and account linking before it can be connected. Reusing
-read-only tools is feasible; do not publish today's local JWT as a shared token
-or bypass account/LAB access. This is an implementation direction, not a deployed
-plugin. See [MCP server](https://developers.openai.com/plugins/build/mcp-server)
-and [authentication requirements](https://developers.openai.com/plugins/build/auth).
+Three remote tools: `get_question_context`, `read_question_data` and
+`publish_question_reply`. The last writes chat text only. Read schemas allow
+catalogue/detail/slots/conflicts/eligibility, owned bookings/notifications/incidents,
+resource tariff/rental quote and owned payment/loyalty/support status. Business
+reads use the request's current CUSTOMER identity, not the OAuth owner's ADMIN
+scope. No passwords, tokens, contact snapshots, provider URLs, other customers'
+records, private support transcripts or global operational audit are projected.
 
-ChatKit offers an embeddable chat UI, with a custom server integration currently
-using its Python SDK; replacing this project's Express chat route would require
-an additional adapter/service and fresh auth/history/handoff tests. Do not migrate
-frameworks for it. For new work, avoid the retiring Agent Builder-hosted path;
-its shutdown is scheduled for 30 November 2026. See
-[ChatKit](https://developers.openai.com/api/docs/guides/chatkit).
+`src/chatgptBridge/knowledge.js` holds 16 reviewed business topics, versioned with
+code: roles/registration/OTP, catalogue, auto confirmation, interval/policy/care,
+prices, verified payments, handover/moves/cancellation, incidents, loyalty, FIFO
+support, emails and privacy. Context includes this version, fresh time and safe
+navigation paths. Dynamic values require a fresh scoped tool read; prior answers
+are conversation only. Publish requires the current context version. This is
+retrieval/grounding, not fine-tuning, and does not certify model accuracy.
 
-Sign in with ChatGPT has website identity and eligible plan-usage integrations.
-Eligibility/registration for LAB has not been verified; do not assume a paid
-ChatGPT account alone supplies website API access. See
-[Sign in with ChatGPT](https://developers.openai.com/siwc/quickstart).
+OAuth: exact configured ChatGPT callbacks, S256 PKCE, explicit audience/scopes,
+ADMIN consent, hashed code/access/refresh tokens, refresh rotation/replay revocation
+and credential-version rechecks. Replacement revokes the prior connection and
+pending work. Callback HTTPS requires public DNS answers, pinned IP and TLS;
+redirects are refused. Webhooks sign exact bytes with Standard Webhooks, verify
+challenge before activation, encrypt secrets and retry at most five times.
+
+Request timeout is ten minutes. Context/data reads are capped at 13 and 24 KB;
+conversation reads include at most ten answered turns in the last thirty minutes.
+One pending request/customer; four MCP operations/process, one active/grant.
+Subscription TTL is at most 24 hours and must be refreshed by the receiver.
+Delivery 2xx is receipt, not an answer. Handoff/cancellation/expiry/revocation rejects
+late replies. Persisted chat records do not disappear when context TTL expires;
+a deletion/retention policy must be defined before production. Multi-replica
+admission has not been certified. Bridge transcripts are not automatically copied
+to human support; the customer's existing staff-chat button remains available.
+
+Private package source is `plugins/lab-support-bridge`. Build its endpoint config
+with `backend/scripts/buildChatgptBridgePlugin.mjs`; the script checks HTTPS/OAuth
+metadata and anonymous rejection before producing the package in ignored logs.
+No credentials belong in plugin files. Installation alone is not a connection.
+The private workflow plugin [LAB Customer Support](https://chatgpt.com/plugins/plugins_6ace18242404819191817976606cf5ce)
+is at version 0.1.1. Read-back confirms the original metadata/audience/MCP config
+and adds an intent-to-evidence routing guide for the customer-support skill.
+Its web listing currently exposes a desktop-only launch. The private web app
+[LAB Support Connection](https://chatgpt.com/plugins/plugin_asdk_app_6ace1b6f93dc8191b806163d21a005d7)
+completed client registration. In-app browser navigation to the review OAuth
+authorize endpoint fails with `ERR_BLOCKED_BY_CLIENT`; user consent in Chrome
+is pending. No live GPT answer has been certified.
+
+Verified local checks: 20 backend bridge/security/protocol cases, seven frontend
+poll/cancellation/redirect cases; protocol replies use labelled test fixtures.
+The twelve live-model evaluation scenarios are versioned in
+`backend/test/fixtures/chatgptBridgeEvaluation.json`; they have not been graded.
+A guarded PostgreSQL `lab_resources_chatgpt_bridge_test` and loopback review
+8001/8002/5174 do not use the shared business database. Only OAuth/MCP gateway
+paths are public in the temporary review tunnel; business endpoints return 404.
+See AI_ASSISTANT_SETUP and INTEGRATION_GUIDE before enabling on the real runtime.
+
+Official sources checked 13 October 2026:
+- [MCP Events](https://developers.openai.com/plugins/build/mcp-events)
+- [Connect and test](https://developers.openai.com/plugins/deploy/connect-chatgpt)
+- [OAuth](https://developers.openai.com/plugins/build/auth)
+- [Plan-usage boundaries](https://developers.openai.com/siwc/token-sharing-open-source)

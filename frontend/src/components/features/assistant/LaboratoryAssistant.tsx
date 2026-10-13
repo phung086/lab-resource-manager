@@ -6,6 +6,7 @@ import { apiRequest } from '../../../api.js';
 import { hasMessage } from '../../../i18n.js';
 import { vietnamTimeToIso } from '../../../utils/timezone';
 import { navigateApp, workspacePathForTab } from '../../../workspaceRoutes.js';
+import { askChatgptBridge, type BridgeRequest } from '../../../services/chatgptBridgeApi';
 import './assistant.css';
 
 type Slot = { resourceId: string; startAt: string; endAt: string; resourceName?: string; resourceCode?: string };
@@ -13,22 +14,28 @@ type Action = { type: string; labelKey: string; payload?: Slot };
 type Segment = { text?: string; key?: string; params?: Record<string, unknown>; labels?: Record<string, string>; times?: Record<string, string> };
 type Resource = { id: string; name: string; code: string; category?: string; operationalStatus?: string };
 type Source = { chunkId: string; excerpt: string; document: { title: string; version?: string; fileName?: string } };
-type Answer = { answer: string; summary: Segment[]; locale: string; provider: string; modelStatus: string; source: string; toolsUsed: string[]; actions: Action[]; toolResults: { tool: string; result: Record<string, unknown> }[]; conversation?: { id: string; expiresAt: string; retainedTurns: number } };
-type Props = { isOpen: boolean; onClose: () => void; onPrefill: (slot: Slot) => void; onNavigate: (tab: string) => void; workspaceTab?: string };
+type Answer = { answer: string; summary: Segment[]; locale: string; provider: string; modelStatus: string; source: string; toolsUsed: string[]; actions: Action[]; toolResults: { tool: string; result: Record<string, unknown> }[]; conversation?: { id: string; expiresAt: string; retainedTurns?: number } };
+type Props = { isOpen: boolean; onClose: () => void; onPrefill: (slot: Slot) => void; onNavigate: (tab: string) => void; workspaceTab?: string; actorRole?: string };
 
-export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavigate, workspaceTab }: Props) {
+export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavigate, workspaceTab, actorRole }: Props) {
   const { locale, tr, changeLocale } = useLocale();
   const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
   const panel = useRef<HTMLElement>(null), content = useRef<HTMLDivElement>(null), contextFields = useRef<HTMLDetailsElement>(null);
   const questionInput = useRef<HTMLTextAreaElement>(null), resourceInput = useRef<HTMLSelectElement>(null), latestTurn = useRef<HTMLElement>(null);
   const mounted = useRef(false), inFlight = useRef<AbortController | null>(null), previousLocale = useRef(locale);
   const conversationId = useRef<string | undefined>(undefined);
+  const bridgeConversationId = useRef<string | undefined>(undefined);
+  const bridgeWork = useRef<Promise<BridgeRequest> | null>(null);
   const [conversationExpired, setConversationExpired] = useState(false);
   const [messages, setMessages] = useState<{ question: string; response: Answer }[]>([]), [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [setupError, setSetupError] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]), [mode, setMode] = useState('CHECKING'), [connectionAttempt, setConnectionAttempt] = useState(0);
   const [resources, setResources] = useState<Resource[]>([]), [resourceId, setResourceId] = useState('');
   const [duration, setDuration] = useState(''), [startAt, setStartAt] = useState(''), [endAt, setEndAt] = useState('');
+  const [bridge, setBridge] = useState<{ enabled: boolean; connected: boolean; mode: string } | null>(null);
+  const [pendingQuestion, setPendingQuestion] = useState('');
+  const usesBridge = actorRole === 'CUSTOMER' && bridge?.enabled && bridge.mode === 'chatgpt_bridge';
+  const bridgeUnavailable = Boolean(usesBridge && !bridge?.connected);
 
   useEffect(() => {
     if (!isOpen || !content.current || !latestTurn.current) return;
@@ -44,7 +51,7 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
       apiRequest('/resources', { signal: controller.signal })
     ]).then(([settings, rows]) => {
       if (controller.signal.aborted) return;
-      if (settings.status === 'fulfilled') { setSuggestions(settings.value.suggestionKeys || []); setMode(settings.value.mode); }
+      if (settings.status === 'fulfilled') { setSuggestions(settings.value.suggestionKeys || []); setMode(settings.value.mode); setBridge(settings.value.bridge || null); }
       else setMode('UNAVAILABLE');
       if (rows.status === 'fulfilled') setResources(Array.isArray(rows.value) ? rows.value : rows.value.resources || []);
       setSetupError(settings.status === 'rejected' || rows.status === 'rejected');
@@ -81,19 +88,34 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
     if (content.current) content.current.scrollTop = 0;
   }
   function cancel() { inFlight.current?.abort(); setError('assistant.cancelled'); }
+  async function stopBridge() {
+    const pending = bridgeWork.current;
+    inFlight.current?.abort();
+    if (!pending) return true;
+    try { await pending; }
+    catch (failure) { if ((failure as { code?: string }).code === 'bridge.cancelFailed') { if (mounted.current) setError('bridge.cancelFailed'); return false; } }
+    return true;
+  }
+  async function handoff() {
+    if (busy && !bridgeWork.current) return;
+    if (bridgeWork.current && !await stopBridge()) return;
+    dismiss(false);
+    navigateApp(workspacePathForTab('support', conversationId.current && !conversationExpired ? { conversation: conversationId.current } : {}));
+  }
   async function newConversation() {
+    if (bridgeWork.current && !await stopBridge()) return;
     if (inFlight.current) return;
     const controller = new AbortController(); inFlight.current = controller; setBusy(true); setError('');
     try {
       if (conversationId.current && !conversationExpired) await apiRequest(`/assistant/conversations/${conversationId.current}`, { method: 'DELETE', signal: controller.signal });
       if (!mounted.current || controller.signal.aborted) return;
-      conversationId.current = undefined; setConversationExpired(false); setMessages([]);
+      conversationId.current = undefined; bridgeConversationId.current = undefined; setConversationExpired(false); setMessages([]);
       setResourceId(''); setDuration(''); setStartAt(''); setEndAt('');
       questionInput.current?.focus({ preventScroll: true });
     } catch (failure) {
       if (!mounted.current || controller.signal.aborted) return;
       if ((failure as { code?: string }).code === 'ASSISTANT_CONVERSATION_EXPIRED') {
-        conversationId.current = undefined; setConversationExpired(false); setMessages([]);
+        conversationId.current = undefined; bridgeConversationId.current = undefined; setConversationExpired(false); setMessages([]);
         setResourceId(''); setDuration(''); setStartAt(''); setEndAt('');
         questionInput.current?.focus({ preventScroll: true });
       } else setError((failure as Error).message);
@@ -101,6 +123,7 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
   }
   async function send(text: string) {
     if (inFlight.current || conversationExpired || text.trim().length < 2) return;
+    if (bridgeUnavailable) { setError('bridge.unavailable'); return; }
     if (duration !== '' && (!Number.isInteger(Number(duration)) || Number(duration) < 15 || Number(duration) > 480)) { setError('assistant.invalidDuration'); return; }
     if (Boolean(startAt) !== Boolean(endAt)) { setError('assistant.completeWindow'); return; }
     let startIso: string | undefined, endIso: string | undefined;
@@ -110,16 +133,24 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
       if (startIso && endIso && startIso >= endIso) throw new Error();
     } catch { setError('api.INVALID_BOOKING_TIME'); return; }
     const controller = new AbortController(); inFlight.current = controller;
-    const timer = window.setTimeout(() => { setError('assistant.timeout'); controller.abort(); }, 65000);
-    setBusy(true); setError('');
+    const timer = usesBridge ? undefined : window.setTimeout(() => { setError('assistant.timeout'); controller.abort(); }, 65000);
+    setBusy(true); setError(''); setPendingQuestion(usesBridge ? text : '');
     try {
-      const response = await apiRequest('/assistant/chat', { method: 'POST', signal: controller.signal, body: JSON.stringify({ message: text, locale, ...(conversationId.current ? { conversationId: conversationId.current } : {}), ...(workspaceTab ? { workspace: workspaceTab } : {}), ...(resourceId ? { resourceId } : {}), ...(duration !== '' ? { durationMinutes: Number(duration) } : {}), ...(startIso ? { startAt: startIso } : {}), ...(endIso ? { endAt: endIso } : {}) }) });
+      const currentConversation = usesBridge ? bridgeConversationId.current : conversationId.current;
+      const body = { message: text, locale, ...(currentConversation ? { conversationId: currentConversation } : {}), ...(workspaceTab ? { workspace: workspaceTab } : {}), ...(resourceId ? { resourceId } : {}), ...(duration !== '' ? { durationMinutes: Number(duration) } : {}), ...(startIso ? { startAt: startIso } : {}), ...(endIso ? { endAt: endIso } : {}) };
+      let response: Answer;
+      if (usesBridge) {
+        const work = askChatgptBridge(body, { signal: controller.signal }); bridgeWork.current = work;
+        const result = await work;
+        response = { answer: result.answer!, locale: result.locale || locale, provider: 'chatgpt', source: 'chatgpt_bridge', modelStatus: 'ANSWERED', summary: [], toolsUsed: [], toolResults: [], actions: [], conversation: result.conversation };
+      } else response = await apiRequest('/assistant/chat', { method: 'POST', signal: controller.signal, body: JSON.stringify(body) });
       if (!mounted.current || controller.signal.aborted) return;
-      conversationId.current = response.conversation?.id;
+      if (usesBridge) bridgeConversationId.current = response.conversation?.id;
+      else conversationId.current = response.conversation?.id;
       setMessages(previous => [...previous.slice(-9), { question: text, response }]);
       setQuestion(current => current.trim() === text.trim() ? '' : current);
-    } catch (failure) { if (mounted.current && !controller.signal.aborted) { setError((failure as Error).message); if ((failure as { code?: string }).code === 'ASSISTANT_CONVERSATION_EXPIRED') setConversationExpired(true); } }
-    finally { window.clearTimeout(timer); if (inFlight.current === controller) { inFlight.current = null; if (mounted.current) setBusy(false); } }
+    } catch (failure) { if (mounted.current && (!controller.signal.aborted || (failure as { code?: string }).code === 'bridge.cancelFailed')) { setError((failure as Error).message); if ((failure as { code?: string }).code === 'ASSISTANT_CONVERSATION_EXPIRED') setConversationExpired(true); } }
+    finally { if (timer) window.clearTimeout(timer); if (inFlight.current === controller) { inFlight.current = null; bridgeWork.current = null; if (mounted.current) { setBusy(false); setPendingQuestion(''); } } }
   }
   const label = (key: string) => tr(hasMessage(key) ? key : 'core.empty.value');
   const time = (value: string) => new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'vi-VN', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(value));
@@ -151,8 +182,9 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
         </div>
       </details>
       {setupError && <div role="alert" className="assistant-setup-error"><p>{tr('assistant.unavailable')}</p><button type="button" className="secondary-button" disabled={busy} onClick={() => setConnectionAttempt(value => value + 1)}>{tr('assistant.retryConnection')}</button></div>}
+      {bridgeUnavailable && <div role="status" className="assistant-setup-error"><p>{tr('bridge.unavailable')}</p><button type="button" className="secondary-button" disabled={busy} onClick={() => setConnectionAttempt(value => value + 1)}>{tr('assistant.retryConnection')}</button></div>}
       {!messages.length && <div className="assistant-suggestions" aria-label={tr('assistant.getStarted')}>
-        {suggestions.slice(0, 3).map(key => <button type="button" key={key} disabled={busy || conversationExpired} onClick={() => void send(label(key))}>{label(key)}</button>)}
+        {suggestions.slice(0, 3).map(key => <button type="button" key={key} disabled={busy || conversationExpired || bridgeUnavailable} onClick={() => void send(label(key))}>{label(key)}</button>)}
       </div>}
       <div className="assistant-conversation" aria-live="polite" aria-relevant="additions">{messages.map((turn, index) => {
         const slots = turn.response.toolResults?.flatMap(result => Array.isArray(result.result.slots) ? result.result.slots as Slot[] : []) || [];
@@ -161,8 +193,8 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
         return <article key={index} className="assistant-turn" ref={index === messages.length - 1 ? latestTurn : undefined}>
           <p className="assistant-question">{turn.question}</p>
           <div className="assistant-answer">
-            {turn.response.provider === 'openai' && <><p>{turn.response.answer}</p>{turn.response.locale !== locale && <small>{tr('assistant.previousLanguage', { locale: turn.response.locale.toUpperCase() })}</small>}</>}
-            {turn.response.provider !== 'openai' && <p>{segments.map(labelText).join('\n')}</p>}
+            {['openai', 'chatgpt'].includes(turn.response.provider) && <><p>{turn.response.answer}</p>{turn.response.locale !== locale && <small>{tr('assistant.previousLanguage', { locale: turn.response.locale.toUpperCase() })}</small>}</>}
+            {!['openai', 'chatgpt'].includes(turn.response.provider) && <p>{segments.map(labelText).join('\n')}</p>}
             {foundResources.map(resource => <article className="assistant-resource-result" key={resource.id}><strong>{resource.name}</strong><small>{resource.code} · {label(`enum.operational.${resource.operationalStatus}`)}</small></article>)}
             {!!foundResources.length && <button type="button" className="secondary-button" onClick={() => navigate('resources')}>{tr('assistant.viewResources')}</button>}
             {slots.map(slot => {
@@ -175,7 +207,7 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
             })}
             {turn.response.actions?.filter(action => ['OPEN_BOOKINGS', 'CHOOSE_CONTEXT'].includes(action.type)).map(action => <button type="button" className="secondary-button" key={action.type} onClick={() => action.type === 'OPEN_BOOKINGS' ? navigate('bookings') : chooseContext()}>{label(action.labelKey)}</button>)}
             <details className="assistant-evidence"><summary>{tr(turn.response.source === 'authenticated_mcp' ? 'assistant.sourceDetails' : 'assistant.responseInfo')}</summary>
-              <small>{tr(turn.response.source === 'model_conversation' ? 'assistant.fromConversation' : turn.response.source === 'model_guidance' ? 'assistant.fromModelGuidance' : turn.response.source === 'local_guidance' ? 'assistant.fromGuidance' : turn.response.provider === 'local' ? 'assistant.fromTools' : 'assistant.fromModel')}</small>
+              <small>{tr(turn.response.source === 'chatgpt_bridge' ? 'bridge.answerSource' : turn.response.source === 'model_conversation' ? 'assistant.fromConversation' : turn.response.source === 'model_guidance' ? 'assistant.fromModelGuidance' : turn.response.source === 'local_guidance' ? 'assistant.fromGuidance' : turn.response.provider === 'local' ? 'assistant.fromTools' : 'assistant.fromModel')}</small>
               {turn.response.provider === 'openai' && <p>{segments.map(labelText).join('\n')}</p>}
               {turn.response.modelStatus === 'MODEL_UNAVAILABLE' && <p>{tr('assistant.modelUnavailable')}</p>}
               {turn.response.modelStatus === 'CIRCUIT_OPEN' && <p>{tr('assistant.circuitOpen')}</p>}
@@ -186,19 +218,20 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavi
           </div>
         </article>;
       })}</div>
-      {busy && <p role="status" className="assistant-busy">{tr('assistant.lookupBusy')}</p>}
+      {pendingQuestion && <p className="assistant-question">{pendingQuestion}</p>}
+      {busy && <p role="status" className="assistant-busy">{tr(bridgeWork.current ? 'bridge.waiting' : 'assistant.lookupBusy')}</p>}
       {error && <p className="alert danger" role="alert">{tr(error)}</p>}
     </div>
     <div className="assistant-bottom">
-      <button type="button" className="secondary-button" disabled={busy} onClick={() => { dismiss(false); navigateApp(workspacePathForTab('support', conversationId.current && !conversationExpired ? { conversation: conversationId.current } : {})); }}>{tr('support.handoff')}</button>
+      <button type="button" className="secondary-button" disabled={busy && !usesBridge} onClick={() => void handoff()}>{tr('support.handoff')}</button>
       <form className="assistant-compose" onSubmit={event => { event.preventDefault(); void send(question); }}>
         <label className="sr-only" htmlFor="assistant-question">{tr('assistant.question')}</label>
         <textarea ref={questionInput} id="assistant-question" maxLength={2000} minLength={2} required rows={2} value={question} onChange={event => setQuestion(event.target.value)}  />
-        {busy ? <button type="button" className="secondary-button" onClick={cancel}>{tr('assistant.cancel')}</button> : <button type="submit" className="primary-button" disabled={conversationExpired || question.trim().length < 2} aria-label={tr('assistant.send')}><Send size={18} aria-hidden="true" /></button>}
+        {busy ? <button type="button" className="secondary-button" onClick={cancel}>{tr('assistant.cancel')}</button> : <button type="submit" className="primary-button" disabled={conversationExpired || bridgeUnavailable || setupError || mode === 'CHECKING' || question.trim().length < 2} aria-label={tr('assistant.send')}><Send size={18} aria-hidden="true" /></button>}
       </form>
       <p className="assistant-boundary">{tr('assistant.boundary')}</p>
-      <div className="assistant-session-controls"><details className="assistant-about"><summary>{tr('assistant.about')}</summary><p>{label(`assistant.mode.${mode}`)}</p><p>{tr('assistant.historyHelp')}</p></details>
-        <button type="button" disabled={busy || (!messages.length && !conversationExpired)} onClick={() => void newConversation()}>{tr('assistant.newConversation')}</button>
+      <div className="assistant-session-controls"><details className="assistant-about"><summary>{tr('assistant.about')}</summary><p>{usesBridge ? tr(bridgeUnavailable ? 'bridge.unavailable' : 'bridge.connectedMode') : label(`assistant.mode.${mode}`)}</p><p>{tr('assistant.historyHelp')}</p></details>
+        <button type="button" disabled={(busy && !usesBridge) || (!messages.length && !conversationExpired && !busy)} onClick={() => void newConversation()}>{tr('assistant.newConversation')}</button>
       </div>
     </div>
   </section>, document.body);

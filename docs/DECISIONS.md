@@ -655,3 +655,31 @@ Refund hoặc đổi chính sách làm quote cũ không hợp lệ nếu giá/h�
 Guest quick booking giữ giá public đã chấp nhận, tránh đổi phí sau OTP; muốn
 nhận giảm theo hạng thì đăng nhập trước đặt. Không suy đoán thanh toán thành công
 và không trao thêm quyền LAB hay độ ưu tiên hàng đợi hỗ trợ theo hạng.
+
+## ADR-036 — ChatGPT hỗ trợ qua sự kiện và quyền theo câu hỏi (13/10/2026)
+
+Theo yêu cầu user, thêm lựa chọn plugin ChatGPT Work/Cloud cho chatbot CUSTOMER,
+giữ Responses/MCP nội bộ hiện có cho đường riêng. Bridge mặc định tắt; bật phải
+có HTTPS origin, UI origin, khóa mã hóa 32 byte và redirect ChatGPT chính xác.
+OAuth public client dùng PKCE S256, audience cụ thể, ba scope read/reply/events;
+ADMIN đồng ý grant 30 ngày và có thể thu hồi. Access 15 phút, refresh 7 ngày xoay
+một lần; replay thu hồi cả grant. Đổi chủ kết nối thu hồi grant/subscription và
+câu hỏi đang chờ của kết nối cũ. Không sử dụng JWT nội bộ làm token cho ChatGPT.
+
+Câu hỏi và outbox được lưu cùng transaction, gắn CUSTOMER/authVersion và generation
+của grant. Event chỉ chứa requestId; 2xx là nhận sự kiện, chưa phải trả lời. Work
+chat đọc bộ nghiệp vụ có phiên bản và dữ liệu hiện hành trong phạm vi khách đó;
+tool publish chỉ ghi nội dung chat, không đổi booking, tài khoản, payment hay care.
+Chưa đọc context đúng phiên bản không được publish. Câu hỏi hết hạn sau 10 phút;
+chuyển staff, hủy, đổi credential hoặc revoke đều từ chối phản hồi muộn. Tối đa
+13 lần đọc và 24 KB dữ liệu động/câu hỏi; lịch sử ngữ cảnh tối đa 10 lượt/30 phút.
+Đây là grounding có kiểm soát, không fine-tuning hoặc sao chép toàn DB sang GPT.
+
+Callback HTTPS được kiểm tra toàn bộ DNS/IP công khai và ghim IP khi kết nối;
+không redirect. Subscription xác minh challenge ký, bí mật mã hóa tại DB và TTL
+24 giờ; worker lease/SKIP LOCKED, tối đa 5 lần gửi. Bốn MCP lượt đang chạy/process,
+một lượt/grant; hỗ trợ nhiều replica cần kiểm chứng admission chung trước triển khai.
+Tin nhắn được lưu bền trong DB; TTL ngữ cảnh không phải chính sách xóa lịch sử.
+AI transcript của bridge chưa được sao chép tự động vào phiên staff; khách dùng
+nút hỗ trợ hiện có. Plugin phải được cài, OAuth consent và Work chat subscribe;
+cài plugin đơn thuần chưa bảo đảm chatbot chạy hoặc đổi account đã hoàn tất.

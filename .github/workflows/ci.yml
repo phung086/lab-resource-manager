@@ -383,6 +383,7 @@ jobs:
       BATCH2_DATABASE: lab_resources_b2_auth_security_test
       GUEST_PHASE_D_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:25439/lab_resources_guest_security_test?schema=public
       ACCOUNT_SECURITY_UI_OUTPUT: ../logs/account-security-ui-ci
+      CHATGPT_BRIDGE_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:25439/lab_resources_chatgpt_bridge_test?schema=public
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -403,10 +404,15 @@ jobs:
           (cd backend && DATABASE_URL="$LOYALTY_TEST_DATABASE_URL" npm run db:migrate)
           (cd backend && DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:25439/lab_resources_b2_auth_security_test?schema=public npm run db:migrate)
           (cd backend && DATABASE_URL="$GUEST_PHASE_D_DATABASE_URL" npm run db:migrate)
+          (cd backend && npm run test:chatgpt-bridge:prepare)
       - name: Verify accounts, actual loopback SMTP and loyalty settlement contracts
         run: |
           (cd backend && npm run test:accounts:integration && npm run test:loyalty:integration && npm run test:batch2 && npm run test:guest-integrity)
           (cd frontend && npm ci && npx playwright-core install --with-deps chromium && npm run test:accounts && npm run test:ui:accounts)
+      - name: Verify scoped ChatGPT bridge, OAuth, Events and customer polling
+        run: |
+          (cd backend && npm run test:chatgpt-bridge:integration)
+          (cd frontend && npm run test:chatgpt-bridge)
       - uses: actions/upload-artifact@v4
         if: always()
         with:

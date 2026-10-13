@@ -184,3 +184,45 @@ vụ cuối cùng vẫn do backend xác minh.
 Tham khảo chính thức: [Conversation state](https://developers.openai.com/api/docs/guides/conversation-state),
 [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs),
 [Tool calling](https://developers.openai.com/api/docs/guides/function-calling).
+
+## 8. Kết nối tài khoản ChatGPT qua plugin
+
+Đọc ADR-036 và AI_ASSISTANT_MCP trước khi bật. Dùng migration forward
+`20261013000300_chatgpt_account_bridge` qua `db:migrate`, rồi `db:generate`.
+Không chạy migration trên DB nghiệp vụ trong bước review. Cấu hình backend:
+
+```dotenv
+CHATGPT_BRIDGE_ENABLED=true
+CHATGPT_BRIDGE_PUBLIC_ORIGIN=https://your-approved-backend-domain
+CHATGPT_BRIDGE_UI_ORIGIN=https://your-approved-frontend-domain
+CHATGPT_BRIDGE_SECRET_KEY=
+CHATGPT_BRIDGE_REDIRECT_URIS=https://chatgpt.com/connector_platform_oauth_redirect
+```
+
+Các domain trên là chỗ cần thay bằng domain triển khai. SECRET_KEY phải là 32 byte
+ngẫu nhiên mã hóa base64, lưu trong secret manager/env backend, giữ nguyên qua
+restart. Không dùng key VNPAY/JWT. UI phát triển có thể là loopback HTTP; production
+phải HTTPS. Chỉ thêm callback `/connector/oauth/<id>` sau khi xác minh đúng URL
+trong ChatGPT, không wildcard. Frontend cần `VITE_ENABLE_AI_ASSISTANT=true`.
+
+1. Kiểm tra protected-resource/authorization-server discovery và endpoint OAuth
+   bằng client MCP; anonymous POST `/mcp/support-bridge` phải 401.
+2. Tạo/cài plugin từ gói đã build hoặc Add custom MCP server, OAuth DCR, cả ba
+   scope `lab.assistant.read`, `lab.assistant.reply`, `lab.assistant.events`.
+3. ADMIN đăng nhập LAB, xem và tự xác nhận quyền tại `/workspace/chatgpt-bridge`.
+   Quyền chỉ phục vụ câu hỏi khách; thu hồi ngay tại màn này khi cần.
+4. Mở một Work/Cloud chat hỗ trợ, dùng skill customer-support để subscribe
+   `lab.assistant.question.created` và tự refresh trước TTL. Có token nhưng chưa
+   subscribe thì website chưa thể gửi câu hỏi. Không bật nhiều consumer cạnh tranh.
+5. Dùng CUSTOMER kiểm thử: hỏi lịch/giá, follow-up, payment pending, yêu cầu ngoài
+   phạm vi, hủy trong lúc chờ và chuyển staff. Kiểm tra reply ở DB/UI, không coi
+   webhook 2xx hoặc protocol fixture là bằng chứng GPT đã trả lời thật.
+
+Đổi tài khoản: cài/connect trên ChatGPT mới, ADMIN cho phép grant mới, chạy Work
+chat và subscribe lại. Kết nối cũ bị thu hồi. Với domain backend ổn định không cần
+đổi source; đổi domain thì phải cập nhật endpoint của kết nối và OAuth audience.
+Tunnel thử tạm thời không có cam kết uptime và không thay thế domain production.
+
+Môi trường review có guard `@bridge.test`, đúng DB test và loopback; script
+`startChatgptBridgeReview.mjs` không đọc `.env` thật hoặc khởi động scheduler mail/
+thanh toán/vận hành. Không dùng script review để triển khai production.

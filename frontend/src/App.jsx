@@ -27,6 +27,7 @@ const ResourceManagementView = React.lazy(() => import("./components/ResourceMan
 const BookingOperationsPage = React.lazy(() => import("./pages/operations/BookingOperationsPage.tsx").then(module => ({ default: module.BookingOperationsPage })));
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage.tsx").then(module => ({ default: module.ProfilePage })));
 const AccessUserManagement = React.lazy(() => import("./components/AccessUserManagement.tsx").then(module => ({ default: module.AccessUserManagement })));
+const ChatgptBridgePage = React.lazy(() => import('./pages/ChatgptBridgePage.tsx'));
 const IncidentsPage = React.lazy(() => import("./pages/incidents/IncidentsPage.tsx").then(module => ({ default: module.IncidentsPage })));
 const MonitoringDashboardPage = React.lazy(() => import("./pages/monitoring/MonitoringDashboardPage.tsx").then(module => ({ default: module.MonitoringDashboardPage })));
 const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage").then(module => ({ default: module.MaintenancePage })));
@@ -421,6 +422,7 @@ function Application() {
       {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage userRole={user.role} dashboard={dashboard} loading={loading} onRefresh={loadData} />}
       {activeTab === "users" && <AccessUserManagement key={routeHash} actorRole={user.role} actorId={user.id} />}
+      {activeTab === 'chatgpt_bridge' && !user.passwordResetRequired && <ChatgptBridgePage actorRole={user.role} />}
 
       </React.Suspense>
 

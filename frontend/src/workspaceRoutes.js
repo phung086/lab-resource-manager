@@ -4,7 +4,7 @@ export const WORKSPACE_ROUTES = Object.freeze({
   dashboard: 'operations', maintenance: 'maintenance', incidents: 'incidents',
   stock: 'materials', teaching: 'teaching', admin_management: 'resource-management',
   users: 'users', profile: 'profile', escalations: 'notifications',
-  monitoring: 'monitoring', payments: 'payments', support: 'support'
+  monitoring: 'monitoring', payments: 'payments', support: 'support', chatgpt_bridge: 'chatgpt-bridge'
 });
 export const PUBLIC_ROUTES = Object.freeze({
   home: '/', resources: '/resources', schedule: '/schedule', process: '/how-it-works',

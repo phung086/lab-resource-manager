@@ -114,6 +114,45 @@ merge/deploy. Thanh toán VNPAY thật đã PASS riêng ở checkpoint trước,
 nguyên trong snapshot; test loyalty callback là fixture ký trên DB test, không
 phải một lượt thanh toán provider mới. Dừng ở phạm vi batch đã yêu cầu.
 
+## Kết nối chatbot với tài khoản ChatGPT — chờ cấp quyền thật, 13/10/2026
+
+Nhánh codex/chatgpt-plugin-bridge trong worktree customer-security-loyalty kế thừa
+d2f1ff4. Đã triển khai OAuth S256, MCP Events, câu hỏi bền vững, publish reply theo
+request/generation, polling/cancel phía CUSTOMER và màn quản lý kết nối ADMIN.
+Bridge mặc định tắt; một kết nối hoạt động, đọc bằng quyền CUSTOMER của câu hỏi,
+không cấp quyền sửa booking/thanh toán/tài khoản/bảo trì. Đổi kết nối hoặc thông
+tin xác thực thu hồi quyền và chặn công việc cũ. Forward migration bảy bảng mới
+chỉ được áp dụng trên DB test lab_resources_chatgpt_bridge_test; DB nghiệp vụ,
+runtime chính, cấu hình SMTP/VNPAY/ngrok và checkout chính được giữ nguyên.
+
+Kiến thức phiên bản 2026-10-13.1 gồm 16 nhóm nghiệp vụ; dữ liệu giá, lịch, payment,
+loyalty và sự cố phải đọc mới từ 15 read tools có giới hạn. Đây là context nghiệp
+vụ được duyệt theo code, không fine-tuning hoặc sao chép toàn DB sang ChatGPT.
+Giới hạn: câu hỏi 10 phút, history cùng khách 30 phút/10 lượt/12 KB, tổng dữ liệu
+động 24 KB và 13 lần đọc. Chat text được lưu để hỗ trợ hội thoại; chưa có chính
+sách xóa tự động hoặc chuyển transcript bridge sang nhân viên.
+
+Kiểm thử bridge: 20 backend (15 integration + 5 network), 7 frontend đều PASS;
+required backend/frontend, lint, typecheck, build, locale và ERD PASS. Frontend
+còn hai lint warnings có sẵn. Fixture protocol/provider không là bằng chứng
+GPT trả lời thật. Bộ 12 tình huống đánh giá nằm trong chatgptBridgeEvaluation.json,
+chưa chấm chất lượng model vì chưa nhận được reply từ ChatGPT thật.
+
+Đã xác minh user đăng nhập ChatGPT Plus, tạo private LAB Customer Support 0.1.1
+(plugins_6ace18242404819191817976606cf5ce) và app LAB Support Connection
+(asdk_app_6ace1b6f93dc8191b806163d21a005d7). Plugin 0.1.1 đã được đọc lại: metadata,
+audience và MCP giữ nguyên, thêm bảng chọn evidence theo câu hỏi. Package hiện desktop-only;
+app connection có màn OAuth trên web. DCR thành công, nhưng browser trong ứng dụng
+chặn navigation /oauth/chatgpt/authorize bằng ERR_BLOCKED_BY_CLIENT; chưa có grant,
+Events subscription hoặc reply thật. User được hướng dẫn tự Connect/cấp quyền
+trong Chrome. Không coi cài plugin hoặc webhook 2xx là chatbot đã hoạt động.
+
+Review riêng: API8001, gateway OAuth/MCP8002, frontend5174; test-only tunnel
+finance-montgomery-hull-meet.trycloudflare.com. Domain này tạm thời, không dùng
+production. Quy trình tích hợp và cấu hình ở AI_ASSISTANT_SETUP, AI_ASSISTANT_MCP,
+INTEGRATION_GUIDE và ADR-036. Chưa merge/push/deploy; phải kiểm chứng end-to-end
+ChatGPT Events → dữ liệu khách → reply hiển thị trước khi bật cho khách thật.
+
 ## Checkout và runtime
 
 - Chỉ C:/Projects/lab-resource-manager, claude/lrm-redesign-v2. Working tree có

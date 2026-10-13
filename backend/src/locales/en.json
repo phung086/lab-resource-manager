@@ -1,6 +1,16 @@
 {
   "locale": "en",
   "messages": {
+    "api.BRIDGE_CONTEXT_REQUIRED": "Read the question context before replying.",
+    "api.BRIDGE_UNAVAILABLE": "ChatGPT is disconnected. Chat with staff or try again later.",
+    "api.BRIDGE_CONNECTION_REVOKED": "The ChatGPT connection is no longer valid.",
+    "api.BRIDGE_REQUEST_INACTIVE": "This question has stopped or expired.",
+    "api.BRIDGE_STAFF_SESSION_ACTIVE": "You already have an open staff support session.",
+    "api.BRIDGE_CONTEXT_LIMIT": "This question reached its read limit. Start a new question.",
+    "api.BRIDGE_TOOL_NOT_ALLOWED": "This request is not allowed.",
+    "api.BRIDGE_REPLY_CONFLICT": "This question already has an answer.",
+    "api.BRIDGE_OAUTH_INVALID": "The connection link expired or is invalid. Reconnect in ChatGPT.",
+    "api.BRIDGE_REGISTRATION_LIMIT": "New connections are temporarily unavailable.",
     "api.ACCOUNT_INACTIVE": "This account is inactive. Contact your administrator.",
     "api.ACTIVITY_BOOKING_CLOSED": "A rejected or cancelled booking cannot start a teaching activity.",
     "api.ACTIVITY_EXISTS": "This booking has already been submitted to a course group.",

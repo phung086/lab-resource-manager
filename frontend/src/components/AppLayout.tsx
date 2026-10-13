@@ -150,6 +150,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     ga_solver: translate("ui.scheduling_algorithm_4c48c66a"),
     ai_rca: translate("ui.incident_root_cause_analysis_83e98bb2"),
     assistant: translate("ui.lab_operations_assistant_9d99d2ba"),
+    chatgpt_bridge: tr("bridge.title"),
     incidents: tr("ui.resource_incidents_0cba217b"),
     training: translate("ui.lab_training_and_safety_26f5f367"),
     logs: translate("ui.audit_logs_da29e2f6"),
@@ -205,7 +206,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       </div>
 
       {AI_ASSISTANT_ENABLED && assistantMounted && <React.Suspense fallback={assistantOpen ? <p className="assistant-loading" role="status">{translate("ui.opening_assistant_9a8f8008")}</p> : null}>
-        <LaboratoryAssistant isOpen={assistantOpen && !navigationOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />
+        <LaboratoryAssistant actorRole={user?.role} isOpen={assistantOpen && !navigationOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />
       </React.Suspense>}
 
       <BaseModal2026

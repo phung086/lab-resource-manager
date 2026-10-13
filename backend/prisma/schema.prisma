@@ -317,6 +317,8 @@ model User {
   emailDeliveries              EmailDelivery[]
   requestedPasswordChallenges  PasswordChallenge[]   @relation("PasswordChallengeActor")
   receivedPasswordChallenges   PasswordChallenge[]   @relation("PasswordChallengeTarget")
+  chatgptBridgeGrants           ChatgptBridgeGrant[]   @relation("ChatgptBridgeOwner")
+  chatgptBridgeRequests         ChatgptBridgeRequest[] @relation("ChatgptBridgeCustomer")
 
   @@map("users")
 }
@@ -1417,4 +1419,146 @@ model ResourcePart {
   resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   @@unique([resourceId, name])
   @@map("resource_parts")
+}
+
+// Optional ChatGPT account bridge. OAuth credentials are stored only as hashes;
+// subscription signing secrets use authenticated encryption outside Prisma.
+model ChatgptBridgeClient {
+  id           String   @id
+  name         String
+  redirectUris Json
+  createdAt    DateTime @default(now())
+  grants       ChatgptBridgeGrant[]
+  codes        ChatgptBridgeCode[]
+  tokens       ChatgptBridgeToken[]
+  @@map("chatgpt_bridge_clients")
+}
+
+model ChatgptBridgeGrant {
+  id               String    @id
+  ownerId          String
+  ownerAuthVersion Int
+  clientId         String
+  generation       String    @unique
+  audience         String
+  scope            String
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  owner            User      @relation("ChatgptBridgeOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  client           ChatgptBridgeClient @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  codes            ChatgptBridgeCode[]
+  tokens           ChatgptBridgeToken[]
+  subscriptions    ChatgptBridgeSubscription[]
+  requests         ChatgptBridgeRequest[]
+  @@index([ownerId, createdAt])
+  @@map("chatgpt_bridge_grants")
+}
+
+model ChatgptBridgeCode {
+  id            String    @id
+  ticketHash    String    @unique
+  codeHash      String?   @unique
+  clientId      String
+  grantId       String?
+  redirectUri   String
+  state         String
+  codeChallenge String
+  audience      String
+  scope         String
+  expiresAt     DateTime
+  consentedAt   DateTime?
+  consumedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  client        ChatgptBridgeClient @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  grant         ChatgptBridgeGrant? @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  @@index([expiresAt])
+  @@map("chatgpt_bridge_codes")
+}
+
+model ChatgptBridgeToken {
+  id         String    @id
+  tokenHash  String    @unique
+  type       String
+  grantId    String
+  clientId   String
+  audience   String
+  scope      String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  grant      ChatgptBridgeGrant @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  client     ChatgptBridgeClient @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  @@index([grantId, type])
+  @@index([expiresAt])
+  @@map("chatgpt_bridge_tokens")
+}
+
+model ChatgptBridgeSubscription {
+  id              String    @id
+  grantId         String
+  eventType       String
+  webhookId       String
+  callbackUrl     String
+  secretCipher    String
+  oldSecretCipher String?
+  oldSecretUntil  DateTime?
+  arguments       Json      @default("{}")
+  status          String    @default("VERIFIED")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  verifiedAt      DateTime?
+  expiresAt       DateTime
+  grant           ChatgptBridgeGrant @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  deliveries      ChatgptBridgeDelivery[]
+  @@unique([grantId, webhookId])
+  @@index([grantId, status])
+  @@map("chatgpt_bridge_subscriptions")
+}
+
+model ChatgptBridgeRequest {
+  id                  String    @id
+  conversationId      String
+  customerId          String
+  customerAuthVersion Int
+  grantId             String
+  generation          String
+  message             String    @db.Text
+  locale              String    @default("vi")
+  context             Json?
+  readCount           Int       @default(0)
+  contextBytes        Int       @default(0)
+  status              String    @default("PENDING")
+  answer              String?   @db.Text
+  createdAt           DateTime  @default(now())
+  expiresAt           DateTime
+  answeredAt          DateTime?
+  customer            User @relation("ChatgptBridgeCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  grant               ChatgptBridgeGrant @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  deliveries          ChatgptBridgeDelivery[]
+  @@index([customerId, createdAt])
+  @@index([customerId, conversationId, createdAt])
+  @@index([grantId, status])
+  @@map("chatgpt_bridge_requests")
+}
+
+model ChatgptBridgeDelivery {
+  id             String    @id
+  subscriptionId String
+  requestId      String
+  eventId        String    @unique
+  status         String    @default("PENDING")
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime  @default(now())
+  leaseToken     String?
+  leaseUntil     DateTime?
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  subscription   ChatgptBridgeSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  request        ChatgptBridgeRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  @@unique([subscriptionId, requestId])
+  @@index([status, nextAttemptAt])
+  @@map("chatgpt_bridge_deliveries")
 }
