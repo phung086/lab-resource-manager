@@ -790,6 +790,7 @@
     "route.workspace.resources": "Rooms and equipment",
     "route.workspace.smart_calendar": "Booking calendar",
     "route.workspace.stock": "Materials inventory",
+    "route.workspace.support": "Live support",
     "route.workspace.teaching": "Classes and course groups",
     "route.workspace.users": "Accounts and assignments",
     "shell.booking_help": "Booking workflow",

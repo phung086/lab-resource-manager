@@ -140,7 +140,8 @@ Merge cả customerProposals/requests/MCP schema, chatgptBridgeProposals/API,
 Assistant/AppLayout/App, QuickBookingModal và SupportPage. Chỉ hai loại đề xuất
 xem trước; không ghép tool AI vào endpoint business writes. Giữ bước khách xác
 nhận, lấy lại quote và kiểm tra cuối của API booking/support. Kiến thức phiên bản
-2026-10-14.1 và plugin portable 0.1.3 đi cùng contract optional proposals/timeContext.
+2026-10-14.2 và plugin portable 0.1.4 đi cùng contract optional proposals/timeContext;
+số liệu hiện thời ngoài LAB phải có dòng dữ liệu nguồn gốc, không chỉ link/snippet.
 Gói Cloud phải map app ID đăng ký đúng tài khoản; không bê ID private cũ sang.
 Chạy 21 tình
 huống model thật sau OAuth + Events; test protocol không thay thế bước này.

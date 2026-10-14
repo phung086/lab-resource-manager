@@ -152,6 +152,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     ga_solver: translate("ui.scheduling_algorithm_4c48c66a"),
     ai_rca: translate("ui.incident_root_cause_analysis_83e98bb2"),
     assistant: translate("ui.lab_operations_assistant_9d99d2ba"),
+    support: tr("support.title"),
     chatgpt_bridge: tr("bridge.title"),
     incidents: tr("ui.resource_incidents_0cba217b"),
     training: translate("ui.lab_training_and_safety_26f5f367"),

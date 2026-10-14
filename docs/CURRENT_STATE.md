@@ -130,7 +130,7 @@ ban đầu đổi hash, gồm contracts/schema/migrations. Trước merge phải
 contracts mới và đối chiếu diff; không ghi đè migration đã áp dụng. Batch này chỉ
 sửa worktree riêng, chưa merge/push/deploy.
 
-Kiến thức phiên bản 2026-10-14.1 gồm 16 nhóm nghiệp vụ; dữ liệu giá, lịch, payment,
+Kiến thức phiên bản 2026-10-14.2 gồm 16 nhóm nghiệp vụ; dữ liệu giá, lịch, payment,
 loyalty và sự cố phải đọc mới từ 16 read tools có giới hạn. Đây là context nghiệp
 vụ được duyệt theo code, không fine-tuning hoặc sao chép toàn DB sang ChatGPT.
 Giới hạn: câu hỏi 10 phút, history cùng khách 30 phút/10 lượt/12 KB, tổng dữ liệu
@@ -158,34 +158,75 @@ chat Đăng ký webhook LAB tạo một subscription VERIFIED và monitor Tiếp
 LAB. Đã nhận 9 phản hồi model tự động; câu đầu gửi từ UI CUSTOMER, các câu tiếp
 gửi qua API CUSTOMER thật. Kiểm tra nội dung/DB và câu đầu hiển thị trên website.
 Hai câu về ngày mai dùng sai ngày Việt Nam: thêm timeContext với giờ Việt Nam,
-today/tomorrow, cập nhật kiến thức và skill; unit/integration PASS, chưa thử lại
-model sau sửa. Các câu còn lại đúng trong phạm vi fixture, nhưng chưa chứng minh
-luồng dữ liệu booking/payment/staff dương vì khách review chưa có lịch và LAB
-chưa có staff được phân công. Câu 10 đã nhận event nhưng chưa có reply khi Work
-hết quota; hủy qua API CUSTOMER, không chấm PASS. Còn 11 tình huống chưa chạy,
-gồm câu ngoài LAB và đề xuất có xác nhận. Không kết luận chất lượng từ webhook 2xx.
+today/tomorrow, cập nhật kiến thức và skill; unit/integration PASS. Đã thử lại
+hai câu 2/5: model trả đúng ngày 15/10, loại giờ 10–11 đã đặt khỏi lịch trống và
+đọc đúng booking của khách. Các câu 10–15 đã nhận reply thật; injection bị từ
+chối, payment pending được đọc đúng, thiếu thông tin thì hỏi lại, STAFF_SUPPORT
+chỉ là nháp. Câu 10 cũ và câu 16 lần đầu dừng khi Work hết quota đã được hủy
+qua API CUSTOMER, không chấm PASS. Sau phục hồi runtime, 16–21 đã nhận reply;
+16 từ chối bypass, 17/18 trả đúng UTC+7/x=4, 20 không tiết lộ OTP/credential,
+21 hỏi lại interval thiếu. Câu19 chưa đạt nội dung: ba giá USD chênh20đ so với
+bảng Vietcombank được mở đối chiếu, cùng timestamp09:23. Đã siết knowledge/skill
+yêu cầu dòng dữ liệu nguồn gốc, đúng ngày/cột/đơn vị; link/snippet không đủ và
+thiếu dữ liệu động phải nói chưa xác minh. Thử lại19 nhận ANSWERED sau42,5giây:
+nêu rõ trang nguồn đọc được thiếu dòngUSD, không đoán số và đưa link ngân hàng
+hợp lệ. Đạt tiêu chí giới hạn xác minh, không là PASS cung cấp tỷ giá live.
+Không kết luận chất lượng từ webhook2xx, trạng thái ANSWERED hoặc protocol fixture.
 
 App cùng tài khoản đã cập nhật 1.0.1 qua Upload new version: Apps 1, Skills 1;
-giữ nguyên app ID/OAuth/metadata, thêm skill. Source portable 0.1.3 không gắn app
+giữ nguyên app ID/OAuth/metadata, thêm skill. Source portable 0.1.4 không gắn app
 ID tài khoản. Fresh usage sau lượt kiểm tra hiển thị 0% hạn mức 5 giờ, 69% tuần,
 reset khoảng 01:59 ngày 14/10; đây là quota dùng chung, không quy toàn bộ cho
 suite này. User đã đổi sang PĐ HƯNG Plus; fresh usage còn 79% hạn mức 5 giờ và
 65% tuần. Kết nối cũ trên tài khoản này trỏ tunnel đã ngừng, không có sửa URL
 trong màn Manage; tạo app LAB Support Connection Current
 (asdk_app_6ace7c55a1b0819184522db6d50521e5) tới endpoint hiện tại. Skill 1.0.1
-đã cập nhật qua Plugin Creator và đọc lại, giữ app mapping/metadata. Đang chờ
-user tự bấm consent ADMIN của app mới; chưa tạo consumer/test mới trước cấp quyền.
+đã cập nhật qua Plugin Creator và đọc lại, giữ app mapping/metadata. User đã cấp
+consent ADMIN, grant lúc 02:00 ngày14/10 và một monitor/subscription đã nhận reply.
+Khi Work dừng, fresh usage lúc 02:22 cho thấy 0%/53%; đây là quota dùng chung.
+Sau khi runtime/tunnel bị dừng và hostname cũ không còn dùng được, đã phục hồi
+test DB và API8001/gateway8002/UI5174. Fresh usage lúc 11:08 có 100% hạn mức5giờ,
+53% tuần; không dùng reset credit hay mua quota. App phục hồi LAB Support
+Connection Local (asdk_app_6acf0120dd18819185e94ea9078f09c5) đã được cập nhật1.0.1,
+giữ mapping/metadata qua ZIP gốc và thêm skill; sau lỗi tỷ giá đã lên1.0.2. Grant mới lúc11:18 và subscription
+VERIFIED; Work chat 6acf0345-2a64-83ec-9797-bc8d0211dbc3 nhận các case còn lại.
 
 Đã thêm fixture cấu hình phòng/giá SERVICE 60.000đ/giờ và staff phân công trong
 DB review riêng; không tạo telemetry/audit/lịch sử vận hành hay kết quả model.
 Runtime review bật riêng kiểm tra quote/pending charge, vẫn tắt VNPAY/SMTP/
-schedulers thanh toán. Chưa xác nhận booking/support từ các fixture mới.
+schedulers thanh toán. Câu đặt phòng thực từ UI CUSTOMER đã nhận BOOKING model;
+trước xác nhận không có booking, sửa/đóng form không ghi DB. Gửi form tạo booking
+ce570c2b-2afc-4d2b-a2e0-6e7965f80550, CONFIRMED ngày15/10 10–11, fee60.000đ.
+Gửi lại cùng giờ báo xung đột và vẫn chỉ một booking. Payment còn pending;
+không có settlement/provider thật trên DB review.
+
+Luồng STAFF_SUPPORT thật đã hoàn tất lúc 12:03 ngày 14/10: câu hỏi từ UI
+CUSTOMER nhận reply sau 56,7 giây, ba scoped reads. Trước xác nhận vẫn có 0 phiên
+hỗ trợ. Form điền đúng LAB/BOOKING; khách sửa nội dung rồi gửi tạo phiên
+28b50da9-c3b1-4f92-8c23-2a6ca2c428a1 WAITING, UI hiển thị #1. Staff bật sẵn sàng
+qua API xác thực, phiên tự ACTIVE; staff gửi tin, khách trả lời qua UI, staff
+kết thúc qua API. ADMIN đọc lại đủ bảy tin/event qua API, đúng handler và CLOSED;
+UI khách giữ transcript sau kết thúc. Không dùng tool model để dispatch hoặc
+gửi giả danh staff. Lượt này chưa kiểm UI staff/admin hoặc hàng đợi nhiều staff;
+không suy coverage đó từ luồng một staff. Đã sửa title/header hỗ trợ thiếu key
+dịch; locale sync và frontend required/lint/typecheck/build PASS.
+Gate nhánh riêng sau sửa: backend required 106, frontend required 43, bridge
+integration 21 PASS. Gate integration dùng DB actions riêng, không reset DB
+review đang giữ consent/monitor. Còn một grant/subscription và 0 câu hỏi chờ.
 
 Review riêng: API8001, gateway OAuth/MCP8002, frontend5174; test-only tunnel
-quilt-anyway-electronic-copyrighted.trycloudflare.com. Domain này tạm thời, không dùng
+transmission-pubmed-paxil-isle.trycloudflare.com. Domain này tạm thời, không dùng
 production. Quy trình tích hợp và cấu hình ở AI_ASSISTANT_SETUP, AI_ASSISTANT_MCP,
-INTEGRATION_GUIDE và ADR-036. Chưa bật cho khách thật: cần hoàn tất các tình huống
-chưa chạy, thử lại ngày tương đối và xác nhận đề xuất qua form CUSTOMER.
+INTEGRATION_GUIDE và ADR-036. Chưa bật cho khách thật: cần tích hợp nhánh riêng vào
+checkout chính, domain ổn định, SMTP và kiểm thử UI/provider theo môi trường
+triển khai. Còn giới hạn độ trễ/quota Work; model không có bảo đảm chính xác mọi
+câu hỏi. Đã thêm SYSTEM_TEST_GUIDE cho ba
+role, positive/negative/permission, care, booking/payment, support, OTP/mail,
+loyalty và chatbot; đánh dấu demo runbook cũ không còn đúng role/approval hiện tại.
+Gate mới trên checkout chính0de9471: backend required92/lint và frontend required26
+(lint/typecheck/build) PASS, hai lint warnings cũ; không chứng minh cả UI/live
+provider hoặc các tính năng nhánh riêng đã tích hợp vào main. Ngrok thực forward
+8000, backendhealth200; cổng8080 thuộc AgentService, không phải backend LAB.
 
 ## Checkout và runtime
 

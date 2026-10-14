@@ -1,7 +1,7 @@
 // Reviewed business knowledge, versioned with the code. Live values are never
 // embedded here. Source paths are evidence identifiers, not public download URLs.
 export const businessKnowledge = Object.freeze({
-  version: '2026-10-14.1', timezone: 'Asia/Ho_Chi_Minh', currency: 'VND',
+  version: '2026-10-14.2', timezone: 'Asia/Ho_Chi_Minh', currency: 'VND',
   responseRules: [
     'Answer in the question locale, concisely. Start with the useful answer and at most three next steps.',
     'Resolve today, tomorrow and other relative dates from timeContext.today/tomorrow in Vietnam UTC+7, never from the UTC date in now or a previous conversation. State the resolved calendar date before searching. Prefer customer terms such as confirmed booking over internal enum names.',
@@ -11,6 +11,7 @@ export const businessKnowledge = Object.freeze({
     'When data is unavailable, state what could not be checked. Offer the existing staff-support option for account/payment disputes, moving schedules, handover or unresolved problems.',
     'Publish plain chat text and, when the customer asks for help doing it, a BOOKING or STAFF_SUPPORT review draft using the publish schema. A draft performs no business action. The customer must review and confirm in the normal LAB form. You cannot move, cancel, pay, refund, change credentials, dispatch staff or repair a resource.',
     'Answer harmless general questions without unnecessary LAB reads. For changing external facts, use a host search capability only if actually available and cite the source; otherwise state the verification limit. Never claim you searched when you did not. No guarantee of correctness for every possible question.',
+    'For current external numbers such as exchange rates, open the primary source and verify the actual data row, date/time, currency, units and buying/selling columns together. A search snippet, page title, link or timestamp without its data row is insufficient. If the fetched page omits dynamic table values, or sources disagree, say the current number cannot be verified and provide the official lookup link; never fill missing numbers from memory, estimates or another date. Do not repeat a previous unverified answer as evidence.',
     'Do not claim an action was completed unless a fresh tool result proves it. A proposed slot is not a reservation.'
   ],
   customerDrafts: { BOOKING: { required: ['resourceId', 'startAt', 'endAt', 'title', 'purpose', 'purposeCode'],

@@ -1,5 +1,10 @@
 # Graduation Demo Runbook
 
+> Historical Batch 7 scenario. Actor and booking-approval instructions below
+> predate ADR-032/033. Use [SYSTEM_TEST_GUIDE](SYSTEM_TEST_GUIDE.md) for current
+> CUSTOMER/LAB_STAFF/ADMIN testing and automatic booking confirmation. Do not
+> run its old seed, role or cleanup commands against the existing local database.
+
 Status: Batch 7 REQUIRED CORE release scenario  
 Timezone: Asia/Ho_Chi_Minh (UTC+07:00)  
 Research features: OFF

@@ -235,7 +235,7 @@ chat và subscribe lại. Kết nối cũ bị thu hồi. Với domain backend �
 Plugin private của tài khoản cũ không tự xuất hiện trên tài khoản mới. Dùng gói
 portable từ `chatgpt-bridge:package` để import lại hoặc đăng ký cùng endpoint
 MCP trên tài khoản mới; giữ skill customer-support và context version hiện tại.
-Gói portable 0.1.3 chỉ chứa endpoint/skill, không chứa app ID hay credential của
+Gói portable 0.1.4 chỉ chứa endpoint/skill, không chứa app ID hay credential của
 tài khoản. Với Work Cloud, đăng ký custom MCP app trên tài khoản đích trước;
 gói app có `.app.json` phải trỏ đúng registered app của tài khoản đó. Có thể build
 gói Cloud bằng `CHATGPT_BRIDGE_REGISTERED_APP_ID=asdk_app_<registered-id>` cùng

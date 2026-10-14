@@ -1,9 +1,9 @@
 # LAB assistant and MCP contract
 
-Current local continuation: 2026-10-05. No new numbered Batch or live provider
-activation. [Setup guide](AI_ASSISTANT_SETUP.md) explains configuration; the
-verification report (historical run output; retired)
-records the tested environment and limits.
+Responses/MCP local checkpoint: 2026-10-05. ChatGPT bridge and its isolated live
+verification: 2026-10-14, detailed below. [Setup guide](AI_ASSISTANT_SETUP.md)
+explains configuration; [CURRENT_STATE](CURRENT_STATE.md) records actual results
+and limits. No production activation or universal model accuracy is implied.
 
 ## Runtime modes
 
@@ -208,7 +208,11 @@ support, emails and privacy. Context includes this version, fresh time and safe
 navigation paths. `timeContext` supplies Asia/Ho_Chi_Minh time and explicit today/
 tomorrow dates; relative dates must use these values rather than the UTC calendar
 or conversation history. Version 2026-10-14.1 adds this rule after two live answers
-selected the wrong next-day date. Dynamic values require a fresh scoped tool read; prior answers
+selected the wrong local date. Version 2026-10-14.2 also requires an opened
+primary data row, matching timestamp/units/columns before quoting changing
+external numbers. A snippet, URL or timestamp alone is insufficient; missing
+dynamic values or conflicting sources require an explicit verification limit.
+Dynamic values require a fresh scoped tool read; prior answers
 are conversation only. Publish requires the current context version. This is
 retrieval/grounding, not fine-tuning, and does not certify model accuracy.
 
@@ -243,7 +247,7 @@ Private package source is `plugins/lab-support-bridge`. Build its endpoint confi
 with `backend/scripts/buildChatgptBridgePlugin.mjs`; the script checks HTTPS/OAuth
 metadata and anonymous rejection before producing the package in ignored logs.
 No credentials belong in plugin files. Installation alone is not a connection.
-Portable source is version 0.1.3. For Work Cloud, first register the custom app
+Portable source is version 0.1.4. For Work Cloud, first register the custom app
 in the target account, then build with its registered app ID or add the same skill
 to that app's exported package without changing OAuth or other app metadata.
 The private app [LAB Support Connection 14-10](https://chatgpt.com/plugins/plugin_asdk_app_6ace700c035081919aaecc37ed2c87db)
@@ -254,18 +258,46 @@ required security fields exact. ADMIN status separates authorized from ready.
 
 Actual automatic Work replies were observed for nine customer questions, with
 the first submitted and displayed in the website UI. Two selected the wrong
-Vietnamese next-day date; the timeContext fix passed automated checks but awaits
-a new live retest. Remaining answers passed within the empty-customer fixture's
-limits; positive booking/payment/staff data and model proposals are not certified.
+Vietnamese next-day date; the timeContext fix passed automated checks and live
+retests for cases 2/5, using October 15 and the customer's actual confirmed room.
+Cases 10–15, then 16–21 received real replies. Initial case 19 is a content FAIL:
+its three exchange-rate values differed by 20 VND from the opened Vietcombank
+table while claiming the same 09:23 timestamp. A real reply/citation is not proof
+of correctness. Knowledge/skill now require primary data rows. The live retest
+answered in 42.5 seconds, correctly stating that the fetched primary page omitted
+the USD row and linking the official lookup instead of inventing a number.
+This passes the verification-limit criterion, not a live exchange-rate quote.
 Case ten received its event but stopped before replying when shared Work quota
 became exhausted. It was cancelled via the owning CUSTOMER API, not marked PASS.
-Eleven scenarios, including outside-LAB questions, remain unrun. Fresh usage showed
+Later case 16 also stopped on quota and was cancelled; its resumed run answered
+correctly without changing price or bypassing conflicts. Fresh usage showed
 0% remaining five-hour quota and 69% weekly; the user chose another account.
 The replacement account PĐ HƯNG Plus now shows 79% five-hour and 65% weekly
 remaining. Its old app endpoint is stale, so [LAB Support Connection Current](https://chatgpt.com/plugins/plugin_asdk_app_6ace7c55a1b0819184522db6d50521e5)
 was registered at the current review endpoint. Skill 1.0.1 was saved and read
 back through Plugin Creator with unchanged app mapping/metadata. Fresh ADMIN
-consent and subscription remain pending; no tests are dispatched before them.
+consent and subscription completed. One real UI BOOKING proposal created no
+booking before confirmation; editing/closing the form was read-only. Confirmation
+created booking ce570c2b-2afc-4d2b-a2e0-6e7965f80550 for October 15, 10–11 Vietnam
+time, 60,000 VND; resubmitting its interval was rejected and only one persisted.
+The model read the owned pending payment correctly, without provider settlement.
+
+After the review processes and quick tunnel stopped, the test DB/API/UI were
+restored without resetting data. The old hostname could not be reused. The
+replacement [LAB Support Connection Local](https://chatgpt.com/plugins/plugin_asdk_app_6acf0120dd18819185e94ea9078f09c5)
+uses transmission-pubmed-paxil-isle.trycloudflare.com with grant at 11:18 Vietnam
+time and one VERIFIED subscription. It is now 1.0.2, preserving original exported
+metadata/app mapping and adding stricter evidence instructions. Fresh browser
+usage at 11:08 showed 100% five-hour and 53% weekly remaining after natural reset;
+no reset credit or purchase was used. A fresh STAFF_SUPPORT request answered in
+56.7 seconds with three scoped reads. No support session existed before customer
+confirmation. The customer edited its prefilled form and submitted through the
+website; session 28b50da9-c3b1-4f92-8c23-2a6ca2c428a1 displayed WAITING #1.
+Authenticated staff availability assigned it automatically, staff sent a message
+through the normal API, the customer replied in the UI, and staff closed it.
+ADMIN read all seven messages/events and the correct handler through its API;
+the customer's UI retained the closed transcript. Staff/admin UI and live
+multi-staff queue coverage are not implied by this single-staff run.
 
 Verified local checks: 28 backend bridge/security/protocol/time cases, nine frontend
 poll/cancellation/redirect/proposal cases; protocol replies use labelled test fixtures.
@@ -274,7 +306,8 @@ DB: changed quotes and overlaps rejected, valid booking automatically CONFIRMED,
 payment remained pending, duplicate support request IDs created one WAITING session.
 The 21 live-model evaluation scenarios are versioned in
 `backend/test/fixtures/chatgptBridgeEvaluation.json`; the live subset and failures
-above must not be replaced by protocol fixtures or treated as a full-suite pass.
+above must not be replaced by protocol fixtures or treated as an all-content pass.
+See SYSTEM_TEST_GUIDE for role-by-role steps and explicit PASS/FAIL/BLOCKED status.
 A guarded PostgreSQL `lab_resources_chatgpt_bridge_test` and loopback review
 8001/8002/5174 do not use the shared business database. Only OAuth/MCP gateway
 paths are public in the temporary review tunnel; business endpoints return 404.
