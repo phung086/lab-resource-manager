@@ -12,7 +12,7 @@ Kết quả đã xác minh trong lượt 14/10:
 | Nhánh chatbot riêng | Backend required 106, frontend required 43, bridge integration 21 PASS | Integration dùng DB test riêng; protocol fixture không là model thật |
 | GPT thật | Bộ 21 tình huống đã nhận reply qua các lượt; lỗi ngày và tỷ giá đã sửa rồi thử lại | Tỷ giá đạt tiêu chí nói rõ chưa xác minh, không phải cung cấp số live; có độ trễ/quota Work |
 | Đề xuất đặt lịch | UI khách xác nhận tạo một CONFIRMED đúng giá; gửi trùng bị chặn | Payment vẫn pending, không thu tiền trong DB review |
-| Chuyển hỗ trợ | UI khách xác nhận → WAITING #1 → staff ACTIVE → chat hai chiều → CLOSED; ADMIN đọc lịch sử qua API | Một staff; lượt này không kiểm UI staff/admin hoặc hàng đợi nhiều staff |
+| Chuyển hỗ trợ | Chat cùng dock; UI khách → WAITING #1 → staff ACTIVE → chat → CLOSED. Suite UI 22 kiểm tra và backend 9 đạt | DB support riêng; không chứng minh tải production |
 | SMTP và tích hợp | Chưa hoàn tất | Chưa có SMTP bên ngoài; nhánh riêng chưa merge vào checkout chính |
 
 Nên chạy theo thứ tự: đăng ký/đăng nhập → khám phá/đặt lịch CUSTOMER → staff
@@ -27,6 +27,7 @@ mong đợi dưới đây; ghi FAIL ngay khi sai và giữ dữ liệu để tá
 | Checkout chính `C:/Projects/lab-resource-manager`, commit `0de9471` | Docker, 8000 | 5173 khi được bật | DB local hiện có; không reset hoặc seed lại để test |
 | Nhánh `codex/chatgpt-plugin-bridge`, worktree `customer-security-loyalty` | 8001 | 5174 | PostgreSQL `lab_resources_chatgpt_bridge_test`; chỉ tài khoản `@bridge.test` |
 | Gateway của bản chatbot review | 8002 | — | Chỉ OAuth/MCP, không mở business API của DB test ra Internet |
+| Gateway dùng chung ngrok | 8003 | — | OAuth/MCP →8002; các đường backend chính/VNPAY →8000 |
 
 OTP đổi mật khẩu, quản lý CUSTOMER mở rộng, loyalty theo chi tiêu và ChatGPT bridge
 đang nằm trong nhánh riêng. Checkout chính chưa tích hợp các thay đổi này.
@@ -47,9 +48,18 @@ Invoke-RestMethod http://127.0.0.1:8000/health/ready
 Backend chính mặc định dùng `PORT=8000`. Ngrok phải forward tới cổng backend đang
 trả health, không phải cổng frontend hoặc dịch vụ khác. Cấu hình hiện đã kiểm tra:
 
+Nếu chỉ dùng backend chính/VNPAY, target8000. Cấu hình đã chốt cho cả chatbot
+review và VNPAY dùng cùng domain: bật gateway trước rồi ngrok8003:
+
 ```powershell
-ngrok http http://127.0.0.1:8000
+Set-Location C:/Users/Admin/.codex/worktrees/customer-security-loyalty/lab-resource-manager/backend
+node scripts/startLocalBridgeGateway.mjs
+# Terminal ngrok riêng:
+ngrok http http://127.0.0.1:8003 --url=https://projector-blaspheme-angelfish.ngrok-free.dev
 ```
+
+Không chạy lại nếu hai tiến trình này đã hoạt động. Backend chính vẫn8000;
+8003 chỉ định tuyến và không đổi URL IPN của merchant.
 
 Khi backend chính đã healthy mà frontend chưa mở, dùng launcher hiện có trong
 terminal riêng (chỉ khởi động frontend, tái dùng backend):
@@ -62,10 +72,10 @@ npm.cmd run dev -- --payments
 Mở `http://localhost:5173`. Không chạy lệnh này nếu 5173 đang có phiên frontend.
 Giữ terminal ngrok mở; Ctrl+C frontend không có nghĩa đã dừng backend Docker.
 
-Ngrok 8000 phục vụ callback VNPAY của backend chính. Chatbot review dùng tunnel
-riêng tới gateway 8002. Nếu chỉ test gateway bằng ngrok thì target là 8002, nhưng
-không chuyển tunnel VNPAY hiện có sang đó: gateway review không nhận IPN VNPAY.
-Không chạy thêm lệnh ngrok nếu phiên đúng đang hoạt động.
+Ngrok8003 phục vụ callback VNPAY tới backend chính và OAuth/MCP tới review8002.
+Không target trực tiếp8002 khi cần cả VNPAY: review gateway không nhận IPN.
+Cloudflare quick tunnel trước đó đã ngừng dùng. Giữ đúng một plugin LAB Support
+và một bộ nhận Tiếp nhận hỗ trợ LAB; không tạo thêm plugin sau mỗi restart.
 
 ChatGPT cần URL HTTPS của `/mcp/support-bridge`, OAuth audience cùng URL, ADMIN
 cấp quyền và Work chat đăng ký sự kiện. Tunnel tạm đổi hostname sau khi khởi động
@@ -206,9 +216,13 @@ CONFIRMED đúng giá. Gửi lại giờ đó bị conflict. Giá đổi phải 
 đề xuất quá 5 phút bị từ chối mở. Booking/payment không được tạo bởi tool model.
 
 **Đề xuất staff:** Nêu LAB/mã LAB, nhóm vấn đề và mô tả. Bot tạo STAFF_SUPPORT;
-chưa dispatch. Khách mở form, sửa được nội dung và gửi. Nếu không có staff rảnh
-thấy vị trí hàng đợi; staff sẵn sàng nhận và chat được. Không ghi đè yêu cầu
-hỗ trợ đang mở. Transcript bridge chưa tự copy sang staff trong bản hiện tại.
+chưa dispatch. Mở form ngay trong dock, giữ AI turns và URL nền; khách sửa rồi
+gửi. Nếu staff bận thấy #1/#2; khi staff nhận, thay status và chat ở cùng dock.
+Thu nhỏ/mở lại giữ draft, reload rồi mở dock phải nối phiên đang mở; không tạo
+yêu cầu thứ hai. Kết thúc xem được transcript và quay lại trợ lý. Thử VI/EN,
+mobile390px, mất mạng và text HTML. Staff/admin dùng workspace xử lý/lịch sử.
+Transcript bridge chưa tự copy sang staff trong bản hiện tại; context local chỉ
+chia sẻ khi khách chọn, không nhận transcript browser.
 
 **Gián đoạn:** Hủy khi bot đang chờ; thu hồi/đổi grant; đổi credential; hết hạn
 request; dừng tunnel; hết Work quota. UI/API phải báo lỗi hoặc inactive đúng,

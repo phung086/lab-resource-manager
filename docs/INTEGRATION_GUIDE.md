@@ -137,12 +137,18 @@ npm --prefix frontend run test:chatgpt-bridge
 Không chạy các integration tests này trong lúc người dùng đang thử OAuth trên
 cùng DB review: setup chủ động thu hồi grants fixture cũ để kiểm thử lặp lại.
 Merge cả customerProposals/requests/MCP schema, chatgptBridgeProposals/API,
-Assistant/AppLayout/App, QuickBookingModal và SupportPage. Chỉ hai loại đề xuất
+Assistant/AppLayout/App, QuickBookingModal, CustomerSupportChat và SupportPage. Chỉ hai loại đề xuất
 xem trước; không ghép tool AI vào endpoint business writes. Giữ bước khách xác
 nhận, lấy lại quote và kiểm tra cuối của API booking/support. Kiến thức phiên bản
 2026-10-14.2 và plugin portable 0.1.4 đi cùng contract optional proposals/timeContext;
 số liệu hiện thời ngoài LAB phải có dòng dữ liệu nguồn gốc, không chỉ link/snippet.
 Gói Cloud phải map app ID đăng ký đúng tài khoản; không bê ID private cũ sang.
+Handoff CUSTOMER giữ trong dock, bỏ callback App điều hướng STAFF_SUPPORT cũ.
+Staff/admin workspace vẫn cần cho xử lý/history; không bỏ support API/FIFO/RBAC.
+Gateway8003 chỉ dùng nối main8000 và review8002 dưới cùng ngrok khi chưa tích hợp;
+khi backend đã tích hợp bridge, trỏ cùng origin tới backend có cả OAuth/MCP/IPN,
+không mang cổng test/DB review vào deployment. Đọc AI_ASSISTANT_SETUP8.1 cho chuyển
+tài khoản và một consumer; installation không tự cấp OAuth/subscription.
 Chạy 21 tình
 huống model thật sau OAuth + Events; test protocol không thay thế bước này.
 Đã có 9 câu nhận reply thật nhưng 2 câu sai ngày mai, đã sửa múi giờ và chưa thử

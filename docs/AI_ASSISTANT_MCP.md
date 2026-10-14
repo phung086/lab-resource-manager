@@ -299,6 +299,24 @@ ADMIN read all seven messages/events and the correct handler through its API;
 the customer's UI retained the closed transcript. Staff/admin UI and live
 multi-staff queue coverage are not implied by this single-staff run.
 
+Later October14 checkpoint: one installed [LAB Support](https://chatgpt.com/plugins/plugin_asdk_app_6acf13e36eec81918a51082417a0e8b7),
+Cloud1.0.1, at the fixed ngrok dev domain projector-blaspheme-angelfish.ngrok-free.dev.
+The four earlier LAB packages were uninstalled; the same Work consumer switched
+to this app, renamed Tiếp nhận hỗ trợ LAB, with one VERIFIED subscription. Its
+first real customer UI reply arrived in33.6seconds with one read. The shortened
+consumer also answered an owned-booking question correctly in48.5seconds and
+the general equation in105.9seconds. No manual GPT send occurred after those
+customer requests; latency remains too high and variable for instant chat. The
+consumer prompt avoids redundant reads after publish; host batching/debounce
+configuration was not exposed. There is no few-second latency guarantee.
+Local gateway8003 routes only exact OAuth/MCP paths to8002 and main API/VNPAY to
+8000; review business API remains private. Customer STAFF_SUPPORT review now
+stays in the existing assistant dock without navigation, including queue/status,
+staff messages and closure. The guarded support regression passed9 backend and
+22 UI checks, including parallel staff/FIFO, admin history/requeue, reopen after reload and network
+recovery. The live single-staff dock flow also completed. A bridge transcript is
+retained visually in that signed-in dock but is not yet copied to staff history.
+
 Verified local checks: 28 backend bridge/security/protocol/time cases, nine frontend
 poll/cancellation/redirect/proposal cases; protocol replies use labelled test fixtures.
 Canonical booking/support HTTP confirmations were also checked in the isolated

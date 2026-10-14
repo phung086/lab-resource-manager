@@ -254,3 +254,58 @@ Có thể bật riêng `CHATGPT_BRIDGE_REVIEW_PRICING_ENABLED=true` để thử 
 pending charge trên DB review; mặc định tắt. VNPAY/SMTP và scheduler vẫn tắt,
 không có thanh toán provider hoặc mail thật. Không dùng fixture làm dữ liệu
 nghiệp vụ hay tạo lịch sử/audit giả để minh chứng vận hành.
+
+### 8.1. Một plugin chuẩn trên ngrok — local ngày 14/10/2026
+
+Plugin đang dùng: [LAB Support](https://chatgpt.com/plugins/plugin_asdk_app_6acf13e36eec81918a51082417a0e8b7),
+Cloud skill 1.0.1; portable source 0.1.4. Chỉ một bộ nhận `Tiếp nhận hỗ trợ LAB`
+đang bật. Các bản LAB trùng đã gỡ cài đặt, bộ nhận cũ tạm dừng; không xóa lịch sử
+hoặc định nghĩa plugin cũ. Backend chính vẫn8000, reviewAPI8001/UI5174.
+
+Ngrok dùng dev domain gắn tài khoản:
+`https://projector-blaspheme-angelfish.ngrok-free.dev`. Máy và terminal phải chạy;
+không có SLA production. Trong bản chưa tích hợp, cần gateway loopback8003 để
+giữ cùng hostname cho VNPAY và chatbot. Terminal riêng từ backend worktree:
+
+```powershell
+node scripts/startLocalBridgeGateway.mjs
+```
+
+Sau khi backend8000 và review8001/gateway8002 trả lời, terminal ngrok:
+
+```powershell
+ngrok http http://127.0.0.1:8003 --url=https://projector-blaspheme-angelfish.ngrok-free.dev
+```
+
+Không mở hai ngrok cùng domain. Giữ `CHATGPT_BRIDGE_PUBLIC_ORIGIN` đúng domain
+này, `CHATGPT_BRIDGE_UI_ORIGIN=http://127.0.0.1:5174` trong runtime review và giữ
+nguyên secret key qua restart. OAuth/MCP allowlist →8002; các đường khác →8000.
+Business API review8001 không được định tuyến ra Internet. IPN giữ nguyên URL/path
+VNPAY đã cấu hình. Kiểm health và unsigned IPN qua domain, discovery resource
+đúng `/mcp/support-bridge`, anonymous MCP401 và reserved path sai404.
+Gateway này chỉ là cầu nối local trong lúc nhánh riêng chưa tích hợp.
+
+Đổi tài khoản ChatGPT mà không sửa code LAB:
+
+1. Trên tài khoản mới, Plugins → Add custom MCP server → cùng URL ngrok
+   `/mcp/support-bridge`, OAuth DCR và đúng ba scope đã nêu ở trên.
+2. ADMIN LAB cấp quyền cho kết nối mới. Grant/token/subscription cũ bị thu hồi.
+3. Giữ skill và reference từ gói nguồn portable. Gói Cloud của tài khoản cũ có
+   `.app.json` gắn registered app ID cũ; không import ID đó như app của tài khoản
+   mới. Export source app mới, giữ metadata/mapping gốc, thêm skill; hoặc build
+   với `CHATGPT_BRIDGE_REGISTERED_APP_ID` mới như hướng dẫn trên.
+4. Một Work/Cloud chat đăng ký event `lab.assistant.question.created` qua skill,
+   host cấp callback/secret/renew. Chỉ làm một lần cho kết nối mới. Sau đó khách
+   hỏi trên LAB → event → GPT đọc context/data → publish về LAB tự động, không
+   bấm gửi ở GPT cho từng khách. Installation không tự cấp OAuth hoặc consumer.
+5. Test một câu nghiệp vụ và một câu ngoài LAB; đối chiếu reply/queue và thu hồi
+   các plugin/consumer LAB cũ, giữ đúng một plugin vận hành.
+
+Prompt bộ nhận: chỉ đọc context mới và dữ liệu cần thiết, trả lời ngắn, kết thúc
+khi publish trả ANSWERED. Không gọi thêm tool đọc lại trạng thái hoặc polling.
+Tùy chọn batching/debounce không được host cung cấp trong lượt này. Trước ngrok,
+câu ngắn sau tối ưu mất43,2giây; ba lượt ngrok mất33,6giây (quy tắc đặt lịch),
+48,5giây (owned booking) và105,9giây (toán). Đều có reply thật đúng nội dung,
+nhưng chưa đạt mục tiêu vài giây. Cần OpenAI API/streaming được cấu hình riêng nếu yêu cầu độ trễ chat
+tức thời có kiểm soát; không dùng cookie/token ChatGPT hay tự động hóa web để
+giả một API. Quota/outage phải báo thật, khách vẫn có nút chuyển staff.

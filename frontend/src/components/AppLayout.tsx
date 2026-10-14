@@ -35,7 +35,6 @@ export interface AppLayoutProps {
   onLogout?: () => void;
   onPasswordChanged?: () => void;
   onAssistantPrefill?: (slot: { resourceId: string; startAt: string; endAt: string; title?: string; purpose?: string; purposeCode?: string }) => void;
-  onAssistantSupportDraft?: (draft: import('../services/chatgptBridgeProposals').BridgeSupportDraft) => void;
   children: React.ReactNode;
 }
 
@@ -54,7 +53,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onLogout,
   onPasswordChanged,
   onAssistantPrefill,
-  onAssistantSupportDraft,
   children
 }) => {
   const { tr } = useLocale();
@@ -209,7 +207,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       </div>
 
       {AI_ASSISTANT_ENABLED && assistantMounted && <React.Suspense fallback={assistantOpen ? <p className="assistant-loading" role="status">{translate("ui.opening_assistant_9a8f8008")}</p> : null}>
-        <LaboratoryAssistant actorRole={user?.role} isOpen={assistantOpen && !navigationOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onSupportDraft={onAssistantSupportDraft} onNavigate={navigateFromShell} />
+        <LaboratoryAssistant actorRole={user?.role} isOpen={assistantOpen && !navigationOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />
       </React.Suspense>}
 
       <BaseModal2026

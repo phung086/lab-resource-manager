@@ -214,9 +214,41 @@ Gate nhánh riêng sau sửa: backend required 106, frontend required 43, bridge
 integration 21 PASS. Gate integration dùng DB actions riêng, không reset DB
 review đang giữ consent/monitor. Còn một grant/subscription và 0 câu hỏi chờ.
 
-Review riêng: API8001, gateway OAuth/MCP8002, frontend5174; test-only tunnel
-transmission-pubmed-paxil-isle.trycloudflare.com. Domain này tạm thời, không dùng
-production. Quy trình tích hợp và cấu hình ở AI_ASSISTANT_SETUP, AI_ASSISTANT_MCP,
+Review riêng: API8001, gateway OAuth/MCP8002, frontend5174. Checkpoint mới 14/10
+chuẩn hóa một [LAB Support](https://chatgpt.com/plugins/plugin_asdk_app_6acf13e36eec81918a51082417a0e8b7)
+Cloud1.0.1 (portable0.1.4) ở domain ngrok
+projector-blaspheme-angelfish.ngrok-free.dev. Đã gỡ cài đặt các bản LAB Current,
+Connection, Customer Support0.1.2 và Local; giữ source/lịch sử, không xóa định
+nghĩa cloud vĩnh viễn. Bộ nhận cũ Current đã tạm dừng; bộ nhận Local đã được
+chuyển sang app ngrok và tên Tiếp nhận hỗ trợ LAB, không tạo task thứ hai.
+Grant mới lúc12:34, một subscription VERIFIED. Câu UI mới trả lời tự động sau
+33,6giây, một read; không thao tác GPT sau khi khách gửi. Hai câu tiếp theo đúng
+owned booking ngày15/10 10–11 (48,5giây, hai reads) vàx=4 (105,9giây, một read).
+Trước đó sau rút gọn
+prompt mất43,2giây; host không có tùy chọn batching/debounce. Chưa đạt SLA vài
+giây, phụ thuộc Work quota/độ trễ. Đổi tài khoản không sửa code nếu giữ hostname,
+nhưng cần đăng ký app/OAuth/consumer một lần; gói Cloud có ID tài khoản riêng.
+
+Ngrok hiện tới gateway8003: exact OAuth/MCP allowlist→8002, mọi đường còn lại
+→backend chính8000; business API review vẫn không public. Backend chính health200,
+unsigned IPN trả97 INVALID_SIGNATURE giống nhau trên8000/8003/domain. Có regression
+gateway giữ query/body/auth bytes, loại forwarded spoof và chặn reserved path sai.
+Cloudflare quick tunnel cũ đã ngừng dùng. Đây là cấu hình local, không production.
+
+Theo yêu cầu cùng khung chat, CUSTOMER handoff/proposal không đổi URL nữa:
+CustomerSupportChat trong dock giữ AI turns, form chỉnh/sent, WAITING#1 rồi ACTIVE,
+tin nhắn thật và CLOSED. Model proposal mới nhận43giây; xác nhận UI tạo phiên
+171eda04-085e-40d4-b978-2b33d1a73dab, staff API nhận/gửi/kết thúc, khách chat trong
+dock. Thu nhỏ/mở lại giữ draft; mobile390px không overflow, HTML là text. Suite
+backend support9 và UI22 PASS trên lab_resources_support_test riêng: hai staff,
+FIFO#1/#2, quick replies chỉ draft, admin xem/requeue, VI/EN, mất mạng giữ draft.
+Ca bổ sung reload/mở lại đã nối đúng phiên staff trong dock. Lần đầu test kiểm
+trước khi lazy dock tải xong; thêm wait đúng control rồi chạy lại toàn UI22 PASS.
+Frontend required43/lint/typecheck/build và detector PASS sau thay đổi; backend
+bridge suite tăng8 do thêm gateway test, lint PASS. Bridge AI transcript vẫn chưa
+copy sang staff; chỉ context local server-owned được chia sẻ opt-in.
+
+Quy trình tích hợp và cấu hình ở AI_ASSISTANT_SETUP, AI_ASSISTANT_MCP,
 INTEGRATION_GUIDE và ADR-036. Chưa bật cho khách thật: cần tích hợp nhánh riêng vào
 checkout chính, domain ổn định, SMTP và kiểm thử UI/provider theo môi trường
 triển khai. Còn giới hạn độ trễ/quota Work; model không có bảo đảm chính xác mọi
@@ -225,8 +257,8 @@ role, positive/negative/permission, care, booking/payment, support, OTP/mail,
 loyalty và chatbot; đánh dấu demo runbook cũ không còn đúng role/approval hiện tại.
 Gate mới trên checkout chính0de9471: backend required92/lint và frontend required26
 (lint/typecheck/build) PASS, hai lint warnings cũ; không chứng minh cả UI/live
-provider hoặc các tính năng nhánh riêng đã tích hợp vào main. Ngrok thực forward
-8000, backendhealth200; cổng8080 thuộc AgentService, không phải backend LAB.
+provider hoặc các tính năng nhánh riêng đã tích hợp vào main. Cổng8080 thuộc
+AgentService, không phải backend LAB; sau chuẩn hóa ngrok forward8003 như trên.
 
 ## Checkout và runtime
 

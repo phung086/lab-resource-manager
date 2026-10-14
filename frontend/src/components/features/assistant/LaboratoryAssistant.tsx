@@ -8,6 +8,8 @@ import { vietnamTimeToIso } from '../../../utils/timezone';
 import { navigateApp, workspacePathForTab } from '../../../workspaceRoutes.js';
 import { askChatgptBridge, type BridgeRequest } from '../../../services/chatgptBridgeApi';
 import { reviewBridgeProposal, type BridgeProposal, type BridgeSupportDraft } from '../../../services/chatgptBridgeProposals';
+import CustomerSupportChat from '../support/CustomerSupportChat';
+import { supportApi } from '../../../services/support';
 import './assistant.css';
 
 type Slot = { resourceId: string; startAt: string; endAt: string; resourceName?: string; resourceCode?: string; title?: string; purpose?: string; purposeCode?: string };
@@ -16,9 +18,9 @@ type Segment = { text?: string; key?: string; params?: Record<string, unknown>; 
 type Resource = { id: string; name: string; code: string; category?: string; operationalStatus?: string };
 type Source = { chunkId: string; excerpt: string; document: { title: string; version?: string; fileName?: string } };
 type Answer = { answer: string; summary: Segment[]; locale: string; provider: string; modelStatus: string; source: string; toolsUsed: string[]; actions: Action[]; toolResults: { tool: string; result: Record<string, unknown> }[]; proposals?: BridgeProposal[]; conversation?: { id: string; expiresAt: string; retainedTurns?: number } };
-type Props = { isOpen: boolean; onClose: () => void; onPrefill: (slot: Slot) => void; onSupportDraft?: (draft: BridgeSupportDraft) => void; onNavigate: (tab: string) => void; workspaceTab?: string; actorRole?: string };
+type Props = { isOpen: boolean; onClose: () => void; onPrefill: (slot: Slot) => void; onNavigate: (tab: string) => void; workspaceTab?: string; actorRole?: string };
 
-export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onSupportDraft, onNavigate, workspaceTab, actorRole }: Props) {
+export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onNavigate, workspaceTab, actorRole }: Props) {
   const { locale, tr, changeLocale } = useLocale();
   const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
   const panel = useRef<HTMLElement>(null), content = useRef<HTMLDivElement>(null), contextFields = useRef<HTMLDetailsElement>(null);
@@ -35,8 +37,18 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onSupp
   const [duration, setDuration] = useState(''), [startAt, setStartAt] = useState(''), [endAt, setEndAt] = useState('');
   const [bridge, setBridge] = useState<{ enabled: boolean; connected: boolean; mode: string } | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState('');
+  const [humanMode, setHumanMode] = useState(false), [humanDraft, setHumanDraft] = useState<BridgeSupportDraft | undefined>();
+  useEffect(() => { if (humanMode && isOpen && content.current) content.current.scrollTop = content.current.scrollHeight; }, [humanMode, isOpen]);
   const usesBridge = actorRole === 'CUSTOMER' && bridge?.enabled && bridge.mode === 'chatgpt_bridge';
   const bridgeUnavailable = Boolean(usesBridge && !bridge?.connected);
+  useEffect(() => {
+    if (!isOpen || actorRole !== 'CUSTOMER') return;
+    const controller = new AbortController();
+    supportApi.list(new URLSearchParams({ page: '1', pageSize: '1' }), controller.signal).then(result => {
+      if (!controller.signal.aborted && result.activeSession && !inFlight.current) setHumanMode(true);
+    }).catch(() => { /* The support form shows its own connection error when opened. */ });
+    return () => controller.abort();
+  }, [isOpen, actorRole]);
 
   useEffect(() => {
     if (!isOpen || !content.current || !latestTurn.current) return;
@@ -100,8 +112,8 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onSupp
   async function handoff() {
     if (busy && !bridgeWork.current) return;
     if (bridgeWork.current && !await stopBridge()) return;
-    dismiss(false);
-    navigateApp(workspacePathForTab('support', conversationId.current && !conversationExpired ? { conversation: conversationId.current } : {}));
+    if (actorRole === 'CUSTOMER') { setHumanDraft(undefined); setHumanMode(true); setError(''); }
+    else { dismiss(false); navigateApp(workspacePathForTab('support')); }
   }
   async function newConversation() {
     if (bridgeWork.current && !await stopBridge()) return;
@@ -164,26 +176,24 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onSupp
   function review(proposal: BridgeProposal) {
     try {
       const draft = reviewBridgeProposal(proposal);
-      if (draft.kind === 'STAFF_SUPPORT' && !onSupportDraft) throw new Error('bridge.unavailable');
-      dismiss(false);
-      if (draft.kind === 'BOOKING') onPrefill(draft);
-      else onSupportDraft?.(draft);
+      if (draft.kind === 'BOOKING') { dismiss(false); onPrefill(draft); }
+      else { setHumanDraft(draft); setHumanMode(true); setError(''); }
     } catch (failure) { setError((failure as Error).message); }
   }
-  if (!isOpen) return null;
+  if (!isOpen && !humanMode) return null;
 
-  return createPortal(<section id="lab-assistant-panel" className={`lab-assistant${messages.length ? ' has-conversation' : ''}`} ref={panel} role="dialog" aria-modal="false" aria-labelledby="lab-assistant-title"
+  return createPortal(<section id="lab-assistant-panel" hidden={!isOpen} className={`lab-assistant${messages.length ? ' has-conversation' : ''}`} ref={panel} role="dialog" aria-modal="false" aria-labelledby="lab-assistant-title"
     onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); dismiss(); } }}>
     <header>
-      <div><h2 id="lab-assistant-title">{tr('assistant.title')}</h2><p>{tr('assistant.subtitle')}</p></div>
+      <div><h2 id="lab-assistant-title">{tr(humanMode ? 'support.handoff' : 'assistant.title')}</h2>{!humanMode && <p>{tr('assistant.subtitle')}</p>}</div>
       <div className="assistant-language" role="group" aria-label={tr('assistant.changeLanguage')}>
         {['vi', 'en'].map(value => <button type="button" key={value} aria-pressed={locale === value} onClick={() => void changeLocale(value)}>{value.toUpperCase()}</button>)}
       </div>
       <button type="button" className="assistant-minimize" onClick={() => dismiss()} aria-label={tr('assistant.minimize')}><X size={19} aria-hidden="true" /></button>
     </header>
     <div className="lab-assistant-content" ref={content}>
-      {!messages.length && <div className="assistant-welcome"><h3>{tr('assistant.welcome')}</h3><p>{tr('assistant.welcomeHelp')}</p></div>}
-      <details ref={contextFields} className="assistant-context-disclosure"><summary>{tr('assistant.context')}{resourceId && <span>{resources.find(resource => resource.id === resourceId)?.code}</span>}</summary>
+      {!humanMode && !messages.length && <div className="assistant-welcome"><h3>{tr('assistant.welcome')}</h3><p>{tr('assistant.welcomeHelp')}</p></div>}
+      <details hidden={humanMode} ref={contextFields} className="assistant-context-disclosure"><summary>{tr('assistant.context')}{resourceId && <span>{resources.find(resource => resource.id === resourceId)?.code}</span>}</summary>
         <div className="assistant-context">
           <label>{tr('assistant.resource')}<select ref={resourceInput} value={resourceId} onChange={event => setResourceId(event.target.value)}><option value="">{tr('assistant.inferResource')}</option>{resources.map(resource => <option value={resource.id} key={resource.id}>{resource.code} · {resource.name}</option>)}</select></label>
           <label>{tr('assistant.duration')}<input type="number" min={15} max={480} step={1} value={duration}  aria-describedby="assistant-duration-help" onChange={event => setDuration(event.target.value)} /><small id="assistant-duration-help">{tr('assistant.durationHelp')}</small></label>
@@ -193,7 +203,7 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onSupp
       </details>
       {setupError && <div role="alert" className="assistant-setup-error"><p>{tr('assistant.unavailable')}</p><button type="button" className="secondary-button" disabled={busy} onClick={() => setConnectionAttempt(value => value + 1)}>{tr('assistant.retryConnection')}</button></div>}
       {bridgeUnavailable && <div role="status" className="assistant-setup-error"><p>{tr('bridge.unavailable')}</p><button type="button" className="secondary-button" disabled={busy} onClick={() => setConnectionAttempt(value => value + 1)}>{tr('assistant.retryConnection')}</button></div>}
-      {!messages.length && <div className="assistant-suggestions" aria-label={tr('assistant.getStarted')}>
+      {!humanMode && !messages.length && <div className="assistant-suggestions" aria-label={tr('assistant.getStarted')}>
         {suggestions.slice(0, 3).map(key => <button type="button" key={key} disabled={busy || conversationExpired || bridgeUnavailable} onClick={() => void send(label(key))}>{label(key)}</button>)}
       </div>}
       <div className="assistant-conversation" aria-live="polite" aria-relevant="additions">{messages.map((turn, index) => {
@@ -211,7 +221,7 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onSupp
                 <p><time dateTime={proposal.startAt}>{time(proposal.startAt)}</time> → <time dateTime={proposal.endAt}>{time(proposal.endAt)}</time></p>
                 <small>{new Intl.NumberFormat(locale === 'en' ? 'en-GB' : 'vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(proposal.quote.amountVnd)}</small>
               </> : <small>{proposal.laboratoryName}</small>}
-              <button type="button" className="secondary-button" disabled={busy} onClick={() => review(proposal)}>{tr('bridge.reviewProposal')}</button>
+              <button type="button" className="secondary-button" disabled={busy || humanMode} onClick={() => review(proposal)}>{tr('bridge.reviewProposal')}</button>
             </div>)}
             {foundResources.map(resource => <article className="assistant-resource-result" key={resource.id}><strong>{resource.name}</strong><small>{resource.code} · {label(`enum.operational.${resource.operationalStatus}`)}</small></article>)}
             {!!foundResources.length && <button type="button" className="secondary-button" onClick={() => navigate('resources')}>{tr('assistant.viewResources')}</button>}
@@ -239,8 +249,9 @@ export default function LaboratoryAssistant({ isOpen, onClose, onPrefill, onSupp
       {pendingQuestion && <p className="assistant-question">{pendingQuestion}</p>}
       {busy && <p role="status" className="assistant-busy">{tr(bridgeWork.current ? 'bridge.waiting' : 'assistant.lookupBusy')}</p>}
       {error && <p className="alert danger" role="alert">{tr(error)}</p>}
+      {humanMode && <CustomerSupportChat visible={isOpen} initialDraft={humanDraft} initialMessage={question.trim() || messages.at(-1)?.question || ''} conversationId={!conversationExpired ? conversationId.current : undefined} onReturn={() => { setHumanMode(false); setHumanDraft(undefined); requestAnimationFrame(() => questionInput.current?.focus({ preventScroll: true })); }} />}
     </div>
-    <div className="assistant-bottom">
+    <div className="assistant-bottom" hidden={humanMode}>
       <button type="button" className="secondary-button" disabled={busy && !usesBridge} onClick={() => void handoff()}>{tr('support.handoff')}</button>
       <form className="assistant-compose" onSubmit={event => { event.preventDefault(); void send(question); }}>
         <label className="sr-only" htmlFor="assistant-question">{tr('assistant.question')}</label>

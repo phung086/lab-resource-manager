@@ -43,7 +43,11 @@ async function open(name) {
   return page;
 }
 const text = (key, locale = 'vi') => catalogs[locale][`support.${key}`];
-const chatText = (page, value) => page.locator('.support-transcript').getByText(value, { exact: true }).waitFor({ timeout: 12_000 });
+const chatText = async (page, value) => {
+  const inline = page.locator('.assistant-human');
+  const scope = await inline.isVisible() ? page.locator('.assistant-human-transcript') : page.locator('.support-transcript');
+  await scope.getByText(value, { exact: true }).waitFor({ timeout: 12_000 });
+};
 async function ask(page, message) {
   await page.locator('.support-request textarea').fill(message);
   await page.locator('.support-request select').first().selectOption({ label: 'SUPPORT-a · Support Lab a' });
@@ -60,9 +64,16 @@ try {
   await student.locator('.assistant-compose button[type=submit]').click();
   await student.locator('.assistant-answer').first().waitFor();
   await student.getByRole('button', { name: text('handoff'), exact: true }).click();
-  await student.locator('.support-share input').waitFor();
-  check(await student.locator('.support-share input').isChecked(), 'Explicit handoff offers consent to share server-owned assistant context');
-  await ask(student, 'Khách A cần kiểm tra đặt lịch'); await ask(peer, 'Khách B cần hỗ trợ thiết bị');
+  await student.locator('.assistant-human-share input').waitFor();
+  check(!await student.locator('.assistant-human-share input').isChecked(), 'Sharing context is opt-in inside the same chat');
+  check(await student.locator('.assistant-answer').count() > 0, 'Handoff retains the prior assistant answer in the same panel');
+  await student.locator('.assistant-human-share input').check();
+  const requestForm = student.locator('.assistant-human-request');
+  await requestForm.locator('select').first().selectOption({ label: 'SUPPORT-a · Support Lab a' });
+  await requestForm.locator('textarea').fill('Khách A cần kiểm tra đặt lịch');
+  await requestForm.getByRole('button', { name: text('request'), exact: true }).click();
+  await chatText(student, 'Khách A cần kiểm tra đặt lịch');
+  await ask(peer, 'Khách B cần hỗ trợ thiết bị');
   await ask(third, 'Khách C chờ đến lượt'); await ask(fourth, 'Khách D chờ đến lượt');
   await third.locator('.support-waiting').getByText(/#1/).waitFor(); await fourth.locator('.support-waiting').getByText(/#2/).waitFor();
   check(true, 'Two busy agents produce live customer queue positions #1 and #2');
@@ -70,7 +81,12 @@ try {
   const handlingName = a.assignedStaffId === sessions.staff.user.id ? 'staff' : 'staff2';
   const handling = handlingName === 'staff' ? staff : staff2;
   await chatText(handling, 'Khách A cần kiểm tra đặt lịch');
-  await student.locator('#support-message').fill('<script>customer message</script>'); await student.locator('.support-compose button').click();
+  await student.reload(); await student.locator('#support-heading').waitFor();
+  await student.locator('.assistant-launcher').click();
+  await student.locator('#assistant-human-message').waitFor({ state: 'visible', timeout: 12_000 });
+  await chatText(student, 'Khách A cần kiểm tra đặt lịch');
+  check(await student.locator('#assistant-human-message').isVisible(), 'Reload and reopen reconnects the existing staff session inside the dock');
+  await student.locator('#assistant-human-message').fill('<script>customer message</script>'); await student.locator('.assistant-human .assistant-compose button').click();
   await chatText(handling, '<script>customer message</script>');
   check(await handling.locator('.support-transcript script').count() === 0, 'Customer content renders as text, never executable markup');
   await handling.locator('.support-quick-replies summary').click();
@@ -85,7 +101,7 @@ try {
   await handling.locator('.support-close input').fill('Đã hướng dẫn đặt lịch và kiểm tra điều kiện'); await handling.getByRole('button', { name: text('finish'), exact: true }).click();
   await chatText(handling, 'Khách C chờ đến lượt'); await third.locator('.support-assignee').waitFor(); await fourth.locator('.support-waiting').getByText(/#1/).waitFor();
   check(true, 'Completing chat assigns oldest waiting customer and updates the remaining position automatically');
-  await student.reload(); await student.locator('.support-closed').waitFor(); await chatText(student, 'Nhân viên đã nhận thông tin và đang kiểm tra'); check(true, 'Reload preserves completed chat and its messages');
+  await student.goto(`${base}/workspace/support?session=${a.id}`); await student.reload(); await student.locator('.support-closed').waitFor(); await chatText(student, 'Nhân viên đã nhận thông tin và đang kiểm tra'); check(true, 'Reloading persisted history preserves completed chat and its messages');
   await admin.locator('.support-closed').waitFor(); check((await admin.locator('.support-transcript').textContent()).includes('Đã hướng dẫn đặt lịch'), 'Admin can read persisted resolution and handling history');
   await handling.locator('#support-message').fill('Bản nháp chưa gửi');
   await handling.route('**/api/support/sessions/*?after=*', route => route.abort('failed'));

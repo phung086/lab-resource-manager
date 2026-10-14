@@ -693,6 +693,21 @@ AI transcript của bridge chưa được sao chép tự động vào phiên sta
 nút hỗ trợ hiện có. Plugin phải được cài, OAuth consent và Work chat subscribe;
 cài plugin đơn thuần chưa bảo đảm chatbot chạy hoặc đổi account đã hoàn tất.
 
+Làm rõ 14/10 — hỗ trợ cùng khung chat và một kết nối chuẩn: CUSTOMER chuyển từ
+trợ lý sang form yêu cầu/WAITING/ACTIVE/CLOSED trong chính dock hiện có, giữ các
+lượt AI đang hiển thị. Không điều hướng sang workspace hỗ trợ khi handoff hoặc
+mở STAFF_SUPPORT proposal. Staff/admin tiếp tục dùng workspace để xử lý/lịch sử;
+API support, FIFO, RBAC, tin nhắn bền và bước khách xác nhận không bị bỏ. Chia sẻ
+context vẫn opt-in, chỉ transcript server-owned được phép copy; bridge transcript
+chưa tự copy sang staff. Thu nhỏ giữ draft; mở lại nối phiên đang mở theo API.
+
+Plugin vận hành duy nhất là LAB Support, một grant và một Work event consumer.
+URL ngrok cố định có thể dùng cho local; gateway 8003 định tuyến đúng OAuth/MCP
+tới review8002, mọi đường business tới backend chính8000, không công khai API
+DB review. Ngrok không thay uptime/quota của Work. Cài gói trên tài khoản mới
+vẫn cần OAuth và đăng ký consumer một lần; không sửa code runtime khi giữ domain.
+Không cam kết SLA vài giây qua Work Events hoặc gọi text đang chờ là reply GPT.
+
 Theo yêu cầu bổ sung 13/10: bot hỗ trợ khách thao tác bằng form điền sẵn. Server
 kiểm tra đề xuất theo quyền CUSTOMER và dữ liệu hiện hành; tên LAB/tài nguyên và
 giá lấy từ DB, không nhận giá/actor/URL từ model. Đề xuất hết hạn sau tối đa 5 phút;

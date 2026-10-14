@@ -169,6 +169,13 @@ explicit readiness writes must win over older heartbeat responses. Human handoff
 shares only an explicitly chosen, owner-validated server transcript. Quick replies
 insert editable text; they never auto-send or change business state.
 
+CUSTOMER handoff uses `CustomerSupportChat` inside the existing assistant dock.
+Keep the prior AI turns visible; prepare/confirm the request in that dock, display
+WAITING position, then assigned staff and real messages without navigation.
+Recover an open session when reopening/reloading the signed-in dock; minimize
+pauses reads and retains its unsent draft. Do not run another AI question while
+human support is open. Staff/admin retain the operational Support workspace.
+
 Use the shared `apiRequest` cancellation and deadline boundary: normal requests
 wait at most 30 seconds, chat 65 seconds, including response-body reads. Preserve
 caller cancellation and catalog error IDs. Do not automatically retry mutations
