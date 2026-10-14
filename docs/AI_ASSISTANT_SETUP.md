@@ -260,30 +260,34 @@ nghiệp vụ hay tạo lịch sử/audit giả để minh chứng vận hành.
 Plugin đang dùng: [LAB Support](https://chatgpt.com/plugins/plugin_asdk_app_6acf13e36eec81918a51082417a0e8b7),
 Cloud skill 1.0.1; portable source 0.1.4. Chỉ một bộ nhận `Tiếp nhận hỗ trợ LAB`
 đang bật. Các bản LAB trùng đã gỡ cài đặt, bộ nhận cũ tạm dừng; không xóa lịch sử
-hoặc định nghĩa plugin cũ. Backend chính vẫn8000, reviewAPI8001/UI5174.
+hoặc định nghĩa plugin cũ. Bản đã tích hợp dùng backend8000/UI5173 và database
+local chính. ReviewAPI8001/UI5174 và gateway8002/8003 đã dừng.
 
 Ngrok dùng dev domain gắn tài khoản:
 `https://projector-blaspheme-angelfish.ngrok-free.dev`. Máy và terminal phải chạy;
-không có SLA production. Trong bản chưa tích hợp, cần gateway loopback8003 để
-giữ cùng hostname cho VNPAY và chatbot. Terminal riêng từ backend worktree:
+không có SLA production. Khởi động bản tích hợp từ checkout chính:
 
 ```powershell
-node scripts/startLocalBridgeGateway.mjs
+Set-Location C:/Projects/lab-resource-manager/frontend
+npm.cmd run dev:demo
 ```
 
-Sau khi backend8000 và review8001/gateway8002 trả lời, terminal ngrok:
+Lệnh build/bật backend Docker có migration, giữ dữ liệu và mở UI5173 với payment,
+assistant và monitoring. Khi backend8000 trả health, terminal ngrok riêng:
 
 ```powershell
-ngrok http http://127.0.0.1:8003 --url=https://projector-blaspheme-angelfish.ngrok-free.dev
+ngrok http http://127.0.0.1:8000 --url=https://projector-blaspheme-angelfish.ngrok-free.dev
 ```
 
 Không mở hai ngrok cùng domain. Giữ `CHATGPT_BRIDGE_PUBLIC_ORIGIN` đúng domain
-này, `CHATGPT_BRIDGE_UI_ORIGIN=http://127.0.0.1:5174` trong runtime review và giữ
-nguyên secret key qua restart. OAuth/MCP allowlist →8002; các đường khác →8000.
-Business API review8001 không được định tuyến ra Internet. IPN giữ nguyên URL/path
-VNPAY đã cấu hình. Kiểm health và unsigned IPN qua domain, discovery resource
-đúng `/mcp/support-bridge`, anonymous MCP401 và reserved path sai404.
-Gateway này chỉ là cầu nối local trong lúc nhánh riêng chưa tích hợp.
+này, `CHATGPT_BRIDGE_UI_ORIGIN=http://localhost:5173` trong backend/.env và giữ
+nguyên secret key qua restart. OAuth/MCP, API khách và IPN cùng backend8000,
+cùng database; không dùng script review/gateway cho demo tích hợp. IPN giữ nguyên
+URL/path VNPAY đã cấu hình. Kiểm health/discovery qua domain và anonymous MCP401.
+ERR_NGROK_334 nghĩa là đã có tunnel cùng URL: kiểm target tại4040, không bật pooling.
+Khi chuyển từ review sang DB chính, chỉ giữ public client registration để ChatGPT
+không mất app; không sao chép grant/token/khách/history. ADMIN cấp lại quyền và
+pause/resume đúng bộ nhận hiện có để host đăng ký subscription theo grant mới.
 
 Đổi tài khoản ChatGPT mà không sửa code LAB:
 

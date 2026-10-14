@@ -6,8 +6,9 @@ import path from "node:path";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const mainComparison = process.argv.includes("--main");
-const paymentsEnabled = process.argv.includes("--payments");
-const monitoringEnabled = process.argv.includes("--monitoring");
+const unifiedDemo = process.argv.includes("--demo");
+const paymentsEnabled = unifiedDemo || process.argv.includes("--payments");
+const monitoringEnabled = unifiedDemo || process.argv.includes("--monitoring");
 const source = mainComparison ? path.resolve(root, "../lab-resource-manager-main") : root;
 const frontend = path.join(source, "frontend");
 const uiPort = mainComparison ? "5180" : "5173";
@@ -57,6 +58,10 @@ try {
     if (process.argv.includes("--rebuild")) throw new Error("De build backend, chay npm run dev:backend:rebuild tai frontend cua nhanh.");
     if (!existsSync(path.join(source, "backend/package.json"))) throw new Error(`Khong tim thay checkout: ${source}. Xem README de tao worktree main.`);
     await checkFrontendPort();
+    if (unifiedDemo) {
+      if (mainComparison) throw new Error("--demo dung checkout chinh, khong ket hop --main.");
+      await run("docker", [...compose, "up", "-d", "--build", "--wait", "--wait-timeout", "180", "backend"]);
+    }
     try {
       const health = await fetch('http://localhost:8000/health/ready', { signal: AbortSignal.timeout(5000) });
       if (!health.ok) throw new Error('Backend not ready');
@@ -76,9 +81,10 @@ try {
     if (!interrupted) {
       console.log(`Backend san sang: http://localhost:${apiPort}/health/ready`);
       console.log(`Frontend: http://localhost:${uiPort} | Docker project: ${project}`);
-      console.log("Tai khoan local: admin/staff/lecturer/student@lrm.local. Mat khau: LabDemo!2026Pass");
+      console.log("Vai tro: ADMIN, LAB_STAFF, CUSTOMER. Tai khoan local co san duoc giu nguyen; khong seed lai khi khoi dong.");
+      if (unifiedDemo) console.log("Thanh toan, tro ly va giam sat cung bat tren API 8000/database local. Ngrok chi chay mot tunnel toi http://127.0.0.1:8000.");
       console.log("Ctrl+C chi dung frontend. Backend va database dung chung cho ca hai giao dien.");
-      await run(process.execPath, ["node_modules/vite/bin/vite.js", "--host", "127.0.0.1", "--port", uiPort, "--strictPort", ...process.argv.slice(2).filter(arg => !["--main", "--rebuild", "--backend", "--payments", "--monitoring"].includes(arg))], {
+      await run(process.execPath, ["node_modules/vite/bin/vite.js", "--host", "127.0.0.1", "--port", uiPort, "--strictPort", ...process.argv.slice(2).filter(arg => !["--main", "--demo", "--rebuild", "--backend", "--payments", "--monitoring"].includes(arg))], {
         cwd: frontend,
         env: { ...process.env, VITE_API_BASE_URL: `http://localhost:${apiPort}/api`, VITE_ENABLE_RESEARCH_FEATURES: "false", VITE_ENABLE_PAYMENT_FEATURES: String(paymentsEnabled), VITE_ENABLE_TELEMETRY_FEATURES: String(monitoringEnabled), VITE_ENABLE_AI_ASSISTANT: "true" }
       });

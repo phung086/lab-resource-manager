@@ -8,80 +8,70 @@ Kết quả đã xác minh trong lượt 14/10:
 
 | Phạm vi | Kết quả | Giới hạn |
 |---|---|---|
-| Checkout chính `0de9471` | Backend required 92, frontend required 26, lint/typecheck/build PASS | Chưa chứng nhận mọi màn hình và provider |
-| Nhánh chatbot riêng | Backend required 106, frontend required 43, bridge integration 21 PASS | Integration dùng DB test riêng; protocol fixture không là model thật |
-| GPT thật | Bộ 21 tình huống đã nhận reply qua các lượt; lỗi ngày và tỷ giá đã sửa rồi thử lại | Tỷ giá đạt tiêu chí nói rõ chưa xác minh, không phải cung cấp số live; có độ trễ/quota Work |
-| Đề xuất đặt lịch | UI khách xác nhận tạo một CONFIRMED đúng giá; gửi trùng bị chặn | Payment vẫn pending, không thu tiền trong DB review |
-| Chuyển hỗ trợ | Chat cùng dock; UI khách → WAITING #1 → staff ACTIVE → chat → CLOSED. Suite UI 22 kiểm tra và backend 9 đạt | DB support riêng; không chứng minh tải production |
-| SMTP và tích hợp | Chưa hoàn tất | Chưa có SMTP bên ngoài; nhánh riêng chưa merge vào checkout chính |
+| Bản chính đã tích hợp | Backend required107, frontend required43, lint/typecheck/build/ERD PASS | Chưa chứng nhận mọi màn hình/load/hardware |
+| DB integration | Accounts12, loyalty11, bridge21, support9 PASS | PostgreSQL test riêng; protocol fixture không là model thật |
+| Ba role trên API chính | 10 kiểm tra read/RBAC/loyalty/connection PASS | Không suy mọi mutation account đã chạy trên DB chính |
+| GPT thật trên bản chính | Tra lịch/giá, BOOKING draft và đọc khoản VNPAY vừa success | Có độ trễ/quota; bộ21 model trước đó thuộc review |
+| Đặt lịch → NCB Sandbox | Form xác nhận tạo CONFIRMED80.000đ; IPN thật ghi success, reload UI đúng | Chỉ NCB success; QR/production/refund chưa xác minh |
+| Chuyển hỗ trợ | Trên bản chính: cùng dock WAITING#1 → ACTIVE → chat hai chiều → CLOSED, admin history. Suite UI22 chạy lại PASS | Suite nhiều staff/FIFO dùng DB riêng; không chứng minh tải production |
+| SMTP | Chưa có nhà cung cấp | Inbox/OTP thật BLOCKED, không giả gửi thành công |
 
 Nên chạy theo thứ tự: đăng ký/đăng nhập → khám phá/đặt lịch CUSTOMER → staff
 bàn giao/vận hành/hoàn trả → care/incident → support nhiều khách → ADMIN audit/
 account/loyalty → VNPAY/SMTP thật → chatbot và gián đoạn. Đối chiếu từng dòng
 mong đợi dưới đây; ghi FAIL ngay khi sai và giữ dữ liệu để tái hiện.
 
-## 1. Chọn đúng bản và môi trường
+## 1. Bản tích hợp và khởi động
 
-| Môi trường | Backend | Frontend | Dữ liệu / phạm vi |
-|---|---|---|---|
-| Checkout chính `C:/Projects/lab-resource-manager`, commit `0de9471` | Docker, 8000 | 5173 khi được bật | DB local hiện có; không reset hoặc seed lại để test |
-| Nhánh `codex/chatgpt-plugin-bridge`, worktree `customer-security-loyalty` | 8001 | 5174 | PostgreSQL `lab_resources_chatgpt_bridge_test`; chỉ tài khoản `@bridge.test` |
-| Gateway của bản chatbot review | 8002 | — | Chỉ OAuth/MCP, không mở business API của DB test ra Internet |
-| Gateway dùng chung ngrok | 8003 | — | OAuth/MCP →8002; các đường backend chính/VNPAY →8000 |
+Bản chính C:/Projects/lab-resource-manager đã tích hợp account/OTP, loyalty,
+ChatGPT bridge và chat cùng dock vào cùng database lab_resources_local_demo.
+Không dùng bản review5174 hay các gateway8002/8003 để demo nữa.
 
-OTP đổi mật khẩu, quản lý CUSTOMER mở rộng, loyalty theo chi tiêu và ChatGPT bridge
-đang nằm trong nhánh riêng. Checkout chính chưa tích hợp các thay đổi này.
-Không dùng thành công trên 5174 để khẳng định 5173/8000 đã có toàn bộ tính năng.
-Trước tích hợp phải đối chiếu [INTEGRATION_GUIDE](INTEGRATION_GUIDE.md), SRS,
-DECISIONS, guideline, schema và migration của cả hai checkout.
+| Thành phần | Địa chỉ | Vai trò |
+|---|---|---|
+| UI cho cả ba role | http://localhost:5173 | Đăng nhập và thao tác mọi tính năng |
+| API Docker | http://127.0.0.1:8000 | Nghiệp vụ, OAuth/MCP, VNPAY IPN và worker |
+| Ngrok duy nhất | https://projector-blaspheme-angelfish.ngrok-free.dev | Forward thẳng8000 |
 
-Kiểm tra cổng bằng PowerShell:
-
-```powershell
-Get-NetTCPConnection -State Listen |
-  Where-Object { $_.LocalPort -in @(8000,8001,8002,8080,5173,5174,4040) } |
-  Select-Object LocalAddress,LocalPort,OwningProcess
-Invoke-RestMethod http://127.0.0.1:8000/health
-Invoke-RestMethod http://127.0.0.1:8000/health/ready
-```
-
-Backend chính mặc định dùng `PORT=8000`. Ngrok phải forward tới cổng backend đang
-trả health, không phải cổng frontend hoặc dịch vụ khác. Cấu hình hiện đã kiểm tra:
-
-Nếu chỉ dùng backend chính/VNPAY, target8000. Cấu hình đã chốt cho cả chatbot
-review và VNPAY dùng cùng domain: bật gateway trước rồi ngrok8003:
-
-```powershell
-Set-Location C:/Users/Admin/.codex/worktrees/customer-security-loyalty/lab-resource-manager/backend
-node scripts/startLocalBridgeGateway.mjs
-# Terminal ngrok riêng:
-ngrok http http://127.0.0.1:8003 --url=https://projector-blaspheme-angelfish.ngrok-free.dev
-```
-
-Không chạy lại nếu hai tiến trình này đã hoạt động. Backend chính vẫn8000;
-8003 chỉ định tuyến và không đổi URL IPN của merchant.
-
-Khi backend chính đã healthy mà frontend chưa mở, dùng launcher hiện có trong
-terminal riêng (chỉ khởi động frontend, tái dùng backend):
+Mở Docker Desktop trước. Terminal ứng dụng:
 
 ```powershell
 Set-Location C:/Projects/lab-resource-manager/frontend
-npm.cmd run dev -- --payments
+npm.cmd run dev:demo
 ```
 
-Mở `http://localhost:5173`. Không chạy lệnh này nếu 5173 đang có phiên frontend.
-Giữ terminal ngrok mở; Ctrl+C frontend không có nghĩa đã dừng backend Docker.
+Lệnh build/bật backend, migrate bổ sung, generate Prisma và mở UI5173 với
+payment/assistant/monitoring. Không seed lại dữ liệu khi restart. Nếu5173 đã chạy, tiếp tục
+sử dụng hoặc dừng đúng terminal frontend đó trước; không mở phiên Vite thứ hai.
 
-Ngrok8003 phục vụ callback VNPAY tới backend chính và OAuth/MCP tới review8002.
-Không target trực tiếp8002 khi cần cả VNPAY: review gateway không nhận IPN.
-Cloudflare quick tunnel trước đó đã ngừng dùng. Giữ đúng một plugin LAB Support
-và một bộ nhận Tiếp nhận hỗ trợ LAB; không tạo thêm plugin sau mỗi restart.
+Terminal ngrok riêng, chỉ chạy khi chưa có tunnel cùng URL:
 
-ChatGPT cần URL HTTPS của `/mcp/support-bridge`, OAuth audience cùng URL, ADMIN
-cấp quyền và Work chat đăng ký sự kiện. Tunnel tạm đổi hostname sau khi khởi động
-lại thì kết nối ChatGPT cũ không tự cập nhật. Hướng dẫn ở
-[AI_ASSISTANT_SETUP](AI_ASSISTANT_SETUP.md#8-kết-nối-tài-khoản-chatgpt-qua-plugin).
-Khi triển khai dùng domain ổn định; không đồng nhất sandbox với production.
+```powershell
+ngrok http http://127.0.0.1:8000 --url=https://projector-blaspheme-angelfish.ngrok-free.dev
+```
+
+ERR_NGROK_334: tunnel đã online; kiểm target ở http://127.0.0.1:4040. Không
+dùng pooling cho phiên trùng.5173 là frontend, ngrok8000 là đường server nhận
+IPN/MCP; đây là một hệ thống, không phải hai bộ dữ liệu. Không dùng8080.
+
+Kiểm health và trạng thái database:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/health/ready
+docker exec lrm-local-review-backend-1 npm run db:status
+```
+
+Giữ một plugin LAB Support và một bộ nhận Tiếp nhận hỗ trợ LAB. ADMIN mở
+/workspace/chatgpt-bridge, phải hiện Sẵn sàng nhận câu hỏi. Có OAuth nhưng chưa
+subscription thì bot chưa nhận câu hỏi. Khi chuyển DB hoặc đổi tài khoản,
+Reconnect cùng plugin, ADMIN cấp quyền, pause/resume đúng bộ nhận để đăng ký
+subscription thật. Không copy token/grant hoặc private app ID giữa tài khoản.
+Xem AI_ASSISTANT_SETUP8.1. Ngrok phải còn chạy khi test IPN hoặc GPT.
+
+Bản tách và test DB chỉ phục vụ regression; không reset/seed DB local để làm
+test xanh. Mở các profile trình duyệt riêng cho từng role. Email tài khoản cũ
+student/lecturer@lrm.local không quyết định quyền; role hiện hành là CUSTOMER.
+SMTP thật chưa có nên gửi mail/OTP ngoài hệ thống vẫn BLOCKED.
 
 ## 2. Chuẩn bị dữ liệu kiểm thử
 
@@ -129,6 +119,11 @@ backend chính, không dùng mật khẩu này cho tài khoản thật. Fixture 
 
 **VNPAY:** Chỉ dùng thẻ và OTP thử do VNPAY công bố. Chọn phương thức merchant
 hỗ trợ; merchant hiện đã xác minh NCB, không suy ra VNPAY-QR đã được mở.
+Lượt thành công: chọn Thẻ nội địa và tài khoản ngân hàng → NCB; dùng số thẻ
+`9704198526191432198`, tên `NGUYEN VAN A`, ngày phát hành `07/15`, OTP `123456`.
+Đây là dữ liệu thử [VNPAY công bố](https://sandbox.vnpayment.vn/apis/vnpay-demo/),
+không dùng thẻ thật. Sau khi chấp nhận điều khoản và xác thực, trở lại đúng
+phiên CUSTOMER trên5173, mở checkout và làm mới để đối chiếu kết quả IPN.
 Kiểm tra lượt thành công, người dùng hủy, thất bại, trở lại chậm và reload. Thành
 công phải đối chiếu `vnp_ResponseCode`, `vnp_TransactionStatus`, reference, amount,
 merchant, transaction number, payment state và booking ID ở backend. Return
@@ -262,11 +257,11 @@ npm.cmd run test:required
 
 Các suite DB/UI có guard riêng; đọc script và cấu hình đúng DB test trước chạy.
 Không chạy `test:all` hoặc E2E legacy tùy ý để sửa test bằng cách mở lại role/module
-đã ngừng. Nhánh mở rộng có thêm `test:accounts:integration`,
+đã ngừng. Bản tích hợp có thêm `test:accounts:integration`,
 `test:loyalty:integration`, `test:chatgpt-bridge:integration`, frontend
 `test:accounts`, `test:chatgpt-bridge`, `test:ui:accounts`. Không chạy integration
 reset fixture trên DB đang giữ grant/monitor review. Xem package.json của đúng
-checkout, không suy script của nhánh riêng đã tồn tại ở main.
+checkout. Các script này hiện đã ở main; mỗi suite vẫn phải dùng đúng DB test.
 
 Với mỗi role kiểm 1366×768 và 1440×900, VI/EN; thử mobile 390px riêng và ghi
 coverage thực. Dùng Tab/Enter/Escape, lỗi có focus, mở/đóng modal không khóa

@@ -50,63 +50,47 @@ Không coi một tính năng là verified chỉ vì UI hiển thị hoặc build
 
 ## Chạy local
 
-### Backend Docker chung, hai frontend chạy bằng npm
+### Bản local tích hợp: một giao diện, một backend, một ngrok
 
-1. Mở Docker Desktop, chờ Engine running.
-2. Trong Docker Desktop, bật nhóm `lrm-local-review` (cả backend và postgres), hoặc:
-
-```powershell
-cd C:\Projects\lab-resource-manager\frontend
-npm run dev:backend
-```
-
-3. Mở frontend cần sử dụng:
+Mở Docker Desktop. Từ checkout chính, terminal ứng dụng:
 
 ```powershell
-# Nhánh đang sửa — http://localhost:5173
-cd C:\Projects\lab-resource-manager\frontend
-npm run dev
+Set-Location C:/Projects/lab-resource-manager/frontend
+npm.cmd run dev:demo
 ```
+
+Lệnh build/bật backend Docker8000, áp dụng forward migrations và mở UI5173
+với thanh toán/trợ lý/giám sát. Đăng nhập CUSTOMER, LAB_STAFF hoặc ADMIN tại
+http://localhost:5173; mọi tính năng dùng cùng database local hiện có. Restart
+không tự seed hoặc ghi đè cấu hình tài nguyên.5174 và gateway8002/8003 đã ngừng
+dùng cho demo. Backend/database chạy nền Docker; Ctrl+C chỉ dừng frontend.
+
+Terminal ngrok riêng, chỉ chạy nếu chưa có tunnel:
 
 ```powershell
-# Main — http://localhost:5180, terminal riêng
-cd C:\Projects\lab-resource-manager-main\frontend
-npm run dev
+ngrok http http://127.0.0.1:8000 --url=https://projector-blaspheme-angelfish.ngrok-free.dev
 ```
 
-Hai frontend dùng chung API `http://localhost:8000/api` và database
-`lrm-local-review_review-data`. Thay đổi dữ liệu ở một giao diện sẽ xuất hiện ở
-cả hai. Đây là so sánh frontend; backend dùng source nhánh hiện tại.
+Ngrok forward8000, không forward5173: backend nhận cả VNPAY IPN và ChatGPT MCP.
+ERR_NGROK_334 nghĩa là cùng URL đã chạy, kiểm target ở http://127.0.0.1:4040;
+không mở phiên thứ hai hoặc bật pooling. Cấu hình bridge trong backend/.env,
+ADMIN cấp quyền ở /workspace/chatgpt-bridge; chỉ một plugin LAB Support và một
+bộ nhận Tiếp nhận hỗ trợ LAB. Tham khảo AI_ASSISTANT_SETUP8.1.
 
-`npm run dev` chỉ kiểm tra API rồi chạy Vite: không build, tạo hoặc bật Docker.
-`npm run dev:backend` tái sử dụng image/container có sẵn (`--no-build`). Chỉ khi
-đổi dependencies hoặc Dockerfile mới chạy `npm run dev:backend:rebuild`
-ở frontend nhánh hiện tại. Trên máy mới cũng cần lệnh rebuild lần đầu.
-Sửa backend/src thông thường được nodemon nạp lại qua bind mount.
+Nếu chỉ cần mở frontend khi backend đã healthy: npm.cmd run dev -- --payments.
+Nếu5173 đang dùng, giữ phiên hiện có hoặc dừng đúng terminal frontend trước.
+Launcher không tự dừng ứng dụng khác. Các account local cũ được giữ nguyên;
+student/lecturer@lrm.local đều là CUSTOMER sau migration, không phải role cũ.
+SMTP thật chưa có, nên OTP/mail cần cấu hình nhà cung cấp trước khi test inbox.
 
-Ctrl+C chỉ dừng frontend. `npm run dev:stop` tại nhánh dừng backend/database CHUNG,
-không xóa dữ liệu. Có thể dừng/bật nhóm trong Docker Desktop. Restart policy
-`unless-stopped` và log rotation 10 MB x 3 được cấu hình cho cả hai container.
-
-Tài khoản demo: `admin@lrm.local`, `staff@lrm.local`, `lecturer@lrm.local`,
-`student@lrm.local`; mật khẩu `LabDemo!2026Pass`. Migration và seed local có bảo vệ,
-không reset bản ghi nghiệp vụ khi bật lại. AI cần provider riêng; payment/research tắt.
-Nếu cổng đang dùng, dừng frontend cũ trước; launcher không tự diệt tiến trình khác.
-
-Danh mục local gồm 25 tài nguyên mẫu: 6 phòng, 10 thiết bị, 4 máy, 3 bộ thí nghiệm
-và 2 vật tư. Trang `/workspace/resources` tách Phòng / Thiết bị / Vật tư & khác,
-dùng lưới 3 cột trên desktop và hồ sơ chi tiết có thông số, hướng dẫn, chính sách,
-bảng giá hiện hành và lịch. Dữ liệu/ảnh/hướng dẫn LOCAL DEMO là minh họa.
-Muốn bổ sung bộ mẫu vào database local đang có (không reset), chạy có chủ đích:
+Chỉ khi muốn bổ sung dữ liệu tài nguyên mẫu có chủ đích mới chạy:
 
 ```powershell
 docker exec lrm-local-review-backend-1 npm run demo:seed-local
 ```
 
-Seed từ chối database ngoài `lab_resources_local_demo` hoặc tài nguyên trùng mã
-không thuộc LOCAL DEMO. Seed thêm bản ghi thiếu, chỉ bổ sung mô tả/thông số mặc định,
-giữ nguyên trạng thái, lịch đặt, giao dịch và giá hiện có. Chạy lại không tạo bản sao.
-Ảnh tài nguyên mới cần bổ sung từ nguồn được phép sử dụng khi có dữ liệu thực tế.
+Không reset database. Seed có guard riêng; không dùng lệnh này mỗi lần demo.
+Hướng dẫn kiểm thử cả ba role ở [SYSTEM_TEST_GUIDE](docs/SYSTEM_TEST_GUIDE.md).
 
 ### Kết nối VNPAY Sandbox với runtime local
 
@@ -420,26 +404,11 @@ Không:
 - biến mock/research UI thành REQUIRED CORE;
 - khai báo fake telemetry/audit/runtime evidence là dữ liệu thật.
 
-## So sánh song song với main trên GitHub
+## Bản so sánh cũ
 
-Thiết lập ngày 2026-10-06 dùng worktree `C:/Projects/lab-resource-manager-main`
-tại commit `a5472d4` của origin/main. Không tự pull khi chạy. Chỉ sửa scripts khởi
-chạy trong package.json của worktree để `npm run dev` gọi launcher chung; source UI
-main giữ nguyên. Có thể chạy `npm run dev:main` từ frontend nhánh thay thế.
-
-| Bản | Frontend | Backend chung |
-|---|---|---|
-| Nhánh | http://localhost:5173 | http://localhost:8000 |
-| Main | http://localhost:5180 | http://localhost:8000 |
-
-Hai phiên trình duyệt tách theo cổng, dữ liệu dùng chung. Không dùng backend riêng
-8010 nữa. `dev:main:stop` là alias dừng backend chung, không phải dừng riêng main.
-Khi cập nhật main, giữ thay đổi scripts local và kiểm tra tương thích API/schema
-trước khi tiếp tục dùng chung backend. Không reset/force checkout.
-
-Docker cũ, image không dùng, cache build và volume cũ đã được dọn theo xác nhận
-người dùng. Chỉ volume `lrm-local-review_review-data` được giữ. Không dùng Compose
-cũ để chạy thêm một bộ môi trường khi kiểm thử giao diện; dùng nhóm local nêu trên.
+Thiết lập hai frontend5173/5180 ngày06/10 đã ngừng dùng cho demo. Bản tích hợp
+hiện ở checkout chính C:/Projects/lab-resource-manager; dùng dev:demo và một
+ngrok8000 như mục Chạy local. Không mở worktree review hoặc stack thứ hai.
 
 ## Quản lý khách hàng, OTP và loyalty
 
@@ -460,6 +429,7 @@ màn Tài khoản. Mặc định tắt, ngưỡng Plus/Priority 1.500.000/5.000.
 3%/5%, tùy cấu hình. Guest booking giữ giá public; đăng nhập trước đặt để nhận
 ưu đãi theo hạng. Giá đã lưu của lịch/thanh toán cũ không đổi.
 
-Đọc [hướng dẫn tích hợp](docs/INTEGRATION_GUIDE.md) trước merge: bản mới hiện ở
-nhánh isolated codex/customer-security-loyalty, chứa snapshot đầy đủ code local.
-Không áp dụng migration, chép .env hay git pull trực tiếp vào checkout đang bẩn.
+Các tính năng đã tích hợp vào checkout chính ngày14/10. Đọc
+[hướng dẫn tích hợp](docs/INTEGRATION_GUIDE.md) trước cập nhật code/migrations;
+không chép .env hoặc git pull đè checkout đang bẩn. Các worktree tách là bản
+tham chiếu, không dùng để demo thay bản tích hợp5173/8000.

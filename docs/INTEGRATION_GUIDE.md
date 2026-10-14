@@ -3,6 +3,25 @@
 Tài liệu dùng khi hợp nhất GitHub với code local; đọc cùng CURRENT_STATE cho kết
 quả kiểm thử của revision đang xét. Không thay hướng dẫn giảng viên hoặc AGENTS.
 
+## Bản tích hợp local — 14/10/2026
+
+User đã cho phép tích hợp vào checkout chính để demo chung. Main0de9471 có code
+nền giống e2358e6, chỉ đã bỏ artifacts; cherry-pick sáu feature commits sau
+snapshot thành d8483ca/64fd55b/54c654d/97111e1/c310fa0/09d125c. Không đưa snapshot
+hoặc artifacts đã dọn trở lại. Có branch codex/local-before-unified-20261014 và
+pg_dump custom trước migration trong backend/logs/unified-local (gitignored).
+Ba forward migrations được áp dụng trên DB local chính; chạy lại không pending.
+Không đổi SQL/migration history đã áp dụng, không chép .env từ worktree.
+
+Từ nay demo dùng C:/Projects/lab-resource-manager, UI5173/API8000 và một ngrok
+target8000; account/loyalty/booking/payment/chat đọc cùng DB. Script dev:demo bật
+backend + frontend với payment/assistant; restart không tự seed. Hướng dẫn cũ
+bên dưới mô tả quá trình phát triển tách, không phải topology runtime hiện hành.
+Work OAuth được cấp lại từ ADMIN chính; public client registration giữ endpoint
+cũ, không chuyển grants/tokens/history. Pause/resume đúng bộ nhận hiện có để
+đăng ký subscription thật theo grant mới. Đổi tài khoản vẫn cần OAuth/consumer.
+Chưa push/deploy; SMTP thật và SLA phản hồi Work vẫn là giới hạn riêng.
+
 ## Bản phát triển hiện tại
 
 Ngày 13/10/2026, fetch GitHub cho thấy origin/main vẫn bd83a97, chưa thấy nhánh/PR

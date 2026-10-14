@@ -708,6 +708,15 @@ DB review. Ngrok không thay uptime/quota của Work. Cài gói trên tài kho�
 vẫn cần OAuth và đăng ký consumer một lần; không sửa code runtime khi giữ domain.
 Không cam kết SLA vài giây qua Work Events hoặc gọi text đang chờ là reply GPT.
 
+Làm rõ 14/10 — user yêu cầu demo đồng nhất: tích hợp tính năng account/OTP,
+loyalty và bridge vào checkout chính, một UI5173/API8000/database local và một
+ngrok target8000. Gateway8003/review8001/8002/5174 chỉ thuộc checkpoint tách trước
+đó, không dùng trong bản tích hợp. Migration bổ sung sau backup, giữ lịch sử và
+không seed khi restart. Plugin/app/issuer/scopes giữ nguyên; public DCR client
+metadata có thể giữ khi chuyển DB, còn grant/token/subscription phải được cấp
+lại theo ADMIN của DB chính và challenge webhook thật. Không chuyển user hay
+giả chứng cứ chat/thanh toán từ DB review vào DB chính.
+
 Theo yêu cầu bổ sung 13/10: bot hỗ trợ khách thao tác bằng form điền sẵn. Server
 kiểm tra đề xuất theo quyền CUSTOMER và dữ liệu hiện hành; tên LAB/tài nguyên và
 giá lấy từ DB, không nhận giá/actor/URL từ model. Đề xuất hết hạn sau tối đa 5 phút;

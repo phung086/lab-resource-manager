@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev-local.mjs",
+    "dev:demo": "node scripts/dev-local.mjs --demo",
     "dev:frontend": "vite --host 0.0.0.0",
     "dev:stop": "node scripts/dev-local.mjs --stop",
     "dev:main": "node scripts/dev-local.mjs --main",

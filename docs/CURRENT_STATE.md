@@ -1,7 +1,63 @@
 # Trạng thái dự án hiện tại
 
-Cập nhật 13/10/2026. Đây là checkpoint gọn; hợp đồng đầy đủ ở SRS, DECISIONS,
+Cập nhật 14/10/2026. Đây là checkpoint gọn; hợp đồng đầy đủ ở SRS, DECISIONS,
 hai guideline, schema/migrations và source/tests liên quan.
+
+## Bản local tích hợp — 14/10/2026
+
+User cho phép tích hợp để demo/test cùng hệ thống. Checkout chính
+C:/Projects/lab-resource-manager, main09d125c sau cherry-pick sáu feature commits
+account/OTP/loyalty/bridge/dock; không đem snapshot/artifacts đã dọn trở lại.
+Backup source ở codex/local-before-unified-20261014; pg_dump custom đã kiểm TOC
+ở backend/logs/unified-local/before-unified-20261014.dump (gitignored).
+Ba forward migrations mới đã áp dụng, chạy db:migrate lần hai không pending;
+schema29 migrations up-to-date, SQL/baseline/history cũ không bị sửa.
+
+Một UI5173/API8000/database lab_resources_local_demo và một ngrok target8000.
+8001/8002/8003/5174 đã dừng. dev:demo build/bật Docker + UI, payment/assistant/monitoring
+cùng bật; startup không seed lại dữ liệu. Backend/.env giữ VNPAY/SMTP/JWT cũ,
+thêm bridge origin/UI/khóa mã hóa riêng; không chép secrets từ worktree review.
+Một plugin LAB Support cùng issuer/app/scopes, ADMIN chính cấp grant30 ngày.
+Public DCR metadata giữ để app không mất registration; không sao chép grants,
+tokens, user hoặc chat history. Pause/resume đúng Work receiver hiện có tạo một
+subscription VERIFIED bằng challenge thật. Grant/subscription còn sau restart.
+
+Verification trên code tích hợp: backend required107 +lint, frontend required43
++lint/typecheck/build, ERD projection PASS. Integration trên DB riêng: accounts12,
+loyalty11, bridge21, support9; UI support22 trên frontend5173 và API/DB fixture
+thật. Main API read-only10 kiểm ba role, staff thấy mọi CUSTOMER nhưng không đọc
+ADMIN (404), customer không quản lý account/connection (403), loyalty đọc80.000đ
+từ khoản success thật, policy vẫn disabled. Không dùng fixture protocol làm GPT.
+
+Luồng thật từ UI CUSTOMER riêng e6737a8c-439c-4cd8-9ba0-742f6b6965aa: GPT tự
+tra LOCAL-ROOM-06 và mục đích SERVICE; hai lượt82,5/67,6giây, form80.000đ,
+16/10/2026 14:00–15:00. Khách xác nhận tạo booking4538ef34-3be8-46eb-834c-
+6a2056d92548 CONFIRMED. NCB Sandbox chính thức trả thành công; IPN ký hợp lệ
+qua ngrok8000 lưu payment943f1815-30e1-4b24-8815-9d81c25d6625, txnRef
+20D6BC5722EB16443A78, success80.000đ, paidAt2026-10-14T06:53:32Z,
+vnpTransactionNo15704117, reconciliation none. Reload UI vẫn Đã xác minh thanh
+toán; không sửa payment thủ công. User xác nhận điều khoản Sandbox tại bước đó.
+Bot sau đó đọc đúng success và trạng thái RETURNED do STAFF thao tác trên bản
+chính trong lúc test; cảnh báo ngày thuê còn tương lai. Không rollback lịch sử
+STAFF; cửa sổ bàn giao sớm chưa có policy riêng, không suy đây là PASS thời điểm.
+
+Handoff cùng dock trên chính trang checkout: phiên345bbf5b-dac9-4b67-847f-
+abaaf88649a8 WAITING#1 → staff được giao → tin nhắn hai chiều qua UI/API thật →
+CLOSED. ADMIN đọc đúng lịch sử. Test staff chỉ được phân LOCAL-LAB-2 và đã ngừng
+nhận/deactivate sau test; không can thiệp yêu cầu local cũ ở LAB khác.
+dev:demo đã chạy thực, chỉ còn cổng5173/8000/4040; ngrok hiện đang hoạt động.
+Câu toán ngoài LAB sau restart nhận reply GPT thật x=4 sau63,8giây, readCount1;
+tra khoản VNPAY mất96,5giây. Không suy tốc độ vài giây hoặc chính xác mọi câu.
+ADMIN UI giám sát đọc23 phòng/thiết bị từ API, connection UI hiển thị Sẵn sàng
+nhận câu hỏi sau restart. CUA viewport yêu cầu1440 nhưng pane thực tế386px;
+chỉ xác minh không overflow ở kích thước thật, không ghi main desktop PASS từ
+override không có hiệu lực. Matrix1440/375 của suite support22 là test riêng.
+
+Chưa push/deploy production. Chưa có SMTP thật nên gửi inbox/OTP vẫn BLOCKED;
+NCB success không chứng nhận QR/production/refund. Work còn chậm, phụ thuộc quota;
+bridge transcript chưa copy sang staff history. Không có whole-system UI/load/
+hardware PASS. SYSTEM_TEST_GUIDE là hướng dẫn test ba role; một mục hướng dẫn
+không phải kết quả đã chạy. Các checkpoint tách bên dưới là lịch sử trước tích hợp.
 
 ## Chỉ đạo hiện hành
 
