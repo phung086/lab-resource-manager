@@ -11,7 +11,7 @@ export const PUBLIC_ROUTES = Object.freeze({
   login: '/login', register: '/register'
 });
 const OLD_WORKSPACE_ROUTES = Object.freeze({
-  'tong-quan': 'home', 'tai-nguyen': 'resources', 'lich-dat': 'smart_calendar', booking: 'bookings',
+  planning: 'bookings', 'tong-quan': 'home', 'tai-nguyen': 'resources', 'lich-dat': 'smart_calendar', booking: 'bookings',
   'van-hanh': 'dashboard', 'bao-tri': 'maintenance', 'su-co': 'incidents', 'kho-vat-tu': 'stock',
   'lop-hoc-phan': 'teaching', 'quan-ly-tai-nguyen': 'admin_management', 'nguoi-dung': 'users',
   'ho-so': 'profile', 'thong-bao': 'escalations', telemetry: 'monitoring', 'thanh-toan': 'payments'

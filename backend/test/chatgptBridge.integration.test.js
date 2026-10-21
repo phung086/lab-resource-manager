@@ -148,7 +148,7 @@ test('modern MCP discovery advertises Events and authenticated tools on the wire
   const discovery = await rpc('server/discover'); assert.equal(discovery.status, 200, JSON.stringify(discovery.body)); assert.deepEqual(discovery.body.result.capabilities.events, {});
   assert.ok(discovery.body.result.supportedVersions.includes('2026-07-28'));
   const list = await rpc('events/list'); assert.equal(list.body.result.events[0].name, EVENT_NAME);
-  const tools = await rpc('tools/list'); assert.deepEqual(tools.body.result.tools.map(t => t.name).sort(), ['get_question_context', 'publish_question_reply', 'read_question_data']);
+  const tools = await rpc('tools/list'); assert.deepEqual(tools.body.result.tools.map(t => t.name).sort(), ['get_question_context', 'publish_question_partial', 'publish_question_reply', 'read_question_data']);
   const sub = await rpc('events/subscribe', { name: EVENT_NAME, arguments: {}, delivery: { mode: 'webhook', url: 'https://receiver.example/questions', secret: 'whsec_' + randomBytes(32).toString('base64') } });
   assert.ok(sub.body.result?.id, JSON.stringify(sub.body.error));
   const connection = await oauth.listConnections(owner);
@@ -170,7 +170,21 @@ test('authenticated older clients discover the same tools without losing OAuth c
     'MCP-Protocol-Version': '2025-11-25' }, body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }) });
   const listedBody = await listing.text();
   const listed = JSON.parse(listedBody.startsWith('event:') ? listedBody.split('\n').find(line => line.startsWith('data: ')).slice(6) : listedBody);
-  assert.equal(listed.result.tools.length, 3);
+  assert.equal(listed.result.tools.length, 4);
+});
+
+test('simple app questions are answered and persisted without webhook work, with owner and busy guards', async () => {
+  for (const [message, locale] of [['xin chào', 'vi'], ['Who are you?', 'en'], ['Hướng dẫn đặt lịch', 'vi']]) {
+    const before = await prisma.chatgptBridgeDelivery.count();
+    const job = await ask(alice, { message, locale });
+    assert.equal(job.status, 'ANSWERED'); assert.equal(job.provider, 'local'); assert.equal(job.source, 'local_guidance');
+    assert.ok(job.answer.includes('LAB') || job.answer.includes('15')); assert.equal(await prisma.chatgptBridgeDelivery.count(), before);
+    assert.equal((await requests.read(alice, job.id)).answer, job.answer);
+    await assert.rejects(requests.read(bob, job.id), error => error.status === 404);
+  }
+  const pending = await ask();
+  await assert.rejects(ask(alice, { message: 'hello' }), error => error.code === 'ASSISTANT_BUSY');
+  await requests.cancel(alice, pending.id);
 });
 
 test('durable request ownership, current business knowledge and read-only boundaries', async () => {
@@ -190,6 +204,96 @@ test('durable request ownership, current business knowledge and read-only bounda
   assert.ok(!JSON.stringify(own).includes('Private Bob'));
   await requests.cancel(alice, job.id);
   await assert.rejects(requests.reply(grant, { requestId: job.id, generation: grant.generation, answer: 'A test protocol response.' }), error => error.code === 'BRIDGE_REQUEST_INACTIVE');
+});
+
+test('partial replies require current context, preserve order and ownership, and stop after cancellation', async () => {
+  await subscribe(); const job = await ask();
+  const input = { requestId: job.id, generation: grant.generation, sequence: 1, text: 'A booking preview does not reserve the resource.' };
+  await assert.rejects(requests.partial(grant, input), error => error.code === 'BRIDGE_CONTEXT_REQUIRED');
+  await requests.context(grant, job.id);
+  assert.equal((await requests.partial(grant, input)).alreadyPublished, false);
+  assert.equal((await requests.partial(grant, input)).alreadyPublished, true);
+  const current = await requests.read(alice, job.id);
+  assert.equal(current.status, 'PENDING'); assert.equal(current.partialReply.text, input.text);
+  await assert.rejects(requests.read(bob, job.id), error => error.status === 404);
+  await assert.rejects(requests.partial(grant, { ...input, sequence: 3 }), error => error.code === 'BRIDGE_REPLY_CONFLICT');
+  await assert.rejects(requests.partial(grant, { ...input, sequence: 2, text: 'Rewrite a previously displayed sentence.' }), error => error.code === 'BRIDGE_REPLY_CONFLICT');
+  await requests.partial(grant, { ...input, sequence: 2, text: input.text + ' Confirm through the regular form.' });
+  await requests.cancel(alice, job.id);
+  assert.equal((await requests.read(alice, job.id)).partialReply, undefined);
+  await assert.rejects(requests.partial(grant, { ...input, sequence: 3 }), error => error.code === 'BRIDGE_REQUEST_INACTIVE');
+});
+
+test('operator tools enforce fresh LAB scope, contact permissions and bounded complete totals', async () => {
+  const marker = randomUUID();
+  const staff = await prisma.user.create({ data: { id: randomUUID(), email: `ops-${marker}@bridge.test`, fullName: 'Scoped operator', role: 'LAB_STAFF', passwordHash: 'never-project-this-secret' } });
+  const emptyStaff = await prisma.user.create({ data: { id: randomUUID(), email: `empty-${marker}@bridge.test`, fullName: 'Unassigned operator', role: 'LAB_STAFF', passwordHash: 'fixture-only' } });
+  const lab = await prisma.laboratory.create({ data: { id: randomUUID(), code: marker, name: 'Assigned operator LAB', buildingId: fixtureLab.buildingId } });
+  await prisma.userLabAssignment.create({ data: { userId: staff.id, laboratoryId: lab.id } });
+  const material = await prisma.resource.create({ data: { id: randomUUID(), code: 'OWN-' + marker, name: 'Scoped material', category: 'MATERIAL', subtype: 'MATERIAL', location: 'Assigned LAB', laboratoryId: lab.id } });
+  await prisma.stockItem.create({ data: { resourceId: material.id, unit: 'pieces', balance: 120 } });
+  const foreign = await prisma.resource.create({ data: { id: randomUUID(), code: 'FOREIGN-' + marker, name: 'Foreign confidential material', category: 'MATERIAL', subtype: 'MATERIAL', location: 'Other LAB', laboratoryId: fixtureLab.id } });
+  const contact = await prisma.user.create({ data: { id: randomUUID(), email: `contact-${marker}@bridge.test`, fullName: marker, phone: '0900000001', organization: 'Test customer', role: 'CUSTOMER', passwordHash: 'customer-password-never-visible' } });
+  const start = new Date(clock.getTime() + 5 * 86400000), end = new Date(+start + 3600000);
+  for (const resourceId of [material.id, foreign.id]) await prisma.booking.create({ data: { id: randomUUID(), resourceId, requestedById: contact.id, title: 'Scope fixture booking', purpose: 'Test', status: 'CONFIRMED', startAt: start, endAt: end } });
+  const message = 'Phân tích hoạt động của LAB và đề xuất hướng xử lý';
+  const job = await ask(staff, { message });
+  const context = await requests.context(grant, job.id);
+  assert.equal(context.actorRole, 'LAB_STAFF'); assert.deepEqual(context.allowedProposals, []);
+  assert.ok(context.tools.some(t => t.name === 'get_material_stock'));
+  const read = (tool, input = {}) => requests.readTool(grant, { requestId: job.id, tool, input }).then(result => result.data);
+  const stock = await read('get_material_stock');
+  assert.equal(stock.total, 1); assert.equal(stock.items[0].stockItem.balance, 120);
+  assert.ok(!JSON.stringify(stock).includes(foreign.code));
+  const schedule = await read('get_lab_schedule', { startAt: start.toISOString(), endAt: end.toISOString() });
+  assert.equal(schedule.total, 1); assert.equal(schedule.items[0].resource.id, material.id);
+  const paidEnd = new Date(+end + 3600000);
+  await prisma.booking.create({ data: { id: randomUUID(), resourceId: material.id, requestedById: contact.id, title: 'Payment hold scope fixture', purpose: 'Test',
+    status: 'PENDING_APPROVAL', feeAmountVnd: 50000, paymentDueAt: new Date(+clock + 900000), startAt: end, endAt: paidEnd } });
+  const withHold = await read('get_lab_schedule', { startAt: start.toISOString(), endAt: paidEnd.toISOString() });
+  assert.equal(withHold.total, 2); assert.equal(withHold.awaitingPayment, 1, 'paid holds are counted separately from legacy approval');
+  const contacts = await read('search_customers', { query: marker, limit: 1 });
+  assert.equal(contacts.total, 1); assert.equal(contacts.items[0].phone, contact.phone);
+  assert.ok(!JSON.stringify(contacts).includes('password'));
+  const report = await read('get_operations_report', { days: 7 }); assert.equal(report.summary.resourceCount, 1);
+  await assert.rejects(requests.reply(grant, { requestId: job.id, generation: grant.generation, answer: 'Forged proposal', proposals: [{ kind: 'STAFF_SUPPORT', laboratoryId: lab.id, category: 'OTHER', message: 'Not allowed for operators' }] }), error => error.status === 403);
+  await prisma.userLabAssignment.delete({ where: { userId_laboratoryId: { userId: staff.id, laboratoryId: lab.id } } });
+  assert.equal((await read('get_material_stock')).total, 0, 'removing an assignment takes effect within the same conversation');
+  await requests.cancel(staff, job.id);
+
+  for (const actor of [emptyStaff, owner, contact]) {
+    const currentJob = await ask(actor, { message }); await requests.context(grant, currentJob.id);
+    const currentRead = (tool, input = {}) => requests.readTool(grant, { requestId: currentJob.id, tool, input }).then(result => result.data);
+    if (actor.role === 'CUSTOMER') {
+      for (const tool of ['get_material_stock', 'search_customers', 'get_operations_report']) await assert.rejects(currentRead(tool), error => error.status === 403);
+      assert.equal((await currentRead('get_lab_schedule', { startAt: start.toISOString(), endAt: end.toISOString() })).total, 2);
+    } else {
+      const result = await currentRead('get_material_stock', { limit: 1 });
+      if (actor.role === 'ADMIN') { assert.ok(result.total > result.items.length); assert.ok((await currentRead('get_operations_report')).summary.resourceCount >= 2); }
+      else { assert.equal(result.total, 0); assert.equal((await currentRead('search_customers', { query: marker })).total, 1); }
+    }
+    await requests.cancel(actor, currentJob.id);
+  }
+  const completed = await ask(staff, { message: 'Kiểm tra tồn kho' });
+  const changed = await ask(staff, { message });
+  await prisma.user.update({ where: { id: staff.id }, data: { role: 'CUSTOMER' } });
+  await assert.rejects(requests.context(grant, changed.id), error => error.code === 'BRIDGE_REQUEST_INACTIVE');
+  await assert.rejects(requests.read({ ...staff, role: 'CUSTOMER' }, completed.id), error => error.status === 404);
+  await prisma.user.update({ where: { id: staff.id }, data: { role: 'LAB_STAFF' } }); await requests.cancel(staff, changed.id);
+});
+
+test('fast database replies persist without receiver events and never replay customer contacts as evidence', async () => {
+  const before = await prisma.chatgptBridgeDelivery.count();
+  const job = await ask(owner, { message: 'Danh sách khách hàng' });
+  assert.equal(job.status, 'ANSWERED'); assert.equal(job.source, 'authenticated_mcp'); assert.equal(job.nextTab, 'users');
+  assert.ok(!job.answer.includes('api.API_REQUEST_FAILED'));
+  assert.equal(await prisma.chatgptBridgeDelivery.count(), before);
+  const followup = await ask(owner, { message: 'Phân tích thêm các nhóm khách này', conversationId: job.conversation.id });
+  const context = await requests.context(grant, followup.id);
+  assert.ok(context.history[0].answer.includes('Read again for current facts'));
+  assert.ok(!context.history[0].answer.includes('@bridge.test'));
+  await requests.cancel(owner, followup.id);
+  await assert.rejects(ask(alice, { message: 'Danh sách khách hàng' }), error => error.status === 403);
 });
 
 test('publish is idempotent and never settles bookings or payments', async () => {
@@ -315,9 +419,10 @@ test('explicit normal booking confirmation rechecks changed price and overlappin
   assert.equal(fresh.status, 200, JSON.stringify(fresh.body));
   body.acceptedQuote = { amountVnd: fresh.body.amountVnd, version: fresh.body.version, loyaltyPolicyVersion: fresh.body.loyaltyPolicyVersion };
   const confirmed = await customerHttp('post', '/bookings', body);
-  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body)); assert.equal(confirmed.body.status, 'CONFIRMED');
+  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body)); assert.equal(confirmed.body.status, 'PENDING_APPROVAL');
+  assert.ok(confirmed.body.paymentDueAt, 'ADR-038: paid form submission holds the slot until verified payment');
   assert.equal(confirmed.body.requestedById, alice.id); assert.equal(confirmed.body.feeAmountVnd, fresh.body.amountVnd);
-  assert.equal((await prisma.paymentTransaction.findFirst({ where: { bookingId: confirmed.body.id } })).status, 'pending');
+  assert.equal(await prisma.paymentTransaction.count({ where: { bookingId: confirmed.body.id, status: 'success' } }), 0);
   const overlap = await customerHttp('post', '/bookings', body); assert.equal(overlap.status, 409);
   assert.equal(await prisma.booking.count({ where: { resourceId: proposal.resourceId, startAt: new Date(proposal.startAt) } }), 1);
 });

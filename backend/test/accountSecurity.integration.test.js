@@ -64,7 +64,7 @@ test.before(async()=>{
  assert.ok((await prisma.user.findMany({select:{email:true}})).every(u=>u.email.endsWith("@security.test")));
  for(const [name,role] of Object.entries({admin:"ADMIN",admin2:"ADMIN",staff:"LAB_STAFF",staff2:"LAB_STAFF",other:"CUSTOMER"})){
  users[name]=await prisma.user.create({data:{id:randomUUID(),email:name+"-"+marker+"@security.test",fullName:name,role,passwordHash:await bcrypt.hash(password,4)}});
- tokens[name]=signUserToken(users[name]);
+ tokens[name]=await signUserToken(users[name]);
  }
 });
 test.after(async()=>{await prisma.$disconnect();for(const socket of sockets)socket.destroy();await new Promise(r=>smtp.close(r));});
@@ -105,7 +105,7 @@ test("missing or rejected SMTP never permits a password change",async()=>{
 });
 
 test("assisted OTP binds recipient, actor and target, persists wrong attempts, then revokes old tokens",async()=>{
- tokens.managed=signUserToken(await prisma.user.findUniqueOrThrow({where:{id:customer.id}}));
+ tokens.managed=await signUserToken(await prisma.user.findUniqueOrThrow({where:{id:customer.id}}));
  const sent=await ask(customer.id);assert.equal(sent.status,200,JSON.stringify(sent.body));assert.deepEqual(Object.keys(sent.body).sort(),["challengeId","expiresAt","maskedEmail","resendAfter"].sort());
  const otp=deliveredCode(customer.email),challengeId=sent.body.challengeId;
  assert.ok(!JSON.stringify(sent.body).includes(otp));assert.ok(!sent.body.maskedEmail.includes(customer.email));assert.ok(new Date(sent.body.resendAfter)>new Date());
@@ -143,7 +143,7 @@ test("concurrent valid confirmations change password and write audit exactly onc
 });
 
 test("self service requires current password plus OTP and renews session with new credential version",async()=>{
- const target=await makeCustomer("self");tokens.self=signUserToken(target);
+ const target=await makeCustomer("self");tokens.self=await signUserToken(target);
  err(await call("post","/auth/change-password","self",{currentPassword:password,newPassword}),400,"VALIDATION_ERROR");
  err(await call("post","/auth/password-otp/request","self",{currentPassword:"Incorrect!2026"}),400,"CURRENT_PASSWORD_INVALID");
  const sent=await call("post","/auth/password-otp/request","self",{currentPassword:password});assert.equal(sent.status,200);const otp=deliveredCode(target.email);
@@ -152,7 +152,7 @@ test("self service requires current password plus OTP and renews session with ne
 });
 
 test("role/activation changes revoke tokens permanently and invalidate outstanding OTP context",async()=>{
- const target=await makeCustomer("context");tokens.context=signUserToken(target);const sent=await ask(target.id);assert.equal(sent.status,200);
+ const target=await makeCustomer("context");tokens.context=await signUserToken(target);const sent=await ask(target.id);assert.equal(sent.status,200);
  assert.equal((await call("patch","/users/"+target.id+"/active","staff",{isActive:false})).status,200);
  err(await call("get","/auth/me","context"),401,"ACCOUNT_INACTIVE");
  assert.equal((await call("patch","/users/"+target.id+"/active","staff",{isActive:true})).status,200);
@@ -169,7 +169,7 @@ test("admin self-lockout blocked; soft delete retains account, bookings and audi
  const building=await prisma.building.create({data:{id:randomUUID(),code:"B-"+marker,name:"Security test",campusId:campus.id}});
  const lab=await prisma.laboratory.create({data:{id:randomUUID(),code:"L-"+marker,name:"Security test",buildingId:building.id}});
  resource=await prisma.resource.create({data:{id:randomUUID(),code:"R-"+marker,name:"Security test room",category:"ROOM",subtype:"ROOM",location:"LAB",laboratoryId:lab.id}});
- const target=await makeCustomer("removed");tokens.removed=signUserToken(target);
+ const target=await makeCustomer("removed");tokens.removed=await signUserToken(target);
  const start=new Date(Date.now()+86400000);booking=await prisma.booking.create({data:{id:randomUUID(),resourceId:resource.id,requestedById:target.id,title:"Retain booking",purpose:"History",startAt:start,endAt:new Date(start.getTime()+3600000),status:"CONFIRMED"}});
  err(await call("delete","/users/"+target.id,"staff",{reason:"Requested removal"}),409,"ACCOUNT_HAS_ACTIVE_BOOKINGS");
  await prisma.booking.update({where:{id:booking.id},data:{status:"COMPLETED"}});
@@ -213,7 +213,7 @@ test("removal and in-flight booking share account locks, never leave a deleted c
 
 test("open customer support blocks deactivation/removal; an old request cannot enter after removal",async()=>{
  const {createSupportService}=await import('../src/services/supportService.js');const service=createSupportService();
- const target=await makeCustomer('support-block');tokens.support=signUserToken(target);
+ const target=await makeCustomer('support-block');tokens.support=await signUserToken(target);
  const lab=await prisma.laboratory.findUniqueOrThrow({where:{id:resource.laboratoryId}});
  await prisma.userLabAssignment.create({data:{userId:users.staff.id,laboratoryId:lab.id}});
  const session=await service.request(target,{requestId:randomUUID(),laboratoryId:lab.id,category:'ACCOUNT',message:'Account assistance'});

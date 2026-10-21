@@ -46,6 +46,7 @@ lab-resource-manager/
 ├── infra/prometheus/       # Metrics scrape configuration
 ├── firmware/               # Optional real telemetry adapter
 ├── ops/                    # Backup/restore and reviewed project cleanup tools
+├── plugins/lab-support-bridge/ # Portable ChatGPT support plugin source
 ├── AGENTS.md, CLAUDE.md     # Agent entry points
 ├── PRODUCT.md               # Product contracts; design chosen for the current task
 └── docker-compose*.yml     # Local, development and production profiles
@@ -54,8 +55,9 @@ lab-resource-manager/
 `node_modules`, dist, logs, screenshots and run packets are generated output.
 Dependencies/runtime assets/configuration are kept to keep the project runnable.
 The one-time cleanup allowlist targets obsolete output and retired modules,
-not these maintained areas. All reviewed targets were removed on 2026-10-07;
-see CURRENT_STATE for verification and remaining product limitations.
+not these maintained areas. The 07/10 cleanup and 16/10 output sweep removed
+reviewed screenshots/build/run packets. Small rollback dumps are retained;
+see CURRENT_STATE for verification, blocked source removals and remaining limits.
 
 ## Boundaries
 
@@ -77,3 +79,13 @@ AGENTS; frontend/backend CLAUDE nhập area guide khi đọc trong vùng. Đây 
 ngữ cảnh, không chuyển source hoặc tạo repo/runtime riêng. `.claude/settings.json`
 giữ token settings; skills `/lab-task`, `/lab-handoff` chỉ nạp khi gọi. Cách dùng,
 audit và nguồn đã lọc ở [.claude/WORKFLOW.md](../.claude/WORKFLOW.md).
+
+## Lập kế hoạch và hồ sơ sử dụng
+
+API: `backend/src/routes/planning.js`; nghiệp vụ tách theo file trong
+`backend/src/services/planning/`. UI tích hợp trong SelectionPage,
+QuickBookingModal, BookingWorkflowTimeline, AdminResourceManagementView và
+OperationsReport; component tái sử dụng `frontend/src/components/features/planning/`,
+API wrapper `planningApi.ts`,
+style `planning-workspace.css`. Hướng dẫn giải thích luồng, khóa transaction,
+retry và giới hạn: `backend/src/services/planning/README.md`.

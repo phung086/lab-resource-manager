@@ -7,9 +7,9 @@ import { useLocale } from '../providers/LocaleProvider';
 import { apiRequest } from '../api.js';
 import { formatVietnamDateTime } from '../utils/timezone.js';
 import '../styles/notifications-workspace.css';
-const typeLabels = {BOOKING_APPROVED:'ui.booking_approved_fbab3009',BOOKING_REJECTED:'ui.booking_rejected_7d50d88b',BOOKING_UPCOMING:'ui.upcoming_booking_65fe3d5f',RETURN_REMINDER:'ui.return_reminder_92b7e4bb'};
+const typeLabels = {BOOKING_APPROVED:'ui.booking_approved_fbab3009',BOOKING_REJECTED:'ui.booking_rejected_7d50d88b',BOOKING_UPCOMING:'ui.upcoming_booking_65fe3d5f',RETURN_REMINDER:'ui.return_reminder_92b7e4bb',WAITLIST_AVAILABLE:'planning.waitlistAvailable'};
 const filterFromRoute = () => ['all','unread','read'].includes(readRouteParams().get('filter')) ? readRouteParams().get('filter') : 'all';
-export function NotificationCenter({ onChanged, onOpenBookings }) {
+export function NotificationCenter({ onChanged, onOpenBookings, actorRole = 'CUSTOMER' }) {
  const { tr } = useLocale(), controllerRef=useRef(null), busyRef=useRef(false), detailRef=useRef(null);
  const [notifications,setNotifications]=useState([]), [loading,setLoading]=useState(true), [readError,setReadError]=useState('');
  const [filter,setFilter]=useState(filterFromRoute), [selected,setSelected]=useState(()=>readRouteParams().get('notification') || '');
@@ -34,8 +34,8 @@ export function NotificationCenter({ onChanged, onOpenBookings }) {
   catch(cause){setError(cause?.message || 'ui.could_not_update_notification_e051a61d');}
   finally{busyRef.current=false;setBusy('');}
  }
- return <section className="notifications-workspace" aria-labelledby="inbox-title" aria-busy={loading}>
-  <header className="inbox-heading"><div><h1 id="inbox-title">{tr('ui.notifications_0c951eef')}</h1><HelpDisclosure>{tr('ui.inbox.subtitle')}</HelpDisclosure></div><div className="inbox-actions"><button type="button" className="btn btn-secondary" disabled={loading||!!busy} onClick={()=>void load()}><RefreshCw size={16} />{tr('ui.refresh_46140fa8')}</button><button type="button" className="btn btn-secondary" disabled={!unread.length||loading||!!busy} onClick={()=>void markRead('all')}><CheckCheck size={16} />{tr(busy==='all'?'ui.updating_01c0991e':'ui.mark_all_as_read_4b943674')}</button></div></header>
+ return <section className="notifications-workspace" data-role={actorRole} aria-labelledby="inbox-title" aria-busy={loading}>
+  <header className="inbox-heading"><div><h1 id="inbox-title">{tr('ui.roleInbox.'+actorRole+'.title')}</h1><HelpDisclosure>{tr('ui.roleInbox.'+actorRole+'.hint')}</HelpDisclosure></div><div className="inbox-actions"><button type="button" className="btn btn-secondary" disabled={loading||!!busy} onClick={()=>void load()}><RefreshCw size={16} />{tr('ui.refresh_46140fa8')}</button><button type="button" className="btn btn-secondary" disabled={!unread.length||loading||!!busy} onClick={()=>void markRead('all')}><CheckCheck size={16} />{tr(busy==='all'?'ui.updating_01c0991e':'ui.mark_all_as_read_4b943674')}</button></div></header>
   {error && <p className="inbox-error" role="alert">{tr(error)}</p>}
   <div className="inbox-layout">
    <div className="inbox-register">

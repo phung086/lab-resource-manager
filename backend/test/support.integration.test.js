@@ -72,6 +72,17 @@ test('two idle agents handle separate requests; FIFO positions move and completi
   assert.deepEqual(filtered.body.items, []); assert.equal(filtered.body.activeSession.id, third.body.id, 'Current assignment survives pagination and filters');
 });
 
+test('support alerts reach active scoped staff/admin, not foreign staff or other customers', async () => {
+  await ready('staff');
+  const first = await ask('student'); assert.equal(first.status, 201);
+  const notices = await prisma.notification.findMany({ where: { dedupeKey: { startsWith: `support:${first.body.id}:` } } });
+  const requested = notices.filter(row => row.titleKey === 'support.requested.title');
+  assert.deepEqual(requested.map(row => row.userId).sort(), [users.admin.id, users.staff.id, users.staff2.id].sort());
+  assert.equal(notices.filter(row => row.titleKey === 'support.assigned.title' && row.userId === users.staff.id).length, 1);
+  await ask('student', { requestId: first.body.id });
+  assert.equal(await prisma.notification.count({ where: { dedupeKey: { startsWith: `support:${first.body.id}:` } } }), notices.length);
+});
+
 test('real two-way messages persist, explicit retries are idempotent, admin can inspect complete history', async () => {
   await ready('staff'); const created = await ask('student'); const session = created.body.id;
   const message = { messageId: id(), body: '<script>alert(1)</script> booking details' };

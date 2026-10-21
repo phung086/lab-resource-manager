@@ -11,6 +11,8 @@ const jsonBodyLimit = process.env.JSON_BODY_LIMIT || "1mb";
 const rateLimitWindowMs = parsePositiveInteger(process.env.RATE_LIMIT_WINDOW_MS, 60_000);
 const rateLimitMax = parsePositiveInteger(process.env.RATE_LIMIT_MAX, 180);
 const logFormat = parseLogFormat(process.env.LOG_FORMAT || (isProduction ? "combined" : "dev"));
+const sessionAbsoluteMs = Math.min(parsePositiveInteger(process.env.SESSION_ABSOLUTE_MINUTES, 480), 480) * 60000;
+const sessionIdleMs = Math.min(Math.min(parsePositiveInteger(process.env.SESSION_IDLE_MINUTES, 30), 30) * 60000, sessionAbsoluteMs);
 
 validateRuntimeConfig();
 
@@ -20,7 +22,10 @@ export const config = {
   databaseUrl,
   jwtSecret: jwtSecret || "change-this-secret-before-production",
   corsOrigins,
-  tokenExpiresIn: process.env.TOKEN_EXPIRES_IN || "8h",
+  sessionAbsoluteMs,
+  sessionIdleMs,
+  jwtIssuer: "lab-resource-manager",
+  jwtAudience: "lab-resource-manager-api",
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   openaiModel: process.env.OPENAI_MODEL || "",
   assistantConversationEnabled: process.env.ASSISTANT_CONVERSATION_ENABLED !== "false",

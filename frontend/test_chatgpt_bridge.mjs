@@ -4,11 +4,42 @@ import { askChatgptBridge, bridgeRedirectUrl } from './src/services/chatgptBridg
 import { parseBridgeProposals, reviewBridgeProposal } from './src/services/chatgptBridgeProposals.ts';
 import { randomUUID } from 'node:crypto';
 
-const originalStorage = globalThis.localStorage;
-test.before(() => { globalThis.localStorage = { getItem: () => 'old-customer-session' }; });
-test.after(() => { if (originalStorage === undefined) delete globalThis.localStorage; else globalThis.localStorage = originalStorage; });
+const originalStorage = globalThis.sessionStorage;
+test.before(() => { globalThis.sessionStorage = { getItem: () => 'old-customer-session' }; });
+test.after(() => { if (originalStorage === undefined) delete globalThis.sessionStorage; else globalThis.sessionStorage = originalStorage; });
 const pending = () => ({ id: 'request-one', status: 'PENDING', expiresAt: new Date(Date.now() + 60000).toISOString() });
 const question = { message: 'Tôi muốn đặt phòng.', locale: 'vi' };
+test('partial content is delivered while pending; completion still requires an actual final answer', async () => {
+  const seen = []; let reads = 0;
+  const result = await askChatgptBridge(question, { signal: new AbortController().signal, pollMs: 1,
+    onPending: job => { if (job.partialReply) seen.push(job.partialReply.text); },
+    transport: async (_path, options = {}) => {
+      if (options.method === 'POST') return pending();
+      if (++reads < 3) return { ...pending(), partialReply: { text: reads === 1 ? 'Verified first sentence.' : 'Verified first sentence. A second fact.', sequence: reads, generatedAt: new Date().toISOString() } };
+      return { ...pending(), status: 'ANSWERED', provider: 'chatgpt', source: 'chatgpt_bridge', answer: 'The complete verified answer.' };
+    } });
+  assert.deepEqual(seen, ['Verified first sentence.', 'Verified first sentence. A second fact.']);
+  assert.equal(result.status, 'ANSWERED'); assert.equal(reads, 3);
+});
+test('regressing or malformed partial content fails closed and cancels pending work without retrying create', async () => {
+  const methods = []; let reads = 0;
+  await assert.rejects(askChatgptBridge(question, { signal: new AbortController().signal, pollMs: 1,
+    transport: async (_path, options = {}) => {
+      methods.push(options.method || 'GET'); if (options.method === 'POST') return pending(); if (options.method === 'DELETE') return '';
+      return { ...pending(), partialReply: { text: ++reads === 1 ? 'First verified fact.' : 'Different overwritten fact.', sequence: reads, generatedAt: new Date().toISOString() } };
+    } }), { code: 'bridge.invalidResponse' });
+  assert.deepEqual(methods, ['POST', 'GET', 'GET', 'DELETE']);
+});
+test('reviewed local guidance returns immediately without polling or pretending to be a model', async () => {
+  const calls = [];
+  const answer = await askChatgptBridge({ message: 'xin chào', locale: 'vi' }, { signal: new AbortController().signal,
+    transport: async (_path, options) => {
+      calls.push(options);
+      return { ...pending(), status: 'ANSWERED', provider: 'local', source: 'local_guidance', answer: 'Chào bạn! Tìm phòng tại LAB.' };
+    } });
+  assert.equal(answer.provider, 'local'); assert.equal(calls.length, 1);
+  assert.equal(calls[0].headers['X-LRM-Locale'], 'vi');
+});
 const bookingDraft = () => ({ kind: 'BOOKING', id: randomUUID(), resourceId: randomUUID(), resourceName: 'Phòng điện tử', resourceCode: 'LAB-01',
   expiresAt: new Date(Date.now() + 300000).toISOString(), startAt: new Date(Date.now() + 86400000).toISOString(), endAt: new Date(Date.now() + 90000000).toISOString(),
   title: 'Đặt phòng', purpose: 'Thực hành điện tử', purposeCode: 'SERVICE', quote: { amountVnd: 60000, currency: 'VND', version: 1 } });
@@ -22,10 +53,31 @@ test('receipt stays pending until a genuine request-bound reply is returned', as
     return { ...job, status: 'ANSWERED', provider: 'chatgpt', source: 'chatgpt_bridge', answer: 'Hãy chọn phòng và khung giờ.' };
   };
   const answer = await askChatgptBridge(question, { signal: new AbortController().signal, pollMs: 1, transport, onPending: v => observations.push(v.status) });
-  assert.equal(answer.status, 'ANSWERED'); assert.deepEqual(observations, ['PENDING']);
+  assert.equal(answer.status, 'ANSWERED'); assert.deepEqual(observations, ['PENDING', 'PENDING']);
   assert.deepEqual(calls.map(([path, options]) => [path, options.method || 'GET']), [
     ['/assistant/bridge/requests', 'POST'], ['/assistant/bridge/requests/request-one', 'GET'], ['/assistant/bridge/requests/request-one', 'GET']
   ]);
+});
+test('a temporary status-read outage recovers without repeating create or cancelling valid work', async () => {
+  const methods = []; let reads = 0;
+  const result = await askChatgptBridge(question, { signal: new AbortController().signal, pollMs: 1,
+    transport: async (_path, options = {}) => {
+      methods.push(options.method || 'GET');
+      if (options.method === 'POST') return pending();
+      if (++reads === 1) throw Object.assign(new Error('Temporary network outage'), { code: 'NETWORK_UNAVAILABLE' });
+      return { ...pending(), status: 'ANSWERED', provider: 'local', source: 'authenticated_mcp', answer: 'Fresh scoped schedule.' };
+    } });
+  assert.equal(result.status, 'ANSWERED'); assert.deepEqual(methods, ['POST', 'GET', 'GET']);
+});
+test('authorization failures on status reads are never retried', async () => {
+  const methods = [];
+  await assert.rejects(askChatgptBridge(question, { signal: new AbortController().signal, pollMs: 1,
+    transport: async (_path, options = {}) => {
+      methods.push(options.method || 'GET');
+      if (options.method === 'POST') return pending();
+      if (!options.method) throw Object.assign(new Error('Forbidden'), { status: 403 });
+    } }), /Forbidden/);
+  assert.deepEqual(methods, ['POST', 'GET', 'DELETE']);
 });
 test('cancelling during creation cancels the persisted request with its original session', async () => {
   const controller = new AbortController(), job = pending(), calls = [];

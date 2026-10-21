@@ -187,6 +187,13 @@ Tham khảo chính thức: [Conversation state](https://developers.openai.com/ap
 
 ## 8. Kết nối tài khoản ChatGPT qua plugin
 
+15/10/2026, ADR-040: kết nối này hiện dùng cho cả ba role. Các tra cứu LAB được
+hỗ trợ đọc trực tiếp database, không cần API key và không chờ Work. Staff/admin
+thấy gợi ý lịch hôm nay, tồn kho, báo cáo7 ngày và tìm CUSTOMER. Quyền đọc theo
+role/assignment hiện tại, không theo ADMIN cấp OAuth. Khi subscription tạm tắt,
+lookup local vẫn hoạt động. Câu hỏi mở/phức tạp qua Work vẫn có độ trễ host.
+API lưu provenance; dock không còn mục Thông tin phản hồi/About từ ADR-039.
+
 Đọc ADR-036 và AI_ASSISTANT_MCP trước khi bật. Dùng migration forward
 `20261013000300_chatgpt_account_bridge` qua `db:migrate`, rồi `db:generate`.
 Không chạy migration trên DB nghiệp vụ trong bước review. Cấu hình backend:

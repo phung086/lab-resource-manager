@@ -1,11 +1,13 @@
 import { localize } from '../locales/index.js';
+import { expirePaymentHolds, isPaymentHold, effectivePaymentDeadline } from '../services/bookingPaymentHoldService.js';
 import express from "express";
 import { prisma } from "../db.js";
-import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
 import { ADMIN, LAB_STAFF, STAFF_ROLES } from "../constants/roles.js";
 import { optionalAuth } from "../middleware/auth.js";
 import { getVietnamTimeParts } from "../services/availabilityService.js";
 import { attachCareUsage, resourceAvailability } from "../services/resourceService.js";
+import { earliestBookingStart } from '../services/bookingNoticePolicy.js';
+import { preparationBookingWhere, occupiesWithTurnaround, turnaroundEnd } from '../services/planning/policyModel.js';
 
 const router = express.Router();
 
@@ -87,6 +89,7 @@ router.get("/slots", async (req, res, next) => {
     });
 
     if (activeResourceId) {
+      await expirePaymentHolds(prisma, { resourceId: activeResourceId });
       const weekStart = new Date(+monday - 7*3600000);
       const weekEnd = new Date(+weekStart + 7*86400000);
 
@@ -94,9 +97,7 @@ router.get("/slots", async (req, res, next) => {
         prisma.booking.findMany({
           where: {
             resourceId: activeResourceId,
-            status: { in: ACTIVE_BOOKING_STATUSES },
-            startAt: { lt: weekEnd },
-            endAt: { gt: weekStart }
+            ...preparationBookingWhere(weekStart, weekEnd)
           },
           select: {
             id: true,
@@ -105,7 +106,8 @@ router.get("/slots", async (req, res, next) => {
             title: true,
             startAt: true,
             endAt: true,
-            status: true
+            status: true,
+            paymentDueAt: true, policySnapshot: true, schedulingReleasedAt: true
           }
         }),
         prisma.maintenanceWindow.findMany({
@@ -168,18 +170,15 @@ router.get("/slots", async (req, res, next) => {
         }
 
         // Check booking match
-        const match = existingBookings.find((b) => {
-          const bStart = new Date(b.startAt);
-          const bEnd = new Date(b.endAt);
-          return slotStart < bEnd && slotEnd > bStart;
-        });
+        const match = existingBookings.find(b => occupiesWithTurnaround(b, slotStart, slotEnd));
 
         if (match) {
           const isMine = currentUserId && match.requestedById === currentUserId;
           return {
             status: "booked",
-            labelKey: isMine ? "calendar.myBooking" : "calendar.booked",
-            label: localize(req.locale, isMine ? "calendar.myBooking" : "calendar.booked"),
+            labelKey: isPaymentHold(match) ? 'calendar.paymentHold' : isMine ? 'calendar.myBooking' : 'calendar.booked',
+            label: localize(req.locale, isPaymentHold(match) ? 'calendar.paymentHold' : isMine ? 'calendar.myBooking' : 'calendar.booked'),
+            paymentDueAt: isPaymentHold(match) ? effectivePaymentDeadline(match) : null,
             title: isMine || isStaff ? match.title : localize(req.locale, "calendar.booked"),
             ...(!isMine && !isStaff ? { titleKey: "calendar.booked" } : {}),
             resourceId: activeResourceId,
@@ -188,6 +187,7 @@ router.get("/slots", async (req, res, next) => {
           };
         }
 
+        if (slotStart < earliestBookingStart(policy)) return { status: 'offline', labelKey: 'calendar.closed', label: localize(req.locale, 'calendar.closed'), detailsKey: 'calendar.noticeRequired', details: localize(req.locale, 'calendar.noticeRequired') };
         return {
           status: "available",
           labelKey: "calendar.available", label: localize(req.locale, "calendar.available"),
@@ -284,13 +284,13 @@ router.get("/events", async (req, res, next) => {
     if (resource_id) resourceWhere.id = String(resource_id);
     if (laboratory_id) resourceWhere.laboratoryId = String(laboratory_id);
 
+    await expirePaymentHolds(prisma, resource_id ? { resourceId: String(resource_id) } : {});
+
     const [bookings, maintenanceWindows, staffAssignments] = await Promise.all([
       prisma.booking.findMany({
         where: {
           resource: resourceWhere,
-          status: { in: ACTIVE_BOOKING_STATUSES },
-          startAt: { lt: toDate },
-          endAt: { gt: fromDate }
+          ...preparationBookingWhere(fromDate, toDate)
         },
         include: {
           resource: { select: { id: true, name: true, code: true, laboratoryId: true } },
@@ -323,6 +323,13 @@ router.get("/events", async (req, res, next) => {
 
     // Map bookings respecting privacy contract
     for (const b of bookings) {
+      const preparationStart = b.schedulingReleasedAt || b.endAt;
+      if (Number(b.policySnapshot?.turnaroundMinutes) > 0 && preparationStart < toDate && turnaroundEnd(b) > fromDate) {
+        events.push({ id: `preparation:${b.id}`, resourceId: b.resourceId, resourceName: b.resource?.name, resourceCode: b.resource?.code,
+          title: localize(req.locale, 'planning.preparation'), titleKey: 'planning.preparation', start: preparationStart.toISOString(), end: turnaroundEnd(b).toISOString(),
+          occupancy: 'BOOKED', type: 'preparation', isMine: false });
+      }
+      if (b.schedulingReleasedAt || b.endAt <= fromDate || b.startAt >= toDate) continue;
       const isMine = currentUserId && b.requestedById === currentUserId;
       const isStaffForLab = isGlobalAdmin || (req.user?.role === LAB_STAFF && b.resource?.laboratoryId && staffLabIds.has(b.resource.laboratoryId));
 
@@ -338,6 +345,7 @@ router.get("/events", async (req, res, next) => {
           end: b.endAt.toISOString(),
           occupancy: "BOOKED",
           status: b.status,
+          paymentDueAt: effectivePaymentDeadline(b),
           type: "booking",
           isMine: Boolean(isMine),
           bookingCode: b.bookingCode,
@@ -357,6 +365,7 @@ router.get("/events", async (req, res, next) => {
           status: b.status,
           type: "booking",
           isMine: true,
+          paymentDueAt: effectivePaymentDeadline(b),
           bookingCode: b.bookingCode
         });
       } else {
@@ -366,7 +375,8 @@ router.get("/events", async (req, res, next) => {
           resourceId: b.resourceId,
           resourceName: b.resource?.name,
           resourceCode: b.resource?.code,
-          title: localize(req.locale, "calendar.booked"), titleKey: "calendar.booked",
+          title: localize(req.locale, isPaymentHold(b) ? 'calendar.paymentHold' : 'calendar.booked'), titleKey: isPaymentHold(b) ? 'calendar.paymentHold' : 'calendar.booked',
+          paymentDueAt: isPaymentHold(b) ? effectivePaymentDeadline(b) : null,
           start: b.startAt.toISOString(),
           end: b.endAt.toISOString(),
           occupancy: "BOOKED",

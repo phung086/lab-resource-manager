@@ -4,7 +4,7 @@ import bootstrap from '../locales/bootstrap.json';
 export type Locale = 'vi' | 'en';
 type Params = Record<string, unknown>;
 export type LocaleMessage = string | { key: string; params?: Params };
-type LocaleContextValue = { locale: Locale; t: (key: LocaleMessage, params?: Params) => string; tr: (key: LocaleMessage, params?: Params) => string; changeLocale: (locale: string) => Promise<void>; loadingLocale: Locale | null };
+type LocaleContextValue = { locale: Locale; t: (key: LocaleMessage, params?: Params) => string; tr: (key: LocaleMessage, params?: Params) => string; changeLocale: (locale: string) => Promise<void>; loadingLocale: Locale | null; localeError?: boolean };
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 const storedLocale = () => { try { return normalizeLocale(localStorage.getItem(localeStorageKey)) as Locale; } catch { return 'vi' as Locale; } };
 export function LocaleProvider({ locale: requestedLocale, children }: { locale?: string; children: React.ReactNode }) {
@@ -34,3 +34,29 @@ export function LocaleProvider({ locale: requestedLocale, children }: { locale?:
   </LocaleContext.Provider>;
 }
 export function useLocale() { const value = useContext(LocaleContext); if (!value) throw new Error('useLocale requires LocaleProvider'); return value; }
+
+/** A local preference follows future application changes without changing the application. */
+export function LocaleScope({ children }: { children: React.ReactNode }) {
+  const application = useLocale();
+  const [locale, setLocale] = useState(application.locale);
+  const [loadingLocale, setLoading] = useState<Locale | null>(null);
+  const [failed, setFailed] = useState(false);
+  const sequence = useRef(0);
+  const changeLocale = useCallback(async (value: string) => {
+    const next = normalizeLocale(value) as Locale, version = ++sequence.current;
+    setLoading(next); setFailed(false);
+    try {
+      await loadLocale(next);
+      if (version === sequence.current) setLocale(next);
+    } catch { if (version === sequence.current) setFailed(true); }
+    finally { if (version === sequence.current) setLoading(null); }
+  }, []);
+  useEffect(() => {
+    sequence.current += 1; setLocale(application.locale); setLoading(null); setFailed(false);
+  }, [application.locale]);
+  useEffect(() => () => { sequence.current += 1; }, []);
+  const t = useCallback((key: LocaleMessage, params: Params = {}) => translateForLocale(locale, key, params), [locale]);
+  return <LocaleContext.Provider value={{ locale, t, tr: t, changeLocale, loadingLocale, localeError: failed }}>
+    {children}
+  </LocaleContext.Provider>;
+}

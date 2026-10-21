@@ -85,9 +85,9 @@ async function seed() {
   }
 }
 
-async function booking({ fee = 50000, status = "CONFIRMED", owner = "student", resource = "a" } = {}) {
+async function booking({ fee = 50000, status = 'CONFIRMED', owner = 'student', resource = 'a', nearStart = false } = {}) {
   sequence += 1;
-  const startAt = new Date(Date.now() + (sequence + 24) * 60 * 60 * 1000);
+  const startAt = new Date(Date.now() + (nearStart ? 10 * 60000 : (sequence + 24) * 60 * 60 * 1000));
   return prisma.booking.create({
     data: {
       id: `phase-h-booking-${sequence}`,
@@ -186,7 +186,8 @@ test("Phase H payment hardening and reconciliation matrix", { timeout: 180000 },
     const charge = await chargeFor(row);
     await initiate(charge);
     const returned = await http.get("/api/payments/vnpay/return").query(callback(charge));
-    assert.equal(returned.status, 200);
+    assert.equal(returned.status, 303);
+    assert.ok(returned.headers.location.startsWith('http://127.0.0.1:5173/workspace/payments?'));
     assert.equal((await prisma.paymentTransaction.findUnique({ where: { id: charge.id } })).status, "pending");
   });
 
@@ -251,21 +252,21 @@ test("Phase H payment hardening and reconciliation matrix", { timeout: 180000 },
   });
 
   await t.test("18 paid checkout is blocked before settlement", async () => {
-    const row = await booking({ resource: "b" }); await chargeFor(row);
+    const row = await booking({ resource: 'a', nearStart: true }); await chargeFor(row);
     const response = await http.post(`/api/bookings/${row.id}/check-out`).set(bearer("staff")).send({ conditionBefore: "Phase H fixture condition" });
     assert.equal(response.status, 409);
     assert.equal(response.body.error.code, "BOOKING_PAYMENT_REQUIRED");
   });
 
   await t.test("19 paid checkout is allowed after signed settlement", async () => {
-    const row = await booking({ resource: "b" }); const charge = await chargeFor(row); await initiate(charge); await ipn(charge);
+    const row = await booking({ resource: 'b', nearStart: true }); const charge = await chargeFor(row); await initiate(charge); await ipn(charge);
     const response = await http.post(`/api/bookings/${row.id}/check-out`).set(bearer("staff")).send({ conditionBefore: "Phase H paid handover" });
     assert.equal(response.status, 200, JSON.stringify(response.body));
     await prisma.resource.update({ where: { id: "phase-h-resource-b" }, data: { operationalStatus: "AVAILABLE" } });
   });
 
   await t.test("20 free checkout is unaffected", async () => {
-    const row = await booking({ fee: 0, resource: "c" });
+    const row = await booking({ fee: 0, resource: 'c', nearStart: true });
     const response = await http.post(`/api/bookings/${row.id}/check-out`).set(bearer("staff")).send({ conditionBefore: "Phase H free handover" });
     assert.equal(response.status, 200, JSON.stringify(response.body));
     assert.equal(await prisma.paymentTransaction.count({ where: { bookingId: row.id } }), 0);

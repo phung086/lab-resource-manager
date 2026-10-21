@@ -31,6 +31,9 @@ export interface BookingResourceSummary {
 }
 
 export interface BookingRecord {
+  paymentDueAt?: string | null;
+  fulfillmentSnapshot?: { mode: string; pickupInstructions?: string; address?: { fullAddress: string }; deliveryFeeVnd?: number } | null;
+  schedulingReleasedAt?: string | null;
   contactSnapshot?: { fullName: string; phone: string; email: string } | null;
   feeAmountVnd?: number;
   feeSnapshot?: { baseAmountVnd?: number; discountAmountVnd?: number; discountBps?: number; loyaltyTier?: string; loyaltyPolicyVersion?: number; amountVnd?: number } | null;

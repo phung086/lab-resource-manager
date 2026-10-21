@@ -4,10 +4,10 @@ import { readFileSync } from 'node:fs';
 import { apiRequest, ApiError } from './src/api.js';
 import { loadLocale, activateLocale, translate } from './src/i18n.js';
 
-const original = { fetch: globalThis.fetch, localStorage: globalThis.localStorage, window: globalThis.window };
+const original = { fetch: globalThis.fetch, sessionStorage: globalThis.sessionStorage, window: globalThis.window };
 const stored = new Map([['lrm_token', 'unit-session']]), events = [];
 test.before(async () => {
-  globalThis.localStorage = { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) };
+  globalThis.sessionStorage = { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) };
   globalThis.window = { dispatchEvent: event => events.push(event.type) };
   globalThis.fetch = async url => new Response(readFileSync(new URL(`./src/locales/catalog/${String(url).includes('en.json') ? 'en' : 'vi'}.json`, import.meta.url)));
   await Promise.all([loadLocale('vi'), loadLocale('en')]); activateLocale('en');
@@ -49,7 +49,7 @@ test('locale headers and stable server codes survive API deadlines', async () =>
 test('expired sessions still clear credentials and notify the shared shell', async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({ error: { code: 'UNAUTHORIZED' } }), { status: 401, headers: { 'Content-Type': 'application/json' } });
   await assert.rejects(apiRequest('/auth/me'), { status: 401 });
-  assert.equal(stored.has('lrm_token'), false); assert.deepEqual(events, ['lrm:session-invalid']);
+  assert.equal(stored.has('lrm_token'), false); assert.deepEqual(events, ['lrm:session-changed', 'lrm:session-invalid']);
 });
 
 
@@ -59,4 +59,17 @@ test('an old 401 cannot discard a new credential session installed while its req
   const pending=apiRequest('/users/me');stored.set('lrm_token','after-change');stored.set('lrm_user','new-user');
   resolve(new Response(JSON.stringify({error:{code:'AUTH_INVALID'}}),{status:401,headers:{'Content-Type':'application/json'}}));
   await assert.rejects(pending,{status:401});assert.equal(stored.get('lrm_token'),'after-change');assert.equal(stored.get('lrm_user'),'new-user');assert.equal(events.length,previousEvents);
+});
+
+test('global API rate limit pauses further requests without retrying writes, then recovers after Retry-After', async () => {
+ const originalNow=Date.now;let now=originalNow(),calls=0;
+ Date.now=()=>now;
+ try {
+  globalThis.fetch=async()=>{calls++;return new Response(JSON.stringify({error:{code:'RATE_LIMITED'}}),{status:429,headers:{'Content-Type':'application/json','Retry-After':'2'}});};
+  await assert.rejects(apiRequest('/bookings'),error=>error.status===429&&error.details.retryAfterSeconds===2);
+  await assert.rejects(apiRequest('/bookings',{method:'POST',body:'{}'}),{code:'RATE_LIMITED'});
+  assert.equal(calls,1,'No mutation submitted during cooldown');
+  now+=2001;globalThis.fetch=async()=>{calls++;return new Response('{}',{headers:{'Content-Type':'application/json'}});};
+  assert.deepEqual(await apiRequest('/bookings'),{});assert.equal(calls,2);
+ } finally {Date.now=originalNow;}
 });

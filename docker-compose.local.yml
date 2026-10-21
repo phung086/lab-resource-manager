@@ -39,9 +39,11 @@ services:
       PORT: "8000"
       LOG_FORMAT: dev
       CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:5180,http://127.0.0.1:5180
-      REMINDER_SCHEDULER_ENABLED: "false"
-      PAYMENTS_ENABLED: "${LRM_LOCAL_PAYMENTS_ENABLED:-false}"
+      REMINDER_SCHEDULER_ENABLED: "true"
+      PAYMENTS_ENABLED: "${LRM_LOCAL_PAYMENTS_ENABLED:-true}"
       MCP_ASSISTANT_ENABLED: "true"
+      BOOKING_UPCOMING_REMINDER_MINUTES: "30"
+      RETURN_REMINDER_MINUTES: "15"
     # Poll bind mounts: Docker Desktop on Windows may not forward file events.
     # Initial sample resources/accounts are an explicit setup action, never a restart side effect.
     command: ["sh", "-c", "npm run db:migrate && npm run db:generate && npm run dev -- --legacy-watch"]

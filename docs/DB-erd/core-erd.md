@@ -1,11 +1,11 @@
 # Core laboratory data relationships
 
 Generated from [canonical Prisma schema](../../backend/prisma/schema.prisma).
-Schema SHA-256 after LF normalization: `7599a385eaa454a6df2627b0c650eed4b2e12debed07468331e522c938e445f9`.
+Schema SHA-256 after LF normalization: `f8601c4b24d479d31d98cb88c69b86b7de030ba79efca799819c862d673ff446`.
 Run `npm run docs:erd` in `backend/`; CI verifies `docs:erd:check`.
 This is a selected model projection, not a claim that only these tables exist.
 Foreign keys and cardinalities come from the generated Prisma data model checked
-against the source schema. The current schema contains 65 models.
+against the source schema. The current schema contains 70 models.
 
 ## Required booking operations and persisted monitoring
 
@@ -66,6 +66,10 @@ erDiagram
         CertificationStatus status
     }
     Booking {
+        string bundleId FK
+        datetime paymentDueAt
+        json fulfillmentSnapshot
+        datetime schedulingReleasedAt
         string id PK
         string bookingCode UK
         string resourceId FK
@@ -208,6 +212,10 @@ erDiagram
         Role role
     }
     Booking {
+        string bundleId FK
+        datetime paymentDueAt
+        json fulfillmentSnapshot
+        datetime schedulingReleasedAt
         string id PK
         string bookingCode UK
         string resourceId FK
@@ -331,6 +339,10 @@ erDiagram
         string email UK
         Role role
     }
+    AuthSession {
+        string id PK
+        string userId FK
+    }
     PasswordChallenge {
         string id PK
         string actorId FK
@@ -339,6 +351,7 @@ erDiagram
     LoyaltyPolicy {
         string id PK
     }
+    User ||--o{ AuthSession : "userId"
     User ||--o{ PasswordChallenge : "actorId"
     User ||--o{ PasswordChallenge : "targetUserId"
 ```
@@ -397,6 +410,80 @@ erDiagram
 Virtual operations retain booking, actor, declared load and server timestamps.
 Maintenance policy and component condition belong to existing catalogue resources.
 Physical-state mutations remain explicit, scoped and history-backed.
+
+## Resource collection and room access
+
+```mermaid
+erDiagram
+    User {
+        string id PK
+        string email UK
+        Role role
+    }
+    Resource {
+        string id PK
+        string laboratoryId FK
+        string code UK
+        ResourceCategory category
+        OperationalStatus operationalStatus
+        ResourceStatus status
+    }
+    ResourceFulfillment {
+        string resourceId PK,FK
+        boolean deliveryAllowed
+    }
+    Booking {
+        string bundleId FK
+        datetime paymentDueAt
+        json fulfillmentSnapshot
+        datetime schedulingReleasedAt
+        string id PK
+        string bookingCode UK
+        string resourceId FK
+        string requestedById FK
+        string approvedById FK
+        datetime startAt
+        datetime endAt
+        BookingStatus status
+        string idempotencyKey UK
+    }
+    BookingBundle {
+        string id PK
+        string ownerId FK
+        string requestKey UK
+    }
+    BookingWaitlist {
+        string id PK
+        string userId FK
+        string resourceId FK
+        datetime startAt
+        datetime endAt
+        string status
+    }
+    BookingChecklistEntry {
+        string id PK
+        string bookingId FK
+        string actorId FK
+    }
+    Resource ||--o| ResourceFulfillment : "resourceId"
+    BookingBundle |o--o{ Booking : "bundleId"
+    Resource ||--o{ Booking : "resourceId"
+    User ||--o{ Booking : "requestedById"
+    User |o--o{ Booking : "approvedById"
+    User ||--o{ BookingBundle : "ownerId"
+    User ||--o{ BookingWaitlist : "userId"
+    Resource ||--o{ BookingWaitlist : "resourceId"
+    User ||--o{ BookingChecklistEntry : "actorId"
+    Booking ||--o{ BookingChecklistEntry : "bookingId"
+```
+
+ResourceFulfillment stores optional encrypted room access and ADMIN delivery
+eligibility. Booking keeps the accepted collection/address snapshot; only an
+authorized owner/operator may read its private contact information. Actual
+return releases the scheduling hold while retaining RETURNED for staff
+inspection. The GiST and booking/maintenance triggers apply the same release
+predicate. Room credentials do not certify an integrated physical door lock.
+See ADR-037.
 
 Payment, shipment, AI, camera and optimization tables are outside this diagram's
 core projection. Their presence in the schema does not certify those integrations.

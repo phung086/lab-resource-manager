@@ -15,8 +15,9 @@ const LaboratoryAssistant = React.lazy(() => import("./features/assistant/Labora
 
 export interface AppLayoutProps {
   activeTab: string;
-  onSelectTab: (tabId: string) => void;
+  onSelectTab: (tabId: string, params?: Record<string, string>) => void;
   user: {
+    id?: string;
     fullName: string;
     role: string;
     email?: string;
@@ -27,6 +28,7 @@ export interface AppLayoutProps {
   locale: string;
   onLocaleChange: (locale: string) => void;
   notifications?: Array<{ id: string | number; readAt?: string | null }>;
+  notificationUnreadCount?: number | null;
   incidents?: Array<{ id: string | number; status?: string }>;
   incidentOpenCount?: number;
   conflictsCount?: number;
@@ -45,6 +47,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   locale,
   onLocaleChange,
   notifications = [],
+  notificationUnreadCount,
   incidents = [],
   incidentOpenCount,
   conflictsCount = 0,
@@ -92,12 +95,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     return () => window.removeEventListener("lrm:open-password-setup", handleOpen);
   }, []);
 
-  function handleSelectTab(tab: string) {
+  function handleSelectTab(tab: string, params?: Record<string, string>) {
     if (user?.passwordResetRequired && !passwordSuccess) {
       setChangePasswordOpen(true);
       return;
     }
-    onSelectTab(tab);
+    onSelectTab(tab, params);
   }
 
   function openAssistant() {
@@ -106,8 +109,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     setAssistantOpen(true);
   }
 
-  function navigateFromShell(tab: string) {
-    handleSelectTab(tab);
+  useEffect(() => {
+    const open = () => {
+      if (!AI_ASSISTANT_ENABLED) return;
+      if (user?.passwordResetRequired && !passwordSuccess) { setChangePasswordOpen(true); return; }
+      setNavigationOpen(false); setAssistantMounted(true); setAssistantOpen(true);
+    };
+    window.addEventListener('lrm:open-assistant', open);
+    return () => window.removeEventListener('lrm:open-assistant', open);
+  }, [user?.passwordResetRequired, passwordSuccess]);
+
+  function navigateFromShell(tab: string, params?: Record<string, string>) {
+    handleSelectTab(tab, params);
     if (!user?.passwordResetRequired || passwordSuccess) {
       window.scrollTo(0, 0);
       document.getElementById('workspace-main')?.focus({ preventScroll: true });
@@ -124,7 +137,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   // Map activeTab to readable header title
   const tabTitles: Record<string, string> = {
     stock: translate("ui.materials_inventory_2b570ac6"),
-    home: tr("ui.workspace_970a97e3"),
+    home: tr(`ui.home.${user?.role === "LAB_STAFF" ? "staff" : user?.role === "ADMIN" ? "admin" : "customer"}.title`),
     profile: translate("ui.profile_and_lab_preferences_ab1e68a1"),
     payments: translate("ui.payments_d4b946cc"),
     smart_calendar: tr("ui.room_and_equipment_calendar_cce9c071"),
@@ -159,10 +172,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   };
 
   const currentTitle = tr(tabTitles[activeTab]) || tr("core.app.name");
-  const unreadCount = notifications.filter((n) => !n.readAt).length;
+  const unreadCount = notificationUnreadCount === null ? null : notificationUnreadCount ?? notifications.filter((n) => !n.readAt).length;
 
   return (
-    <div className="app-shell-2026 workspace-shell">
+    <div className="app-shell-2026 workspace-shell" data-workspace-role={user?.role}>
       <a className="skip-link" href="#workspace-main">{translate("ui.skip_to_main_content_a75d7c33")}</a>
       {/* Primary navigation */}
       <Sidebar
@@ -170,6 +183,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         onSelectTab={handleSelectTab}
         user={user}
         notifications={notifications}
+        notificationUnreadCount={unreadCount}
         incidents={incidents}
         incidentOpenCount={incidentOpenCount}
         conflictsCount={conflictsCount}
@@ -183,6 +197,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       {/* 2. Main Work Area with Header */}
       <div className="main-content-column-2026" inert={navigationOpen}>
         <Header
+          showSearch={activeTab !== 'smart_calendar'}
           title={currentTitle}
           user={user}
           locale={locale}
@@ -194,17 +209,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           onOpenChangePassword={() => setChangePasswordOpen(true)}
           onOpenProfile={() => handleSelectTab("profile")}
           onOpenHome={() => navigateFromShell("home")}
+          onNavigate={navigateFromShell}
           onLogout={onLogout}
-          onOpenAssistant={AI_ASSISTANT_ENABLED ? openAssistant : undefined}
-          assistantControl={AI_ASSISTANT_ENABLED && !changePasswordOpen ? <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} /> : undefined}
         />
 
         <main id="workspace-main" tabIndex={-1} className="main-body-container-2026">
           {children}
-          <MaintenanceNoticeToast role={user?.role || ''}/>
+          <MaintenanceNoticeToast role={user?.role || ''} actorId={user?.id}/>
         </main>
         <ProjectFooter variant="workspace" role={user?.role} onNavigate={navigateFromShell} />
       </div>
+
+      {AI_ASSISTANT_ENABLED && !navigationOpen && !changePasswordOpen && <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} />}
 
       {AI_ASSISTANT_ENABLED && assistantMounted && <React.Suspense fallback={assistantOpen ? <p className="assistant-loading" role="status">{translate("ui.opening_assistant_9a8f8008")}</p> : null}>
         <LaboratoryAssistant actorRole={user?.role} isOpen={assistantOpen && !navigationOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />

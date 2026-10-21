@@ -34,7 +34,7 @@ try {
   async function signIn(id, role, route) {
     const token = jwt.sign({ sub: id, role }, process.env.JWT_SECRET, { algorithm: "HS256" });
     await page.goto("http://127.0.0.1:15181");
-    await page.evaluate(token => localStorage.setItem("lrm_token", token), token);
+    await page.evaluate(token => sessionStorage.setItem("lrm_token", token), token);
     await page.goto(`http://127.0.0.1:15181${route}`);
     await page.reload({ waitUntil: "networkidle" });
   }

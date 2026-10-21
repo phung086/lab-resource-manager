@@ -1,455 +1,155 @@
 import '../styles/calendar-workspace.css';
-import { translate } from "../i18n.js";
+import '../styles/calendar-planner.css';
+import { useEffect, useState } from 'react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, RefreshCw } from 'lucide-react';
+import { ResourceSearchField } from './base/ResourceSearchField';
+import { apiRequest } from '../api.js';
 import { useLocale } from '../providers/LocaleProvider';
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { navigateApp, readRouteParams, workspacePathForTab } from "../workspaceRoutes.js";
-import { apiRequest } from "../api.js";
-import { QuickBookingModal } from "./QuickBookingModal.js";
-import { CalendarToolbar } from "./calendar/CalendarToolbar.js";
-import { WeekSchedule } from "./calendar/WeekSchedule.js";
-import { DaySchedule } from "./calendar/DaySchedule.js";
-import { MonthSchedule } from "./calendar/MonthSchedule.js";
-import { BookingStatusBadge } from "./BookingStatusBadge.js";
-import { BaseModal2026 } from "./BaseModal2026.js";
-import { Clock, Calendar, User, AlertCircle } from "lucide-react";
-import { formatVietnamDateTime, getVietnamTodayDateString, toVietnamDateString, vietnamTimeToIso } from "../utils/timezone.js";
+import { QuickBookingModal } from './QuickBookingModal';
+import { BaseModal2026 } from './BaseModal2026';
+import { BookingStatusBadge } from './BookingStatusBadge';
+import { ResourceWeekOverview } from './calendar/ResourceWeekOverview';
+import { MonthSchedule } from './calendar/MonthSchedule';
+import { ResourceDayBoard } from './calendar/ResourceDayBoard';
+import { BookingSlotPicker } from './calendar/BookingSlotPicker';
+import { RESOURCE_GROUPS, freeWindows, resourceBlocked, shiftDate, type PlannerEvent, type PlannerResource } from './calendar/plannerModel';
+import { formatVietnamDateTime, getVietnamTodayDateString, vietnamTimeToIso } from '../utils/timezone';
 
 export interface SmartCalendarViewProps {
-  onOpenBooking?: (slot?: any) => void;
-  onOpenCheckIn?: (booking?: any) => void;
-  user?: any;
-  initialResourceId?: string;
-  refreshKey?: number;
+  onOpenBooking?: (slot?: any) => void; onOpenCheckIn?: (booking?: any) => void; onPayment?: (booking: any) => void;
+  user?: any; initialResourceId?: string; refreshKey?: number;
+  selectedResourceIds?: string[]; onAddToSelection?: (resource: PlannerResource) => void; onViewSelection?: () => void;
 }
-
-export const SmartCalendarView: React.FC<SmartCalendarViewProps> = ({ user, onOpenBooking, initialResourceId = "", refreshKey = 0 }) => {
+type View = 'plan' | 'day' | 'week' | 'month';
+type Laboratory = { id: string; name: string; code: string };
+export function SmartCalendarView({ user, onOpenBooking, onPayment, initialResourceId = '', refreshKey = 0, selectedResourceIds = [], onAddToSelection, onViewSelection }: SmartCalendarViewProps) {
   const { tr, locale } = useLocale();
-  const [, setCalendarMinute] = useState(0);
+  const operator = ['ADMIN', 'LAB_STAFF'].includes(user?.role);
+  const [view, setView] = useState<View>(operator ? 'day' : 'plan');
+  const [date, setDate] = useState(getVietnamTodayDateString);
+  const [planAnchor,setPlanAnchor]=useState(getVietnamTodayDateString),[duration,setDuration]=useState(60);
+  const [entry,setEntry]=useState<'resource'|'time'>('resource');
+  const [labs, setLabs] = useState<Laboratory[]>([]), [lab, setLab] = useState('');
+  const [ready, setReady] = useState(false), [scopeError, setScopeError] = useState('');
+  const [resources, setResources] = useState<PlannerResource[]>([]), [resourceId, setResourceId] = useState(initialResourceId);
+  const [group, setGroup] = useState(''), [search, setSearch] = useState(''), [query, setQuery] = useState('');
+  const [page, setPage] = useState(0), [revision, setRevision] = useState(0);
+  const [scheduleRevision,setScheduleRevision]=useState(0);
+  const [resourceBusy, setResourceBusy] = useState(true), [resourceError, setResourceError] = useState('');
+  const [events, setEvents] = useState<PlannerEvent[]>([]);
+  const [loadedCalendarKey,setLoadedCalendarKey]=useState('');
+  const [scheduleBusy, setScheduleBusy] = useState(false), [scheduleError, setScheduleError] = useState('');
+  const [timeFilter, setTimeFilter] = useState<{ startAt: string; endAt: string } | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<PlannerEvent | null>(null), [modalSlot, setModalSlot] = useState<any>(null);
   useEffect(() => {
-    const timer = window.setInterval(() => setCalendarMinute(value => value + 1), 60000);
-    return () => window.clearInterval(timer);
-  }, []);
-  const [viewMode, setViewMode] = useState<"day" | "week" | "month">(() => window.matchMedia("(max-width:700px)").matches ? "day" : "week");
-  const [selectedResourceId, setSelectedResourceId] = useState<string>(initialResourceId);
-  const [resources, setResources] = useState<any[]>([]);
-  const [resourcesLoading, setResourcesLoading] = useState(true);
-  const [resourcesError, setResourcesError] = useState("");
-
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [monthOffset, setMonthOffset] = useState(0);
-  const [dayOffset, setDayOffset] = useState(0);
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const calendarRequest = useRef(0);
-
-  // Slots state for Week View
-  const [slotsData, setSlotsData] = useState<any>(null);
-
-  // Events state for Month and Day Views
-  const [eventsData, setEventsData] = useState<any[]>([]);
-
-  // Modal state
-  const [bookingModalOpen, setBookingModalOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<any>(null);
-  const [selectedBooking, setSelectedBooking] = useState<any>(null);
-
-  // 1. Fetch available resources with explicit states
-  const loadResources = useCallback(async () => {
-    setResourcesLoading(true);
-    setResourcesError("");
-    try {
-      const data = await apiRequest("/resources");
-      const list = Array.isArray(data) ? data : data.items || [];
-      // A filtered catalogue can link to a resource outside the first 250 rows.
-      // Resolve that exact resource rather than silently selecting another one.
-      if (initialResourceId && !list.some((row: any) => row.id === initialResourceId)) {
-        list.push(await apiRequest(`/resources/${encodeURIComponent(initialResourceId)}`));
+    const controller = new AbortController(); setScopeError(''); setReady(false);
+    apiRequest('/laboratories', { signal: controller.signal }).then(async rows => {
+      let targetLab='';
+      if (operator && initialResourceId) {
+        const target=await apiRequest(`/resources/${encodeURIComponent(initialResourceId)}`,{signal:controller.signal});
+        targetLab=target.laboratoryId || target.laboratory?.id || '';
       }
-      setResources(list);
-      if (list.length > 0) {
-        setSelectedResourceId((prev) => {
-          if (prev && list.some((r: any) => r.id === prev)) {
-            return prev;
-          }
-          return list[0].id;
-        });
-      } else {
-        setSelectedResourceId("");
-        setSlotsData(null);
-        setEventsData([]);
-      }
-    } catch (err: any) {
-      console.error("Failed to load resources for calendar", err);
-      setResourcesError(err?.message || "ui.could_not_load_laboratory_resources_02a86614");
-      setResources([]);
-      setSelectedResourceId("");
-      setSlotsData(null);
-      setEventsData([]);
-    } finally {
-      setResourcesLoading(false);
-    }
-  }, [initialResourceId]);
-
+      if (controller.signal.aborted) return;
+      setLabs(rows); if (operator) setLab(current => rows.some((row: Laboratory)=>row.id===current) ? current : rows.find((row: Laboratory)=>row.id===targetLab)?.id || rows[0]?.id || ''); setReady(true);
+    }).catch(error => { if (!controller.signal.aborted) setScopeError(error.message); });
+    return () => controller.abort();
+  }, [operator, user?.id, initialResourceId, revision]);
   useEffect(() => {
-    loadResources();
-  }, [loadResources]);
-
-  useEffect(()=>{if(initialResourceId)setSelectedResourceId(initialResourceId);},[initialResourceId]);
-  useEffect(()=>{const sync=()=>setSelectedResourceId(readRouteParams().get('resource') || resources[0]?.id || '');window.addEventListener('popstate',sync);return()=>window.removeEventListener('popstate',sync);},[resources]);
-
-  // Compute reference anchor dates
-  const getAnchorDate = useCallback(() => {
-    // A UTC-midnight date is used only as a calendar-date carrier. The date itself
-    // comes from Vietnam time, so browser timezone cannot change the selected day.
-    const d = new Date(`${getVietnamTodayDateString()}T00:00:00Z`);
-    if (viewMode === "week") {
-      d.setUTCDate(d.getUTCDate() + weekOffset * 7);
-    } else if (viewMode === "month") {
-      d.setUTCDate(1);
-      d.setUTCMonth(d.getUTCMonth() + monthOffset);
-    } else if (viewMode === "day") {
-      d.setUTCDate(d.getUTCDate() + dayOffset);
-    }
-    return d;
-  }, [viewMode, weekOffset, monthOffset, dayOffset]);
-
-  // 2. Fetch Calendar Data whenever dependencies change (guarded by selectedResourceId)
-  const loadCalendarData = useCallback(async () => {
-    const version = ++calendarRequest.current;
-    if (!selectedResourceId) {
-      setSlotsData(null);
-      setEventsData([]);
-      return;
-    }
-
-    setLoading(true);
-    setSlotsData(null);
-    setEventsData([]);
-    setError("");
-    try {
-      const anchor = getAnchorDate();
-      const dateStr = toVietnamDateString(anchor);
-
-      if (viewMode === "week") {
-        const queryParams = new URLSearchParams();
-        queryParams.set("resource_id", selectedResourceId);
-        queryParams.set("start_date", dateStr);
-
-        const data = await apiRequest(`/calendar/slots?${queryParams.toString()}`);
-        if (version === calendarRequest.current) setSlotsData(data);
-      } else if (viewMode === "month") {
-        const startDate = `${anchor.getUTCFullYear()}-${String(anchor.getUTCMonth() + 1).padStart(2, "0")}-01`;
-        const nextMonth = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1));
-        const endDate = toVietnamDateString(nextMonth);
-
-        const queryParams = new URLSearchParams();
-        queryParams.set("resource_id", selectedResourceId);
-        queryParams.set("start", vietnamTimeToIso(startDate, "00:00"));
-        queryParams.set("end", vietnamTimeToIso(endDate, "00:00"));
-
-        const data = await apiRequest(`/calendar/events?${queryParams.toString()}`);
-        if (version === calendarRequest.current) setEventsData(data.events || []);
-      } else if (viewMode === "day") {
-        const nextDay = new Date(anchor);
-        nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-
-        const queryParams = new URLSearchParams();
-        queryParams.set("resource_id", selectedResourceId);
-        queryParams.set("start", vietnamTimeToIso(dateStr, "00:00"));
-        queryParams.set("end", vietnamTimeToIso(toVietnamDateString(nextDay), "00:00"));
-
-        const data = await apiRequest(`/calendar/events?${queryParams.toString()}`);
-        if (version === calendarRequest.current) setEventsData(data.events || []);
-      }
-    } catch (err: any) {
-      console.error("Error loading calendar data", err);
-      if (version === calendarRequest.current) setError(err.message || "ui.could_not_load_the_calendar_63365d1d");
-    } finally {
-      if (version === calendarRequest.current) setLoading(false);
-    }
-  }, [viewMode, selectedResourceId, getAnchorDate]);
-
-  useEffect(() => {
-    loadCalendarData();
-    return () => { calendarRequest.current += 1; };
-  }, [loadCalendarData, refreshKey]);
-
-  // Handlers for Navigation
-  const handlePrev = () => {
-    if (viewMode === "week") setWeekOffset((prev) => prev - 1);
-    else if (viewMode === "month") setMonthOffset((prev) => prev - 1);
-    else if (viewMode === "day") setDayOffset((prev) => prev - 1);
-  };
-
-  const handleNext = () => {
-    if (viewMode === "week") setWeekOffset((prev) => prev + 1);
-    else if (viewMode === "month") setMonthOffset((prev) => prev + 1);
-    else if (viewMode === "day") setDayOffset((prev) => prev + 1);
-  };
-
-  const handleToday = () => {
-    setWeekOffset(0);
-    setMonthOffset(0);
-    setDayOffset(0);
-  };
-
-  // Open booking modal prefilled (strictly guarded by selectedResourceId)
-  const handleOpenSlotBooking = (dateStr: string, timeStr: string) => {
-    if (!selectedResourceId) return;
-
-    const [h, m] = timeStr.split(":").map(Number);
-    const endH = String((h || 9) + 1).padStart(2, "0");
-    const mStr = String(m || 0).padStart(2, "0");
-
-    const startAt = vietnamTimeToIso(dateStr, timeStr);
-    const endAt = vietnamTimeToIso(dateStr, `${endH}:${mStr}`);
-
-    const slot = {
-      resourceId: selectedResourceId,
-      startAt,
-      endAt
-    };
-
-    if (onOpenBooking) {
-      onOpenBooking(slot);
-    } else {
-      setSelectedSlot(slot);
-      setBookingModalOpen(true);
-    }
-  };
-
-  // Compute title string
-  const getHeaderTitle = () => {
-    const anchor = getAnchorDate();
-    const formattedMonth = anchor.toLocaleDateString(locale === "en" ? "en-GB" : "vi-VN", { month: "long", timeZone: "UTC" });
-    const year = anchor.getUTCFullYear();
-
-    if (viewMode === "day") {
-      return `${anchor.toLocaleDateString(locale === "en" ? "en-GB" : "vi-VN", { weekday: "long", timeZone: "UTC" })}, ${anchor.toLocaleDateString(locale === "en" ? "en-GB" : "vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" })}`;
-    }
-    if (viewMode === "month") {
-      return translate("ui._3c7e1612", { value0: formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1), value1: year });
-    }
-    if (slotsData?.daysHeader?.length) {
-      const first = slotsData.daysHeader[0]?.dateStr;
-      const last = slotsData.daysHeader[6]?.dateStr;
-      return translate("ui.week_from_to_48b85b54", { value0: first, value1: last, value2: year });
-    }
-    return translate("ui.month_125e246d", { value0: anchor.getUTCMonth() + 1, value1: year });
-  };
-
-  const anchor = getAnchorDate();
-  const currentDateStr = toVietnamDateString(anchor);
-  const selectedResource = resources.find((r) => r.id === selectedResourceId) || null;
-
-  const blocked = selectedResource && (!["AVAILABLE", "IN_USE"].includes(selectedResource.operationalStatus) || selectedResource.bookingState !== "bookable" || selectedResource.laboratory?.isActive === false || selectedResource.availability?.source === "maintenance_policy");
-  const blockedReason = selectedResource?.availability?.source === "maintenance_policy" ? "ui.rental.serviceRequired" : selectedResource?.laboratory?.isActive === false ? "ui.rental.labClosed" : selectedResource?.bookingState !== "bookable" ? "ui.rental.bookingClosed" : "ui.care." + selectedResource?.operationalStatus;
-
-  return (
-    <div className="calendar-page calendar-workspace flex flex-col gap-4 w-full">
-      <header className="calendar-page-heading"><div><h1>{tr('ui.room_and_equipment_calendar_cce9c071')}</h1><p>{tr('ui.final.calendarIntro')}</p></div><span className="calendar-timezone"><Clock size={14} aria-hidden="true" />{tr('ui.calendarWorkspace.timezone')}</span></header>
-      {/* Calendar Toolbar */}
-      <CalendarToolbar
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        headerTitle={getHeaderTitle()}
-        loading={loading}
-        onPrev={handlePrev}
-        onToday={handleToday}
-        onNext={handleNext}
-        onRefresh={() => {
-          loadResources();
-          loadCalendarData();
-        }}
-        onNewBooking={() => {
-          if (!selectedResourceId) return;
-          const slot = { resourceId: selectedResourceId };
-          if (onOpenBooking) {
-            onOpenBooking(slot);
-          } else {
-            setSelectedSlot(slot);
-            setBookingModalOpen(true);
-          }
-        }}
-        resources={resources}
-        selectedResourceId={selectedResourceId}
-        bookingBlocked={Boolean(blocked)}
-        onResourceChange={id=>{setSelectedResourceId(id);const params=readRouteParams();params.set('resource',id);navigateApp(workspacePathForTab('smart_calendar',params),{notify:false});}}
-      />
-
-      {selectedResource && !resourcesLoading && <section className="calendar-resource-context" aria-label={tr('ui.resource_9a35ef53')}><div><strong>{selectedResource.name}</strong><span>{selectedResource.code}{selectedResource.laboratory?.name ? ` · ${selectedResource.laboratory.name}` : ''}</span></div><p>{tr(blocked ? blockedReason : 'ui.rental.selectSlot')}</p></section>}
-
-      {/* Resource Load Error Notice with Retry */}
-      {resourcesError && (
-        <div className="alert danger text-xs flex items-center justify-between" role="alert">
-          <div className="flex items-center gap-2">
-            <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
-            <span>{translate(resourcesError)}</span>
-          </div>
-          <button
-            type="button"
-            onClick={loadResources}
-            className="btn btn-secondary text-xs px-2.5 py-1"
-          >
-            {tr("ui.retry_c58d068c")}</button>
-        </div>
-      )}
-
-      {/* Calendar Data Error Notice */}
-      {error && !resourcesError && (
-        <div className="alert danger text-xs flex items-center justify-between" role="alert">
-          <span>{translate(error)}</span>
-          <button
-            type="button"
-            onClick={loadCalendarData}
-            className="underline ml-2"
-          >
-            {tr("ui.retry_c58d068c")}</button>
-        </div>
-      )}
-
-      {/* Resource Loading State */}
-      {resourcesLoading && (
-        <div aria-live="polite" className="calendar-week-loading">
-          {tr("ui.loading_laboratory_resources_e55dcf2e")}</div>
-      )}
-
-      {/* Honest Empty State when zero resources exist */}
-      {!resourcesLoading && !resourcesError && resources.length === 0 && (
-        <div className="calendar-empty-resources-card card p-8 sm:p-12 text-center flex flex-col items-center justify-center my-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-          <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
-            <Calendar size={28} aria-hidden="true" />
-          </div>
-          <h3 className="text-base font-semibold text-slate-900 mb-1">
-            {tr("ui.no_resources_available_43e76083")}</h3>
-          <p className="text-sm text-slate-600 max-w-md mb-3">
-            {tr("ui.no_rooms_or_equipment_are_0855c760")}</p>
-          <div className="text-xs text-slate-500 max-w-md bg-slate-50 border border-slate-200 rounded-lg p-3">
-            {user?.role === "ADMIN" || user?.role === "LAB_STAFF" ? (
-              <span>
-                {tr("ui.configure_and_activate_resources_in_c3e79799")}<strong>{tr("ui.resource_management_44713fdd")}</strong> {tr("ui.before_using_the_calendar_039200c8")}</span>
-            ) : (
-              <span>
-                {tr("ui.contact_an_administrator_or_lab_b0a5be4d")}</span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* View Content (only rendered when a valid resource exists) */}
-      {loading && <p className="empty-state" role="status">{tr("ui.loading_resource_calendar_08975674")}</p>}
-      {!loading && !error && !resourcesLoading && !resourcesError && resources.length > 0 && selectedResourceId && (
-        <>
-          {viewMode === "week" && (
-            <WeekSchedule
-              blocked={Boolean(blocked)}
-              slotsData={slotsData}
-              selectedResourceName={selectedResource?.name}
-              onSelectSlot={handleOpenSlotBooking}
-              onSelectBooking={(b) => setSelectedBooking(b)}
-            />
-          )}
-
-          {viewMode === "month" && (
-            <MonthSchedule
-              blocked={Boolean(blocked)}
-              anchorDate={anchor}
-              events={eventsData}
-              selectedResourceName={selectedResource?.name}
-              onSelectSlot={handleOpenSlotBooking}
-              onSelectBooking={(b) => setSelectedBooking(b)}
-            />
-          )}
-
-          {viewMode === "day" && (
-            <DaySchedule
-              blocked={Boolean(blocked)}
-              currentDateStr={currentDateStr}
-              events={eventsData}
-              selectedResourceName={selectedResource?.name}
-              onSelectSlot={handleOpenSlotBooking}
-              onSelectBooking={(b) => setSelectedBooking(b)}
-            />
-          )}
-        </>
-      )}
-
-      {/* Quick Booking Modal */}
-      <QuickBookingModal
-        isOpen={bookingModalOpen}
-        onClose={() => setBookingModalOpen(false)}
-        initialSlot={selectedSlot}
-        resources={resources}
-        onConfirmBooking={() => {
-          loadCalendarData();
-        }}
-      />
-
-      {/* Booking Detail Modal (when user clicks an existing event) */}
-      <BaseModal2026
-        isOpen={Boolean(selectedBooking)}
-        onClose={() => setSelectedBooking(null)}
-        title={selectedBooking?.titleKey ? tr(selectedBooking.titleKey, selectedBooking.titleParams) : selectedBooking?.title || tr("ui.booking_details_89353735")}
-        subtitle={
-          selectedBooking
-            ? `${selectedBooking.resourceName || ""}`
-            : ""
+    if (!ready) return;
+    if (operator && !lab) { setResources([]); setResourceBusy(false); return; }
+    const controller = new AbortController(); setResourceBusy(true); setResourceError(''); setResources([]);
+    const params = new URLSearchParams(); if (lab) params.set('laboratoryId',lab); if (group) params.set('category',group); if (query) params.set('search',query);
+    if (view === 'plan' && timeFilter) { params.set('availableFrom',timeFilter.startAt); params.set('availableTo',timeFilter.endAt); params.set('availability','AVAILABLE'); }
+    (async () => {
+      try {
+        const response = await apiRequest(`/resources?${params}`, { signal: controller.signal });
+        const rows: PlannerResource[] = Array.isArray(response) ? response : response.items || [];
+        if (initialResourceId && !group && !query && !timeFilter && !rows.some(resource => resource.id === initialResourceId)) {
+          const target=await apiRequest(`/resources/${encodeURIComponent(initialResourceId)}`, { signal: controller.signal });
+          if (!lab || (target.laboratoryId || target.laboratory?.id) === lab) {if(rows.length>=250)rows.pop();rows.unshift(target);}
         }
-        icon={Calendar}
-        iconColor="text-blue-600"
-        maxWidth="max-w-md"
-        footer={
-          <button
-            type="button"
-            onClick={() => setSelectedBooking(null)}
-            className="btn btn-secondary text-xs"
-          >
-            {tr("ui.close_5d54c2a1")}</button>
-        }
-      >
-        {selectedBooking && (
-          <div className="flex flex-col gap-3">
-            <div className="mt-1">
-              <BookingStatusBadge
-                status={selectedBooking.status}
-                occupancy={selectedBooking.occupancy}
-              />
-            </div>
-
-            <div className="calendar-detail-card flex flex-col gap-2.5 text-xs">
-              {(selectedBooking.start || selectedBooking.startAt) && (
-                <div className="flex items-center gap-2">
-                  <Clock size={13} className="text-muted shrink-0" aria-hidden="true" />
-                  <span className="text-muted">{tr("ui.time_fbe0ffb4")}</span>
-                  <span className="font-medium font-mono">
-                    {formatVietnamDateTime(selectedBooking.start || selectedBooking.startAt)} –{" "}
-                    {formatVietnamDateTime(selectedBooking.end || selectedBooking.endAt)}
-                  </span>
-                </div>
-              )}
-
-              {selectedBooking.purpose && (
-                <div className="calendar-detail-subfield pt-2">
-                  <span className="text-muted block mb-0.5 font-medium">{tr("ui.purpose_a4ade8de")}</span>
-                  <span>{selectedBooking.purpose}</span>
-                </div>
-              )}
-
-              {selectedBooking.requestedBy && (
-                <div className="calendar-detail-subfield pt-2 flex items-center gap-2">
-                  <User size={13} className="text-muted shrink-0" aria-hidden="true" />
-                  <span className="text-muted">{tr("ui.booked_by_5023f9f8")}</span>
-                  <span className="font-medium">
-                    {selectedBooking.requestedBy.fullName || selectedBooking.requestedBy.email}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </BaseModal2026>
+        if (controller.signal.aborted) return;
+        setResources(rows); setPage(0); setResourceId(current => rows.some(resource => resource.id === current) ? current : rows[0]?.id || '');
+      } catch (error: any) { if (!controller.signal.aborted) setResourceError(error.message); }
+      finally { if (!controller.signal.aborted) setResourceBusy(false); }
+    })();
+    return () => controller.abort();
+  }, [ready, lab, group, query, view, timeFilter, initialResourceId, revision, operator]);
+  const resource = resources.find(row => row.id === resourceId);
+  const calendarFrom=view==='plan'?planAnchor:view==='month'?`${date.slice(0,7)}-01`:view==='week'?shiftDate(date,-((new Date(`${date}T00:00:00Z`).getUTCDay()+6)%7)):date;
+  const nextMonth=new Date(`${calendarFrom}T00:00:00Z`);nextMonth.setUTCMonth(nextMonth.getUTCMonth()+1);
+  const calendarTo=view==='month'?nextMonth.toISOString().slice(0,10):shiftDate(calendarFrom,['plan','week'].includes(view)?7:1);
+  const calendarKey=`${view}|${lab}|${resourceId}|${calendarFrom}|${calendarTo}|${revision}|${refreshKey}|${scheduleRevision}`;
+  useEffect(() => {
+    if (!ready || resourceBusy || (view !== 'day' && !resourceId) || (operator && !lab)) { setEvents([]);setLoadedCalendarKey('');setScheduleBusy(false);setScheduleError('');return; }
+    const controller = new AbortController(); setScheduleBusy(true); setScheduleError(''); setEvents([]);
+    const params = new URLSearchParams();
+    {
+      params.set('start',vietnamTimeToIso(calendarFrom,'00:00')); params.set('end',vietnamTimeToIso(calendarTo,'00:00'));
+      if (view === 'day') params.set('laboratory_id',lab); else params.set('resource_id',resourceId);
+    }
+    apiRequest(`/calendar/events?${params}`, { signal: controller.signal }).then(data => {
+      if (controller.signal.aborted) return;
+      setEvents(data.events || []);
+      setLoadedCalendarKey(calendarKey);
+    }).catch(error => { if (!controller.signal.aborted) setScheduleError(error.message); }).finally(() => { if (!controller.signal.aborted) setScheduleBusy(false); });
+    return () => controller.abort();
+  }, [ready, resourceBusy, resourceId, operator, lab, view, calendarFrom, calendarTo, calendarKey]);
+  useEffect(() => {
+    const visible = events;
+    const deadlines = visible.map((event: PlannerEvent) => Date.parse(event.paymentDueAt || '')).filter((time: number) => time > Date.now());
+    if (!deadlines.length) return;
+    const timer = setTimeout(() => setRevision(value => value+1),Math.min(...deadlines)-Date.now()+300);
+    return () => clearTimeout(timer);
+  }, [events]);
+  function openBooking(slot: any) {
+    const exact=resources.find(row=>row.id===slot.resourceId);
+    if (!exact) return;
+    // Carry the exact loaded resource into the shared form, including deep links beyond the list cap.
+    const context={...slot,resources:[exact]};
+    if (onOpenBooking) onOpenBooking(context); else setModalSlot(context);
+  }
+  const dateTitle = new Date(`${date}T00:00:00Z`).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+  const changeDate = (value: string) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return; setDate(value); if(value<planAnchor||value>=shiftDate(planAnchor,7))setPlanAnchor(value);setTimeFilter(null); };
+  function moveDate(direction: number) {
+    if (view !== 'month') changeDate(shiftDate(date,direction*(view === 'week' ? 7 : 1)));
+    else { const carrier = new Date(`${date.slice(0,7)}-01T00:00:00Z`); carrier.setUTCMonth(carrier.getUTCMonth()+direction); changeDate(carrier.toISOString().slice(0,10)); }
+  }
+  const busy = resourceBusy || scheduleBusy || (ready&&resources.length>0&&loadedCalendarKey!==calendarKey&&!scheduleError);
+  const visibleEvents=loadedCalendarKey===calendarKey?events:[];
+  return <div className="calendar-workspace calendar-planner">
+    <header className="planner-heading"><div><h1>{tr(operator ? 'ui.planner.operationsTitle' : 'ui.planner.customerTitle')}</h1><p>{tr(operator ? 'ui.planner.operationsIntro' : 'ui.planner.customerIntro')}</p></div><span className="planner-timezone"><Clock size={15} />{tr('ui.calendarWorkspace.timezone')}</span></header>
+    <div className="planner-topline"><div className="planner-views" role="group" aria-label={tr('ui.calendar_view_6ff1148e')}>
+      <button type="button" aria-pressed={view === (operator ? 'day' : 'plan')} onClick={() => {setView(operator ? 'day' : 'plan');setPage(0);}}><CalendarDays size={17} />{tr(operator ? 'ui.planner.dayView' : 'ui.planner.chooseSlot')}</button>
+      {operator && <button type="button" aria-pressed={view === 'plan'} onClick={() => setView('plan')}>{tr('ui.planner.chooseSlot')}</button>}
+      <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>{tr('ui.planner.weekView')}</button>
+      <button type="button" aria-pressed={view === 'month'} onClick={() => setView('month')}>{tr('ui.month_10276db1')}</button>
+    </div><button type="button" className="btn btn-secondary" disabled={busy && !scopeError} onClick={() => setRevision(value=>value+1)}><RefreshCw size={16} />{tr('ui.refresh_calendar_5cd617b0')}</button></div>
+    {(scopeError || resourceError) && <div className="alert danger" role="alert">{tr(scopeError || resourceError)} <button type="button" className="btn btn-secondary" onClick={() => setRevision(value=>value+1)}>{tr('ui.retry_c58d068c')}</button></div>}
+    <div className="planner-filters">
+      <label>{tr('ui.planner.laboratory')}<select value={lab} onChange={event=>{setLab(event.target.value);setPage(0);}}>{!operator && <option value="">{tr('ui.planner.allLabs')}</option>}{labs.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+      <label>{tr('ui.resource_category_5fc170bb')}<select value={group} onChange={event=>{setGroup(event.target.value);setPage(0);}}><option value="">{tr('ui.planner.allGroups')}</option>{RESOURCE_GROUPS.map(category=><option key={category} value={category}>{tr(`enum.category.${category}`)}</option>)}</select></label>
+      <ResourceSearchField className="planner-resource-search" value={search} onChange={setSearch} onSearch={value=>{setQuery(value);setPage(0);}} label={tr('ui.planner.findResource')} placeholder={tr('ui.planner.searchPlaceholder')} allowEmpty/>
     </div>
-  );
-};
+    {ready && operator && !labs.length && <p className="empty-state">{tr('ui.planner.noAssignedLabs')}</p>}
+    <div className="planner-datebar"><div className="planner-date-controls"><button type="button" aria-label={tr('ui.previous_period_b5ef94e1')} onClick={()=>moveDate(-1)}><ChevronLeft size={19}/></button><button type="button" className="planner-today" onClick={()=>changeDate(getVietnamTodayDateString())}>{tr('ui.today_e6747a82')}</button><button type="button" aria-label={tr('ui.next_period_117cfb3c')} onClick={()=>moveDate(1)}><ChevronRight size={19}/></button></div><h2>{dateTitle}</h2><label className="planner-date-input"><CalendarDays size={17}/><span className="sr-only">{tr('ui.planner.chooseDate')}</span><input type="date" value={date} onChange={event=>changeDate(event.target.value)}/></label></div>
+    {view==='plan'&&entry==='resource'&&<div className="planner-date-strip" role="group" aria-label={tr('ui.planner.chooseDate')}>{Array.from({length:7},(_,index)=>{
+      const day=shiftDate(planAnchor,index), carrier=new Date(`${day}T00:00:00Z`);
+      const hasTime=resource&&freeWindows(resource,day,duration,visibleEvents).length>0;
+      return <button type="button" key={day} aria-pressed={date===day} aria-label={carrier.toLocaleDateString(locale==='vi'?'vi-VN':'en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'})} onClick={()=>changeDate(day)}><span>{carrier.toLocaleDateString(locale==='vi'?'vi-VN':'en-GB',{weekday:'short',timeZone:'UTC'})}</span><strong>{carrier.getUTCDate()}</strong><small>{busy?'…':scheduleError?'—':tr(hasTime?'ui.planner.hasTime':'ui.planner.noTime')}</small></button>;
+    })}</div>}
+    {view === 'plan' ? <BookingSlotPicker resources={resources} resourceId={resourceId} onResource={setResourceId} date={date} dateTitle={dateTitle} events={visibleEvents} busy={busy} scheduleError={scheduleError} onFilterTime={setTimeFilter} timeFilter={timeFilter} onBook={openBooking} entry={entry} onEntry={setEntry} duration={duration} onDuration={setDuration} rangeEnd={calendarTo} onChooseDate={changeDate} onRefresh={()=>setScheduleRevision(value=>value+1)} selectedResourceIds={selectedResourceIds} onAddToSelection={onAddToSelection} onViewSelection={onViewSelection}/> : <>
+      {view !== 'day' && <label className="planner-week-resource">{tr('ui.planner.singleResource')}<select value={resourceId} onChange={event=>setResourceId(event.target.value)}>{resources.map(row=><option key={row.id} value={row.id}>{row.name} ({row.code})</option>)}</select></label>}
+      <div className="planner-legend"><span><i className="is-booked"/>{tr('ui.reserved_f20b6ee2')}</span><span><i className="is-mine"/>{tr('ui.your_booking_72ef015d')}</span><span><i className="is-maintenance"/>{tr('ui.maintenance_calibration_79fdebcb')}</span><span><i/>{tr('ui.planner.neutralLegend')}</span></div>
+      {busy ? <p role="status" className="planner-empty">{tr('ui.loading_resource_calendar_08975674')}</p> : scheduleError ? <div className="alert danger" role="alert">{tr(scheduleError)}<button className="btn btn-secondary" type="button" onClick={()=>setRevision(value=>value+1)}>{tr('ui.retry_c58d068c')}</button></div> : view === 'day' ? <ResourceDayBoard resources={resources} events={events} date={date} page={Math.min(page,Math.max(0,Math.ceil(resources.length/12)-1))} onPage={setPage} onBook={row=>openBooking({resourceId:row.id,date})} onEvent={setSelectedEvent}/> : resource && <>
+        <div className="planner-week-context"><strong>{resource.name}</strong><button className="btn btn-primary" type="button" disabled={resourceBlocked(resource)} onClick={()=>openBooking({resourceId:resource.id,date})}>{tr('ui.book_a_time_slot_0003e14b')}</button></div>
+        {view==='week' ? <ResourceWeekOverview resource={resource} date={date} events={events} onDay={day=>{changeDate(day);setView('plan');}} onEvent={setSelectedEvent}/> : <MonthSchedule blocked={resourceBlocked(resource)} anchorDate={new Date(`${date}T00:00:00Z`)} events={events} selectedResourceName={resource.name} onSelectSlot={day=>{changeDate(day);setView('plan');}} onSelectBooking={setSelectedEvent}/>}
+      </>}
+    </>}
+    {resources.length>=250 && <p className="planner-limit">{tr('ui.planner.limit')}</p>}
+    {modalSlot && <QuickBookingModal isOpen initialSlot={modalSlot} resources={resources} onClose={()=>setModalSlot(null)} onProceedPayment={onPayment} onConfirmBooking={()=>setRevision(value=>value+1)}/>}
+    <BaseModal2026 isOpen={!!selectedEvent} onClose={()=>setSelectedEvent(null)} title={selectedEvent?.titleKey ? tr(selectedEvent.titleKey,selectedEvent.titleParams) : selectedEvent?.title || tr('ui.booking_details_89353735')} subtitle={selectedEvent?.resourceName || ''} icon={CalendarDays} footer={<button className="btn btn-secondary" type="button" onClick={()=>setSelectedEvent(null)}>{tr('ui.close_5d54c2a1')}</button>}>
+      {selectedEvent && <div className="planner-event-detail"><BookingStatusBadge status={selectedEvent.status} occupancy={selectedEvent.occupancy} paymentDueAt={selectedEvent.paymentDueAt}/><p>{formatVietnamDateTime(selectedEvent.start)} – {formatVietnamDateTime(selectedEvent.end)}</p>{selectedEvent.paymentDueAt && <p>{tr('ui.planner.paymentDeadline',{time:formatVietnamDateTime(selectedEvent.paymentDueAt)})}</p>}{selectedEvent.requestedBy && <p>{selectedEvent.requestedBy.fullName || selectedEvent.requestedBy.email}</p>}</div>}
+    </BaseModal2026>
+  </div>;
+}

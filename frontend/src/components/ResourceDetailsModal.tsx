@@ -18,6 +18,9 @@ export interface ResourceDetailsModalProps {
   onClose: () => void;
   resource?: any;
   onViewCalendar?: (resourceId: string) => void;
+  actorRole?: string;
+  onEdit?: () => void;
+  onChangeStatus?: () => void;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -42,9 +45,9 @@ const maintenanceLabels: Record<string, string> = {
   scheduled: "ui.scheduled_2cf00513", in_progress: "ui.in_progress_50e04c04", completed: "ui.completed_5eb36f8c", cancelled: "ui.cancelled_2f777a90"
 };
 
-export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOpen, onClose, resource, onViewCalendar }) => {
+export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOpen, onClose, resource, onViewCalendar, actorRole, onEdit, onChangeStatus }) => {
   const { tr } = useLocale();
-  const [section, setSection] = useState("overview");
+  const [section, setSection] = useState(actorRole === "ADMIN" ? "specifications" : actorRole === "LAB_STAFF" ? "schedule" : "overview");
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
@@ -73,11 +76,11 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
       subtitle={resource.location ? `${resource.code} · ${resource.location}` : resource.code}
       icon={Server}
       maxWidth="max-w-4xl"
-      footer={<><button type="button" className="secondary-button" onClick={onClose}>{tr("ui.close_5d54c2a1")}</button>{onViewCalendar && <button className="primary-button" onClick={() => { onClose(); onViewCalendar(resource.id); }}>{tr("ui.view_resource_calendar_a11d4b1d")}</button>}</>}
+      footer={<><button type="button" className="secondary-button" onClick={onClose}>{tr("ui.close_5d54c2a1")}</button>{onViewCalendar && <button className="secondary-button" onClick={() => { onClose(); onViewCalendar(resource.id); }}>{tr("ui.view_resource_calendar_a11d4b1d")}</button>}{onChangeStatus && <button type="button" className={actorRole === "LAB_STAFF" ? "primary-button" : "secondary-button"} onClick={onChangeStatus}>{tr("ui.change_status_e85b5764")}</button>}{onEdit && <button type="button" className={actorRole === "ADMIN" ? "primary-button" : "secondary-button"} onClick={onEdit}>{tr("ui.resourceAdmin.configure")}</button>}</>}
     >
       <div className="resource-dossier">
       <nav className="refine-section-nav" aria-label={tr("refine.detailSections")}>
-        {["overview", "specifications", "schedule", "history"].map(value => <button key={value} type="button" aria-pressed={section === value} aria-controls={`dossier-${value}`} onPointerEnter={() => setSection(value)} onFocus={() => setSection(value)} onClick={() => setSection(value)}>{tr(`refine.${value}`)}</button>)}
+        {(actorRole === "ADMIN" ? ["specifications", "history", "schedule", "overview"] : actorRole === "LAB_STAFF" ? ["schedule", "overview", "history", "specifications"] : ["overview", "specifications", "schedule", "history"]).map(value => <button key={value} type="button" aria-pressed={section === value} aria-controls={`dossier-${value}`} onClick={() => setSection(value)}>{tr(`refine.${value}`)}</button>)}
       </nav>
       <section id="dossier-overview" hidden={section !== "overview"}>
       <ResourceGallery key={resource.id} resourceId={resource.id} initialItems={resource.media} />

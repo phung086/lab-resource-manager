@@ -4,6 +4,7 @@ import { CANONICAL_BOOKING_STATUS_LABELS } from "../constants.js";
 
 export interface BookingStatusBadgeProps {
   status?: string;
+  paymentDueAt?: string | null;
   occupancy?: string;
   className?: string;
 }
@@ -119,13 +120,14 @@ const OCCUPANCY_CONFIG: Record<
 
 export const BookingStatusBadge: React.FC<BookingStatusBadgeProps> = ({
   status,
+  paymentDueAt,
   occupancy,
   className = ""
 }) => {
   const { tr } = useLocale();
   // If canonical status is provided, use it
   if (status && STATUS_CONFIG[status]) {
-    const config = STATUS_CONFIG[status];
+    const config = status === 'PENDING_APPROVAL' && paymentDueAt ? { ...STATUS_CONFIG.PENDING_APPROVAL, label: 'ui.paymentHold.pending' } : STATUS_CONFIG[status];
     return (
       <span
         className={`status-badge-inline ${className}`}

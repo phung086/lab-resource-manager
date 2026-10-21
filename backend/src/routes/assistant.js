@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errors.js';
-import { answerAssistantQuestion, getAssistantSuggestions, listAssistantTools, suggestionKeys, removeAssistantConversation, assistantConversationLimits } from '../assistant/assistantService.js';
+import { answerAssistantQuestion, getAssistantSuggestions, getAssistantSuggestionKeys, listAssistantTools, removeAssistantConversation, assistantConversationLimits } from '../assistant/assistantService.js';
 import { config } from '../config.js';
 const router = express.Router(), timestamp = z.string().datetime({ offset: true });
 const chat = z.object({ message: z.string().trim().min(2).max(2000), locale: z.enum(['vi', 'en']).optional(), conversationId: z.string().uuid().optional(), workspace: z.string().max(50).regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/).optional(), resourceId: z.string().min(1).max(100).optional(), startAt: timestamp.optional(), endAt: timestamp.optional(), durationMinutes: z.number().int().min(15).max(480).optional() }).strict().refine(data => Boolean(data.startAt) === Boolean(data.endAt) && (!data.startAt || Date.parse(data.startAt) < Date.parse(data.endAt)), { path: ['endAt'], message: 'INVALID_BOOKING_TIME' });
@@ -13,7 +13,7 @@ const limiter = rateLimit({ windowMs: 60000, limit: config.assistantRateLimit, k
 router.get('/suggestions', async (req, res, next) => {
   try {
     const bridge = await bridgeConnectionStatus();
-    res.json({ suggestionKeys, suggestions: getAssistantSuggestions(req.locale), locale: req.locale, bridge,
+    res.json({ suggestionKeys: getAssistantSuggestionKeys(req.user.role), suggestions: getAssistantSuggestions(req.locale, req.user.role), locale: req.locale, bridge,
       mode: config.openaiApiKey && config.openaiModel ? 'OPENAI_WITH_LOCAL_FALLBACK' : 'LOCAL_GROUNDED', persistence: 'EPHEMERAL',
       conversation: { enabled: true, modelRoutingEnabled: config.assistantConversationEnabled, maxTurns: assistantConversationLimits.maxTurns, idleMinutes: assistantConversationLimits.ttlMs / 60000 },
       configuration: { hasApiKey: Boolean(config.openaiApiKey), hasModel: Boolean(config.openaiModel),

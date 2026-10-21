@@ -30,3 +30,9 @@ frontend/baseline_results.json
 /.cleanup-plan.local.json
 /docs/screenshots/
 /tmp/
+
+# Root browser captures belong in disposable output, never agent context
+/.playwright-mcp/
+/*.png
+/*.jpg
+/*.jpeg

@@ -48,7 +48,11 @@ export default function ChatgptBridgePage({ actorRole }: { actorRole: string }) 
       <div className="chatgpt-connection-status" role="status">{state.connected ? <CheckCircle2 aria-hidden="true" /> : state.authorized ? <Clock3 aria-hidden="true" /> : <Unplug aria-hidden="true" />}<strong>{tr(state.connected ? 'bridge.connected' : state.authorized ? 'bridge.authorized' : 'bridge.disconnected')}</strong></div>
       {!state.enabled && <p>{tr('bridge.notConfigured')}</p>}
       {state.enabled && <><label>{tr('bridge.serverUrl')}<input readOnly value={state.publicUrl || ''} onFocus={event => event.target.select()} /></label>
-        {!state.connected && <p>{tr(state.authorized ? 'bridge.startListening' : 'bridge.connectHelp')}</p>}</>}
+        {!state.connected && <p>{tr(state.authorized ? 'bridge.startListening' : 'bridge.connectHelp')}</p>}
+        {state.authorized && !state.connected && <ol className="chatgpt-recovery">
+          <li>{tr('bridge.recovery.resume')}</li>
+          <li>{tr('bridge.recovery.refresh')}</li>
+        </ol>}</>}
       {state.connections.map(connection => <section className="chatgpt-connection-row" key={connection.id}><div><strong>{connection.clientName}</strong>
         <p>{tr('bridge.expiresOn', { date: date(connection.expiresAt) })}</p><span>{tr(connection.subscriptionCount ? 'bridge.listening' : 'bridge.awaitingSubscription')}</span></div>
         <button className="btn btn-secondary" type="button" disabled={busy} onClick={() => setDisconnecting(connection.id)}><Unplug size={16} />{tr('bridge.disconnect')}</button></section>)}

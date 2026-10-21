@@ -53,9 +53,20 @@ to manage all CUSTOMER accounts through account APIs only.
 
 Canonical lifecycle:
 
-New valid bookings: `CONFIRMED` -> `CHECKED_OUT` -> `RETURNED` -> `COMPLETED`.
+Free valid bookings: `CONFIRMED` -> `CHECKED_OUT` -> `RETURNED` -> `COMPLETED`.
 
-Legacy `PENDING_APPROVAL` records retain approval/rejection handling. Per the
+User clarification 2026-10-15: positive-fee bookings reserve the slot in
+`PENDING_APPROVAL` with `paymentDueAt`, displayed as awaiting payment. This is
+automatic payment verification, not staff approval. Only verified payment before
+the fixed min(creation+15 minutes,startAt) deadline confirms them. Expired unpaid holds become
+`CANCELLED`, freeing the interval. Late settlement requires reconciliation and
+never restores the reservation. The seven canonical statuses are unchanged.
+
+ADR-044 adds an application minimum booking notice of30 minutes, configurable
+upward per LAB. This applies to new bookings/reschedules, including guests and
+direct API calls; it does not retroactively cancel confirmed/paid reservations.
+
+Legacy `PENDING_APPROVAL` records without paymentDueAt retain approval/rejection handling. Per the
 user-approved ADR-032, resource/LAB approval flags never delay new bookings;
 conflict, maintenance, policy, eligibility and pricing checks remain mandatory.
 

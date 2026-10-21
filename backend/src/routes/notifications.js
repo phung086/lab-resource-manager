@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
-import { getUserNotifications } from "../services/notificationService.js";
+import { getUserNotifications, countUnreadUserNotifications } from "../services/notificationService.js";
 
 const router = express.Router();
 
@@ -42,8 +42,7 @@ router.get("/", async (req, res, next) => {
 
 router.get("/unread-count", async (req, res, next) => {
   try {
-    const notifications = await getUserNotifications(req.user.id, { unreadOnly: true, take: 100 });
-    res.json({ unread: notifications.length });
+    res.json({ unread: await countUnreadUserNotifications(req.user.id) });
   } catch (error) {
     next(error);
   }

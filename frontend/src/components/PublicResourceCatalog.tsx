@@ -67,6 +67,7 @@ type Resource = {
       maxBookingMinutes?: number;
       minBookingMinutes?: number;
       maxAdvanceBookingDays?: number;
+      minAdvanceBookingMinutes?: number;
       allowWeekend?: boolean;
       workDayStartHour?: number;
       workDayEndHour?: number;
@@ -146,7 +147,7 @@ export function PublicResourceCatalog({
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("lrm_user");
+      const raw = sessionStorage.getItem("lrm_user");
       if (raw) setCurrentUser(JSON.parse(raw));
     } catch {
       setCurrentUser(null);
@@ -346,7 +347,7 @@ export function PublicResourceCatalog({
                 aria-label={`${t("ui.view_details_f6f88b0f")}: ${row.name}`}
               >
                 {image ? (
-                  <ResourceMediaPreview key={image.url} kind="IMAGE" url={image.url} alt={image.altText || row.name} />
+                  <ResourceMediaPreview key={image.url} kind="IMAGE" size="card" url={image.url} alt={image.altText || row.name} />
                 ) : (
                   <span className="catalog-placeholder">
                     {row.category === "ROOM" ? <DoorOpen size={48} /> : <Microscope size={48} />}

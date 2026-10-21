@@ -3,14 +3,22 @@ import rateLimit from 'express-rate-limit';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errors.js';
 import { bridgeRequests } from '../chatgptBridge/runtime.js';
+import { fastQueryPlan } from '../assistant/fastQueries.js';
+import { quickReplyKey } from '../assistant/quickReplies.js';
 
 const router = express.Router();
 const limited = limit => rateLimit({ windowMs: 60000, limit, keyGenerator: req => req.user.id,
   standardHeaders: 'draft-7', legacyHeaders: false,
   handler: (_req, _res, next) => next(new HttpError(429, 'ASSISTANT_RATE_LIMITED', { retryAfterSeconds: 60 }, 'ASSISTANT_RATE_LIMITED')) });
-router.use(requireAuth, requireRole('CUSTOMER'), limited(180));
+router.use(requireAuth, requireRole('CUSTOMER', 'LAB_STAFF', 'ADMIN'), limited(180));
 const mutations = limited(6);
-router.post('/requests', mutations, async (req, res, next) => {
+const fastReads = limited(30);
+const questionLimit = (req, res, next) => {
+  const message = req.body?.message;
+  const fast = typeof message === 'string' && message.length <= 2000 && (quickReplyKey(message) || fastQueryPlan({ message, resourceId: req.body?.resourceId }));
+  return (fast ? fastReads : mutations)(req, res, next);
+};
+router.post('/requests', questionLimit, async (req, res, next) => {
   try { res.status(202).json(await bridgeRequests.create(req.user, req.body)); }
   catch (error) { next(error); }
 });

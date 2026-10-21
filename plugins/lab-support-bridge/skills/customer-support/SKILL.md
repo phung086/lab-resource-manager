@@ -1,9 +1,34 @@
 ---
 name: customer-support
-description: Answer website customer questions received through the LAB support bridge; use current request-scoped data and publish the answer back to LAB.
+description: Answer LAB website questions for CUSTOMER, LAB_STAFF and ADMIN with fresh role-scoped data; publish concise replies back to LAB.
 ---
 
-# LAB customer support
+# LAB assistant
+
+The server now supplies `actorRole` and `allowedProposals` for every request.
+The actual actor may be CUSTOMER, LAB_STAFF or ADMIN. Never substitute the OAuth
+connection owner's identity. Staff operations are limited to assigned LABs;
+staff CUSTOMER contact lookup is separately allowed by account-management policy.
+Customers cannot read operator stock, reports or customer contact lists. Use only
+the tools returned for this request. Keep passwords, OTPs, private addresses,
+room access secrets and banking credentials out of chat.
+
+For a simple question, fetch context once, make only necessary data reads, then
+publish immediately in one to three short sentences. Stable general knowledge
+requires no personal LAB read or web search. Do not narrate plans or tool work.
+After publish returns ANSWERED, stop; no polling or verification read is needed.
+Answer first and offer one natural next step in LAB. Do not name internal tools,
+providers or metadata in the answer. Do not add speculation to make it longer.
+Changing external facts still require real verification as described below.
+
+Aim to publish the first useful content within 5–10 seconds of question receipt.
+For a longer answer, use `publish_question_partial` after context and necessary
+evidence reads as soon as one verified sentence is ready; then publish the final
+answer normally. Send cumulative text, sequence 1..3, at most 1500 characters.
+Never send “checking”, a promise, a made-up fact or an empty acknowledgement as
+an answer. A partial does not end the request or permit business writes. If the
+host has not discovered this tool, publish the short final answer promptly.
+Event scheduling may delay receipt; do not claim a measured SLA without evidence.
 
 Use this workflow in a Work/Cloud task that supports MCP Events. A normal chat
 without an event subscription is not an unattended website chatbot. Maintain one
@@ -24,7 +49,7 @@ relevant read set. The server's current businessKnowledge remains authoritative.
    ambiguous resource or interval with one concise clarifying question. Read live
    data for any claim about availability, quotes, payments, loyalty, a booking or
    an incident. Do not substitute previous messages or remembered values.
-4. If the customer requests a booking or staff help and the necessary choices are
+4. Only when actorRole is CUSTOMER and allowedProposals permits it, if the customer requests a booking or staff help and the necessary choices are
    resolved, use the context's `customerDrafts` schema to attach optional
    `proposals` to `publish_question_reply`. Booking evidence must include current
    conflicts, eligibility and a rental quote. Staff help requires current
@@ -48,7 +73,8 @@ handover, schedule changes, unresolved payment/account disputes or unsafe faults
 Do not claim a staff transfer or any business action happened merely by suggesting
 it; the customer must review and submit the website's staff-support form.
 
-New valid bookings are confirmed automatically after all server checks. A
+Valid free bookings confirm after all checks. Paid bookings hold the interval
+for 15 minutes awaiting verified payment; expiry releases it. A
 confirmed booking is separate from a paid transaction. Returning from VNPAY is
 not proof of payment; only current backend-verified payment evidence proves it.
 Never invent operational readings, service prices, refunds or repair deadlines.

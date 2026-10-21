@@ -20,7 +20,7 @@ function setCache(key, value) {
 
 async function fetchJson(path) {
   const url = `${SOURCE_URL}${path}`;
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
+  const response = await fetch(url, { headers: { Accept: "application/json" }, signal: globalThis.AbortSignal.timeout(8000) });
   if (!response.ok) throw new Error(`Address source returned ${response.status}`);
   return response.json();
 }

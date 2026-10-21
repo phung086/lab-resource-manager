@@ -7,6 +7,58 @@ and limits. No production activation or universal model accuracy is implied.
 
 ## Runtime modes
 
+19 October2026: bridge MCP additionally exposes `publish_question_partial` with
+requestId/generation/sequence/text. Up to three cumulative parts of1500 characters,
+current context and all existing actor/grant/expiry checks are mandatory. The
+request stays PENDING; final reply alone finishes it. Identical replay is safe;
+out-of-order/rewrite/late parts fail. Client polls expose real partial text and
+reject regression; cancellation/handoff hides partials. The versioned rules and
+plugin source ask the receiver to publish a useful verified first sentence
+promptly, targeting5–10s, rather than a waiting acknowledgement. External event
+scheduling/subscription readiness must be measured separately. At this checkpoint
+Work had no active subscription; no live5–10s provider result is certified.
+Explanatory questions no longer trigger catalogue reads through a keyword match.
+Disconnected/unconfigured explanatory work reports that a connection is needed.
+
+15 October 2026 continuation (ADR-040): all three roles use the same dock and
+Work connection. Clear supported queries read authorized data directly and persist
+ANSWERED/authenticated_mcp without a delivery event. `fastQueries.js` is a bounded
+VI/EN grammar, not a general model. Mixed/unknown/date-ambiguous questions retain
+Work. Disconnected Work leaves internal authenticated quick reads available.
+The direct Responses/local service retains its existing synthesis behavior for
+resource/slot requests and adds direct operational tools.
+
+New reads: `get_material_stock`, `search_customers`, `get_lab_schedule` and
+`get_operations_report`. Staff stock/schedule/reports use current assignments;
+CUSTOMER schedule is owner-only, and operator stock/reports/contacts fail403.
+Staff contact search follows ADR-034 globally for CUSTOMER only. Contact projections
+exclude credentials, addresses, private financial data and room-access secrets.
+Schedule intervals are half-open Vietnam-time windows (max31 days), report windows
+7/30 days. Full totals precede previews of at most20 rows; missing stock is unknown.
+Operational reports retain the canonical planned/actual/measurement distinctions.
+
+Bridge request.context stores server-owned actorRole; absent historical snapshots
+mean CUSTOMER. Current role/authVersion is rechecked at create/read/tool/reply and
+delivery, including role changes without a version increment. OAuth owner remains
+ADMIN but tools use the question's actual actor. Context advertises actorRole,
+role-appropriate tools and allowedProposals (empty for operators). Fast lookup
+history becomes a re-read marker before it reaches Work; display history remains.
+Fast reads have4 admission slots and30 creates/minute/actor; Work creation/cancel
+retains6 and ingress180. Event dispatch polls500ms; frontend status GET retries at
+most3 transient network/timeout/5xx failures, respecting cancellation/expiry. POST,
+auth and invalid payloads are never retried. Database reads retain finite8s
+transaction bounds and MCP read budgets. No schema, API key or business writes.
+
+15 October 2026 UX clarification (ADR-039): exact greetings, introductions,
+thanks and reviewed workflow guidance can answer locally before provider work.
+The bridge persists these as `ANSWERED` with `provider=local` and
+`source=local_guidance`, without a delivery event. All customer/connection/busy
+guards remain. Mixed questions, general knowledge and changing LAB facts retain
+their usual receiver/evidence path. The dock hides provider metadata, keeps real
+errors/document evidence, and offers LAB navigation after answers. Its VI/EN
+preference is local; subsequent application language changes update it too.
+No external-receiver latency improvement is certified by local-guidance tests.
+
 With no `OPENAI_API_KEY` or no `OPENAI_MODEL`, the assistant uses the existing
 VI/EN local planner and real authenticated MCP reads. It handles introductions,
 resource searches, candidate booking slots, selected results and application

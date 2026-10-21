@@ -20,7 +20,7 @@ const ACTION_COPY: Record<BookingAction, { title: string; submit: string; hint: 
   CHECK_OUT: { title: "ui.hand_over_resource_2b919047", submit: "ui.confirm_handover_fe4a1650", hint: "ui.record_the_actual_condition_before_abca3376" },
   RETURN: { title: "ui.receive_returned_resource_0c4b837a", submit: "ui.confirm_return_b2f47ecd", hint: "ui.record_the_actual_condition_when_5f156705" },
   SELF_RETURN: { title: "ui.return_room_and_end_session_b4578431", submit: "ui.confirm_room_return_4ffc6e19", hint: "ui.confirm_you_have_left_the_f20d8d44" },
-  COMPLETE: { title: "ui.complete_booking_record_2b8ff0eb", submit: "ui.complete_workflow_519742b0", hint: "ui.complete_the_record_after_reviewing_ee0112ff" }
+  COMPLETE: { title: "ui.fulfillment.inspectionComplete", submit: "ui.fulfillment.inspectionComplete", hint: "ui.complete_the_record_after_reviewing_ee0112ff" }
 };
 
 const CONDITION_SUGGESTIONS = [

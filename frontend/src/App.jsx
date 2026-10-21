@@ -1,3 +1,9 @@
+import { ResourceSelectionTray } from './components/ResourceSelectionTray';
+import { ApiCooldownNotice } from './components/ApiCooldownNotice';
+import { SessionGuard } from './components/features/accounts/SessionGuard';
+import { storeAuthUser } from './services/authStorage.js';
+import { publicSiteOrigin, seoForPath } from './utils/seo.js';
+import { workspaceActorScope, workspaceDataIsCurrent } from './utils/workspaceScope.js';
 
 import { translate } from "./i18n.js";
 
@@ -23,6 +29,8 @@ const SupportPage = React.lazy(() => import("./components/features/support/Suppo
 
 const SmartCalendarView = React.lazy(() => import("./components/SmartCalendarView.tsx").then(module => ({ default: module.SmartCalendarView })));
 const AdminResourceManagementView = React.lazy(() => import("./components/AdminResourceManagementView.tsx").then(module => ({ default: module.AdminResourceManagementView })));
+const AdminResourceConsole = React.lazy(() => import("./components/AdminResourceConsole.tsx").then(module => ({ default: module.AdminResourceConsole })));
+const AdminUserConsole = React.lazy(() => import("./components/AdminUserConsole.tsx").then(module => ({ default: module.AdminUserConsole })));
 const ResourceManagementView = React.lazy(() => import("./components/ResourceManagementView.tsx").then(module => ({ default: module.ResourceManagementView })));
 const BookingOperationsPage = React.lazy(() => import("./pages/operations/BookingOperationsPage.tsx").then(module => ({ default: module.BookingOperationsPage })));
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage.tsx").then(module => ({ default: module.ProfilePage })));
@@ -32,6 +40,7 @@ const IncidentsPage = React.lazy(() => import("./pages/incidents/IncidentsPage.t
 const MonitoringDashboardPage = React.lazy(() => import("./pages/monitoring/MonitoringDashboardPage.tsx").then(module => ({ default: module.MonitoringDashboardPage })));
 const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage").then(module => ({ default: module.MaintenancePage })));
 const StockPage = React.lazy(() => import("./pages/LabWorkspace").then(module => ({ default: module.StockPage })));
+
 
 const ResourceDetailPage = React.lazy(() => import("./pages/ResourceDetailPage.tsx").then(module => ({ default: module.ResourceDetailPage })));
 const SelectionPage = React.lazy(() => import("./pages/SelectionPage.tsx").then(module => ({ default: module.SelectionPage })));
@@ -47,7 +56,7 @@ function canAccessTab(role, tabId) {
 }
 
 function App() {
-  return <LocaleProvider><Application /></LocaleProvider>;
+  return <LocaleProvider><Application /><SessionGuard /></LocaleProvider>;
 }
 
 function Application() {
@@ -83,6 +92,8 @@ function Application() {
   const [maintenance, setMaintenance] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(null);
+  const [loadedWorkspaceScope, setLoadedWorkspaceScope] = useState(null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -98,7 +109,7 @@ function Application() {
     const params = new URLSearchParams(route.search);
     if (context) {
       for (const [key, value] of Object.entries(context)) {
-        if (value && value !== "ALL" && value !== "name") params.set(key, String(value)); else params.delete(key);
+        if (value && (value !== "ALL" || key === "catalogueGroup") && value !== "name") params.set(key, String(value)); else params.delete(key);
       }
       // Save the current register's filters in its existing history entry before leaving it.
       navigateApp(workspacePathForTab("resources", params), { replace: true, notify: false });
@@ -139,10 +150,29 @@ function Application() {
     document.title = translate(key) + " · LAB Resource Manager";
     const description = document.querySelector('meta[name="description"]');
     if (description) description.setAttribute("content", translate(route.kind === "public" ? "route.publicDescription" : "route.privateDescription"));
-  }, [locale, route.kind, route.page, route.tab]);
+    const origin = publicSiteOrigin(import.meta.env.VITE_PUBLIC_SITE_URL);
+    const policy = seoForPath(route.path, { origin, indexable: import.meta.env.VITE_SEO_INDEXABLE === 'true' });
+    const robots = document.querySelector('meta[name="robots"]');
+    if (robots) robots.setAttribute('content', policy.robots);
+    if (policy.page) {
+      document.title = translate(policy.page.titleKey);
+      description?.setAttribute('content', translate(policy.page.descriptionKey));
+    }
+    for (const [property, content] of [['og:title', document.title], ['og:description', description?.getAttribute('content') || ''], ['og:url', policy.canonical]]) {
+      let tag = document.querySelector(`meta[property="${property}"]`);
+      if (!content) { tag?.remove(); continue; }
+      if (!tag) { tag = document.createElement('meta'); tag.setAttribute('property', property); document.head.appendChild(tag); }
+      tag.setAttribute('content', content);
+    }
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (policy.canonical) { if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); } canonical.href = policy.canonical; }
+    else canonical?.remove();
+  }, [locale, route.kind, route.page, route.tab, route.path]);
 
   const routeUserId = user?.id;
   const routeUserRole = user?.role;
+  const workspaceScope = workspaceActorScope(user);
+  useEffect(() => { setActiveGlobalModal(null); }, [workspaceScope]);
   const appDataController = React.useRef(null);
   const previousTab = React.useRef(activeTab);
   const isPasswordResetRequired = Boolean(user?.passwordResetRequired);
@@ -201,10 +231,10 @@ function Application() {
       const requests = {
         resources: read("/resources"),
         bookings: read("/bookings?page=1&pageSize=100"),
-        maintenance: read("/maintenance"),
         notifications: read("/notifications"),
+        notificationCount: read('/notifications/unread-count'),
         incidents: read("/incidents?page=1&pageSize=50&filter=OPEN"),
-        ...(["ADMIN", "LAB_STAFF"].includes(routeUserRole) ? { dashboard: read(`/dashboard?includeTelemetry=${TELEMETRY_FEATURES_ENABLED}`) } : {}),
+        ...(["ADMIN", "LAB_STAFF"].includes(routeUserRole) ? { maintenance: read('/maintenance'), dashboard: read(`/dashboard?includeTelemetry=${TELEMETRY_FEATURES_ENABLED}`) } : {}),
         ...(routeUserRole === "ADMIN" ? { users: read("/users") } : {})
       };
       const entries = Object.entries(requests);
@@ -213,6 +243,8 @@ function Application() {
       const data = Object.fromEntries(entries.map(([key], index) => [key, results[index]]));
       const value = (key, fallback) => data[key]?.status === "fulfilled" ? data[key].value : fallback;
 
+      setLoadedWorkspaceScope(workspaceScope);
+
       setDashboard(value("dashboard", null));
       setResources(value("resources", []));
       setBookings(value("bookings", null)?.items || []);
@@ -220,6 +252,8 @@ function Application() {
       setIncidentSummary(value("incidents", null)?.summary || null);
       setMaintenance(value("maintenance", []));
       setNotifications(value("notifications", []));
+      const unread = value('notificationCount', null)?.unread;
+      setNotificationUnreadCount(Number.isSafeInteger(unread) && unread >= 0 ? unread : null);
       setUsers(value("users", []));
       setIncidents(value("incidents", null)?.items || []);
 
@@ -239,7 +273,7 @@ function Application() {
         setLoading(false);
       }
     }
-  }, [routeUserId, routeUserRole]);
+  }, [routeUserId, routeUserRole, workspaceScope]);
 
   useEffect(() => {
     if (!routeUserId) return;
@@ -289,14 +323,17 @@ function Application() {
         else { sessionStorage.setItem("lrm_pending_resource", id); navigateApp(publicPathForSection("login", { returnTo: workspacePathForTab("smart_calendar", { resource: id }) })); }
       }} onGuestBookingComplete={handleGuestBookingComplete} />;
   }
+  if (!workspaceDataIsCurrent(loadedWorkspaceScope, user)) {
+    return <PublicShell {...publicShellProps}><div className="route-status-page"><p className="empty-state" role="status">{translate('ui.loading_workspace_959fb711')}</p></div></PublicShell>;
+  }
   return (
     <AppLayout
       key={`${user.id}:${user.role}:${user.authVersion ?? 0}`}
       activeTab={activeTab}
-      onSelectTab={(tabId) => {
+      onSelectTab={(tabId, params) => {
         if (canAccessTab(user.role, tabId)) {
           setError("");
-          setActiveTab(tabId);
+          setActiveTab(tabId, params);
         } else {
           setError("ui.you_do_not_have_permission_e6eeee92");
         }
@@ -305,6 +342,7 @@ function Application() {
       locale={locale}
       onLocaleChange={changeLocale}
       notifications={notifications}
+      notificationUnreadCount={notificationUnreadCount}
       incidents={incidents}
       incidentOpenCount={loading || error ? undefined : incidentSummary?.open}
       conflictsCount={0}
@@ -326,7 +364,7 @@ function Application() {
       onPasswordChanged={async () => {
         try {
           const freshUser = await getCurrentUser();
-          localStorage.setItem("lrm_user", JSON.stringify(freshUser));
+          storeAuthUser(freshUser);
           setUser(freshUser);
         } catch (requestError) {
           setError(requestError?.message || "api.API_REQUEST_FAILED");
@@ -357,6 +395,8 @@ function Application() {
 
       <React.Suspense fallback={<p className="empty-state" role="status">{translate("ui.loading_workspace_959fb711")}</p>}>
       {/* REQUIRED CORE — Gated when passwordResetRequired */}
+      <ApiCooldownNotice />
+      {user.role === "CUSTOMER" && route.screen !== "resource-selection" && <ResourceSelectionTray items={resourceSelection.items} onOpen={() => navigateApp(resourceSelectionPath(activeTab === "resources" ? routeParams : {}))} />}
       {!user.passwordResetRequired && activeTab === "home" && (
         <WorkspaceHome
           bookingSummary={bookingSummary}
@@ -392,11 +432,30 @@ function Application() {
           user={user}
           initialResourceId={routeParams.get("resource") || calendarResourceId}
           refreshKey={calendarRevision}
+          selectedResourceIds={resourceSelection.items.map(item => item.id)}
+          onAddToSelection={resourceSelection.add}
+          onViewSelection={() => navigateApp(resourceSelectionPath(routeParams))}
+          onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined}
           onOpenBooking={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
         />
       )}
-      {!user.passwordResetRequired && activeTab === "admin_management" && <AdminResourceManagementView key={routeHash} user={user} initialClassification={routeParams.get("classification") || "ALL"} />}
-      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter notifications={notifications} loading={loading} loadError={translate(error)} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
+      {!user.passwordResetRequired && activeTab === "admin_management" && (
+        user.role === "ADMIN" ? (
+          <AdminResourceConsole
+            key={routeHash}
+            user={user}
+            initialClassification={routeParams.get("classification") || "ALL"}
+            bookingSummary={bookingSummary}
+            incidentSummary={incidentSummary}
+            dashboard={dashboard}
+            incidents={incidents}
+            onNavigate={setActiveTab}
+          />
+        ) : (
+          <AdminResourceManagementView key={routeHash} user={user} initialClassification={routeParams.get("classification") || "ALL"} />
+        )
+      )}
+      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter actorRole={user.role} notifications={notifications} loading={loading} loadError={translate(error)} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
       {!user.passwordResetRequired && activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={loadData} />}
       {!user.passwordResetRequired && route.screen === "resource-detail" && (
         <ResourceDetailPage
@@ -423,7 +482,19 @@ function Application() {
       {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage locale={locale} resources={resources} maintenance={maintenance} onChanged={loadData} onBookings={() => setActiveTab('bookings')} />}
       {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage userRole={user.role} dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {activeTab === "users" && <AccessUserManagement key={routeHash} actorRole={user.role} actorId={user.id} />}
+      {activeTab === "users" && (
+        user.role === "ADMIN" ? (
+          <AdminUserConsole
+            key={routeHash}
+            actorRole={user.role}
+            actorId={user.id}
+            users={users}
+            onNavigate={setActiveTab}
+          />
+        ) : (
+          <AccessUserManagement key={routeHash} actorRole={user.role} actorId={user.id} />
+        )
+      )}
       {activeTab === 'chatgpt_bridge' && !user.passwordResetRequired && <ChatgptBridgePage actorRole={user.role} />}
 
       </React.Suspense>
@@ -432,6 +503,7 @@ function Application() {
         isOpen={activeGlobalModal?.type === "quick_booking"}
         onClose={() => setActiveGlobalModal(null)}
         initialSlot={activeGlobalModal?.payload}
+        resources={activeGlobalModal?.payload?.resources}
         onProceedPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined}
         onViewBookings={() => { setActiveGlobalModal(null); setActiveTab("bookings"); }}
         onConfirmBooking={() => {

@@ -1,4 +1,5 @@
 import '../styles/calendar-workspace.css';
+import { BookingAvailabilityHelp } from './features/planning/BookingAvailabilityHelp';
 import type { LocaleMessage } from "../providers/LocaleProvider";
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
@@ -7,7 +8,10 @@ import { Calendar, AlertCircle, CheckCircle2, ArrowRight, ShieldAlert, Shield, R
 import { BaseModal2026 } from "./BaseModal2026.js";
 import { LabPolicySummary } from "./LabPolicySummary";
 import { QuoteDiscountSummary } from "./features/payments/QuoteDiscountSummary";
+import { PaymentHoldNotice } from './features/payments/PaymentHoldNotice';
+import { VietnamAddressSelector } from './VietnamAddressSelector';
 import "../styles/loyalty-account.css";
+import { bookingNoticeSatisfied, minimumBookingNotice, type BookingNoticePolicy } from '../utils/bookingNotice';
 import { apiRequest, ApiError } from "../api.js";
 import {
   toVietnamDateString,
@@ -17,7 +21,7 @@ import {
   getVietnamTomorrowDateString
 } from "../utils/timezone.js";
 
-function bookingTimeErrors(date: string, start: string, end: string): Record<string, string> {
+function bookingTimeErrors(date: string, start: string, end: string, policy?: BookingNoticePolicy | null): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!date) errors['booking-date'] = 'ui.enter_a_date_and_time_72a12ba5';
   if (!start) errors['booking-start-time'] = 'ui.enter_start_and_end_times_dd573c8f';
@@ -34,6 +38,8 @@ function bookingTimeErrors(date: string, start: string, end: string): Record<str
       errors['booking-start-time'] = 'ui.calendarWorkspace.futureTime';
     } else if (new Date(startIso).getTime() >= new Date(endIso).getTime()) {
       errors['booking-end-time'] = 'ui.start_time_must_be_before_fe9fe060';
+    } else if (!bookingNoticeSatisfied(startIso, policy)) {
+      errors['booking-start-time'] = 'ui.bookingNotice.tooSoon';
     }
   } catch {
     errors['booking-date'] = 'ui.invalid_date_or_time_e55672a4';
@@ -95,6 +101,10 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 }) => {
   const { tr } = useLocale();
   const [contact, setContact] = useState({ fullName: '', phone: '' });
+  const [deliveryMode, setDeliveryMode] = useState('LAB_PICKUP');
+  const [deliveryAddress, setDeliveryAddress] = useState({ addressLine: '', provinceCode: '', wardCode: '' });
+  const [deliveryLabels, setDeliveryLabels] = useState({ provinceName: '', wardName: '' });
+  const [fulfillment, setFulfillment] = useState<{ category: string; deliveryAllowed: boolean } | null>(null);
   const [contactLoading, setContactLoading] = useState(true), [contactError, setContactError] = useState(''), [contactRetry, setContactRetry] = useState(0);
   useEffect(() => {
     if (!isOpen) return;
@@ -112,6 +122,13 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("11:00");
   const [resourceId, setResourceId] = useState("");
+  useEffect(() => {
+    setFulfillment(null); setDeliveryMode('LAB_PICKUP');
+    if (!isOpen || !resourceId) return;
+    const controller = new AbortController();
+    apiRequest(`/resources/${encodeURIComponent(resourceId)}/fulfillment`, { signal: controller.signal }).then(value => { if (!controller.signal.aborted) setFulfillment(value); }).catch(() => { /* Delivery stays unavailable; normal LAB booking remains usable. */ });
+    return () => controller.abort();
+  }, [isOpen, resourceId]);
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -127,7 +144,17 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   const [pricingLoaded, setPricingLoaded] = useState(false);
   const [pricingRetry, setPricingRetry] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const timeErrors = bookingTimeErrors(selectedDate, startTime, endTime);
+  const [review, setReview] = useState<{ key: string; checkedAt: number; refreshed: boolean } | null>(null);
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const bookingField = (id: string) => formRef.current?.querySelector<HTMLElement>('[id="' + id + '"]');
+  const reviewKey = JSON.stringify([resourceId, selectedDate, startTime, endTime, title, purpose, purposeCode, contact, deliveryMode, deliveryAddress, quote?.version, quote?.amountVnd, quote?.loyaltyPolicyVersion]);
+  const reviewing = review?.key === reviewKey;
+  useEffect(() => { if (!isOpen) setReview(null); }, [isOpen]);
+  useEffect(() => { if (reviewing) reviewHeading.current?.focus(); }, [reviewing]);
+  const currentResource = resources.find((r) => r.id === resourceId) || null;
+  const currentPolicy = currentResource?.labPolicy || currentResource?.laboratory?.labPolicy || null;
+  const timeErrors = bookingTimeErrors(selectedDate, startTime, endTime, currentPolicy);
   const timeIsValid = Object.keys(timeErrors).length === 0;
 
   useEffect(() => {
@@ -257,13 +284,11 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentResource = resources.find((r) => r.id === resourceId) || null;
-  const currentPolicy = currentResource?.labPolicy || currentResource?.laboratory?.labPolicy || null;
 
   const effectiveRequiresApproval = false;
 
   const validateFields = (): Record<string, string> => {
-    const errors = bookingTimeErrors(selectedDate, startTime, endTime);
+    const errors = bookingTimeErrors(selectedDate, startTime, endTime, currentPolicy);
     if (!contact.fullName.trim()) errors['booking-contact-name'] = 'ui.customer.nameRequired';
     else if (contact.fullName.trim().length < 2 || contact.fullName.trim().length > 255) errors['booking-contact-name'] = 'ui.customer.nameInvalid';
     if (!contact.phone.trim()) errors['booking-contact-phone'] = 'ui.customer.phoneRequired';
@@ -271,6 +296,11 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     if (!resourceId || !resources.some(r => r.id === resourceId)) errors['booking-resource-select'] = 'ui.choose_a_laboratory_resource_88e754b2';
     if (title.trim().length < 2 || title.trim().length > 255) errors['booking-title'] = 'ui.calendarWorkspace.titleLength';
     if (purpose.trim().length > 2000) errors['booking-purpose'] = 'ui.calendarWorkspace.purposeLength';
+    if (deliveryMode === 'HOME_DELIVERY') {
+      if (!deliveryAddress.provinceCode) errors['address-province'] = 'ui.fulfillment.addressRequired';
+      if (!deliveryAddress.wardCode) errors['address-ward'] = 'ui.fulfillment.addressRequired';
+      if (deliveryAddress.addressLine.trim().length < 5) errors['address-line'] = 'ui.fulfillment.addressRequired';
+    }
     return errors;
   };
   const validateField = (id: string) => {
@@ -288,8 +318,9 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     const errors = validateFields();
     setFieldErrors(errors);
     if (Object.keys(errors).length) {
+      setReview(null);
       setErrorMessage('');
-      document.getElementById(Object.keys(errors)[0])?.focus();
+      requestAnimationFrame(() => bookingField(Object.keys(errors)[0])?.focus());
       return;
     }
     if (!quote || quote.key !== quoteKey) { setErrorMessage("ui.wait_for_the_fee_to_e7e5a7f0"); return; }
@@ -330,13 +361,24 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       const payload = {
         resourceId,
         contact: { fullName: contact.fullName.trim(), phone: contact.phone.trim() },
+        ...(fulfillment?.category !== 'ROOM' && fulfillment ? { fulfillment: { mode: deliveryMode, ...(deliveryMode === 'HOME_DELIVERY' ? { address: deliveryAddress } : {}) } } : {}),
         title: title.trim() || translate("ui.booking_1ca81eb4", { value0: currentResource?.name || tr("ui.resource_9a35ef53") }),
         purpose: purpose.trim() || tr("ui.research_laboratory_practice_c62c993a"),
         ...(purposeCode ? { purposeCode } : {}),
-        acceptedQuote: { amountVnd: quote.amountVnd, version: quote.version },
+        acceptedQuote: { amountVnd: quote.amountVnd, version: quote.version, loyaltyPolicyVersion: quote.loyaltyPolicyVersion },
         startAt: startAtIso,
         endAt: endAtIso
       };
+
+      if (!reviewing || Date.now() - review!.checkedAt >= 60000) {
+        const preflight = await apiRequest('/bookings/preflight', { method: 'POST', body: JSON.stringify({ resourceId,
+          startAt: startAtIso, endAt: endAtIso, ...(purposeCode ? { purposeCode } : {}) }) });
+        if (preflight.ready !== true || !preflight.quote) throw new Error('api.DATA_UNAVAILABLE');
+        setQuote({ ...preflight.quote, key: quoteKey });
+        const nextKey = JSON.stringify([resourceId, selectedDate, startTime, endTime, title, purpose, purposeCode, contact, deliveryMode, deliveryAddress, preflight.quote.version, preflight.quote.amountVnd, preflight.quote.loyaltyPolicyVersion]);
+        setReview({ key: nextKey, checkedAt: Date.now(), refreshed: Boolean(reviewing) });
+        return;
+      }
 
       onAttempt?.();
       requestStarted = true;
@@ -355,24 +397,27 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       if (onConfirmBooking) {
         onConfirmBooking(booking);
       }
-      if (booking.feeAmountVnd > 0 && booking.status === "CONFIRMED" && onProceedPayment) {
+      if (booking.feeAmountVnd > 0 && (booking.paymentDueAt || booking.status === 'CONFIRMED') && onProceedPayment) {
         onProceedPayment(booking);
       }
     } catch (err: any) {
+      setReview(null);
       const msg = err instanceof ApiError ? err.message : err?.message || tr("ui.could_not_create_the_booking_ead473e4");
       const uncertain = requestStarted && (!(err instanceof ApiError) || err.status === 0 || err.status === 408 || err.status >= 500);
       setSubmissionUncertain(uncertain);
       onBookingError?.(msg, uncertain);
       if (err?.code === 'BOOKING_CONTACT_REQUIRED' || err?.code === 'VALIDATION_ERROR') {
         const mapped: Record<string,string> = {};
-        const fields: Record<string,string> = { fullName: 'booking-contact-name', phone: 'booking-contact-phone', title: 'booking-title', purpose: 'booking-purpose', resourceId: 'booking-resource-select', startAt: 'booking-start-time', endAt: 'booking-end-time' };
+        const fields: Record<string,string> = { fullName: 'booking-contact-name', phone: 'booking-contact-phone', addressLine: 'address-line', provinceCode: 'address-province', wardCode: 'address-ward', title: 'booking-title', purpose: 'booking-purpose', resourceId: 'booking-resource-select', startAt: 'booking-start-time', endAt: 'booking-end-time' };
         for (const [field,id] of Object.entries(fields)) if (err.details?.fieldErrors?.[field]?.length || err.details?.field === field) mapped[id] = field === 'fullName' ? 'ui.customer.nameInvalid' : field === 'phone' ? 'ui.customer.phoneInvalid' : 'ui.auth_check_field';
         // Zod nests contact errors under the contact object.
         for (const issue of err.details?.issues || []) {
           if (issue.field === 'contact.fullName') mapped['booking-contact-name'] = 'ui.customer.nameInvalid';
           if (issue.field === 'contact.phone') mapped['booking-contact-phone'] = 'ui.customer.phoneInvalid';
+          const addressFields: Record<string,string> = { 'fulfillment.address.addressLine': 'address-line', 'fulfillment.address.provinceCode': 'address-province', 'fulfillment.address.wardCode': 'address-ward' };
+          if (addressFields[issue.field]) mapped[addressFields[issue.field]] = 'ui.fulfillment.addressRequired';
         }
-        setFieldErrors(mapped); document.getElementById(Object.keys(mapped)[0])?.focus(); setErrorMessage(mapped && Object.keys(mapped).length ? '' : msg);
+        setFieldErrors(mapped); requestAnimationFrame(() => bookingField(Object.keys(mapped)[0])?.focus()); setErrorMessage(mapped && Object.keys(mapped).length ? '' : msg);
       } else if (err?.code === "BOOKING_CONFLICT") {
         setErrorMessage("ui.booking_conflict_this_time_slot_13af8e52");
       } else if (err?.code === "MAINTENANCE_CONFLICT" || err?.code === "CALIBRATION_CONFLICT") {
@@ -432,7 +477,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               disabled={contactLoading || !!contactError || submissionUncertain || isSubmitting || loadingResources || resources.length === 0 || !resourceId || !quote || quote.key !== quoteKey}
               className="btn btn-primary text-xs px-5 py-2.5 flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>{isSubmitting ? tr("ui.submitting_abf01d43") : tr("ui.confirm_booking_f6a19e97")}</span>
+              <span>{tr(isSubmitting ? 'ui.submitting_abf01d43' : !reviewing ? 'ui.bookingReview.check' : quote?.amountVnd > 0 ? 'ui.paymentHold.reserve' : 'ui.confirm_booking_f6a19e97')}</span>
               <ArrowRight size={14} aria-hidden="true" />
             </button>
           </>
@@ -445,11 +490,11 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           <div className="booking-success-header">
             <CheckCircle2 size={28} className="booking-success-icon" aria-hidden="true" />
             <div>
-              <h4 className="booking-success-title">{tr("ui.booking_saved_a4789b57")}</h4>
+              <h4 className="booking-success-title">{tr(createdBooking?.paymentDueAt ? 'ui.paymentHold.pending' : 'ui.booking_saved_a4789b57')}</h4>
               <p className="booking-success-desc">
                 {createdBooking?.status === "CONFIRMED"
                   ? tr("ui.your_booking_has_been_automatically_4e5eb482")
-                  : tr("ui.your_request_is_saved_and_3cb1a789")}
+                  : tr(createdBooking?.paymentDueAt ? 'ui.paymentHold.rule' : 'ui.your_request_is_saved_and_3cb1a789')}
               </p>
             </div>
           </div>
@@ -463,7 +508,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                   createdBooking?.status === "CONFIRMED" ? "is-confirmed" : "is-pending"
                 }`}
               >
-                {createdBooking?.status === "CONFIRMED" ? tr("ui.immediate_confirmation_11e1e39e") : tr("ui.pending_approval_9aa55303")}
+                {tr(createdBooking?.paymentDueAt ? 'ui.paymentHold.pending' : createdBooking?.status === 'CONFIRMED' ? 'ui.immediate_confirmation_11e1e39e' : 'ui.pending_approval_9aa55303')}
               </span>
             </div>
             <div className="booking-detail-row">
@@ -481,16 +526,33 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               </div>
             )}
           </div>
-          {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>{tr("ui.agreed_fee_e147e0c0")}{createdBooking.feeAmountVnd.toLocaleString("vi-VN")} {tr("ui.vnd_789721c8")}{createdBooking.status === "PENDING_APPROVAL" ? tr("ui.payment_is_created_after_staff_0ff3ea14") : tr("ui.complete_payment_before_handover_94ef0241")}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>{tr("ui.view_booking_payment_3a007567")}</button>}</div>}
+          {createdBooking?.paymentDueAt && <PaymentHoldNotice paymentDueAt={createdBooking.paymentDueAt} startAt={createdBooking.startAt} />}
+          {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>{tr('ui.agreed_fee_e147e0c0')}{createdBooking.feeAmountVnd.toLocaleString('vi-VN')} {tr('ui.vnd_789721c8')}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>{tr('ui.view_booking_payment_3a007567')}</button>}</div>}
         </div>
       ) : (
-        <form id="quick-booking-form" onSubmit={handleSubmit} className="booking-form booking-workspace" noValidate>
+        <form ref={formRef} id="quick-booking-form" onSubmit={handleSubmit} className="booking-form booking-workspace" noValidate>
+          {reviewing && <section className="booking-review" aria-labelledby="booking-review-heading">
+            <h3 id="booking-review-heading" tabIndex={-1} ref={reviewHeading}>{tr('ui.bookingReview.title')}</h3>
+            <p>{tr('ui.bookingReview.checked')}</p>
+            {review?.refreshed && <p role="status">{tr('ui.bookingReview.refreshed')}</p>}
+            <dl><dt>{tr('ui.resource_9a35ef53')}</dt><dd>{currentResource?.name} · {currentResource?.code}</dd>
+              <dt>{tr('ui.time_b295fd62')}</dt><dd>{selectedDate} · {startTime}–{endTime} {tr('ui.timezoneVietnam')}</dd>
+              <dt>{tr('ui.session_title_87c59f6e')}</dt><dd>{title}</dd>
+              <dt>{tr('ui.customer.contactTitle')}</dt><dd>{contact.fullName} · {contact.phone}</dd>
+              <dt>{tr('ui.fulfillment.receiveMethod')}</dt><dd>{tr(deliveryMode === 'HOME_DELIVERY' ? 'ui.fulfillment.homeDelivery' : 'ui.fulfillment.labPickup')}{deliveryMode === 'HOME_DELIVERY' && ` · ${[deliveryAddress.addressLine, deliveryLabels.wardName, deliveryLabels.provinceName].filter(Boolean).join(', ')}`}</dd>
+              <dt>{tr('ui.usage_fee_10b23fee')}</dt><dd>{quote.amountVnd.toLocaleString('vi-VN')} {tr('ui.vnd_bf502a39')}</dd></dl>
+            <QuoteDiscountSummary quote={quote} />
+            <p>{tr(quote.amountVnd > 0 ? 'ui.paymentHold.rule' : 'ui.bookingReview.free')}</p>
+            <p>{tr('ui.bookingReview.next')}</p>
+            <button type="button" className="btn btn-secondary" disabled={isSubmitting} onClick={() => { setReview(null); requestAnimationFrame(() => bookingField('booking-contact-name')?.focus()); }}>{tr('ui.bookingReview.edit')}</button>
+          </section>}
+          <fieldset className="booking-edit-fields" hidden={reviewing} disabled={isSubmitting} aria-label={tr('ui.bookingReview.edit')}>
           <fieldset className="booking-contact" disabled={isSubmitting || contactLoading}><legend>{tr('ui.customer.contactTitle')}</legend>
             {contactLoading && <p role="status">{tr('ui.loading_42d77f3a')}</p>}
             {contactError && <p role="alert">{tr(contactError)} <button type="button" onClick={()=>setContactRetry(value=>value+1)}>{tr('ui.retry_c58d068c')}</button></p>}
             <div className="booking-contact-grid">{[{field:'fullName',id:'booking-contact-name',label:'ui.full_name_03de764f',type:'text',auto:'name',max:255},{field:'phone',id:'booking-contact-phone',label:'ui.customer.phoneLabel',type:'tel',auto:'tel',max:20}].map(item=><div key={item.id} className="booking-field"><label htmlFor={item.id} className="booking-label">{tr(item.label)}</label><input id={item.id} className="booking-input" type={item.type} autoComplete={item.auto} required maxLength={item.max} value={contact[item.field as keyof typeof contact]} aria-invalid={!!fieldErrors[item.id]} aria-describedby={fieldErrors[item.id]?item.id+'-error':undefined} onBlur={()=>validateField(item.id)} onChange={event=>{setContact(value=>({...value,[item.field]:event.target.value}));clearFieldError(item.id);}} />{fieldFeedback(item.id)}</div>)}</div>
           </fieldset>
-          {Object.keys(fieldErrors).length > 0 && <div className="booking-error-summary" role="alert"><strong>{tr("ui.calendarWorkspace.checkFields")}</strong><ul>{Object.entries(fieldErrors).map(([id, key]) => <li key={id}><button type="button" onClick={() => document.getElementById(id)?.focus()}>{tr(key)}</button></li>)}</ul></div>}
+          {Object.keys(fieldErrors).length > 0 && <div className="booking-error-summary" role="alert"><strong>{tr("ui.calendarWorkspace.checkFields")}</strong><ul>{Object.entries(fieldErrors).map(([id, key]) => <li key={id}><button type="button" onClick={() => bookingField(id)?.focus()}>{tr(key)}</button></li>)}</ul></div>}
           {errorMessage && (
             <div className="alert danger" role="alert">
               <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
@@ -498,6 +560,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             </div>
           )}
 
+          {errorMessage && timeIsValid && resourceId && !submissionUncertain && <BookingAvailabilityHelp key={quoteKey} resourceId={resourceId} startAt={vietnamTimeToIso(selectedDate, startTime)} endAt={vietnamTimeToIso(selectedDate, endTime)} purposeCode={purposeCode} onChoose={(date, start, end) => { setSelectedDate(date); setStartTime(start); setEndTime(end); setReview(null); setErrorMessage(''); }}/>}
           {/* Resource Selector */}
           <div className="booking-field">
             <label htmlFor="booking-resource-select" className="booking-label">
@@ -583,7 +646,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                 onChange={(e) => { setStartTime(e.target.value); clearFieldError("booking-start-time"); clearFieldError("booking-end-time"); }}
                 onBlur={() => validateField("booking-start-time")}
                 aria-invalid={Boolean(fieldErrors["booking-start-time"])}
-                aria-describedby={fieldErrors["booking-start-time"] ? "booking-start-time-error" : undefined}
+                aria-describedby={'booking-notice-hint' + (fieldErrors["booking-start-time"] ? ' booking-start-time-error' : '')}
               />
               {fieldFeedback("booking-start-time")}
             </div>
@@ -606,6 +669,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             </div>
           </div>
 
+          <p id="booking-notice-hint" className="booking-review-note">{tr('ui.bookingNotice.hint', { minutes: minimumBookingNotice(currentPolicy) })}</p>
           {/* Booking Title */}
           <div className="booking-field">
             <label htmlFor="booking-title" className="booking-label">
@@ -648,8 +712,10 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           </div>
 
           {fieldFeedback("booking-purpose")}
+          {fulfillment?.deliveryAllowed && <fieldset className="booking-contact" disabled={isSubmitting}><legend>{tr('ui.fulfillment.title')}</legend><label htmlFor="booking-delivery-mode">{tr('ui.fulfillment.receiveMethod')}</label><select id="booking-delivery-mode" className="booking-input" value={deliveryMode} onChange={event => setDeliveryMode(event.target.value)}><option value="LAB_PICKUP">{tr('ui.fulfillment.labPickup')}</option><option value="HOME_DELIVERY">{tr('ui.fulfillment.homeDelivery')}</option></select>{deliveryMode === 'HOME_DELIVERY' && <><p>{tr('ui.fulfillment.deliveryFee', { amount: '0' })}</p><VietnamAddressSelector required value={deliveryAddress} onLabelsChange={setDeliveryLabels} onChange={value => { setDeliveryAddress(value); clearFieldError('address-province'); clearFieldError('address-ward'); clearFieldError('address-line'); }} fieldErrors={{ provinceCode: fieldErrors['address-province'], wardCode: fieldErrors['address-ward'], addressLine: fieldErrors['address-line'] }} /></>}</fieldset>}
           <p className="booking-review-note">{tr("ui.rental.quickConfirm")}</p>
           <LabPolicySummary policy={{...currentPolicy, maxBookingMinutes: currentResource?.maxBookingMinutes ?? currentPolicy?.maxBookingMinutes}} requiresApproval={currentResource ? effectiveRequiresApproval : undefined} />
+          </fieldset>
         </form>
       )}
     </BaseModal2026>

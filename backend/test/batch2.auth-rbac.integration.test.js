@@ -130,6 +130,8 @@ test("Batch 2 authentication, RBAC, ownership and lab scope", { timeout: 180000 
     assert.equal(me.status, 200);
     assert.equal(me.body.id, fixture.users.customerA);
     assert.equal(await request(app).post("/api/auth/logout").set(bearer(tokens.customerA)).then((r) => r.status), 204);
+    assert.equal((await request(app).get('/api/auth/me').set(bearer(tokens.customerA))).status, 401);
+    tokens.customerA = (await login('customerA')).body.accessToken;
   });
 
   await t.test("ADMIN manages all accounts; staff directory is globally CUSTOMER-only", async () => {

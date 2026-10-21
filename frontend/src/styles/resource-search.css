@@ -1,0 +1,12 @@
+.workspace-shell form.resource-search{display:flex;align-items:center;gap:10px;min-width:0;min-height:48px;padding:0 4px 0 14px;border:1px solid #cfc1e3;border-radius:10px;background:#fff;color:#71617f;box-shadow:none}
+.workspace-shell form.resource-search:focus-within{border-color:#7451cb;outline:2px solid #cbb9f2;outline-offset:2px}
+.workspace-shell form.resource-search>svg{flex-shrink:0}
+.workspace-shell form.resource-search input[type=search],
+.workspace-shell form.resource-search input[type=search]:is(:focus,:focus-visible){flex:1;width:0;min-width:0;min-height:46px;height:46px;padding:0;border:0;border-radius:0;outline:0;outline-offset:0;box-shadow:none;background:transparent;color:#30253f;font:inherit;font-size:14px;font-weight:400;caret-color:#6441d9}
+.workspace-shell form.resource-search input[type=search]::placeholder{color:#756980;opacity:1}
+.workspace-shell form.resource-search>button{display:grid;place-items:center;flex:0 0 44px;width:44px;min-height:44px;padding:0;border:0;border-radius:7px;background:transparent;box-shadow:none;color:#6441d9;cursor:pointer}
+.workspace-shell form.resource-search>button:hover:not(:disabled){background:#f0e9fc}
+.workspace-shell form.resource-search>button:disabled{color:#a49bb0;opacity:1;cursor:default;background:transparent}
+.workspace-shell form.resource-search>button:focus-visible{outline:2px solid #6441d9;outline-offset:-3px}
+.workspace-shell form.resource-search.project-header-search{flex:1;max-width:400px;min-width:180px;background:#faf7ff}
+@media(max-width:1180px){.workspace-shell form.resource-search.project-header-search{display:none}}

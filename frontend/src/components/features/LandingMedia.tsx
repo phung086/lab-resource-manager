@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Info, Pause, Play } from 'lucide-react';
 import { useLocale } from '../../providers/LocaleProvider';
+import { shouldConserveMedia, type MediaConnection } from '../../utils/mediaPreferences';
+import benefitsPoster from '../../assets/benefits-poster.webp';
 
 const chapters = [
   { start: 0, end: 4, key: 'chapter1' },
@@ -49,7 +51,16 @@ export function BenefitsVideo({ motionPaused, documentHidden, onToggleMotion }: 
   const [loaded, setLoaded] = useState(false);
   const [chapterIndex, setChapterIndex] = useState(0);
   const [playbackFailed, setPlaybackFailed] = useState(false);
-  const allowed = visible && !documentHidden && !motionPaused && !reducedMotion;
+  const [conserve, setConserve] = useState(() => shouldConserveMedia((navigator as Navigator & { connection?: MediaConnection }).connection));
+  const [explicitPlayback, setExplicitPlayback] = useState(false);
+  useEffect(() => {
+    const connection = (navigator as Navigator & { connection?: MediaConnection }).connection;
+    const update = () => setConserve(shouldConserveMedia(connection));
+    connection?.addEventListener('change', update);
+    return () => connection?.removeEventListener('change', update);
+  }, []);
+  const needsPlay = conserve && !explicitPlayback;
+  const allowed = visible && !documentHidden && !motionPaused && !reducedMotion && !needsPlay;
 
   // Only attach a source once the illustration is visible and motion is allowed.
   useEffect(() => { if (allowed) setLoaded(true); }, [allowed]);
@@ -57,14 +68,16 @@ export function BenefitsVideo({ motionPaused, documentHidden, onToggleMotion }: 
     const video = videoRef.current;
     if (!video) return;
     setPlaybackFailed(false);
+    // A failed source stays in the media error state until it is loaded again.
+    if (video.error) video.load();
     void video.play().catch(error => { if (error.name !== 'AbortError') setPlaybackFailed(true); });
   }, []);
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (allowed && loaded && !playbackFailed) attemptPlay();
+    if (allowed && loaded) attemptPlay();
     else video.pause();
-  }, [allowed, loaded, playbackFailed, attemptPlay]);
+  }, [allowed, loaded, attemptPlay]);
 
   const updateChapter = () => {
     const time = videoRef.current?.currentTime ?? 0;
@@ -72,7 +85,8 @@ export function BenefitsVideo({ motionPaused, documentHidden, onToggleMotion }: 
     setChapterIndex(index < 0 ? 0 : index);
   };
   const handleControl = () => {
-    if (playbackFailed && allowed) attemptPlay();
+    if (needsPlay) { setExplicitPlayback(true); if (motionPaused) onToggleMotion(); }
+    else if (playbackFailed && allowed) attemptPlay();
     else onToggleMotion();
   };
   const key = chapters[chapterIndex].key;
@@ -80,10 +94,10 @@ export function BenefitsVideo({ motionPaused, documentHidden, onToggleMotion }: 
   return <div className="benefits-explainer">
     <div className="benefits-video-container">
       <div ref={frameRef} className="benefits-video-viewport">
-        {reducedMotion ? <img src="/media/poster.jpg" alt="" className="benefits-video-static" /> :
+        {reducedMotion ? <img src={benefitsPoster} alt="" loading="lazy" decoding="async" className="benefits-video-static" /> :
         <video ref={videoRef} className="benefits-video" muted loop playsInline preload="none"
           src={loaded ? '/media/LAB-benefits-loop-v1.mp4' : undefined}
-          poster="/media/poster.jpg" onTimeUpdate={updateChapter}
+          poster={benefitsPoster} onTimeUpdate={updateChapter}
           onError={() => setPlaybackFailed(true)} aria-hidden="true" />}
       </div>
       <div className="benefits-captions">
@@ -93,9 +107,9 @@ export function BenefitsVideo({ motionPaused, documentHidden, onToggleMotion }: 
           <p className="benefits-caption-body">{t(`ui.landing.benefits.${key}.body`)}</p>
         </div>
         {!reducedMotion && <button type="button" className="benefits-video-control" onClick={handleControl}
-          aria-pressed={motionPaused}>
-          {motionPaused || playbackFailed ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
-          {t(motionPaused || playbackFailed ? 'ui.landing.motion.resume' : 'ui.landing.motion.pause')}
+          aria-pressed={motionPaused || needsPlay}>
+          {motionPaused || playbackFailed || needsPlay ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
+          {t(motionPaused || playbackFailed || needsPlay ? 'ui.landing.motion.resume' : 'ui.landing.motion.pause')}
         </button>}
       </div>
     </div>

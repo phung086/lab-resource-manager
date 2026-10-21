@@ -53,7 +53,7 @@ try {
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base); await page.locator('#login-email').fill(`${role}@lrm.local`); await page.locator('#login-password').fill(process.env.UX_DEMO_PASSWORD);
     await page.getByRole('button', { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).click(); await page.locator('.home-attention-grid').waitFor();
-    const token = await page.evaluate(() => localStorage.getItem('lrm_token'));
+    const token = await page.evaluate(() => sessionStorage.getItem('lrm_token'));
     const data = await fetch(`${api}/resources`, { headers: { Authorization: `Bearer ${token}` } }); collectOriginal(await data.json());
     const user = await fetch(`${api}/auth/me`, { headers: { Authorization: `Bearer ${token}` } }); collectOriginal(await user.json());
     // Preserve original names, booking titles, course names and operational notes.

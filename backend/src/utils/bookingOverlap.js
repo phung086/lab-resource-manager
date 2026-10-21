@@ -18,7 +18,7 @@ export function hasTimeOverlap(startA, endA, startB, endB) {
 export function bookingOverlapWhere({ resourceId, startAt, endAt, excludeBookingId }) {
   return {
     resourceId,
-    status: { in: ACTIVE_BOOKING_STATUSES },
+    status: { in: ACTIVE_BOOKING_STATUSES }, schedulingReleasedAt: null,
     ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
     startAt: { lt: endAt },
     endAt: { gt: startAt }

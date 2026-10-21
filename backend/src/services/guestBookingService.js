@@ -34,10 +34,6 @@ function codeHash(email, code) {
   return crypto.createHmac("sha256", config.jwtSecret).update(`${email}:${code}`).digest("hex");
 }
 
-function authToken(user) {
-  return signUserToken(user);
-}
-
 async function lockOtpIdentity(tx, email) {
   const key = `${PURPOSE}:${email}`;
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))::text AS locked`;
@@ -307,13 +303,14 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
       });
     }
 
-    return { user, booking, loyalty: await getUserLoyalty(tx, user.id), accountCreated: !existing };
+    return { user, booking, loyalty: await getUserLoyalty(tx, user.id), accountCreated: !existing,
+      accessToken: !existing ? await signUserToken(user, { transaction: tx }) : null };
   });
 
   if (outcome.error) throwOtpError(outcome.error);
   return {
     ...(outcome.accountCreated ? {
-      accessToken: authToken(outcome.user),
+      accessToken: outcome.accessToken,
       tokenType: "Bearer"
     } : {
       accessToken: null,

@@ -67,8 +67,10 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
     }),
     client.booking.findMany({
       where: {
-        startAt: { lt: windowEnd },
-        endAt: { gt: windowStart },
+        OR: [
+          { startAt: { lt: windowEnd }, endAt: { gt: windowStart } },
+          { actualStartAt: { lt: windowEnd }, OR: [{ actualEndAt: null }, { actualEndAt: { gt: windowStart } }] }
+        ],
         status: { notIn: ["REJECTED", "CANCELLED"] },
         resource: resourceWhere
       },

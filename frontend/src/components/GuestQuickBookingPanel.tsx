@@ -16,10 +16,11 @@ import {
   User,
   WalletCards
 } from "lucide-react";
-import { apiRequest } from "../api.js";
+import { apiRequest, ApiError } from "../api.js";
 import { getVietnamTodayDateString, vietnamTimeToIso } from "../utils/timezone.js";
 import { VietnamAddressSelector } from "./VietnamAddressSelector";
 import "../styles/guest-booking.css";
+import { bookingNoticeSatisfied, minimumBookingNotice, type BookingNoticePolicy } from '../utils/bookingNotice';
 
 export type Resource = {
   id: string;
@@ -29,6 +30,8 @@ export type Resource = {
   location?: string;
   operationalStatus?: string;
   effectiveRequiresApproval?: boolean;
+  labPolicy?: BookingNoticePolicy;
+  laboratory?: { labPolicy?: BookingNoticePolicy };
   trainingRequirements?: Array<{ id: string; courseId: string; code?: string; name?: string }>;
 };
 
@@ -94,6 +97,8 @@ export function GuestQuickBookingPanel({
   const [otpCode, setOtpCode] = useState("");
   const [busyOtp, setBusyOtp] = useState(false);
   const [busyBooking, setBusyBooking] = useState(false);
+  const submissionStarted = useRef(false);
+  const [submissionUncertain, setSubmissionUncertain] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [message, setMessage] = useState<LocaleMessage>("");
   const [error, setError] = useState("");
@@ -208,6 +213,7 @@ export function GuestQuickBookingPanel({
     if (startTime >= endTime) {
       return invalid(tr("ui.start_time_must_be_before_b0b279ec"));
     }
+    if (!bookingNoticeSatisfied(vietnamTimeToIso(selectedDate, startTime), resource.labPolicy || resource.laboratory?.labPolicy)) return invalid(tr('ui.bookingNotice.tooSoon'));
     if (!quote || quote.key !== quoteKey) return invalid(quoteError || tr("ui.wait_for_the_fee_to_077bf617"));
     if (advance) setStep(2);
     return true;
@@ -262,12 +268,13 @@ export function GuestQuickBookingPanel({
 
   async function submitBooking(event: React.FormEvent) {
     event.preventDefault();
-    if (busyBooking || !quote || quote.key !== quoteKey) return;
+    if (submissionStarted.current || submissionUncertain || busyBooking || !quote || quote.key !== quoteKey) return;
     if (!otpCode || otpCode.length !== 6) {
       setError("ui.enter_the_6_digit_verification_0e45892f");
       return;
     }
     setBusyBooking(true);
+    submissionStarted.current = true;
     setError("");
     setMessage("");
     try {
@@ -297,8 +304,11 @@ export function GuestQuickBookingPanel({
       }
       onComplete(result);
     } catch (cause: any) {
-      setError(mapOtpErrorCode(cause?.code, cause?.message || "ui.could_not_complete_booking_d0932ca8"));
+      const uncertain = !(cause instanceof ApiError) || cause.status === 0 || cause.status === 408 || cause.status >= 500;
+      setSubmissionUncertain(uncertain);
+      setError(uncertain ? 'ui.bookingReview.guestUncertain' : mapOtpErrorCode(cause?.code, cause?.message || "ui.could_not_complete_booking_d0932ca8"));
     } finally {
+      submissionStarted.current = false;
       setBusyBooking(false);
     }
   }
@@ -424,6 +434,7 @@ export function GuestQuickBookingPanel({
               <label htmlFor="guest-start-time">
                 {tr("ui.start_time_1dd67708")}<input
                   id="guest-start-time"
+                  aria-describedby="guest-booking-notice"
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
@@ -442,6 +453,7 @@ export function GuestQuickBookingPanel({
             </div>
           </div>
 
+          <p id="guest-booking-notice">{tr('ui.bookingNotice.hint', { minutes: minimumBookingNotice(resource.labPolicy || resource.laboratory?.labPolicy) })}</p>
           {pricingRules.length > 0 && (
             <label className="guest-purpose" htmlFor="guest-pricing-purpose">
               {tr("ui.lab_pricing_purpose_7ae67bf1")}<select
@@ -615,7 +627,7 @@ export function GuestQuickBookingPanel({
               <div>
                 <dt>{tr("ui.what_happens_next_939dbedd")}</dt>
                 <dd>
-                  {resource.effectiveRequiresApproval
+                  {quote?.amountVnd > 0 ? tr('ui.paymentHold.rule') : resource.effectiveRequiresApproval
                     ? tr("ui.your_request_will_await_lab_c95e96c2")
                     : tr("ui.the_booking_will_be_automatically_cde77fc7")}
                 </dd>
@@ -671,7 +683,7 @@ export function GuestQuickBookingPanel({
             <button
               type="submit"
               className="public-primary guest-wizard-btn submit"
-              disabled={busy || !otpSent || !quote || quote.key !== quoteKey || otpCode.length !== 6}
+              disabled={submissionUncertain || busy || !otpSent || !quote || quote.key !== quoteKey || otpCode.length !== 6}
             >
               {busyBooking ? (
                 <Loader2 className="spin" size={17} aria-hidden="true" />

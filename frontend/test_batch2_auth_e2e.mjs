@@ -47,7 +47,7 @@ async function loginAndVerify({ email, fullName, visible, hidden }) {
   await page.locator(".user-avatar-btn-2026").click();
   await page.getByRole("button", { name: /Đăng xuất/i }).click();
   await page.getByRole("button", { name: /ĐĂNG NHẬP VÀO HỆ THỐNG/i }).waitFor();
-  assert.equal(await page.evaluate(() => localStorage.getItem("lrm_token")), null);
+  assert.equal(await page.evaluate(() => sessionStorage.getItem("lrm_token")), null);
   assert.deepEqual(failures, []);
   await context.close();
 }

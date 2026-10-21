@@ -15,6 +15,7 @@ import { ResourceUsageGuide } from "../components/ResourceUsageGuide";
 import { LabPolicySummary } from "../components/LabPolicySummary";
 import { ResourceSpecifications } from "../components/ResourceSpecifications";
 import { ResourcePricingSummary } from "../components/ResourcePricingSummary";
+import { ResourceFulfillmentEditor } from '../components/features/operations/ResourceFulfillmentEditor';
 import { formatVietnamDateTime } from "../utils/timezone.js";
 import "../styles/resource-workspace.css";
 import "../styles/resource-discovery.css";
@@ -312,6 +313,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
           <section className="resource-detail-section" aria-labelledby="pricing-heading" hidden={section !== "pricing"}>
             <h3 id="pricing-heading" className="resource-section-title">{tr("ui.catalogue.pricing")}</h3>
             <ResourcePricingSummary key={resource.id} resourceId={resource.id} />
+            {user?.role === 'ADMIN' && <ResourceFulfillmentEditor key={resource.id} resourceId={resource.id} />}
           </section>
 
           {/* Schedule */}

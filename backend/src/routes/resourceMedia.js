@@ -1,5 +1,6 @@
 import express from "express";
 import { z } from "zod";
+import rateLimit from 'express-rate-limit';
 import { prisma } from "../db.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { assertLabStaffResourceAccess } from "../middleware/labScope.js";
@@ -22,6 +23,9 @@ router.get("/:resourceId/media", route(async (req, res) => {
   res.json(await prisma.resourceMedia.findMany({ where: { resourceId: resource.id }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }));
 }));
 const canManageMedia = [requireAuth, requireRole(ADMIN, LAB_STAFF)];
+const mediaWriteLimit = rateLimit({ windowMs: 60000, limit: 20, keyGenerator: req => req.user.id,
+  standardHeaders: 'draft-7', legacyHeaders: false,
+  message: { error: { code: 'RATE_LIMITED', message: 'Too many media changes' } } });
 router.get('/:resourceId/media/config', ...canManageMedia, route(async (req, res) => {
   await assertMediaAccess(req);
   const fields = ['MEDIA_S3_ENDPOINT', 'MEDIA_S3_BUCKET', 'MEDIA_S3_ACCESS_KEY_ID', 'MEDIA_S3_SECRET_ACCESS_KEY', 'MEDIA_PUBLIC_BASE_URL'];
@@ -29,22 +33,22 @@ router.get('/:resourceId/media/config', ...canManageMedia, route(async (req, res
   res.json({ uploadConfigured: missing.length === 0, missing, externalHosts: (process.env.MEDIA_EXTERNAL_HOSTS || 'upload.wikimedia.org,commons.wikimedia.org').split(',').map(host => host.trim()).filter(Boolean) });
 }));
 
-router.post("/:resourceId/media/upload", ...canManageMedia, route(async (req, res) => {
+router.post("/:resourceId/media/upload", ...canManageMedia, mediaWriteLimit, route(async (req, res) => {
   await assertMediaAccess(req);
   const data = z.object({ contentType: z.string(), size: z.number().int().positive() }).strict().parse(req.body);
-  res.json(await requestResourceMediaUpload(req.params.resourceId, data));
+  res.set('Cache-Control', 'no-store').json(await requestResourceMediaUpload(req.params.resourceId, data));
 }));
-router.post("/:resourceId/media/complete", ...canManageMedia, route(async (req, res) => {
+router.post("/:resourceId/media/complete", ...canManageMedia, mediaWriteLimit, route(async (req, res) => {
   await assertMediaAccess(req);
   const data = z.object({ key: z.string().min(1).max(300), ...details }).strict().parse(req.body);
   res.status(201).json(await finishResourceMediaUpload(req.params.resourceId, data));
 }));
-router.post("/:resourceId/media/external", ...canManageMedia, route(async (req, res) => {
+router.post("/:resourceId/media/external", ...canManageMedia, mediaWriteLimit, route(async (req, res) => {
   await assertMediaAccess(req);
   const data = z.object({ url: z.string().url().max(2000), sourceUrl: z.string().url().max(2000), ...details, credit: z.string().trim().min(2).max(200), license: z.string().trim().min(2).max(100) }).strict().parse(req.body);
   res.status(201).json(await addExternalResourceMedia(req.params.resourceId, data));
 }));
-router.delete("/:resourceId/media/:mediaId", ...canManageMedia, route(async (req, res) => {
+router.delete("/:resourceId/media/:mediaId", ...canManageMedia, mediaWriteLimit, route(async (req, res) => {
   await assertMediaAccess(req);
   await deleteResourceMedia(req.params.resourceId, req.params.mediaId);
   res.sendStatus(204);

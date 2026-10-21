@@ -25,7 +25,7 @@ try {
     const auth = await fetch(`${api}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: `${role}@lrm.local`, password: process.env.UX_DEMO_PASSWORD }) });
     assert.equal(auth.status, 200);
     const session = await auth.json();
-    await page.addInitScript(({ accessToken, user }) => { localStorage.setItem('lrm_token', accessToken); localStorage.setItem('lrm_user', JSON.stringify(user)); }, session);
+    await page.addInitScript(({ accessToken, user }) => { sessionStorage.setItem('lrm_token', accessToken); sessionStorage.setItem('lrm_user', JSON.stringify(user)); }, session);
     await page.goto(base); await page.locator('.assistant-launcher').waitFor();
     const launcher = page.locator('.assistant-launcher'), dock = page.locator('#lab-assistant-panel');
     const corner = await launcher.boundingBox();
@@ -90,7 +90,7 @@ try {
     check(await page.locator('#assistant-question').inputValue() === 'Câu hỏi chưa gửi', `${role}: draft survives minimize`);
     check(await dock.locator('.assistant-turn').count() === 1, `${role}: history survives minimize`);
     await dock.locator('.assistant-language').getByRole('button', { name: 'EN', exact: true }).click();
-    await page.locator('html[lang=en]').waitFor();
+    await dock.locator(':scope[lang=en]').waitFor();
     check(await page.locator('#assistant-question').inputValue() === 'Câu hỏi chưa gửi', `${role}: draft survives locale change`);
     const ambiguous = await ask('Book tomorrow at 09:00');
     check(ambiguous.summary[0].key === 'assistant.chooseTimeWindow' && ambiguous.toolsUsed.length === 0, `${role}: ambiguous date asks for explicit time`);
@@ -121,25 +121,25 @@ try {
       await page.route('**/assistant/chat', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'MCP_UNAVAILABLE' } }) }));
       await page.locator('#assistant-question').fill('Find equipment'); await dock.locator('.assistant-compose button').click();
       await dock.getByRole('alert').waitFor();
-      check(await page.locator('#assistant-question').inputValue() === 'Find equipment', 'failed chat preserves draft for retry');
-      check(await dock.locator('.assistant-turn').count() === 3, 'failed chat adds no fabricated answer');
+      check(await page.locator('#assistant-question').inputValue() === '' && (await dock.locator('.assistant-turn').last().innerText()).includes('Find equipment'), 'failed chat preserves outgoing message for retry');
+      check(await dock.locator('.assistant-answer').count() === 3, 'failed chat adds no fabricated answer');
       await page.unroute('**/assistant/chat');
       // Fault injection is test-only. No success fixture replaces the real MCP answers above.
       let release;
       const stalled = new Promise(resolve => { release = resolve; });
       await page.route('**/assistant/chat', async route => { await stalled; await route.abort().catch(() => {}); });
-      await dock.locator('.assistant-compose button').click();
+      await dock.locator('.assistant-retry').last().click();
       await dock.getByRole('button', { name: catalogs.en['assistant.cancel'], exact: true }).click(); release();
       await page.waitForFunction(() => !document.querySelector('.assistant-busy'));
-      check(await page.locator('#assistant-question').inputValue() === 'Find equipment', 'cancellation preserves draft');
-      check(await dock.locator('.assistant-turn').count() === 3, 'cancellation adds no answer');
+      check(await page.locator('#assistant-question').inputValue() === '' && (await dock.locator('.assistant-turn').last().innerText()).includes('Find equipment'), 'cancellation preserves outgoing message');
+      check(await dock.locator('.assistant-answer').count() === 3, 'cancellation adds no answer');
       await page.unroute('**/assistant/chat');
     }
     await dock.locator('.assistant-turn').nth(2).getByRole('button', { name: catalogs.en['assistant.viewBookings'], exact: true }).click();
     await page.waitForURL(/workspace\/booking/);
     check(!await dock.isVisible(), `${role}: guidance navigates to existing bookings`);
     await selectWorkspaceTab(page, 'home'); await launcher.click();
-    check(await dock.locator('.assistant-turn').count() === 3, `${role}: history survives workspace navigation`);
+    check(await dock.locator('.assistant-answer').count() === 3, `${role}: history survives workspace navigation`);
     check(businessMutations === 0, `${role}: assistant test performs no booking/payment POST`);
     check(errors.length === 0, `${role}: no browser exception`);
     await context.close();

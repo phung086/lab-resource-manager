@@ -32,8 +32,17 @@ import { getResourceHistory, projectResourceHistoryForActor } from "../services/
 import { normalizeResourceCode, normalizeSpecs, normalizeText } from "../utils/dataContract.js";
 
 import { resourceSpecsSchema } from "../utils/resourceUsageGuide.js";
+import { getFulfillmentSetting, configureFulfillment } from '../services/bookingFulfillmentService.js';
+import { expirePaymentHolds } from '../services/bookingPaymentHoldService.js';
+import { preparationBookingWhere, turnaroundEnd } from '../services/planning/policyModel.js';
 
 const router = express.Router();
+router.get('/:id/fulfillment', async (req, res, next) => {
+  try { res.json(await getFulfillmentSetting(req.params.id)); } catch (error) { next(error); }
+});
+router.put('/:id/fulfillment', requireAuth, requireRole(ADMIN), async (req, res, next) => {
+  try { res.json(await configureFulfillment(req.params.id, req.user, req.body)); } catch (error) { next(error); }
+});
 const MAX_SCHEDULE_DAYS = 180;
 
 const uppercaseEnum = (values) => z.preprocess(
@@ -130,6 +139,10 @@ function overlapWhere(startAt, endAt) {
   return { startAt: { lt: endAt }, endAt: { gt: startAt } };
 }
 
+function bookingWindowWhere(startAt, endAt) {
+  return preparationBookingWhere(startAt, endAt);
+}
+
 function availabilityInclude(startAt, endAt) {
   return {
     pricingRules: true,
@@ -138,8 +151,8 @@ function availabilityInclude(startAt, endAt) {
     media: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
     laboratory: { select: resourceLaboratorySelect },
     bookings: {
-      where: { status: { in: ACTIVE_BOOKING_STATUSES }, ...overlapWhere(startAt, endAt) },
-      select: { id: true, status: true, startAt: true, endAt: true }
+      where: bookingWindowWhere(startAt, endAt),
+      select: { id: true, status: true, startAt: true, endAt: true, schedulingReleasedAt: true, policySnapshot: true }
     },
     maintenanceWindows: {
       where: { status: { in: BLOCKING_MAINTENANCE_STATUSES }, ...overlapWhere(startAt, endAt) },
@@ -163,7 +176,8 @@ function availabilityMatches(resource, requested, interval) {
 router.get("/", async (req, res, next) => {
   try {
     const query = resourceListQuerySchema.parse(req.query);
-    const interval = query.availableFrom ? { startAt: query.availableFrom, endAt: query.availableTo } : currentInterval();
+    await expirePaymentHolds(prisma);
+    const interval = query.availableFrom ? { startAt: query.availableFrom, endAt: query.availableTo, checkBookingPolicy: true } : currentInterval();
     const search = query.search ? normalizeText(query.search) : null;
     const resources = await prisma.resource.findMany({
       where: {
@@ -232,6 +246,7 @@ router.post("/", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, ne
 router.get("/:id/schedule", async (req, res, next) => {
   try {
     const query = scheduleQuerySchema.parse(req.query);
+    await expirePaymentHolds(prisma, { resourceId: req.params.id });
     const startAt = query.from || new Date();
     const endAt = query.to || new Date(startAt.getTime() + 30 * 24 * 60 * 60 * 1000);
     const resource = await prisma.resource.findUnique({
@@ -241,20 +256,20 @@ router.get("/:id/schedule", async (req, res, next) => {
         operationSessions: { select: { startedAt: true, endedAt: true, loadPercent: true } },
         media: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
         laboratory: { select: resourceLaboratorySelect },
-        bookings: { where: overlapWhere(startAt, endAt), select: { id: true, status: true, startAt: true, endAt: true }, orderBy: { startAt: "asc" } },
+        bookings: { where: bookingWindowWhere(startAt, endAt), select: { id: true, status: true, startAt: true, endAt: true, policySnapshot: true, schedulingReleasedAt: true }, orderBy: { startAt: "asc" } },
         maintenanceWindows: { where: overlapWhere(startAt, endAt), select: { id: true, kind: true, status: true, title: true, startAt: true, endAt: true }, orderBy: { startAt: "asc" } }
       }
     });
     if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
     const blockingView = {
       ...resource,
-      bookings: resource.bookings.filter((row) => ACTIVE_BOOKING_STATUSES.includes(row.status)),
+      bookings: resource.bookings,
       maintenanceWindows: resource.maintenanceWindows.filter((row) => BLOCKING_MAINTENANCE_STATUSES.includes(row.status))
     };
     res.json({
       resource: serializeCanonicalResource(await attachCareUsage(prisma, blockingView), { startAt, endAt }),
       interval: { from: startAt.toISOString(), to: endAt.toISOString(), semantics: "[from,to)" },
-      bookings: resource.bookings.map((row) => ({ ...row, startAt: row.startAt.toISOString(), endAt: row.endAt.toISOString() })),
+      bookings: resource.bookings.map((row) => ({ id: row.id, status: row.status, startAt: row.startAt.toISOString(), endAt: row.endAt.toISOString(), preparationUntil: turnaroundEnd(row).toISOString(), schedulingReleasedAt: row.schedulingReleasedAt, preparationMinutes: row.policySnapshot?.turnaroundMinutes || 0 })),
       maintenanceWindows: resource.maintenanceWindows.map((row) => ({ ...row, startAt: row.startAt.toISOString(), endAt: row.endAt.toISOString() }))
     });
   } catch (error) {
@@ -278,6 +293,7 @@ router.get("/:id/history", requireAuth, async (req, res, next) => {
 
 router.get("/:id", async (req, res, next) => {
   try {
+    await expirePaymentHolds(prisma, { resourceId: req.params.id });
     const now = new Date();
     const interval = currentInterval(now);
     const resource = await prisma.resource.findUnique({
@@ -288,7 +304,12 @@ router.get("/:id", async (req, res, next) => {
         operationSessions: { select: { startedAt: true, endedAt: true, loadPercent: true } },
         media: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
         laboratory: { select: resourceLaboratorySelect },
-        bookings: { where: { endAt: { gte: now }, status: { in: ACTIVE_BOOKING_STATUSES } }, select: { id: true, startAt: true, endAt: true, status: true }, orderBy: { startAt: "asc" }, take: 10 },
+        bookings: { where: {
+          OR: [
+            { status: { in: ['PENDING_APPROVAL', 'CONFIRMED', 'CHECKED_OUT', 'RETURNED'] }, schedulingReleasedAt: null, endAt: { gt: new Date(+now - 240 * 60000) } },
+            { status: { in: ['RETURNED', 'COMPLETED'] }, schedulingReleasedAt: { gt: new Date(+now - 240 * 60000) }, policySnapshot: { path: ['turnaroundMinutes'], gt: 0 } }
+          ]
+        }, select: { id: true, startAt: true, endAt: true, status: true, schedulingReleasedAt: true, policySnapshot: true }, orderBy: { startAt: "asc" }, take: 50 },
         maintenanceWindows: { where: { endAt: { gte: now }, status: { in: BLOCKING_MAINTENANCE_STATUSES } }, select: { id: true, kind: true, status: true, title: true, startAt: true, endAt: true }, orderBy: { startAt: "asc" }, take: 10 },
         trainingRequirements: { where: { isMandatory: true }, include: { course: { select: { id: true, code: true, name: true } } } },
         _count: { select: { bookings: true, maintenanceWindows: true, incidents: true, usageLogs: true } }
@@ -305,7 +326,11 @@ router.get("/:id", async (req, res, next) => {
       })),
       counts: resource._count,
       upcomingSchedule: {
-        bookings: resource.bookings.map((row) => ({ ...row, startAt: row.startAt.toISOString(), endAt: row.endAt.toISOString() })),
+        bookings: resource.bookings.filter(row => turnaroundEnd(row) > now).map((row) => ({
+          id: row.id, status: row.status, startAt: row.startAt.toISOString(), endAt: row.endAt.toISOString(),
+          schedulingReleasedAt: row.schedulingReleasedAt, preparationUntil: turnaroundEnd(row).toISOString(),
+          preparationMinutes: row.policySnapshot?.turnaroundMinutes || 0
+        })),
         maintenanceWindows: resource.maintenanceWindows.map((row) => ({ ...row, startAt: row.startAt.toISOString(), endAt: row.endAt.toISOString() }))
       }
     });

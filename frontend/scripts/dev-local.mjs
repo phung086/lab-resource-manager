@@ -7,7 +7,7 @@ import path from "node:path";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const mainComparison = process.argv.includes("--main");
 const unifiedDemo = process.argv.includes("--demo");
-const paymentsEnabled = unifiedDemo || process.argv.includes("--payments");
+const paymentsEnabled = unifiedDemo || process.argv.includes('--payments') || process.env.LRM_LOCAL_PAYMENTS_ENABLED !== 'false';
 const monitoringEnabled = unifiedDemo || process.argv.includes("--monitoring");
 const source = mainComparison ? path.resolve(root, "../lab-resource-manager-main") : root;
 const frontend = path.join(source, "frontend");

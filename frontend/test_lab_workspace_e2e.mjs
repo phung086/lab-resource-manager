@@ -56,7 +56,7 @@ try {
     const response = await fetch(`${api}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: `${role}@lrm.local`, password: process.env.UX_DEMO_PASSWORD }) });
     assert.equal(response.status, 200, `${role}: login`); const session = await response.json();
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
-    await context.addInitScript(({ session }) => { localStorage.setItem('lrm_token', session.accessToken); localStorage.setItem('lrm_user', JSON.stringify(session.user)); localStorage.setItem('lrm_locale', 'en'); }, { session });
+    await context.addInitScript(({ session }) => { sessionStorage.setItem('lrm_token', session.accessToken); sessionStorage.setItem('lrm_user', JSON.stringify(session.user)); localStorage.setItem('lrm_locale', 'en'); }, { session });
     const p = await context.newPage(); p.on('pageerror', error => errors.push(error.message));
     await p.goto(ui, { waitUntil: 'networkidle' });
     await p.locator('#workspace-main .lab-home').waitFor();

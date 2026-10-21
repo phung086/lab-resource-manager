@@ -937,3 +937,7 @@
 .incident-alert ul { margin: 8px 0 0; padding-left: 20px; }
 .incident-alert a { color: inherit; text-underline-offset: 3px; }
 @media (max-width: 760px) { .incident-field :is(input,select,textarea) { font-size: 1rem; } }
+@media(min-width:1000px) {
+ .incidents-workspace[data-role="CUSTOMER"] .incident-columns { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); }
+ .incidents-workspace[data-role="LAB_STAFF"] .incident-columns { grid-template-columns:minmax(300px,.8fr) minmax(0,1.2fr); }
+}

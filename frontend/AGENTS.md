@@ -17,12 +17,10 @@ Claude tự quyết redesign, dùng skill GitHub cần thiết theo từng bư�
 
 Theo imports của tính năng. Backend quyết định quyền và nghiệp vụ. Giữ VI/EN,
 draft form, focus, cancellation/deadline, privacy, server totals và lỗi thật.
-Đổi API cần đọc BE caller/route/service tương ứng. 
-pm run i18n:sync` ghi cả
+Đổi API cần đọc BE caller/route/service tương ứng. `npm run i18n:sync` ghi cả
 backend projection: xem diff liên vùng. Không tạo router/store/locale song song.
 
-App changes: chạy gate phù hợp trong package.json; 
-pm run test:required`
+App changes: chạy gate phù hợp trong package.json; `npm run test:required`
 gồm locale/API tests, lint, typecheck/build. Đọc guard và tác động dữ liệu trước
 test UI/DB. Build không chứng minh UX hoặc E2E; docs-only cần kiểm tra link/diff.
 Tái dùng UI 5173, bản so sánh 5180 và API chung 8000 theo README; kiểm tra thực

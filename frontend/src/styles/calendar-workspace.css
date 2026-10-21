@@ -70,6 +70,15 @@
 .calendar-workspace .calendar-new-booking-btn:disabled { background:#eeebf1; border-color:#d2cbdc; color:#6b627a; box-shadow:none; cursor:not-allowed; }
 /* A dedicated form scope also works when the dialog is mounted outside the calendar. */
 .booking-workspace { color:#29253b; gap:18px; }
+.booking-workspace .booking-edit-fields { display:grid; gap:18px; border:0; margin:0; padding:0; min-width:0; }
+.booking-workspace .booking-edit-fields[hidden] { display:none; }
+.booking-workspace .booking-review { display:grid; gap:14px; min-width:0; }
+.booking-workspace .booking-review :is(h3,p) { margin:0; }
+.booking-workspace .booking-review dl { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:12px 16px; margin:4px 0; }
+.booking-workspace .booking-review dt { color:#5f596e; }
+.booking-workspace .booking-review dd { margin:0; font-weight:600; overflow-wrap:anywhere; }
+.booking-workspace .booking-review .btn { justify-self:start; min-height:44px; }
+@media(max-width:480px) { .booking-workspace .booking-review dl { grid-template-columns:1fr; gap:4px; } .booking-workspace .booking-review dd { margin-bottom:10px; } }
 .booking-workspace .booking-label { color:#4e465e; font-size:13px; gap:8px; flex-wrap:wrap; }
 .booking-workspace :is(input,select,textarea) { min-width:0; width:100%; max-width:100%; min-height:44px; border:1px solid #bfb2d0; border-radius:8px; padding:10px 12px; color:#29253b; background:#fff; font:inherit; font-size:14px; box-sizing:border-box; }
 .booking-workspace textarea { resize:vertical; min-height:86px; }

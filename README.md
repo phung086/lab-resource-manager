@@ -81,7 +81,9 @@ Nếu chỉ cần mở frontend khi backend đã healthy: npm.cmd run dev -- --p
 Nếu5173 đang dùng, giữ phiên hiện có hoặc dừng đúng terminal frontend trước.
 Launcher không tự dừng ứng dụng khác. Các account local cũ được giữ nguyên;
 student/lecturer@lrm.local đều là CUSTOMER sau migration, không phải role cũ.
-SMTP thật chưa có, nên OTP/mail cần cấu hình nhà cung cấp trước khi test inbox.
+SMTP Gmail local đã xác minh kết nối và chấp nhận thư kiểm thử; inbox cần người
+dùng xác nhận. Worker email đang tạm dừng vì còn thư tới địa chỉ thử nghiệm;
+xem checkpoint email trong docs/CURRENT_STATE.md trước khi bật gửi tự động.
 
 Chỉ khi muốn bổ sung dữ liệu tài nguyên mẫu có chủ đích mới chạy:
 
@@ -137,16 +139,20 @@ cd C:\Projects\lab-resource-manager\frontend
 npm.cmd run dev -- --payments
 ```
 
-Cờ `--payments` bật API thanh toán và UI tương ứng; bỏ cờ để trở về mặc định
-tắt. Trong PowerShell, dùng `npm.cmd` để giữ nguyên đối số `--payments`;
+Cập nhật 15/10: launcher local mặc định bật API thanh toán và UI tương ứng;
+`--payments` vẫn được hỗ trợ. Để chủ động tắt, đặt
+`$env:LRM_LOCAL_PAYMENTS_ENABLED='false'` trước khi chạy backend/frontend.
+Trong PowerShell, dùng `npm.cmd` để giữ nguyên đối số `--payments`;
 trên Linux/macOS dùng `npm`. Thay `backend/.env` cần chạy lại lệnh backend để container nhận cấu hình
 mới; thay frontend flag cần dừng/bật frontend. Dữ liệu trong volume chung được
 giữ nguyên. Không bật stack demo cũ ở 15005/15181 để thay thế runtime này.
 
-Thử một lịch có giá dương và mục đích khớp bảng giá. Lịch hợp lệ được xác nhận
-tự động sau kiểm tra trùng lịch, bảo trì và chính sách; chủ lịch chọn thanh toán,
-rồi chọn phương thức trên VNPAY Sandbox. Chỉ IPN hợp lệ khớp merchant, mã giao dịch và số tiền mới cập nhật
-thanh toán; browser Return không xác nhận đã trả tiền. Đối chiếu trạng thái,
+Thử một lịch có giá dương và mục đích khớp bảng giá. Sau kiểm tra điều kiện,
+lịch chuyển sang **Chờ thanh toán** và mở checkout, giữ chỗ 15 phút từ lúc tạo.
+Chủ lịch chọn phương thức trên VNPAY Sandbox. Chỉ IPN hợp lệ trước hạn khớp
+merchant, mã giao dịch và số tiền mới xác nhận lịch; browser Return không settle.
+Hết hạn chưa trả, backend tự hủy và mở khung giờ; tải lại/retry không gia hạn.
+Lịch miễn phí vẫn xác nhận ngay. Đối chiếu trạng thái,
 `vnpTransactionNo` và `paidAt`, rồi làm mới trang checkout. Dùng phương tiện
 kiểm thử do VNPAY cung cấp; không coi app ngân hàng thật là công cụ Sandbox.
 Không đổi trạng thái thành công thủ công. QueryDr/refund tự động chưa được
@@ -156,7 +162,7 @@ Nếu cổng báo `70 – Sai chữ ký`, kiểm tra cặp Terminal ID/HashSecre
 container đã nhận `.env`, và cách ký/encode theo tài liệu. Nút **Test call IPN**
 nhận được JSON chỉ chứng minh endpoint có phản hồi; mã `97` chưa chứng minh
 chữ ký hợp lệ. Sau khi sửa key, URL thanh toán đã lưu vẫn được tái dùng trong
-15 phút: chờ hết phiên rồi mở thanh toán lại để API tạo phiên mới. Không sửa
+thời gian giữ chỗ: khi hết hạn, chọn khung giờ khả dụng và tạo lịch mới. Không sửa
 DB hay giả lập IPN thành công để bỏ qua lỗi. Khi deploy, thay domain backend
 trong Return/IPN và domain frontend trong `PAYMENT_APP_URL`, cập nhật IPN trên
 merchant rồi thử lại. Domain chính thức không tự đổi Sandbox thành production.
@@ -180,7 +186,8 @@ bản đầu cập nhật mỗi 2 giây, heartbeat 15 giây, offline sau 45 giâ
 Launcher local generate Prisma client từ schema đang mount và deploy migration
 forward khi startup; rebuild khi đổi dependencies/image. Không dùng `db push`
 hoặc reset DB.
-Giữ `--payments` nếu phiên local đang bật thanh toán. Kiểm thử chat dùng DB
+Launcher local mặc định bật thanh toán; tắt bằng LRM_LOCAL_PAYMENTS_ENABLED=false.
+Kiểm thử chat dùng DB
 local riêng tên `lab_resources_support_test` qua `SUPPORT_TEST_DATABASE_URL`:
 backend `npm.cmd run test:support:integration`, sau đó frontend
 `npm.cmd run test:ui:support` (UI local đang chạy; Chromium có sẵn hoặc đặt
@@ -197,7 +204,7 @@ toán LAB và mã giao dịch VNPAY. Lịch đã hủy hoặc khoản cần đ�
 rõ; email không phê duyệt lại lịch. Return từ trình duyệt không tạo biên nhận.
 
 Để gửi đến hộp thư thật, cần tài khoản SMTP do hosting/dịch vụ email cấp. Điền
-trực tiếp trong `backend/.env` (đã thêm sẵn các trường trống ở phiên local):
+trực tiếp trong `backend/.env` (cấu hình bí mật local không được commit):
 
 ```dotenv
 SMTP_HOST=
@@ -216,8 +223,8 @@ không phải mật khẩu tài khoản LAB. Khi deploy, `EMAIL_APP_URL` là dom
 HTTPS. Không đưa credential vào frontend, Git hoặc nội dung thư.
 
 Sau khi lưu cấu hình, dùng launcher chính thức từ `frontend/`:
-`npm.cmd run dev:backend:rebuild -- --payments` nếu đang bật thanh toán, hoặc
-bỏ `--payments` khi không dùng. Launcher generate client và áp dụng migration
+`npm.cmd run dev:backend:rebuild` (thanh toán mặc định bật; đặt
+LRM_LOCAL_PAYMENTS_ENABLED=false khi chủ động tắt). Launcher generate client và áp dụng migration
 forward `20261012000200_email_deliveries`, giữ volume nghiệp vụ. Docker cần được
 tạo lại để nhận biến `.env` mới; reload source không nạp lại env_file.
 

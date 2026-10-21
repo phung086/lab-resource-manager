@@ -2,6 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { WORKSPACE_ROUTES, PUBLIC_ROUTES, readAppRoute, readRouteParams, publicPathForSection, workspacePathForTab, safeReturnTo, navigateApp, resourceDetailPath, resourceSelectionPath } from './src/workspaceRoutes.js';
 
+test('retired planning URL preserves booking context in the normal booking flow', () => {
+  assert.equal(Object.hasOwn(WORKSPACE_ROUTES, 'planning'), false);
+  assert.equal(readAppRoute('/workspace/planning?booking=existing-id').canonicalUrl, '/workspace/bookings?booking=existing-id');
+  assert.equal(readAppRoute('/workspace/planning').tab, 'bookings');
+});
+
 test('every public and workspace screen has a unique English path', () => {
   const paths = [...Object.values(PUBLIC_ROUTES), ...Object.keys(WORKSPACE_ROUTES).map(workspacePathForTab)];
   assert.equal(new Set(paths).size, paths.length);

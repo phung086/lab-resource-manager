@@ -20,13 +20,18 @@ const base = {
   VNPAY_HASH_SECRET: "",
   VNPAY_PAYMENT_URL: "",
   VNPAY_RETURN_URL: "",
-  VNPAY_IPN_URL: ""
+  VNPAY_IPN_URL: "",
+  CHATGPT_BRIDGE_ENABLED: "false",
+  CHATGPT_BRIDGE_PUBLIC_ORIGIN: "",
+  CHATGPT_BRIDGE_UI_ORIGIN: "",
+  CHATGPT_BRIDGE_SECRET_KEY: "",
+  CHATGPT_BRIDGE_REDIRECT_URIS: "https://chatgpt.com/connector_platform_oauth_redirect"
 };
 
 function runConfig(overrides = {}) {
   return spawnSync(
     process.execPath,
-    ["--input-type=module", "-e", "import('./src/config.js')"],
+    ["--input-type=module", "-e", "await import('./src/config.js'); await import('./src/chatgptBridge/config.js')"],
     {
       cwd: process.cwd(),
       env: { ...base, ...overrides },
@@ -102,4 +107,15 @@ expectPass("payments enabled with complete VNPAY configuration", {
   VNPAY_IPN_URL: "https://api.lab.example.edu.vn/api/payments/vnpay/ipn"
 });
 
+const bridge = {
+  CHATGPT_BRIDGE_ENABLED: "true",
+  CHATGPT_BRIDGE_PUBLIC_ORIGIN: "https://lab.example.edu.vn",
+  CHATGPT_BRIDGE_UI_ORIGIN: "https://lab.example.edu.vn",
+  CHATGPT_BRIDGE_SECRET_KEY: Buffer.alloc(32, 7).toString('base64')
+};
+expectPass("complete Work bridge configuration", bridge);
+expectFail("bridge missing encryption key", { ...bridge, CHATGPT_BRIDGE_SECRET_KEY: "" }, /CHATGPT_BRIDGE_SECRET_KEY_INVALID/);
+expectFail("bridge insecure public origin", { ...bridge, CHATGPT_BRIDGE_PUBLIC_ORIGIN: "http://lab.example.edu.vn" }, /CHATGPT_BRIDGE_ORIGIN_INVALID/);
+expectFail("bridge insecure UI origin", { ...bridge, CHATGPT_BRIDGE_UI_ORIGIN: "http://localhost:5173" }, /CHATGPT_BRIDGE_ORIGIN_INVALID/);
+expectFail("bridge unapproved callback", { ...bridge, CHATGPT_BRIDGE_REDIRECT_URIS: "https://not-chatgpt.example/callback" }, /CHATGPT_BRIDGE_REDIRECT_INVALID/);
 console.log("Production configuration verification: PASS");

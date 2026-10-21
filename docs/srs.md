@@ -117,6 +117,7 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | FR-AUTH-09 | Credential, activation and role changes shall invalidate earlier authentication versions; removal shall retain history and block while bookings/support remain open. |
 | FR-AUTH-05 | The system shall not treat client-side route hiding or client-provided user/role/laboratory identifiers as authorization. |
 | FR-AUTH-06 | When external quick booking is enabled, the system shall verify the configured email OTP flow before creating/reusing an external account and proceeding with booking. The account shall retain role `CUSTOMER` and may carry `customerType=EXTERNAL`. |
+| FR-AUTH-10 | Internal JWTs shall bind to persisted revocable sessions with issuer/audience/expiry checks, idle and absolute deadlines. Background reads shall not extend idle expiry; logout revokes the current session and logout-all invalidates earlier credential versions (ADR-043). |
 
 ### 4.2 Resource catalogue and administration
 
@@ -134,7 +135,8 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 |---|---|
 | FR-BKG-01 | An authenticated user shall be able to request a booking for an eligible resource and time interval. |
 | FR-BKG-02 | The system shall evaluate resource policy, operational state, maintenance windows, eligibility, and existing bookings before accepting a request. |
-| FR-BKG-03 | New eligible bookings shall automatically enter `CONFIRMED` after conflict, maintenance, resource-state, eligibility, rental-duration and laboratory-policy checks. Legacy `PENDING_APPROVAL` records retain their operator workflow. |
+| FR-BKG-03 | After eligibility, policy, duration, resource-state, maintenance and overlap checks, free bookings enter `CONFIRMED`. Positive-fee bookings hold the slot in `PENDING_APPROVAL` with `paymentDueAt=min(creation+15 minutes,startAt)`, presented as awaiting payment. Verified payment before that deadline automatically confirms them; staff cannot approve around payment verification. Legacy pending records without a payment deadline retain their operator workflow. |
+| FR-BKG-11 | An unpaid reservation shall automatically become `CANCELLED` at its fixed payment deadline and release its slot. Opening/retrying checkout shall not extend the hold. Booking creation and schedule/payment reads shall enforce expiry even if the background worker is delayed. A late successful provider callback shall retain payment evidence for manual reconciliation without restoring the cancelled reservation. |
 | FR-BKG-04 | Authorized staff shall be able to approve or reject eligible legacy pending bookings. New valid bookings require no staff approval. |
 | FR-BKG-05 | A booking owner shall be able to view and cancel only their own eligible bookings. |
 | FR-BKG-06 | The system shall prevent overlapping active bookings at the database level, including concurrent requests. |
@@ -142,6 +144,8 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | FR-BKG-08 | Public schedule data shall omit requester identity and private booking titles. |
 | FR-BKG-10 | ADMIN or assigned LAB_STAFF may move a CONFIRMED booking, preserving duration and accepted fee, requiring reason/current start snapshot, rechecking policy/conflicts/eligibility and retaining audit and owner notifications. |
 | FR-BKG-09 | Workspace booking and incident queues shall expose older authorized records through bounded server pages and complete scoped totals; recent list caps shall not define queue totals. |
+| FR-BKG-12 | The signed-in booking form shall check current conditions and quote before a separate review/confirmation step. This does not reserve a slot; final creation revalidates all rules. An uncertain guest submission shall not be automatically repeated. |
+| FR-BKG-13 | New bookings and reschedules shall meet the server-time minimum notice for the LAB. The application baseline is 30 minutes, including resources without a policy row; ADMIN may increase it per LAB with a reason and audit record. Quotes, availability checks, guest and assistant flows shall use the same rule and final writes shall recheck it. Existing confirmed/paid reservations shall not be cancelled merely because a new notice rule is introduced. |
 
 ### 4.4 Handover and return
 
@@ -153,12 +157,15 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | FR-OPS-04 | An authenticated owner may self-return a checked-out `ROOM` booking only through the approved owner-return workflow and with required condition evidence. This records the owner's declaration, not a staff inspection. |
 | FR-OPS-05 | A return shall not silently overwrite a hard physical state such as `BROKEN`, `MAINTENANCE`, `CALIBRATION`, `RETIRED`, or `OFFLINE`. |
 | FR-OPS-06 | The system shall retain booking event/history evidence for supported operational transitions. |
+| FR-OPS-07 | Owners may self-check-in paid/free ROOM bookings from 30 minutes before start until before end; occupancy changes only on that action. Staff handover uses the same time guard. |
+| FR-OPS-08 | Owner room return releases the scheduling hold immediately but retains RETURNED pending staff inspection/completion. Hard operational states are preserved. |
+| FR-OPS-09 | ROOM access uses the booking contact phone snapshot as its code (ADR-041); only an eligible authenticated owner reads it. Missing contact fails closed; a phone number alone does not authorize entry. ADMIN configures pickup guidance and equipment delivery eligibility. Equipment delivery uses a validated address/contact snapshot and staff handover; GHN integration is deferred (ADR-037). |
 
 ### 4.5 Maintenance, notifications, incidents, and audit
 
 | ID | Requirement |
 |---|---|
-| FR-SUP-01 | Authorized staff shall be able to persist maintenance windows; blocking maintenance shall affect derived availability. |
+| FR-SUP-01 | Authorized staff shall be able to persist maintenance windows; blocking maintenance shall affect derived availability. Internal job lists with notes and operator identities require ADMIN or assigned LAB_STAFF. Customers use public-safe schedules. |
 | FR-SUP-02 | Booking and operational events shall create user-scoped in-app notifications where the workflow defines recipients. In-app persistence shall not imply email or push delivery. |
 | FR-SUP-03 | The system shall allow authorized incident workflows to record, review, and resolve persisted incidents. |
 | FR-SUP-04 | Security-sensitive administrative and business mutations shall be recorded in append-only audit history where defined by the data model. |
@@ -265,9 +272,22 @@ Implementation and verification boundaries are recorded in
 - LAB-I18N-01: Active UI and system feedback shall use matching VI/EN message
   catalogs. Integrity/load failures shall preserve the last valid locale and
   drafts, with explicit recovery; original user evidence shall remain unchanged.
+  Clarification 15/10/2026: chatbot VI/EN changes only its own interface/reply
+  preference; a subsequent application language change also updates the chatbot.
+  Sending clears the composer immediately, retains the visible message and keeps
+  the next draft separate through reply, failure, cancellation and retry.
 - LAB-AI-01: Global assistant lookups shall use authenticated read-only tools and
   existing account/object/lab scope. Suggested actions shall return to normal
   confirmation forms and never perform implicit business mutations.
+- LAB-AI-04 (approved 15/10/2026, ADR-040): CUSTOMER, LAB_STAFF and ADMIN shall use
+  the assistant with their current database role and permissions. Exact supported
+  resource/availability, schedule, material-stock, 7/30-day operational report and
+  customer-contact queries shall read authorized data without waiting for Work
+  synthesis. Staff LAB scope and ADR-034 CUSTOMER contact permissions remain
+  distinct. Matching totals shall be complete despite bounded row previews;
+  absent stock ledgers shall remain unknown. Open-ended questions retain Work,
+  without an instant-response guarantee. No API key or assistant business-write
+  capability is introduced.
 - LAB-AI-02: Assistant/MCP work shall have finite independent admission/rate
   budgets, deadlines and cancellation. Model synthesis of LAB facts shall require
   fresh usable authorized evidence. All model calls shall have bounded input/output
@@ -454,3 +474,26 @@ policy conflicts and unverified/refunded payments cannot earn or alter an old fe
 Entries: backend test:accounts:integration, test:loyalty and test:loyalty:integration;
 frontend test:accounts, test_api_request.mjs and test:ui:accounts. Live SMTP inbox
 and AI provider verification remain environment-dependent. See CURRENT_STATE.
+
+## LAB-PLAN — Lập kế hoạch và hồ sơ sử dụng (ADR-045)
+
+- PLAN-01: ADMIN thay đổi chính sách bằng revision và lý do, có audit và preview
+  tối đa500 lịch tương lai. Không tự hủy hoặc sửa snapshot lịch cũ.
+- PLAN-02: Người dùng đặt1..5 tài nguyên cùng LAB/cùng giờ. Toàn bộ tạo nguyên tử;
+  kiểm tra quyền, policy, đào tạo, xung đột và giá cho từng tài nguyên. Retry cùng
+  requestKey không tạo lịch trùng; thanh toán/vòng đời vẫn theo từng lịch.
+- PLAN-03: Hồ sơ hiển thị timeline, sự cố và checklist bàn giao/hoàn trả/kiểm tra.
+  Mỗi bước chỉ ghi một lần; CUSTOMER chỉ ghi hoàn trả lịch của mình, STAFF theo
+  phân công LAB. Dữ liệu khai báo không được trình bày là xác minh bằng phần cứng.
+- PLAN-04: Gợi ý tối đa3 mốc từ48 bước nửa giờ; thay thế chỉ khi thông số khai báo
+  khớp, cùng LAB/category/subtype và đủ capacity. Xác nhận luôn kiểm tra lại.
+- PLAN-05: Theo dõi tối đa20 khung giờ mỗi người; thông báo trong ứng dụng khi
+  preflight hợp lệ, không tự giữ chỗ/đặt/thanh toán. Hết thời gian thì hết hiệu lực.
+- PLAN-06: Báo cáo theo lịch tạo trong1..90 ngày, giới hạn10.000 bản ghi, STAFF
+  chỉ thấy LAB được phân công. Không suy diễn công suất thực từ dữ liệu khai báo.
+- PLAN-07: Buffer sau lịch0..240 phút lấy từ snapshot lịch trước, áp dụng nhất
+  quán trên kiểm tra đặt lịch và lịch hiển thị; notice tối thiểu30 phút giữ nguyên.
+
+Acceptance: kiểm thử `planning.integration.test.js`, các nhóm resources/calendar/
+operations/fulfillment/payment-hold và test planner frontend. Chưa xác minh giao
+ diện trực tiếp không được coi là đã hoàn thành visual QA.

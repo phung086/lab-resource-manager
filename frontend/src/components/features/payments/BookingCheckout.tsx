@@ -6,9 +6,13 @@ import { canInitiateBookingPayment, paymentSessionStatus, safeVnpayUrl } from ".
 import { apiRequest } from "../../../api.js";
 import { formatVietnamDateTime } from "../../../utils/timezone";
 import { QuoteDiscountSummary } from './QuoteDiscountSummary';
+import { BookingAccessPanel } from '../operations/BookingAccessPanel';
+import { PaymentHoldNotice } from './PaymentHoldNotice';
+import { ReceiptButton } from './ReceiptButton';
+import { workspacePathForTab } from '../../../workspaceRoutes.js';
 import "./payments.css";
 
-type Booking = { id: string; requestedById: string; title: string; status: string; feeAmountVnd: number; feeSnapshot?: { baseAmountVnd: number; discountAmountVnd: number; discountBps: number; loyaltyTier: string; loyaltyPolicyVersion: number; amountVnd: number }; startAt: string; endAt: string; resource: { code: string; name: string } };
+type Booking = { id: string; bookingCode?: string; requestedById: string; title: string; status: string; paymentDueAt?: string | null; feeAmountVnd: number; contactSnapshot?: { fullName: string; phone: string; email: string }; feeSnapshot?: { baseAmountVnd: number; discountAmountVnd: number; discountBps: number; loyaltyTier: string; loyaltyPolicyVersion: number; amountVnd: number }; startAt: string; endAt: string; resource: { code: string; name: string; category?: string } };
 type Charge = { id: string; userId: string; amount: number; currency: string; status: string; provider: string; txnRef: string; paidAt: string | null; paymentUrlExpiresAt: string | null; reconciliationStatus: string; reconciliationReason: string | null };
 const money = (amount: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
@@ -25,8 +29,8 @@ export function BookingCheckout({ user, bookingId, onClearBooking }: { user: { i
   const displayStatus = charge ? paymentSessionStatus(charge) : '';
   const statusKeys: Record<string, string> = { pending: 'ui.awaiting_payment_dd717eb2', success: 'ui.payment_verified_c37ae36e', failed: 'ui.payment_failed_39d4ec59', expired: 'ui.session_expired_213530d5', refunded: 'ui.refunded_d0d4c45f' };
 
-  const load = useCallback(async () => {
-    loadAbort.current?.abort(); const controller=new AbortController();loadAbort.current=controller;setLoading(true); setError("");setBooking(null);setCharge(null);
+  const load = useCallback(async (silent = false) => {
+    loadAbort.current?.abort(); const controller=new AbortController();loadAbort.current=controller;if (!silent) { setLoading(true); setBooking(null); setCharge(null); } setError("");
     try {
       const [bookingRow, charges, paymentList] = await Promise.all([
         apiRequest(`/bookings/${encodeURIComponent(bookingId)}`,{signal:controller.signal}),
@@ -41,6 +45,29 @@ export function BookingCheckout({ user, bookingId, onClearBooking }: { user: { i
   }, [bookingId]);
 
   useEffect(() => { void load(); return()=>loadAbort.current?.abort(); }, [load]);
+  useEffect(() => {
+    if (charge?.status !== 'pending' || !booking || !['PENDING_APPROVAL','CONFIRMED'].includes(booking.status) || Date.parse(booking.endAt) <= Date.now()) return;
+    let stopped = false, timer: ReturnType<typeof setTimeout>;
+    const controller = new AbortController();
+    async function poll() {
+      if (stopped) return;
+      if (!document.hidden && !busyRef.current) {
+        try {
+          const rows: Charge[] = await apiRequest(`/payments/booking/${encodeURIComponent(bookingId)}`, { signal:controller.signal });
+          if (stopped) return;
+          const updated = rows.find(row => row.status === 'success') || rows.find(row => row.id === charge?.id);
+          if (updated && updated.status !== 'pending') { await load(true); return; }
+        } catch (cause: any) {
+          if (!controller.signal.aborted) setError(cause.message);
+          // A failed/status-limited read requires explicit refresh. Never loop on 429.
+          return;
+        }
+      }
+      timer = setTimeout(() => void poll(), 10000);
+    }
+    timer = setTimeout(() => void poll(), 10000);
+    return () => { stopped = true; clearTimeout(timer); controller.abort(); };
+  }, [bookingId, booking, charge?.id, charge?.status, load]);
 
   async function pay() {
     if (!charge || !booking || !canPay || busyRef.current || !vnpayReady) return;
@@ -55,22 +82,25 @@ export function BookingCheckout({ user, bookingId, onClearBooking }: { user: { i
 
   return <section className="content-stack payment-page booking-checkout" aria-labelledby="booking-checkout-heading">
     <header className="page-section-header">
-      <div><h1 id="booking-checkout-heading">{translate("ui.lab_booking_payment_5e2f0fb9")}</h1></div>
-      <button type="button" className="secondary-button" onClick={load} disabled={loading || redirecting}><RefreshCw size={16} /> {tr("ui.refresh_b4c61340")}</button>
+      <div><h1 id="booking-checkout-heading">{tr(charge?.status === 'success' ? 'ui.fulfillment.receipt' : 'ui.lab_booking_payment_5e2f0fb9')}</h1></div>
+      <button type="button" className="secondary-button" onClick={() => void load()} disabled={loading || redirecting}><RefreshCw size={16} /> {tr("ui.refresh_b4c61340")}</button>
     </header>
     {error && <p className="alert danger" role="alert">{translate(error)}</p>}
     {loading ? <p role="status">{translate("ui.loading_payment_details_1be4a89c")}</p> : booking && <div className="booking-checkout-order"><div className="booking-checkout-summary">
       <h2>{booking.title}</h2>
       <p>{booking.resource.code} · {booking.resource.name}</p>
+      <a className="btn btn-secondary" href={workspacePathForTab('bookings', { booking:booking.id })}>{tr('ui.paymentJourney.openBooking')}</a>
       <dl>
         <dt>{tr("ui.time_b295fd62")}</dt><dd>{formatVietnamDateTime(booking.startAt)} – {formatVietnamDateTime(booking.endAt)}</dd>
-        <dt>{tr("ui.booking_reference_e80792a6")}</dt><dd className="payment-ref">{booking.id}</dd>
+        <dt>{tr("ui.booking_reference_e80792a6")}</dt><dd className="payment-ref">{booking.bookingCode || booking.id}</dd>
         <dt>{tr("ui.usage_fee_cdf18099")}</dt><dd><strong className="payment-amount">{money(booking.feeAmountVnd)}</strong></dd>
         {charge && <><dt>{translate("ui.payment_reference_3749e1af")}</dt><dd className="payment-ref">{charge.txnRef}</dd></>}
+        {charge?.status === 'success' && booking.contactSnapshot && <><dt>{tr('ui.full_name_03de764f')}</dt><dd>{booking.contactSnapshot.fullName}</dd><dt>{tr('ui.customer.phoneLabel')}</dt><dd>{booking.contactSnapshot.phone}</dd></>}
       </dl>
       <QuoteDiscountSummary quote={booking.feeSnapshot} />
+      {booking.status === 'PENDING_APPROVAL' && booking.paymentDueAt && <PaymentHoldNotice paymentDueAt={booking.paymentDueAt} startAt={booking.startAt} onExpired={() => void load(true)} />}
       </div><div className="booking-checkout-status">{booking.feeAmountVnd === 0 ? <div className="alert" role="status">{translate("ui.this_booking_is_free_and_a79ab8e0")}</div>
-        : booking.status === "PENDING_APPROVAL" ? <div className="alert" role="status">{translate("ui.awaiting_lab_staff_approval_a_7acf2a8a")}</div>
+        : booking.status === 'PENDING_APPROVAL' && !booking.paymentDueAt ? <div className="alert" role="status">{translate('ui.awaiting_lab_staff_approval_a_7acf2a8a')}</div>
         : ["REJECTED", "CANCELLED"].includes(booking.status) && charge?.status === "success" && charge.reconciliationStatus === "manual_review" ? <div className="alert warning" role="status">{translate("ui.vnpay_verified_this_payment_after_b54cfde0")} {booking.status === "REJECTED" ? tr("ui.rejected_cb6ec8af") : tr("ui.cancelled_2cdb07af")}{translate("ui.an_administrator_must_reconcile_the_682abc88")}</div>
         : ["REJECTED", "CANCELLED"].includes(booking.status) ? <div className="alert" role="status">{translate("ui.the_booking_has_been_09264f80")} {booking.status === "REJECTED" ? tr("ui.rejected_cb6ec8af") : translate("ui.cancelled_a37e2797")}{translate("ui.this_booking_cannot_be_paid_ed942f5f")}</div>
         : charge?.status === "success" ? <div className="alert success" role="status"><ShieldCheck size={18} />  {translate("ui.payment_verified_c37ae36e")} {money(charge.amount)}  {translate("ui.at_0febedcf")} {charge.paidAt ? formatVietnamDateTime(charge.paidAt) : "—"}.</div>
@@ -82,6 +112,8 @@ export function BookingCheckout({ user, bookingId, onClearBooking }: { user: { i
           {!vnpayReady && <p className="alert warning" role="status">{translate("ui.vnpay_is_not_configured_on_4832ddeb")}</p>}
           {charge.provider === "vietqr" && <p className="alert warning">{translate("ui.this_transaction_uses_vietqr_and_0585cf77")}</p>}
         </div> : <div className="alert warning">{translate("ui.no_valid_charge_exists_for_44e6869a")}</div>}
+      {charge?.status === 'success' && <ReceiptButton transactionId={charge.id} />}
+      {booking.requestedById === user.id && (booking.feeAmountVnd === 0 || (charge?.status === 'success' && charge.reconciliationStatus === 'none')) && <BookingAccessPanel key={booking.id} bookingId={booking.id} status={booking.status} category={booking.resource.category} onChanged={() => void load(true)} />}
     </div></div>}
     <button type="button" className="secondary-button" onClick={onClearBooking}><ArrowLeft size={16} />  {translate("ui.view_transactions_c48a4c6f")}</button>
   </section>;

@@ -8,6 +8,7 @@ export interface SidebarProps {
   onSelectTab: (tabId: string) => void;
   user: { fullName: string; role: string; email?: string } | null;
   notifications?: Array<{ id: string | number; readAt?: string | null }>;
+  notificationUnreadCount?: number | null;
   incidents?: Array<{ id: string | number; status?: string }>;
   incidentOpenCount?: number;
   conflictsCount?: number;
@@ -19,7 +20,7 @@ export interface SidebarProps {
 }
 interface NavItem { id: string; labelKey: string; icon: LucideIcon; badge?: number }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, notifications = [], incidentOpenCount, locale = "vi", expanded, onExpandedChange, pinned, onPinnedChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, notifications = [], notificationUnreadCount, incidentOpenCount, locale = "vi", expanded, onExpandedChange, pinned, onPinnedChange }) => {
   const t = translate;
   const role = user?.role || "";
   const staff = ["ADMIN", "LAB_STAFF"].includes(role);
@@ -47,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, 
       { id: "maintenance", labelKey: "ui.maintenance_and_calibration_fa8ebcfe",  icon: Wrench },
       { id: "stock", labelKey: "ui.materials_inventory_2b570ac6",  icon: Layers },
       { id: "incidents", labelKey: "ui.resource_incidents_0cba217b",  icon: ShieldAlert, badge: incidentOpenCount },
-      { id: "escalations", labelKey: "ui.notifications_a9b656f5",  icon: Bell, badge: notifications.filter(row => !row.readAt).length },
+      { id: "escalations", labelKey: "ui.notifications_a9b656f5",  icon: Bell, badge: notificationUnreadCount === null ? undefined : notificationUnreadCount ?? notifications.filter(row => !row.readAt).length },
       { id: "support", labelKey: "support.title", icon: Users },
     ] },
     { id: "account", labelKey: role === "ADMIN" ? "ui.account_and_administration_cade4bec" : "ui.account_09128ce8",  items: [
@@ -69,7 +70,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, 
   const available = sections.map(section => ({ ...section, items: section.items.filter(item => allowed(item.id)) })).filter(section => section.items.length);
   const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase();
   const matching = available.map(section => ({ ...section, items: section.items.filter(item => normalize(`${t(item.labelKey)} ${item.id}`).includes(normalize(query.trim()))) })).filter(section => section.items.length);
-  const quick = available.flatMap(section => section.items).filter(item => ["home", "smart_calendar", "bookings", "resources"].includes(item.id));
+  const quickIds = role === "ADMIN"
+    ? ["home", "users", "admin_management", "dashboard"]
+    : role === "LAB_STAFF" ? ["home", "bookings", "smart_calendar", "stock"]
+      : ["home", "resources", "smart_calendar", "bookings"];
+  const quickLabels: Record<string, string> = {
+    home: "ui.overview_120adc28", resources: "ui.resources_eb706979",
+    smart_calendar: "ui.calendar_be87b302", bookings: "ui.bookings_00f5b333",
+    users: "ui.navigation.accountsShort", admin_management: "ui.resources_eb706979",
+    dashboard: "ui.navigation.operationsShort", stock: "ui.navigation.stockShort"
+  };
+  const quick = quickIds.flatMap(id => available.flatMap(section => section.items).filter(item => item.id === id));
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1100px)');
@@ -109,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, 
     {!docked && <div className="workspace-rail" inert={expanded}>
       <button type="button" className="rail-brand" onClick={() => navigate("home")} aria-label={t("ui.lab_overview_50cafd5a")}><FlaskConical size={23} aria-hidden="true" /><span>{translate("ui.lab_7a62e3ac")}</span></button>
       <button ref={trigger} type="button" className="rail-item rail-menu" aria-expanded={expanded} aria-controls="workspace-navigation-panel" onClick={() => { setQuery(""); onExpandedChange(true); }}><Menu size={21} aria-hidden="true" /><span>{translate("ui.menu_99af6606")}</span></button>
-      <nav className="rail-shortcuts" aria-label={t("ui.quick_navigation_ec400fed")}>{quick.map(item => <button key={item.id} type="button" data-quick-nav-id={item.id} className={`rail-item ${activeTab === item.id ? "is-active" : ""}`} title={t(item.labelKey)} aria-label={t(item.labelKey)} aria-current={activeTab === item.id ? "page" : undefined} onClick={() => navigate(item.id)}><item.icon size={20} aria-hidden="true" /><span>{item.id === "home" ? t("ui.overview_120adc28") : item.id === "smart_calendar" ? t("ui.calendar_be87b302") : item.id === "bookings" ? t("ui.bookings_00f5b333") : t("ui.resources_eb706979")}</span></button>)}</nav>
+      <nav className="rail-shortcuts" aria-label={t("ui.quick_navigation_ec400fed")}>{quick.map(item => <button key={item.id} type="button" data-quick-nav-id={item.id} className={`rail-item ${activeTab === item.id ? "is-active" : ""}`} title={t(item.labelKey)} aria-label={t(item.labelKey)} aria-current={activeTab === item.id ? "page" : undefined} onClick={() => navigate(item.id)}><item.icon size={20} aria-hidden="true" /><span>{t(quickLabels[item.id])}</span></button>)}</nav>
       <button type="button" className="rail-item rail-profile" aria-label={t("ui.my_profile_700b5272")} onClick={() => navigate("profile")}><span className="rail-avatar">{user?.fullName?.charAt(0) || "U"}</span><span>{t("ui.profile_7f401d2e")}</span></button>
     </div>}
     {(docked || expanded) && <>

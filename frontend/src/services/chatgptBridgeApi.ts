@@ -1,10 +1,13 @@
 import { apiRequest } from '../api.js';
+import { getAccessToken } from './authStorage.js';
 import { parseBridgeProposals, type BridgeProposal } from './chatgptBridgeProposals.ts';
 
 export type BridgeRequest = {
   id: string; status: 'PENDING' | 'ANSWERED' | 'EXPIRED' | 'CANCELLED' | 'HANDED_OFF';
   expiresAt: string; answer?: string; locale?: string; generatedAt?: string;
-  provider?: 'chatgpt'; source?: 'chatgpt_bridge';
+  provider?: 'chatgpt' | 'local'; source?: 'chatgpt_bridge' | 'local_guidance' | 'authenticated_mcp';
+  toolsUsed?: string[]; nextTab?: string;
+  partialReply?: { text: string; sequence: number; generatedAt: string };
   proposals?: BridgeProposal[];
   conversation?: { id: string; expiresAt: string; retainedTurns?: number };
 };
@@ -39,9 +42,12 @@ export const disconnectBridge = (id: string) => apiRequest('/chatgpt-bridge/conn
 function validateRequest(value: unknown): BridgeRequest {
   const request = value as BridgeRequest;
   if (!request || !REQUEST_ID.test(request.id) || !['PENDING', 'ANSWERED', 'EXPIRED', 'CANCELLED', 'HANDED_OFF'].includes(request.status) || !Number.isFinite(Date.parse(request.expiresAt))) throw failure('bridge.invalidResponse');
-  if (request.status === 'ANSWERED' && (typeof request.answer !== 'string' || !request.answer.trim() || request.source !== 'chatgpt_bridge' || request.provider !== 'chatgpt')) throw failure('bridge.invalidResponse');
+  if (request.status === 'ANSWERED' && (typeof request.answer !== 'string' || !request.answer.trim() ||
+      !((request.source === 'chatgpt_bridge' && request.provider === 'chatgpt') || (['local_guidance', 'authenticated_mcp'].includes(request.source || '') && request.provider === 'local')))) throw failure('bridge.invalidResponse');
   if (request.status === 'ANSWERED') request.proposals = parseBridgeProposals(request.proposals);
   else if (request.proposals?.length) throw failure('bridge.invalidResponse');
+  if (request.partialReply && (request.status !== 'PENDING' || typeof request.partialReply.text !== 'string' || !request.partialReply.text.trim() ||
+    request.partialReply.text.length > 1500 || !Number.isInteger(request.partialReply.sequence) || request.partialReply.sequence < 1 || request.partialReply.sequence > 3 || !Number.isFinite(Date.parse(request.partialReply.generatedAt)))) throw failure('bridge.invalidResponse');
   return request;
 }
 function pause(milliseconds: number, signal: AbortSignal) {
@@ -60,8 +66,8 @@ export async function askChatgptBridge(question: BridgeQuestion, options: {
 }): Promise<BridgeRequest> {
   const { signal, onPending, transport = apiRequest, pollMs = POLL_MS } = options;
   if (signal.aborted) throw signal.reason;
-  const token = localStorage.getItem('lrm_token');
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const token = getAccessToken();
+  const headers = { 'X-LRM-Locale': question.locale, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   let request: BridgeRequest | undefined, answered = false;
   try {
     request = validateRequest(await transport(PREFIX, { method: 'POST', headers, body: JSON.stringify(question) }));
@@ -71,10 +77,26 @@ export async function askChatgptBridge(question: BridgeQuestion, options: {
     while (request.status === 'PENDING') {
       if (Date.now() >= deadline) throw failure('bridge.expired');
       await pause(Math.min(Math.max(1, pollMs), Math.max(1, deadline - Date.now())), signal);
-      const next = validateRequest(await transport(`${PREFIX}/${request.id}`, { signal, headers }));
+      let payload: unknown;
+      for (let attempt = 0; ; attempt++) {
+        if (Date.now() >= deadline) throw failure('bridge.expired');
+        try { payload = await transport(`${PREFIX}/${request.id}`, { signal, headers }); break; }
+        catch (error) {
+          const cause = error as { code?: string; status?: number };
+          const transient = ['NETWORK_UNAVAILABLE', 'REQUEST_TIMEOUT'].includes(cause.code || '') || (Number(cause.status) >= 500 && Number(cause.status) <= 599);
+          if (signal.aborted || !transient || attempt >= 3) throw error;
+          // Only the idempotent status read is retried; never recreate a question.
+          await pause(Math.min(500 * 2 ** attempt, Math.max(1, deadline - Date.now())), signal);
+        }
+      }
+      const next = validateRequest(payload);
       if (next.id !== request.id) throw failure('bridge.invalidResponse');
+      if (next.status === 'PENDING' && request.partialReply && (!next.partialReply || next.partialReply.sequence < request.partialReply.sequence ||
+          (next.partialReply.sequence === request.partialReply.sequence && next.partialReply.text !== request.partialReply.text) ||
+          !next.partialReply.text.startsWith(request.partialReply.text))) throw failure('bridge.invalidResponse');
       request = next;
       if (signal.aborted) throw signal.reason;
+      if (request.status === 'PENDING') onPending?.(request);
     }
     if (request.status === 'EXPIRED') throw failure('bridge.expired');
     if (request.status === 'CANCELLED' || request.status === 'HANDED_OFF') throw failure('bridge.cancelled');

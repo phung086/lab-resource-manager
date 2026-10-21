@@ -13,10 +13,10 @@
 
 - `frontend/`: React/Vite application.
 - `backend/`: Express API, Prisma schema, backend tests, backend scripts.
-- `docs/`: SRS, structure, conventions, guidelines, Batch reports, runbooks.
+- `docs/`: maintained SRS, structure, conventions, guidelines and runbooks; no per-run AI reports.
 - `.agent/`: project-local agent rules and workflow.
 - `data/`: import templates and example inventory data.
-- `research/`, optional advanced components: non-core unless batch-approved.
+- Retired research/showcase code must not be restored to satisfy obsolete tests.
 
 ## Backend Layering
 

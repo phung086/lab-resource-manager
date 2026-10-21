@@ -22,7 +22,7 @@ for (const role of ["staff", "admin", "student", "lecturer", "unassigned"]) sess
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined, headless: true, args: ["--no-sandbox"] });
 async function open(role, hash) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, reducedMotion: "reduce" });
-  await context.addInitScript(session => { localStorage.setItem("lrm_token", session.accessToken); localStorage.setItem("lrm_user", JSON.stringify(session.user)); localStorage.setItem("lrm_locale", "vi"); }, sessions[role]);
+  await context.addInitScript(session => { sessionStorage.setItem("lrm_token", session.accessToken); sessionStorage.setItem("lrm_user", JSON.stringify(session.user)); localStorage.setItem("lrm_locale", "vi"); }, sessions[role]);
   const page = await context.newPage(); page.on("pageerror", error => errors.push(`${role}: ${error.message}`));
   const reads = [], mutations = [];
   page.on("request", request => {

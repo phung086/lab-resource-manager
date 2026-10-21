@@ -92,6 +92,26 @@ test('cancelled/expired requests and changed credentials never emit a new event'
   assert.equal((await prisma.chatgptBridgeRequest.findUniqueOrThrow({ where: { id: next.request.id } })).status, 'EXPIRED');
 });
 
+test('staff/admin events retain the question role and reject role changes before delivery', async () => {
+  for (const role of ['LAB_STAFF', 'ADMIN']) {
+    const actor = await prisma.user.create({ data: { id: randomUUID(), email: `event-role-${randomUUID()}@bridge.test`, fullName: role, role, passwordHash: 'fixture-only' } });
+    const create = async () => {
+      const request = await prisma.chatgptBridgeRequest.create({ data: { id: randomUUID(), customerId: actor.id, customerAuthVersion: actor.authVersion,
+        grantId: grant.id, generation: grant.generation, conversationId: randomUUID(), context: { actorRole: role }, message: 'Operator analysis', expiresAt: new Date(clock.getTime() + 600000) } });
+      return prisma.chatgptBridgeDelivery.create({ data: { id: randomUUID(), requestId: request.id, subscriptionId, eventId: 'evt_' + randomUUID(), nextAttemptAt: clock } });
+    };
+    deliveries = []; responseStatus = 202;
+    const value = await create(); await events.dispatchOnce();
+    assert.equal((await prisma.chatgptBridgeDelivery.findUniqueOrThrow({ where: { id: value.id } })).status, 'DELIVERED');
+    assert.equal(deliveries.length, 1);
+    await prisma.chatgptBridgeRequest.update({ where: { id: value.requestId }, data: { status: 'CANCELLED' } });
+    const changed = await create(); await prisma.user.update({ where: { id: actor.id }, data: { role: 'CUSTOMER' } });
+    deliveries = []; await events.dispatchOnce();
+    assert.equal((await prisma.chatgptBridgeDelivery.findUniqueOrThrow({ where: { id: changed.id } })).status, 'CANCELLED');
+    assert.equal(deliveries.length, 0);
+  }
+});
+
 test('unsubscribe and owner revocation stop access and delivery', async () => {
   await events.unsubscribe(grant, { name: EVENT_NAME, arguments: {}, delivery: { mode: 'webhook', url: 'https://receiver.example/callback' } });
   await events.unsubscribe(grant, { name: EVENT_NAME, arguments: {}, delivery: { mode: 'webhook', url: 'https://receiver.example/callback' } });

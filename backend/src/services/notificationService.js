@@ -3,7 +3,7 @@ import crypto from "crypto";
 
 import { prisma } from "../db.js";
 
-export const BOOKING_UPCOMING_REMINDER_MINUTES = Number(process.env.BOOKING_UPCOMING_REMINDER_MINUTES || 60);
+export const BOOKING_UPCOMING_REMINDER_MINUTES = Number(process.env.BOOKING_UPCOMING_REMINDER_MINUTES || 30);
 export const RETURN_REMINDER_MINUTES = Number(process.env.RETURN_REMINDER_MINUTES || 15);
 
 const REMINDER_TYPES = ["BOOKING_UPCOMING", "RETURN_REMINDER"];
@@ -37,8 +37,11 @@ function reminderSchedule(booking) {
 
 export async function scheduleBookingReminders(tx, booking, now = new Date()) {
   if (booking.status !== "CONFIRMED" && booking.status !== "CHECKED_OUT") return;
+  if (booking.feeAmountVnd > 0 && !await tx.paymentTransaction.findFirst({ where: { bookingId: booking.id, userId: booking.requestedById, status: 'success', amount: booking.feeAmountVnd, currency: 'VND', provider: { in: ['vnpay','vietqr'] }, reconciliationStatus: 'none', paidAt: { not: null } } })) return;
+  if (booking.endAt <= now) return;
 
   for (const definition of reminderSchedule(booking)) {
+    if (definition.type === 'BOOKING_UPCOMING' && (booking.status !== 'CONFIRMED' || booking.startAt <= now)) continue;
     const messageParams = {
       bookingId: booking.id,
       title: booking.title,
@@ -91,23 +94,38 @@ export async function cancelPendingBookingReminders(tx, bookingId, types = REMIN
       dedupeKey: { in: selectedTypes.map((type) => `booking:${bookingId}:${type}`) }
     }
   });
+  await tx.notification.updateMany({ where: { dedupeKey: { in: selectedTypes.map(type => `booking:${bookingId}:${type}`) }, sentAt: { not: null }, readAt: null }, data: { readAt: new Date() } });
   return result.count;
 }
 
 export async function dispatchDueNotifications(client = prisma, now = new Date(), userId = null) {
+  let reminderCount = 0;
+  // Recheck persisted reminders after downtime; an obsolete job must not pop up
+  // as though a cancelled, unpaid or expired booking were still upcoming.
+  const reminders = await client.notification.findMany({ where: { sentAt: null, type: { in: REMINDER_TYPES }, scheduledAt: { lte: now }, ...(userId ? { userId } : {}) }, take: 100,
+    select: { id: true, type: true, messageParams: true } });
+  for (const reminder of reminders) {
+    const bookingId = reminder.messageParams?.bookingId;
+    const booking = typeof bookingId === 'string' ? await client.booking.findUnique({ where: { id: bookingId } }) : null;
+    const active = booking && ['CONFIRMED','CHECKED_OUT'].includes(booking.status) && booking.endAt > now && (reminder.type !== 'BOOKING_UPCOMING' || (booking.status === 'CONFIRMED' && booking.startAt > now));
+    const paid = active && (booking.feeAmountVnd === 0 || await client.paymentTransaction.findFirst({ where: { bookingId, userId: booking.requestedById, status: 'success', amount: booking.feeAmountVnd, currency: 'VND', provider: { in: ['vnpay','vietqr'] }, reconciliationStatus: 'none', paidAt: { not: null } } }));
+    if (paid) reminderCount += (await client.notification.updateMany({ where: { id: reminder.id, sentAt: null }, data: { sentAt: now } })).count;
+    else await client.notification.deleteMany({ where: { id: reminder.id, sentAt: null } });
+  }
   const where = {
     sentAt: null,
-    OR: [
+    OR: [{ type: null }, { type: { notIn: REMINDER_TYPES } }],
+    AND: [{ OR: [
       { scheduledAt: null },
       { scheduledAt: { lte: now } }
-    ],
+    ] }],
     ...(userId ? { userId } : {})
   };
   const result = await client.notification.updateMany({
     where,
     data: { sentAt: now }
   });
-  return result.count;
+  return result.count + reminderCount;
 }
 
 export async function getUserNotifications(userId, { unreadOnly = false, take = 50 } = {}, client = prisma) {
@@ -121,6 +139,11 @@ export async function getUserNotifications(userId, { unreadOnly = false, take = 
     orderBy: { createdAt: "desc" },
     take: Math.min(Math.max(Number(take) || 50, 1), 100)
   });
+}
+
+export async function countUnreadUserNotifications(userId, client = prisma) {
+  await dispatchDueNotifications(client, new Date(), userId);
+  return client.notification.count({ where: { userId, sentAt: { not: null }, readAt: null } });
 }
 
 export function startReminderScheduler({

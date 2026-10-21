@@ -92,7 +92,7 @@ export function createBridgeEvents({ prisma, settings, sendWebhook = postWebhook
     const valid = sub.status === 'VERIFIED' && sub.expiresAt > at && activeOwner(sub.grant, at) &&
       job.status === 'PENDING' && job.expiresAt > at && job.generation === sub.grant.generation &&
       job.customer.isActive && !job.customer.deletedAt && !job.customer.passwordResetRequired &&
-      job.customer.role === 'CUSTOMER' && job.customer.authVersion === job.customerAuthVersion;
+      job.customer.role === (job.context?.actorRole || 'CUSTOMER') && job.customer.authVersion === job.customerAuthVersion;
     const finish = data => prisma.chatgptBridgeDelivery.updateMany({ where: { id: claimed.id, leaseToken, status: 'PENDING' },
       data: { ...data, leaseToken: null, leaseUntil: null } });
     if (!valid) { await finish({ status: 'CANCELLED' }); return true; }
@@ -123,7 +123,7 @@ export function createBridgeEvents({ prisma, settings, sendWebhook = postWebhook
   return { definitions: eventDefinitions, list, subscribe, unsubscribe, dispatchOnce };
 }
 
-export function startBridgeScheduler({ events, enabled, intervalMs = 3000 }) {
+export function startBridgeScheduler({ events, enabled, intervalMs = 500 }) {
   if (!enabled) return () => Promise.resolve();
   let running = null, stopped = false;
   const tick = () => {

@@ -24,7 +24,7 @@ async function open(role, route) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
   await context.addInitScript(session => {
     if (sessionStorage.getItem('account_security_ui_initialized')) return;
-    localStorage.setItem('lrm_token', session.accessToken); localStorage.setItem('lrm_user', JSON.stringify(session.user)); localStorage.setItem('lrm_locale', 'vi');
+    sessionStorage.setItem('lrm_token', session.accessToken); sessionStorage.setItem('lrm_user', JSON.stringify(session.user)); localStorage.setItem('lrm_locale', 'vi');
     sessionStorage.setItem('account_security_ui_initialized', '1');
   }, sessions[role]);
   const page = await context.newPage(); page.on('pageerror', cause => errors.push(role + ': ' + cause.message));
@@ -172,7 +172,7 @@ try {
   await selfForm.locator('[name=otp]').fill(selfCode);
   await mutation(customerPage, 'POST', '/auth/change-password', () => selfForm.locator('button[type=submit]').click());
   await selfForm.getByRole('status').waitFor();
-  const renewed = await customerPage.evaluate(() => ({ accessToken: localStorage.getItem('lrm_token'), user: JSON.parse(localStorage.getItem('lrm_user')) }));
+  const renewed = await customerPage.evaluate(() => ({ accessToken: sessionStorage.getItem('lrm_token'), user: JSON.parse(sessionStorage.getItem('lrm_user')) }));
   check(renewed.accessToken !== sessions.customer.accessToken && renewed.user.id === fixture.users.customer.id, 'Self OTP flow stores a renewed session');
   check((await call('customer', 'GET', '/auth/me')).status === 401, 'Old self session is revoked'); sessions.customer = renewed;
   check((await call('customer', 'GET', '/auth/me')).status === 200, 'Renewed self session remains authenticated');

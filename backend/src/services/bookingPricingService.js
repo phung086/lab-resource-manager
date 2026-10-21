@@ -2,12 +2,16 @@ import crypto from "node:crypto";
 import { HttpError } from "../middleware/errors.js";
 import { config } from "../config.js";
 import { getUserLoyalty } from "./loyaltyService.js";
+import { isPaymentHold } from './bookingPaymentHoldService.js';
+import { assertBookingNotice } from './bookingNoticePolicy.js';
 
 export const PURPOSE_CODES = ["STUDY", "TEACHING", "RESEARCH", "SERVICE"];
 
 export async function quoteBooking(tx, { resourceId, purposeCode, startAt, endAt }, { userId = null, lockPolicy = false } = {}) {
-  const resource = await tx.resource.findUnique({ where: { id: resourceId }, select: { id: true, maxBookingMinutes: true, laboratory: { select: { labPolicy: { select: { maxBookingMinutes: true } } } } } });
+  if (lockPolicy) await tx.$queryRaw`SELECT id FROM laboratories WHERE id = (SELECT "laboratoryId" FROM resources WHERE id = ${resourceId}) FOR SHARE`;
+  const resource = await tx.resource.findUnique({ where: { id: resourceId }, select: { id: true, maxBookingMinutes: true, laboratory: { select: { labPolicy: { select: { maxBookingMinutes: true, minAdvanceBookingMinutes: true } } } } } });
   if (!resource) throw new HttpError(404, "Không tìm thấy tài nguyên.", undefined, "NOT_FOUND");
+  assertBookingNotice({ policy: resource.laboratory?.labPolicy, startAt });
   const rules = await tx.resourcePricingRule.findMany({ where: { resourceId } });
   if (!rules.length) return { amountVnd: 0, baseAmountVnd: 0, discountAmountVnd: 0, discountBps: 0, loyaltyTier: "LAB_STANDARD", loyaltyPolicyVersion: null, currency: "VND", purposeCode: purposeCode || null, version: 0, hourlyRateVnd: 0, label: "Miễn phí", minutes: null };
   const rule = rules.find(row => row.purposeCode === purposeCode);
@@ -39,7 +43,7 @@ export function verifyAcceptedQuote(quote, acceptedQuote) {
 }
 
 export async function ensureBookingCharge(tx, booking) {
-  if (booking.feeAmountVnd <= 0 || booking.status !== "CONFIRMED") return;
+  if (booking.feeAmountVnd <= 0 || (booking.status !== 'CONFIRMED' && !isPaymentHold(booking))) return;
   const existing = await tx.paymentTransaction.findFirst({ where: { bookingId: booking.id, status: { in: ["pending", "success"] } } });
   if (existing) return existing;
   return tx.paymentTransaction.create({ data: {

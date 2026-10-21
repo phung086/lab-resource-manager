@@ -14,7 +14,8 @@ report/audit/handoff AI cũ và ảnh chụp không phải ngữ cảnh bắt bu
 | Hướng triển khai, báo cáo vận hành và mô phỏng | [Đối chiếu](IMPLEMENTATION_DIRECTION_20261005.md) |
 | AI | [Setup](AI_ASSISTANT_SETUP.md), [MCP contract](AI_ASSISTANT_MCP.md) |
 | API hàng đợi | [Pagination contract](WORKSPACE_QUEUE_PAGINATION_20261003.md) |
-| Chạy/deploy/demo | [README](../README.md), [Deployment](DEPLOYMENT.md), [Demo](GRADUATION_DEMO_RUNBOOK.md), [Real data](REAL_DATA_RUNBOOK.md) |
+| Chạy/tích hợp/kiểm thử | [README](../README.md), [Integration](INTEGRATION_GUIDE.md), [System tests](SYSTEM_TEST_GUIDE.md) |
+| Deploy/demo | [Deployment](DEPLOYMENT.md), [Demo](GRADUATION_DEMO_RUNBOOK.md), [Real data](REAL_DATA_RUNBOOK.md) |
 | Nhà cung cấp tùy chọn | [Integration setup](INTEGRATION_SETUP_GUIDE_20261003.md) |
 | Security và triển khai thật | [Threat model](security/threat-model.md), [Checklist](PRODUCTION_READINESS.md) |
 | Việc còn lại | [Backlog](backlogs/README.md) |

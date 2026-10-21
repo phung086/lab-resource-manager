@@ -30,7 +30,7 @@ const opened = [];
 async function open(name) {
   sessions[name] = await call(name, '/auth/login', { email: `${name}@support.test`, password: 'SupportTest!2026' });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' }); opened.push(context);
-  await context.addInitScript(session => { localStorage.setItem('lrm_token', session.accessToken); localStorage.setItem('lrm_user', JSON.stringify(session.user)); localStorage.setItem('lrm_locale', 'vi'); }, sessions[name]);
+  await context.addInitScript(session => { sessionStorage.setItem('lrm_token', session.accessToken); sessionStorage.setItem('lrm_user', JSON.stringify(session.user)); localStorage.setItem('lrm_locale', 'vi'); }, sessions[name]);
   // Every intercepted request is forwarded to the real test Express/Prisma API.
   // No response, message, queue position or successful mutation is simulated.
   await context.route('**/api/**', async route => {
@@ -51,7 +51,7 @@ const chatText = async (page, value) => {
 async function ask(page, message) {
   await page.locator('.support-request textarea').fill(message);
   await page.locator('.support-request select').first().selectOption({ label: 'SUPPORT-a · Support Lab a' });
-  await page.getByRole('button', { name: text('request'), exact: true }).click();
+  await page.locator('.support-request textarea').press('Enter');
   await chatText(page, message);
 }
 try {
@@ -61,8 +61,9 @@ try {
   // Ask the actual assistant first, then explicitly choose human support.
   await student.locator('.assistant-launcher').click();
   await student.locator('#assistant-question').fill('Tôi cần hỗ trợ đặt lịch trong LAB');
-  await student.locator('.assistant-compose button[type=submit]').click();
+  await student.locator('#assistant-question').press('Enter');
   await student.locator('.assistant-answer').first().waitFor();
+  check(true, 'Enter sends the AI question through the actual request form');
   await student.getByRole('button', { name: text('handoff'), exact: true }).click();
   await student.locator('.assistant-human-share input').waitFor();
   check(!await student.locator('.assistant-human-share input').isChecked(), 'Sharing context is opt-in inside the same chat');
@@ -71,7 +72,7 @@ try {
   const requestForm = student.locator('.assistant-human-request');
   await requestForm.locator('select').first().selectOption({ label: 'SUPPORT-a · Support Lab a' });
   await requestForm.locator('textarea').fill('Khách A cần kiểm tra đặt lịch');
-  await requestForm.getByRole('button', { name: text('request'), exact: true }).click();
+  await requestForm.locator('textarea').press('Enter');
   await chatText(student, 'Khách A cần kiểm tra đặt lịch');
   await ask(peer, 'Khách B cần hỗ trợ thiết bị');
   await ask(third, 'Khách C chờ đến lượt'); await ask(fourth, 'Khách D chờ đến lượt');
@@ -86,7 +87,7 @@ try {
   await student.locator('#assistant-human-message').waitFor({ state: 'visible', timeout: 12_000 });
   await chatText(student, 'Khách A cần kiểm tra đặt lịch');
   check(await student.locator('#assistant-human-message').isVisible(), 'Reload and reopen reconnects the existing staff session inside the dock');
-  await student.locator('#assistant-human-message').fill('<script>customer message</script>'); await student.locator('.assistant-human .assistant-compose button').click();
+  await student.locator('#assistant-human-message').fill('<script>customer message</script>'); await student.locator('#assistant-human-message').press('Enter');
   await chatText(handling, '<script>customer message</script>');
   check(await handling.locator('.support-transcript script').count() === 0, 'Customer content renders as text, never executable markup');
   await handling.locator('.support-quick-replies summary').click();
@@ -94,7 +95,10 @@ try {
   check((await handling.locator('#support-message').inputValue()) === text('quick.booking.body'), 'Quick reply only inserts an editable draft');
   const beforeSend = (await call('student', `/support/sessions/${a.id}`)).messages;
   check(!beforeSend.some(message => message.body === text('quick.booking.body')), 'Quick reply does not send automatically');
-  await handling.locator('#support-message').fill('Nhân viên đã nhận thông tin và đang kiểm tra'); await handling.locator('.support-compose button').click();
+  await handling.locator('#support-message').fill('Nhân viên đã nhận thông tin và đang kiểm tra');
+  await handling.locator('#support-message').press('Shift+Enter');
+  check((await handling.locator('#support-message').inputValue()).endsWith('\n'), 'Shift+Enter keeps a newline without submitting');
+  await handling.locator('#support-message').press('Enter');
   await chatText(student, 'Nhân viên đã nhận thông tin và đang kiểm tra'); check(true, 'Customer and staff exchange real persisted messages in separate browser sessions');
   await admin.goto(`${base}/workspace/support?session=${a.id}`); await chatText(admin, 'Nhân viên đã nhận thông tin và đang kiểm tra');
   check(await admin.locator('.support-compose').count() === 0, 'Admin reviews conversation without impersonating its agent');

@@ -77,7 +77,7 @@ test("optional authentication exposes database outages instead of downgrading to
   const originalConsoleError = console.error;
   const req = {
     headers: {
-      authorization: `Bearer ${jwt.sign({ sub: "release-security-user" }, config.jwtSecret, { algorithm: "HS256" })}`
+      authorization: `Bearer ${jwt.sign({ sub: "release-security-user", sid: "00000000-0000-4000-8000-000000000001", authVersion: 0 }, config.jwtSecret, { algorithm: "HS256", issuer: config.jwtIssuer, audience: config.jwtAudience, expiresIn: 3600 })}`
     }
   };
   const res = responseRecorder();

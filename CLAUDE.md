@@ -3,8 +3,9 @@
 # Claude — LAB Resource Manager
 
 Giao tiếp bằng tiếng Việt. Đây là đồ án đang phát triển; giữ code chưa commit.
-Làm việc tại C:/Projects/lab-resource-manager, claude/lrm-redesign-v2; không sửa
-worktree 497f. Kiểm tra Git và runtime thực trước khi làm.
+Làm việc tại C:/Projects/lab-resource-manager, nhánh main (sau quyết định ngày
+15/10/2026 gộp redesign trên main thay vì tách worktree lrm-redesign-v2); không
+sửa worktree 497f. Kiểm tra Git và runtime thực trước khi làm.
 
 ## Yêu cầu hiện hành — 10/10/2026
 

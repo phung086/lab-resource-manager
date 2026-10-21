@@ -21,6 +21,7 @@ import loyaltyRouter from "./routes/loyalty.js";
 import auditEventsRouter from "./routes/auditEvents.js";
 import resourceRouter from "./routes/resources.js";
 import laboratoryRouter from "./routes/laboratories.js";
+import planningRouter from './routes/planning.js';
 import calendarRouter from "./routes/calendar.js";
 import bookingRouter from "./routes/bookings.js";
 import bookingPricingRouter from "./routes/bookingPricing.js";
@@ -57,7 +58,8 @@ export function createApp() {
         }
         return callback(new HttpError(403, "Origin is not allowed by CORS", undefined, "FORBIDDEN"));
       },
-      credentials: true
+      credentials: true,
+      exposedHeaders: ["Retry-After", "RateLimit", "RateLimit-Policy"]
     })
   );
   app.use(express.json({ limit: config.jsonBodyLimit }));
@@ -69,7 +71,11 @@ export function createApp() {
   }));
   const ingressLimit = limit => rateLimit({
     windowMs: config.rateLimitWindowMs, limit, standardHeaders: "draft-7", legacyHeaders: false,
-    handler: (req, res) => res.status(429).json({ error: { code: "RATE_LIMITED", message: localizeError(req.locale, "RATE_LIMITED") } })
+    handler: (req, res) => {
+      const retryAfterSeconds = Math.max(1, Math.ceil(((req.rateLimit?.resetTime?.getTime() || Date.now() + config.rateLimitWindowMs) - Date.now()) / 1000));
+      res.set("Retry-After", String(retryAfterSeconds));
+      return res.status(429).json({ error: { code: "RATE_LIMITED", message: localizeError(req.locale, "RATE_LIMITED"), details: { retryAfterSeconds } } });
+    }
   });
   // MCP initialization and tool reads share the loopback IP, but must not spend
   // the ordinary API budget. Both ingress paths remain bounded before auth.
@@ -144,6 +150,7 @@ export function createApp() {
   app.use("/api/resources", resourceMediaRouter);
   app.use("/api/resources", resourceRouter);
   app.use("/api/laboratories", laboratoryRouter);
+  app.use('/api/planning', planningRouter);
 
   // 4. Calendar & Time Slots
   app.use("/api/calendar", calendarRouter);

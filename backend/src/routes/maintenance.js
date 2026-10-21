@@ -67,7 +67,7 @@ router.get("/impact", requireRole(ADMIN, LAB_STAFF), requireLabAccess("query.res
   } catch (error) { next(error); }
 });
 
-router.get("/", async (req, res, next) => {
+router.get("/", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {
     const { resourceId, kind, status, from, to } = maintenanceListQuerySchema.parse(req.query);
     if (from && to && from > to) {
@@ -282,7 +282,7 @@ function validateMaintenanceWindow(startAt, endAt) {
   if (startAt >= endAt) {
     throw new HttpError(400, "Maintenance start time must be before end time", undefined, "INVALID_MAINTENANCE_TIME");
   }
-  const durationMinutes = Math.round((endAt.getTime() - startAt.getTime()) / 60_000);
+  const durationMinutes = (endAt.getTime() - startAt.getTime()) / 60_000;
   if (durationMinutes < MIN_MAINTENANCE_MINUTES || durationMinutes > MAX_MAINTENANCE_MINUTES) {
     throw new HttpError(400, "Maintenance duration is outside the allowed range", undefined, "INVALID_MAINTENANCE_TIME");
   }

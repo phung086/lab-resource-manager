@@ -25,19 +25,23 @@ export function buildBridgeMcp({ oauth, requests, events, settings }) {
         try { return await work; } finally { pending.delete(work); }
       };
       handler = createMcpHandler(() => {
-        const server = new McpServer({ name: 'lab-customer-support', version: '1.0.0' }, { capabilities: { events: {} } });
+        const server = new McpServer({ name: 'lab-customer-support', version: '1.1.0' }, { capabilities: { events: {} } });
         const reply = async operation => {
           try { const result = await run(operation); return { content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result }; }
           catch (error) { const result = { error: { code: error.code || (error instanceof z.ZodError ? 'VALIDATION_ERROR' : 'DATA_UNAVAILABLE') } };
             return { isError: true, content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result }; }
         };
-        server.registerTool('get_question_context', { description: 'Read a pending customer question, versioned LAB rules and request-bound read schemas. Never use admin identity for business reads.',
+        server.registerTool('get_question_context', { description: 'Read a pending LAB question, its authenticated actorRole, versioned rules and request-bound read schemas. Never substitute the OAuth owner identity.',
           inputSchema: schema({ requestId: uuid }), annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
         input => reply(() => requests.context(identity.grant, input.requestId)));
-        server.registerTool('read_question_data', { description: 'Read fresh LAB data as the customer bound to this question. Allowlisted tools only, no identity overrides or business mutations.',
+        server.registerTool('read_question_data', { description: 'Read fresh LAB data as the current actor bound to this question. Staff LAB scope and customer privacy are enforced. No identity overrides or business mutations.',
           inputSchema: schema({ requestId: uuid, tool: { type: 'string', maxLength: 80 }, input: { type: 'object', additionalProperties: true } }),
           annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
         (input, ctx) => reply(() => requests.readTool(identity.grant, input, { signal: globalThis.AbortSignal.any([controller.signal, ctx.signal].filter(Boolean)) })));
+        server.registerTool('publish_question_partial', { description: 'Publish the first useful, verified part of a longer answer promptly after reading context. Never send a placeholder or a promise to check. Up to three cumulative plain-text parts; monotonic sequence, same text replay is idempotent. Finish with publish_question_reply. No proposals or business mutations.',
+          inputSchema: schema({ requestId: uuid, generation: uuid, sequence: { type: 'integer', minimum: 1, maximum: 3 }, text: { type: 'string', minLength: 2, maxLength: 1500 } }),
+          annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
+        input => reply(() => requests.partial(identity.grant, input)));
         server.registerTool('publish_question_reply', { description: 'Publish a plain-text reply with optional BOOKING or STAFF_SUPPORT review drafts. Drafts do not execute; the customer reviews and confirms through normal LAB forms/APIs. No payment/account/operator mutations. Identical replay is idempotent.',
           inputSchema: fromJsonSchema({ type: 'object', properties: { requestId: uuid, generation: uuid,
             answer: { type: 'string', minLength: 2, maxLength: 6000 }, proposals: customerProposalJsonSchema },

@@ -1,9 +1,10 @@
 import { translate } from "../i18n.js";
 import { LanguageToggle } from "./base/LanguageToggle";
 import { ProjectBrand } from "./base/ProjectBrand";
+import { ResourceSearchField } from './base/ResourceSearchField';
 import React, { useState, useEffect, useRef } from "react";
 import { parseVietnamParts } from "../utils/timezone";
-import { Bell, ChevronDown, KeyRound, LogOut, RefreshCw, UserRound } from "lucide-react";
+import { Bell, MessageCircle, ChevronDown, KeyRound, LogOut, RefreshCw, UserRound, CalendarDays, UsersRound, ClipboardCheck } from "lucide-react";
 
 export interface HeaderProps {
   title: string;
@@ -16,7 +17,7 @@ export interface HeaderProps {
   } | null;
   locale: string;
   onLocaleChange: (locale: string) => void;
-  notificationsCount?: number;
+  notificationsCount?: number | null;
   loading?: boolean;
   onRefresh?: () => void;
   onOpenNotifications?: () => void;
@@ -26,12 +27,14 @@ export interface HeaderProps {
   onOpenAssistant?: () => void;
   assistantControl?: React.ReactNode;
   onOpenHome?: () => void;
+  onNavigate?: (tab: string, params?: Record<string, string>) => void;
+  showSearch?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   title,
   user,
-  notificationsCount = 0,
+  notificationsCount: unreadTotal = 0,
   loading = false,
   onRefresh,
   onOpenNotifications,
@@ -40,12 +43,17 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onOpenAssistant,
   assistantControl,
-  onOpenHome
+  onOpenHome,
+  onNavigate,
+  showSearch = true
 }) => {
   const t = translate;
+  // Unknown totals keep the generic notification action without a numeric badge.
+  const notificationsCount = unreadTotal ?? 0;
   // Canonical laboratory clock
   const [currentDateTime, setCurrentDateTime] = useState<string>("");
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
+  const [search, setSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -82,6 +90,11 @@ export const Header: React.FC<HeaderProps> = ({
   const quotaPercent = hasQuota ? Math.min(100, Math.round((quotaUsed / quotaTotal) * 100)) : 0;
   const roleKeys: Record<string, string> = { ADMIN: 'core.roles.admin', LAB_STAFF: 'core.roles.lab_staff', CUSTOMER: 'core.roles.customer' };
   const roleKey = roleKeys[user?.role || ''];
+  const shortcut = user?.role === 'ADMIN'
+    ? { tab: 'users', label: 'workspace.header.accounts', Icon: UsersRound }
+    : user?.role === 'LAB_STAFF'
+      ? { tab: 'dashboard', label: 'workspace.header.operations', Icon: ClipboardCheck }
+      : { tab: 'bookings', label: 'workspace.header.bookings', Icon: CalendarDays };
 
   function closeUserMenu() {
     setUserMenuOpen(false);
@@ -97,6 +110,13 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="header-telemetry-row-2026">{roleKey ? t(roleKey) : t('ui.workspace_970a97e3')}</div>
         </div>
       </div>
+
+      {onNavigate && <div className="project-header-tools">
+        {showSearch && <ResourceSearchField className="project-header-search" value={search} onChange={setSearch} label={t('workspace.header.search')} onSearch={value=>{if(value)onNavigate('resources',{search:value});}}/>}
+        <button type="button" className="project-header-shortcut" onClick={() => onNavigate(shortcut.tab)} aria-label={t(shortcut.label)} title={t(shortcut.label)}>
+          <shortcut.Icon size={18} aria-hidden="true" /><span>{t(shortcut.label)}</span>
+        </button>
+      </div>}
 
       {/* Right side: Language Segmented Control, Actions & User Profile */}
       <div className="header-right-2026">
@@ -195,7 +215,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* Actions */}
                 <div className="user-menu-actions">
-                  {onOpenAssistant && <button type="button" className="user-menu-item-btn project-menu-assistant" onClick={() => { closeUserMenu(); onOpenAssistant(); }}>{t('ui.lab_assistant_0a8d5bc9')}</button>}
+                  {onOpenAssistant && <button type="button" className="user-menu-item-btn project-menu-assistant" onClick={() => { closeUserMenu(); onOpenAssistant(); }}><MessageCircle size={15} aria-hidden="true" /><span>{t('ui.lab_assistant_0a8d5bc9')}</span></button>}
                   {onRefresh && <button type="button" className="user-menu-item-btn project-menu-refresh" disabled={loading} onClick={() => { closeUserMenu(); onRefresh(); }}><RefreshCw size={15} aria-hidden="true" /><span>{t('ui.refresh_data_167c5f3e')}</span></button>}
                   {onOpenProfile && <button type="button" className="user-menu-item-btn" onClick={() => { setUserMenuOpen(false); onOpenProfile(); }}><UserRound size={15} aria-hidden="true" /><span>{t("ui.my_profile_700b5272")}</span></button>}
                   <button

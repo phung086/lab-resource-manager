@@ -3,6 +3,9 @@ import { prisma } from "../db.js";
 import { HttpError } from "../middleware/errors.js";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "./systemAuditService.js";
 import { enqueuePaymentReceipt } from "./emailAutomationService.js";
+import { config } from '../config.js';
+import { isPaymentHold, effectivePaymentDeadline, lockPaymentBooking, expirePaymentHolds, expireLockedPaymentHold, confirmPaidBooking } from './bookingPaymentHoldService.js';
+import { scheduleBookingReminders } from './notificationService.js';
 import {
   buildVnpayUrl,
   buildVietqr,
@@ -18,6 +21,11 @@ const include = {
       title: true,
       status: true,
       feeAmountVnd: true,
+      endAt: true,
+      startAt: true,
+      paymentDueAt: true,
+      resourceId: true,
+      requestedById: true,
       resource: { select: { id: true, name: true, code: true, laboratoryId: true } },
     },
   },
@@ -28,7 +36,7 @@ const RETRYABLE_PAYMENT_STATUSES = new Set(["failed", "expired"]);
 function publicPayment(row) {
   if (!row) return row;
   const { paymentUrl: _paymentUrl, ...safe } = row;
-  return safe;
+  return safe.booking?.paymentDueAt ? { ...safe, booking: { ...safe.booking, paymentDueAt: effectivePaymentDeadline(safe.booking) } } : safe;
 }
 const missing = () =>
   new HttpError(
@@ -71,11 +79,20 @@ function replacementChargeData(row) {
 }
 
 async function notifyPayment(tx, row, event, { reconciliation = false, now = new Date() } = {}) {
+  const booking = event === 'SUCCESS' && !reconciliation && row.bookingId
+    ? await tx.booking.findUnique({ where: { id: row.bookingId }, include: { resource: true } }) : null;
+  const mode = booking?.fulfillmentSnapshot?.mode || (booking?.resource.category === 'ROOM' ? 'ROOM_SELF_SERVICE' : 'LAB_PICKUP');
+  const roomAccessReady = mode === 'ROOM_SELF_SERVICE' && booking
+    ? Boolean((await tx.resourceFulfillment.findUnique({ where: { resourceId: booking.resourceId }, select: { roomPasswordCiphertext: true } }))?.roomPasswordCiphertext) : false;
+  const guidanceMode = mode === 'ROOM_SELF_SERVICE' && !roomAccessReady ? 'ROOM_ACCESS_PENDING' : mode;
   const definitions = [{
     userId: row.userId,
     key: `payment:${row.id}:${event}:owner`,
     title: event === "SUCCESS" ? "Thanh toán đã được xác minh" : event === "FAILED" ? "Thanh toán chưa thành công" : "Phiên thanh toán đã hết hạn",
-    message: `${row.txnRef} · ${Math.trunc(row.amount).toLocaleString("vi-VN")} VND`,
+    message: booking ? mode === 'ROOM_SELF_SERVICE' ? roomAccessReady ? 'Biên lai và mật khẩu phòng đã sẵn sàng. Check-in từ 30 phút trước lịch.' : 'Đã thanh toán. Liên hệ LAB để hoàn tất cấu hình truy cập phòng.'
+      : mode === 'HOME_DELIVERY' ? 'Đã nhận yêu cầu giao thiết bị. Nhân viên LAB sẽ liên hệ bàn giao.'
+      : `Đến LAB gặp nhân viên để kiểm tra và nhận thiết bị: ${booking.fulfillmentSnapshot?.pickupInstructions || booking.resource.location}`
+      : `${row.txnRef} · ${Math.trunc(row.amount).toLocaleString("vi-VN")} VND`,
     severity: event === "SUCCESS" ? "success" : "warning",
   }];
   if (reconciliation) {
@@ -97,7 +114,9 @@ async function notifyPayment(tx, row, event, { reconciliation = false, now = new
         userId: definition.userId,
         title: definition.title,
         message: definition.message,
-        messageParams: { paymentId: row.id, bookingId: row.bookingId, event },
+        titleKey: definition.userId === row.userId ? `payment.${event.toLowerCase()}.title` : null,
+        messageKey: booking && definition.userId === row.userId ? `fulfillment.${guidanceMode}.message` : null,
+        messageParams: { paymentId: row.id, bookingId: row.bookingId, event, location: booking?.fulfillmentSnapshot?.pickupInstructions || booking?.resource.location || '' },
         severity: definition.severity,
         channel: "in_app",
         sentAt: now,
@@ -105,13 +124,18 @@ async function notifyPayment(tx, row, event, { reconciliation = false, now = new
       },
     });
   }
+  if (booking) await scheduleBookingReminders(tx, booking, now);
 }
 export async function getPayment(id, actor) {
-  const row = await prisma.paymentTransaction.findUnique({
+  let row = await prisma.paymentTransaction.findUnique({
     where: { id },
     include,
   });
   assertOwner(row, actor);
+  if (row.bookingId) {
+    await expirePaymentHolds(prisma, { bookingId: row.bookingId });
+    row = await prisma.paymentTransaction.findUnique({ where: { id }, include });
+  }
   return publicPayment(row);
 }
 export async function listPayments(actor, filters = {}, admin = false) {
@@ -122,6 +146,7 @@ export async function listPayments(actor, filters = {}, admin = false) {
       undefined,
       "PAYMENT_FORBIDDEN",
     );
+  await expirePaymentHolds(prisma, admin ? {} : { userId: actor.id });
   const where = {
     ...(admin ? {} : { userId: actor.id }),
     ...(filters.bookingId ? { bookingId: filters.bookingId } : {}),
@@ -168,6 +193,7 @@ export async function bookingPayments(bookingId, actor) {
     (actor.role !== "ADMIN" && booking.requestedById !== actor.id)
   )
     throw missing();
+  await expirePaymentHolds(prisma, { bookingId });
   const rows = await prisma.paymentTransaction.findMany({
     where: { bookingId },
     include,
@@ -249,8 +275,11 @@ export async function createCharge(actor, data) {
     return transaction;
   });
 }
-export async function initiatePayment(id, actor, provider, ip) {
+export async function initiatePayment(id, actor, provider, ip, appOrigin) {
   if (provider === "vietqr") requireVietqr();
+  const payable = await prisma.paymentTransaction.findUnique({ where: { id }, include });
+  assertOwner(payable, actor, false);
+  if (payable.bookingId) await expirePaymentHolds(prisma, { bookingId: payable.bookingId });
   const row = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment:${id}`}))::text`;
     let current = await tx.paymentTransaction.findUnique({
@@ -258,12 +287,18 @@ export async function initiatePayment(id, actor, provider, ip) {
       include,
     });
     assertOwner(current, actor, false);
-    if (current.booking && ["PENDING_APPROVAL", "REJECTED", "CANCELLED"].includes(current.booking.status)) {
+    if (current.bookingId) {
+      await lockPaymentBooking(tx, current.bookingId);
+      current = await tx.paymentTransaction.findUnique({ where: { id }, include });
+    }
+    if (current.booking && current.booking.status !== 'CONFIRMED' && !isPaymentHold(current.booking)) {
       throw new HttpError(409, "Lịch đặt chưa được duyệt hoặc đã kết thúc yêu cầu; không thể thanh toán.", undefined, "BOOKING_PAYMENT_INVALID");
     }
+    if (current.booking?.endAt <= new Date()) throw new HttpError(409, 'Lịch sử dụng đã kết thúc.', undefined, 'BOOKING_HANDOVER_EXPIRED');
     if (current.status === "success") assertPending(current);
 
     const now = new Date();
+    if (isPaymentHold(current.booking) && +effectivePaymentDeadline(current.booking) <= +now) throw new HttpError(409, 'Hết thời gian giữ chỗ thanh toán.', undefined, 'PAYMENT_HOLD_EXPIRED');
     const sessionExpired = current.status === "pending" && current.paymentUrl &&
       (!current.paymentUrlExpiresAt || current.paymentUrlExpiresAt <= now);
     if (sessionExpired) {
@@ -303,14 +338,16 @@ export async function initiatePayment(id, actor, provider, ip) {
       current.provider === provider &&
       current.paymentUrl &&
       current.paymentUrlExpiresAt &&
-      current.paymentUrlExpiresAt > now
+      current.paymentUrlExpiresAt > now &&
+      (!isPaymentHold(current.booking) || +current.paymentUrlExpiresAt <= +effectivePaymentDeadline(current.booking))
     ) return current;
-    const expiresAt = new Date(now.getTime() + VNPAY_SESSION_TTL_MS);
+    const expiresAt = new Date(Math.min(now.getTime() + VNPAY_SESSION_TTL_MS, current.booking?.paymentDueAt ? +effectivePaymentDeadline(current.booking) : Infinity));
     const url = provider === "vnpay" ? buildVnpayUrl(current, ip, now, expiresAt) : null;
     const updated = await tx.paymentTransaction.updateMany({
       where: { id: current.id, status: "pending", provider: current.provider },
       data: {
         provider,
+        ...(config.corsOrigins.includes(appOrigin) ? { appOrigin } : {}),
         ...(url ? {
           paymentUrl: url,
           paymentUrlCreatedAt: now,
@@ -364,7 +401,7 @@ export async function processVnpayIpn(query) {
     );
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`vnpay:${query.vnp_TxnRef}`}))::text`;
-    const row = await tx.paymentTransaction.findUnique({
+    let row = await tx.paymentTransaction.findUnique({
       where: { txnRef: query.vnp_TxnRef },
       include,
     });
@@ -386,6 +423,13 @@ export async function processVnpayIpn(query) {
     if (row.status === "success" || row.status === "refunded")
       return { RspCode: "02", Message: "Order already confirmed" };
 
+    if (row.bookingId) {
+      await lockPaymentBooking(tx, row.bookingId);
+      row = await tx.paymentTransaction.findUnique({ where: { id: row.id }, include });
+      await expireLockedPaymentHold(tx, row.booking, new Date());
+      row = await tx.paymentTransaction.findUnique({ where: { id: row.id }, include });
+    }
+
     if (success) {
       const transactionNoOwner = await tx.paymentTransaction.findFirst({
         where: { vnpTransactionNo: query.vnp_TransactionNo, id: { not: row.id } },
@@ -400,12 +444,13 @@ export async function processVnpayIpn(query) {
           })
         : null;
       const terminalBooking = row.booking && ["CANCELLED", "REJECTED"].includes(row.booking.status);
-      const reconciliation = terminalBooking || Boolean(otherSuccess);
+      const bookingMismatch = row.booking && (row.amount !== row.booking.feeAmountVnd || row.userId !== row.booking.requestedById);
+      const reconciliation = terminalBooking || Boolean(otherSuccess) || Boolean(bookingMismatch);
       const reconciliationReason = terminalBooking
         ? `Provider success received after booking entered ${row.booking.status}.`
         : otherSuccess
           ? "Provider success duplicates an existing settled payment for the booking."
-          : null;
+          : bookingMismatch ? 'Payment does not match the booking owner and accepted fee.' : null;
       const saved = await tx.paymentTransaction.update({
         where: { id: row.id },
         data: {
@@ -421,6 +466,7 @@ export async function processVnpayIpn(query) {
           } : {}),
         },
       });
+      if (!reconciliation && row.booking && saved.amount === row.booking.feeAmountVnd && saved.userId === row.booking.requestedById) await confirmPaidBooking(tx, row.booking);
       await notifyPayment(tx, saved, "SUCCESS", { reconciliation, now: new Date() });
       await enqueuePaymentReceipt(tx, saved);
       return { RspCode: "00", Message: "Confirm Success" };

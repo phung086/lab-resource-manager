@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import test from "node:test";
-import jwt from "jsonwebtoken";
+
 import request from "supertest";
 
 const url = new URL(process.env.OPERATIONS_REPORT_TEST_DATABASE_URL || "");
@@ -13,7 +13,9 @@ const [{ createApp }, { prisma }, { buildOperationsReport }] = await Promise.all
 const app = createApp(), marker = randomUUID(), ids = {}, now = new Date();
 const at = minutes => new Date(now.getTime() + minutes * 60000);
 const users = {};
-const auth = name => ({ Authorization: `Bearer ${jwt.sign({ sub: users[name].id }, process.env.JWT_SECRET, { expiresIn: "1h" })}` });
+const { signUserToken } = await import("../src/services/authTokens.js");
+const tokens = {};
+const auth = name => ({ Authorization: `Bearer ${tokens[name]}` });
 
 test.before(async () => {
   const [identity] = await prisma.$queryRaw`SELECT current_database() AS name, current_setting('server_version') AS version`;
@@ -23,8 +25,10 @@ test.before(async () => {
   await prisma.building.create({ data: { id: ids.building, campusId: ids.campus, code: `OR-${marker}`, name: "Isolated report test" } });
   for (const key of ["lab", "foreignLab"]) await prisma.laboratory.create({ data: { id: ids[key], buildingId: ids.building, code: `OR-${key}-${marker}`, name: `Isolated ${key}` } });
   for (const [key, role] of Object.entries({ admin: "ADMIN", staff: "LAB_STAFF", unassigned: "LAB_STAFF", lecturer: "CUSTOMER", student: "CUSTOMER", inactive: "ADMIN" })) {
-    users[key] = await prisma.user.create({ data: { id: randomUUID(), email: `or-${key}-${marker}@example.test`, fullName: `Isolated ${key}`, role, isActive: key !== "inactive", passwordHash: "unused-test-hash" } });
+    users[key] = await prisma.user.create({ data: { id: randomUUID(), email: `or-${key}-${marker}@example.test`, fullName: `Isolated ${key}`, role, isActive: true, passwordHash: "unused-test-hash" } });
   }
+  for (const [key, user] of Object.entries(users)) tokens[key] = await signUserToken(user);
+  await prisma.user.update({ where: { id: users.inactive.id }, data: { isActive: false } });
   await prisma.userLabAssignment.create({ data: { userId: users.staff.id, laboratoryId: ids.lab } });
   for (const key of ["resource", "unused", "foreign"]) await prisma.resource.create({ data: { id: ids[key], code: `OR-${key}-${marker}`, name: `Isolated ${key}`, subtype: "OTHER", category: "ROOM", location: "Test", laboratoryId: key === "foreign" ? ids.foreignLab : ids.lab } });
   const booking = (status, start, end, extra = {}) => ({ id: randomUUID(), resourceId: ids.resource, requestedById: users.student.id, title: "Isolated report fixture", purpose: "Verification", status, startAt: at(start), endAt: at(end), ...extra });

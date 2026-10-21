@@ -20,7 +20,7 @@ try {
     check(apiReport.status === (authorized ? 200 : 403), `${role}: real report authorization`);
     const context = await browser.newContext({ viewport:{width:1440,height:1000} });
     const page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
-    await page.addInitScript(({accessToken,user}) => {localStorage.setItem('lrm_token',accessToken);localStorage.setItem('lrm_user',JSON.stringify(user));localStorage.setItem('lrm_locale','vi');},session);
+    await page.addInitScript(({accessToken,user}) => {sessionStorage.setItem('lrm_token',accessToken);sessionStorage.setItem('lrm_user',JSON.stringify(user));localStorage.setItem('lrm_locale','vi');},session);
     await page.goto(base); await page.locator('.sidebar-2026').waitFor();
     if (!authorized) {
       await page.goto(`${base}/#/workspace/van-hanh`);

@@ -1,8 +1,11 @@
 import { HttpError } from '../middleware/errors.js';
+import { CANONICAL_ROLES } from '../constants/roles.js';
 
 export const bridgeError = (status, code) => new HttpError(status, code, undefined, code);
 export const activeUser = (user, role, version) => Boolean(user?.isActive && !user.deletedAt &&
   !user.passwordResetRequired && user.role === role && user.authVersion === version);
+export const requestRole = job => job.context?.actorRole || 'CUSTOMER';
+export const activeRequester = job => CANONICAL_ROLES.includes(requestRole(job)) && activeUser(job.customer, requestRole(job), job.customerAuthVersion);
 export const bridgeLocks = async tx => {
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('lrm-account-security'))::text`;
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('chatgpt-bridge:connection'))::text`;

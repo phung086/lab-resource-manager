@@ -18,7 +18,9 @@ export function canManageTarget(actor, target) {
 }
 
 export async function lockCurrentAccount(tx, id, expectedVersion) {
-  await tx.$queryRaw`SELECT id FROM users WHERE id = ${id} FOR UPDATE`;
+  // Serialize account/credential changes while allowing foreign-key references
+  // from expiry notifications to another customer's account in the same flow.
+  await tx.$queryRaw`SELECT id FROM users WHERE id = ${id} FOR NO KEY UPDATE`;
   const user = await tx.user.findUnique({ where: { id } });
   if (!user) throw new HttpError(401, "Account not found", undefined, "AUTH_INVALID");
   if (!user.isActive || user.deletedAt) throw new HttpError(401, "Account inactive", undefined, "ACCOUNT_INACTIVE");

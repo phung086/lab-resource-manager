@@ -462,12 +462,12 @@ export const IncidentManagementView: React.FC<Props> = ({
   const queueCount = filtered.length;
 
   return (
-    <div className="incidents-workspace">
+    <div className="incidents-workspace" data-role={user?.role}>
       {/* ── Page header ── */}
       <div className="incident-heading">
         <div className="incident-heading-text">
-          <h1>{tr("ui.resource_incidents_0cba217b")}</h1>
-          <HelpDisclosure>{tr("ui.report_observed_problems_lab_staff_c71e9e68")}</HelpDisclosure>
+          <h1>{tr("ui.roleIncident."+(user?.role || "CUSTOMER")+".title")}</h1>
+          <HelpDisclosure>{tr("ui.roleIncident."+(user?.role || "CUSTOMER")+".hint")}</HelpDisclosure>
         </div>
         <button
           className="primary-button"
@@ -488,7 +488,7 @@ export const IncidentManagementView: React.FC<Props> = ({
       )}
 
       {/* Compact queue totals from the actual scoped response. */}
-      {summary && (
+      {summary && user?.role !== "CUSTOMER" && (
         <div className="incident-summary-grid">
           <div className="incident-summary-card">
             <span>

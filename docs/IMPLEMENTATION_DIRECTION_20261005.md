@@ -1,135 +1,63 @@
-# Đối chiếu hướng triển khai và phạm vi đồ án
+# Hướng triển khai và hợp đồng báo cáo vận hành
 
-Ngày: 05/10/2026. Phạm vi: tiếp tục local theo yêu cầu đọc và tích hợp
-`Hướng triển khai.docx`; chưa push Git, chưa mở Batch mới.
+Đối chiếu đề xuất Hướng triển khai.docx với đề tài và các quyết định hiện hành.
+Cập nhật16/10/2026; đây là hợp đồng được duy trì, không phải báo cáo một lượt chạy.
 
-## Kết luận
+## Phạm vi bắt buộc
 
-Tài liệu giúp làm rõ vòng đời quản lý phòng và thiết bị. Đồ án nên thể hiện được
-đặt lịch, duyệt, bàn giao, sử dụng, hoàn trả, xử lý sự cố và báo cáo, với AI hỗ trợ
-tra cứu và giải thích. Một giao diện đặt lịch đẹp chưa chứng minh đủ nghiệp vụ.
+Hệ thống đặt lịch và giám sát tài nguyên phòng thí nghiệm: phòng, GPU server,
+Raspberry Pi, UAV, camera và tài nguyên dùng chung. Hai năng lực là điều phối
+sử dụng có lịch sử và giám sát có nguồn xác thực. UI đẹp không thay nghiệp vụ.
+Giữ React/Vite, Express/Prisma và PostgreSQL16; không đổi sang Python hoặc tạo
+thêm Session/SensorLog/Alert song song chỉ vì đề xuất Word nêu ví dụ khác.
 
-Giữ React/Vite, Express, Prisma và PostgreSQL 16 đang có. Tài liệu tự ghi là
-“Đề xuất hướng triển khai”; gợi ý Python, bảng Session mới và Digital Twin là
-nguồn tham khảo. Các hợp đồng tốt nghiệp, trạng thái chuẩn và phân quyền hiện
-tại vẫn là căn cứ triển khai. Mô phỏng phải có nhãn và được tách khỏi dữ liệu
-phần cứng thực tế.
+Vai trò hiện hành ADMIN/LAB_STAFF/CUSTOMER theo ADR-033, thay bốn actor cũ.
+Lịch miễn phí xác nhận tự động sau đủ checks; có phí giữ chỗ15 phút rồi xác
+nhận bằng payment/IPN hợp lệ. Duyệt thủ công chỉ legacy không paymentDueAt.
+Nhận/trả, room access, slot release và inspection theo ADR-037/038; không lấy
+flow duyệt trong tài liệu05/10 làm hợp đồng mới. SRS/DECISIONS chứa chi tiết.
 
-## Đối chiếu từng đề xuất
+## Giám sát, vận hành và AI
 
-| Đề xuất trong Word | Dự án hiện tại | Cách tích hợp phù hợp |
-|---|---|---|
-| Bốn vai trò | ADMIN, LAB_STAFF, LECTURER, STUDENT; nhân viên theo lab, giảng viên theo nhóm học phần | Giữ vai trò và quyền hiện tại. Giảng viên duyệt hoạt động học tập; cán bộ lab duyệt tài nguyên và bàn giao |
-| Phòng, thiết bị, vị trí, chính sách, lịch bảo trì | Laboratory, Resource, LabPolicy, MaintenanceWindow đã có | Dùng hồ sơ và lịch hiện tại; thông số chuyên môn nằm ở chi tiết tài nguyên |
-| Booking, check-in, check-out, Session | Booking có actualStartAt/actualEndAt và lịch sử sử dụng | Phiên sử dụng được xác định bằng bàn giao/hoàn trả. Chưa tạo một bảng Session trùng nghiệp vụ |
-| Available, Occupied, Fault | Bộ trạng thái chuẩn đã có | Dùng AVAILABLE, IN_USE, BROKEN…; không thêm Occupied/Fault hay trạng thái đặt lịch mới |
-| SensorLog, Alert, ResourceLog | TelemetrySample, TelemetrySource, MonitoringAlert, Incident, UsageLog đã có | Tái sử dụng xác thực nguồn, ngưỡng, episode và bằng chứng; không tạo bộ bảng song song |
-| Mô phỏng cảm biến mỗi 3–10 giây | Giám sát đã nhận mẫu từ nguồn xác thực; thiếu phần cứng và demo simulator đã được kiểm chứng | Chuẩn bị kịch bản độc lập có nhãn. Chưa đưa dữ liệu tổng hợp vào luồng giám sát sử dụng thật |
-| Nhiệt độ phòng trên 32°C | Ngưỡng có thứ tự tài nguyên → lab → mặc định | Ngưỡng cần cấu hình theo tài nguyên. Không đổi mặc định cho mọi thiết bị |
-| Quá nhiệt hoặc đủ giờ dùng tự chuyển bảo trì | Trạng thái vật lý do nghiệp vụ có thẩm quyền quyết định | Cảnh báo dẫn đến kiểm tra, tạo sự cố, lập bảo trì. Không tự đổi trạng thái vật lý hoặc hủy lịch chỉ vì mô phỏng |
-| Điện năng, số người trong phòng | Chưa có nguồn đo và hợp đồng dữ liệu được kiểm chứng | Chưa hiển thị như số đo thật. Sức chứa/nhu cầu đặt phòng khác với số người thực tế |
-| Báo cáo tuần/tháng, sử dụng nhiều/ít, lịch hủy | Dashboard cũ có chỉ số 30 ngày và danh sách tối đa 20 lịch | Đã thêm báo cáo 7/30 ngày, mức dùng từng tài nguyên, lịch hủy, không đến nhận, sự cố và bảo trì theo lịch |
-| AI gợi ý, tóm tắt, dự báo hỏng | Trợ lý có tra cứu read-only, ngữ cảnh và tổng hợp; chưa bật nhà cung cấp | Ưu tiên tìm lịch phù hợp và tóm tắt có bằng chứng. Dự báo hỏng để sau khi có đủ dữ liệu và đánh giá sai số |
-| Python backend và WebSocket | Express, PostgreSQL và API giám sát đã có | Giữ stack. Python chỉ là lựa chọn cho simulator hoặc nghiên cứu sau này; chưa cần đổi backend hoặc thêm hạ tầng streaming |
-| 3–5 phòng, 15–30 thiết bị | Demo local hiện có 2 lab, 11 tài nguyên, có nhãn dữ liệu demo | Đây là quy mô dữ liệu mẫu để bảo vệ, không phải giới hạn sản phẩm. Chưa tự bơm thêm booking, lịch sử, số đo hoặc sự cố |
-| Email, thanh toán, media, ESP32 | Có hợp đồng/tích hợp một phần, cần cấu hình nhà cung cấp riêng | Hoàn thiện nghiệp vụ trước. Không coi cấu hình chưa có hoặc thanh toán/email demo là đã thành công |
+- Resource.operationalStatus là trạng thái vật lý; availability suy từ booking,
+  maintenance, policy. Alert/AI không tự sửa physical state hoặc vượt RBAC.
+- TelemetrySource, TelemetrySample, MonitoringAlert, Incident và UsageLog đã có;
+  dùng identity/scope/freshness/episode hiện hành. Thiếu nguồn phải báo unavailable.
+- Workload/occupancy do operator khai báo, thời gian server và actual handover/
+  return là bằng chứng vận hành; không phải nhiệt độ, CPU/GPU, điện năng hoặc
+  số người được cảm biến đo. Không hiển thị KPI giả hoặc số0 cho unknown.
+- User12/10 bác bỏ simulator/kịch bản cũ. Không phục hồi preview, fake hardware
+  hoặc migration cũ chỉ vì Word từng cho phép demo mô phỏng. Applied migrations
+  giữ bất biến; phần cứng thật cần môi trường và kiểm chứng riêng.
+- Trợ lý tra tài nguyên/slot và tóm tắt dữ liệu được phân quyền. Fast lookup và
+  ChatGPT Work giữ provenance/actor scope; đề xuất chỉ thành ghi nghiệp vụ sau
+  xác nhận qua API thường. Không cam kết model latency từ timing fixture.
+- Dự báo bảo trì chỉ triển khai khi có dataset, baseline và đánh giá theo thời
+  gian; ngưỡng quy tắc không được gọi là ML. Không tự thêm Digital Twin/NSGA-II.
 
-## Phần đã triển khai trong lần này
+## Báo cáo7/30 ngày
 
-### 1. Báo cáo vận hành theo kỳ
+Endpoint/service hiện hành kiểm ADMIN hoặc LAB_STAFF với UserLabAssignment.
+Toàn bộ tổng hợp theo scope trước giới hạn preview; khoảng báo cáo là
+[now-days,now). Không đếm một queue page để đưa ra tổng toàn LAB.
 
-Endpoint mới: `GET /api/dashboard/report?days=7` hoặc `days=30`.
-Mặc định API là 30 ngày; giao diện mở ở 7 ngày. Kỳ là khoảng lùi đúng 7/30
-ngày tính đến thời điểm lập báo cáo, không phải tuần ISO hoặc tháng dương lịch.
-Giờ hiển thị theo Việt Nam.
-
-- ADMIN đọc toàn hệ thống; LAB_STAFF chỉ đọc lab được phân công hiện tại.
-- Nhân viên chưa có phân công nhận báo cáo rỗng; LECTURER/STUDENT bị từ chối.
-- Không nhận userId, role hoặc laboratoryId từ người gọi để mở rộng quyền.
-- SQL tổng hợp phía server trong một snapshot. Không tính tổng từ một trang
-  booking/incident hay danh sách 20 dòng trên dashboard.
-- Chỉ trả số tổng hợp và hồ sơ tài nguyên; không trả tên/email người đặt lịch.
-- Giao diện VI/EN có chọn kỳ, bốn chỉ số chính, tối đa năm thanh so sánh khi
-  thu gọn và nút xem toàn bộ/cách tính. Có loading, báo cáo rỗng, lỗi và thử lại.
-- Khi đổi kỳ, số liệu cũ được ẩn; request cũ bị hủy và không ghi đè kỳ mới.
-
-Quy tắc tính:
-
-| Chỉ số | Căn cứ |
+| Chỉ số | Ý nghĩa |
 |---|---|
-| Giờ theo lịch | Phần giao với kỳ của CONFIRMED, CHECKED_OUT, RETURNED, COMPLETED; bỏ PENDING_APPROVAL, CANCELLED, REJECTED |
-| Giờ đã sử dụng | actualStartAt → actualEndAt; phiên còn mở tính đến thời điểm báo cáo. Cắt theo ranh giới kỳ, độc lập với lịch dự kiến |
-| Phiên kết thúc | actualEndAt nằm trong kỳ `[start,end)`; việc hoàn tất rà soát booking là bước riêng |
-| Lịch hủy, không đến nhận | Trạng thái/outcome hiện tại của lịch dự kiến có giao với kỳ; không phải số thao tác hủy diễn ra trong kỳ |
-| Sự cố phát sinh | detectedAt trong kỳ |
-| Sự cố đang xử lý | Trạng thái mở hiện tại, gồm cả sự cố từ kỳ trước |
-| Bảo trì theo lịch | Phần giao của cửa sổ bảo trì không bị hủy; chưa phải số giờ sửa chữa đo thực tế |
-| Tài nguyên có sử dụng | Có số phút bàn giao/hoàn trả dương trong kỳ |
+| Lịch đặt | Khoảng dự kiến có giao với kỳ; số booking riêng, không nhân theo chi tiết join. |
+| Hủy/không đến nhận | Status/outcome hiện tại của lịch dự kiến có giao với kỳ, không là số thao tác hủy trong kỳ. |
+| Giờ đã dùng | Phần giao actualStartAt–actualEndAt với kỳ; đang CHECKED_OUT đến thời điểm đọc. |
+| Sự cố phát sinh | detectedAt trong kỳ. |
+| Sự cố đang xử lý | Sự cố đang mở trong scope, kể cả từ trước kỳ. |
+| Bảo trì theo lịch | Phần giao cửa sổ không hủy với kỳ, không phải giờ sửa chữa đo thực tế. |
+| Tài nguyên có dùng | Có thời gian bàn giao/hoàn trả dương trong kỳ. |
 
-Số giờ là thời gian giữ tài nguyên theo nghiệp vụ, chưa phải giờ motor/CPU chạy.
-Không suy diễn sử dụng của thiết bị chỉ được yêu cầu kèm theo khi chưa có bằng
-chứng bàn giao riêng. Không trình bày phần trăm sử dụng trên mẫu số 24/7 như
-tỷ lệ dùng theo giờ mở cửa: muốn có tỷ lệ này cần định nghĩa lịch mở cửa và
-thời gian tài nguyên thực sự được phép sử dụng.
+Không suy ra motor/CPU runtime hoặc hiệu suất năng lượng từ giờ giữ tài nguyên.
+Không suy giờ dùng của phụ kiện chỉ được yêu cầu kèm mà chưa bàn giao riêng.
+Muốn tỷ lệ sử dụng cần định nghĩa giờ mở cửa/mẫu số; không mặc định24/7.
 
-Dashboard vẫn giữ danh sách sắp tới tối đa 20 dòng để đọc nhanh. Tổng công việc
-đang mở được đếm riêng từ toàn bộ trạng thái hoạt động, kể cả bàn giao quá giờ
-và hoàn trả đang chờ rà soát. Danh sách và tổng số vì vậy có mục đích khác nhau.
+## Kiểm chứng và tiếp tục
 
-## Luồng bảo vệ và ứng dụng thực tế
-
-```mermaid
-flowchart LR
-  A[Chọn tài nguyên và xem lịch] --> B[Gửi yêu cầu]
-  B --> C[Cán bộ lab duyệt]
-  C --> D[Bàn giao và ghi điều kiện]
-  D --> E[Phiên sử dụng]
-  E --> F[Hoàn trả và rà soát]
-  F --> G[Báo cáo từ dữ liệu đã lưu]
-  E --> H[Giám sát nguồn được cấu hình]
-  H --> I[Cảnh báo và sự cố]
-  I --> J[Kiểm tra và lập bảo trì]
-  J --> G
-```
-
-1. Giảng viên/sinh viên xem chi tiết tài nguyên, chọn khoảng giờ và gửi yêu cầu.
-   Nếu thuộc nhóm học phần, phần duyệt học tập không thay thế duyệt tài nguyên.
-2. ADMIN/nhân viên đúng lab xử lý lịch. Trùng lịch, điều kiện đào tạo và trạng
-   thái vật lý được kiểm tra ở backend.
-3. Bàn giao qua luồng chuẩn ghi actualStartAt và đồng bộ IN_USE trong transaction.
-4. Vận hành tài nguyên ảo gắn booking, workload/occupancy khai báo và giờ server;
-   đối chiếu SRS/CURRENT_STATE cho phạm vi hiện hành.
-5. Cảnh báo thật/đã chấp nhận theo chính sách liên kết với sự cố. Người có quyền
-   kiểm tra, phân công và xử lý; lịch bảo trì không được ghi đè lịch đang có.
-6. Hoàn trả ghi actualEndAt, giữ các trạng thái nghiêm trọng như BROKEN hoặc
-   MAINTENANCE; cán bộ rà soát rồi hoàn tất booking.
-7. Xem báo cáo 7/30 ngày và đối chiếu với lịch sử bàn giao. AI có thể giải thích
-   bằng chứng đã được phép đọc khi nhà cung cấp được cấu hình và kiểm chứng.
-
-## Công việc tiếp theo và điều kiện hoàn thành
-
-Đây là các bước kế tiếp có giới hạn, chưa phải tuyên bố đã triển khai:
-
-2. **Hai chức năng AI:** tra cứu lịch phù hợp bằng API và tóm tắt vận hành từ
-   báo cáo đã phân quyền. Kiểm tra bộ câu hỏi VI/EN, số liệu được dẫn, xử lý thiếu
-   dữ liệu, lỗi nhà cung cấp và từ chối thao tác vượt quyền. Chưa công bố chất
-   lượng LLM khi chưa có API key/model và lần chạy thực tế.
-3. **Dữ liệu trình diễn:** chuẩn bị danh mục 3–5 phòng, 15–30 thiết bị trong demo
-   riêng nếu phù hợp đề tài. Booking và lịch sử demo phải được tạo qua nghiệp vụ
-   chuẩn; dữ liệu tổng hợp phải giữ nhãn. Không dùng lịch sử giả để đánh giá ML.
-4. **Dự báo:** chỉ bắt đầu khi có dữ liệu huấn luyện/kiểm tra tách theo thời gian,
-   baseline, tiêu chí đánh giá và đủ lỗi đã xác minh. Ngưỡng cố định là quy tắc,
-   không phải mô hình dự báo AI.
-
-Các tính năng này không được chặn luồng tốt nghiệp chính. Không triển khai đồng
-loạt Python backend, streaming, payment, IoT, ML và Digital Twin chỉ để có nhiều
-màn hình. Phần kho, nhóm học phần và song ngữ đã được người dùng chấp thuận vẫn
-giữ nguyên phạm vi hiện tại.
-
-## Kiểm chứng và giới hạn
-
-Xem báo cáo lần chạy (historical run output; retired).
-Code cũ và thay đổi local đã được giữ, file sửa có bản sao SHA256 trong artifacts.
-Không đổi schema/migration, reset dữ liệu, thêm API key hay push Git.
-Thử nghiệm DB dùng fixture có nhãn trong DB test riêng, xóa đúng fixture của
-lần chạy; không chạm dữ liệu demo đang dùng.
+[CURRENT_STATE](CURRENT_STATE.md) phân biệt code hiện hành, kết quả cũ/mới và
+provider/hardware chưa kiểm. Dùng tests hiện có, DB test riêng và fixtures có nhãn;
+không ghi telemetry/audit/history giả vào DB demo. Kho, học phần, hỗ trợ, email,
+loyalty và payment đã được phê duyệt được giữ, không mở rộng chỉ để thêm màn hình.

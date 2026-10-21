@@ -42,11 +42,11 @@
 .care-cycle.is-due progress::-webkit-progress-value { background:#b23c4b; }
 .care-list td:last-child { width:110px; }
 .care-controls>summary { font-weight:650; }
-.care-toast-stack { position:fixed; right:24px; bottom:24px; z-index:80; display:grid; gap:10px; width:min(360px,calc(100vw - 32px)); }
-.care-toast { display:flex; gap:12px; padding:16px; background:var(--workspace-surface,#fff); border:1px solid #e2bc74; border-left:4px solid #b77817; border-radius:8px; box-shadow:0 6px 24px rgb(25 18 35 / 12%); color:var(--workspace-text,#211b30); }
+.care-toast-stack { position:fixed; right:24px; top:100px; z-index:80; display:grid; gap:10px; width:min(360px,calc(100vw - 32px)); pointer-events:none; }
+.care-toast { display:flex; gap:12px; padding:16px; background:var(--workspace-surface,#fff); border:1px solid #e2bc74; border-radius:8px; box-shadow:0 6px 24px rgb(25 18 35 / 12%); color:var(--workspace-text,#211b30); }
 .care-toast p { font-size:.875rem; margin:6px 0; }
-.care-toast a { font-size:.85rem; display:inline-block; padding:5px 0; }
-.care-toast>button { border:0; background:none; min-width:32px; height:32px; color:inherit; cursor:pointer; margin-left:auto; }
+.care-toast a { font-size:.85rem; display:inline-block; padding:5px 0; pointer-events:auto; }
+.care-toast>button { border:0; background:none; min-width:44px; height:44px; color:inherit; cursor:pointer; margin-left:auto; pointer-events:auto; }
 .maintenance-cycles { margin:0 0 24px; padding:20px; border:1px solid var(--workspace-border,#ded7e8); border-radius:8px; }
 .maintenance-cycles header { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
 .maintenance-cycles h2 { font-size:1rem; margin-right:auto; }

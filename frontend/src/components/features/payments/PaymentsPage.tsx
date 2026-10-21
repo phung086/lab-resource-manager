@@ -9,7 +9,6 @@ import { apiRequest } from "../../../api.js";
 import { BaseModal2026 } from "../../BaseModal2026";
 import { formatVietnamDateTime } from "../../../utils/timezone";
 import "./payments.css";
-import { ResourcePricingEditor } from "./ResourcePricingEditor";
 import { BookingCheckout } from "./BookingCheckout";
 type Payment = {
   id: string;
@@ -227,7 +226,7 @@ function PaymentsLedger({
     }
   }
   return (
-    <section className="content-stack payment-page payment-ledger">
+    <section className="content-stack payment-page payment-ledger" data-role={user.role}>
 
       <header className="page-section-header">
         <div>
@@ -353,15 +352,36 @@ function PaymentsLedger({
             ? translate("ui.unable_to_load_transactions_please_79da9051")
             : translate("ui.no_matching_payment_requests_4df227bf")}
         </p>
+      ) : !admin ? (
+        <ul className="customer-payment-list" aria-label={tr('ui.my_payments_dae6e05a')}>
+          {rows.map(row => <li key={row.id}><button type="button" disabled={!!busy} aria-pressed={selected?.id === row.id} onClick={() => choose(row)}>
+            <span className={'payment-state payment-'+paymentSessionStatus(row)}>{tr(labels[paymentSessionStatus(row)])}</span>
+            <strong>{row.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</strong>
+            <span>{row.booking?.resource?.name}</span>
+            <span className="customer-payment-amount">{money(row.amount)}</span>
+            <time dateTime={row.createdAt}>{formatVietnamDateTime(row.createdAt)}</time>
+            <span className="customer-payment-action">{tr(row.status === 'success' ? 'ui.paymentJourney.receiptDetails' : 'ui.paymentJourney.viewDetails')}<ArrowRight size={16} /></span>
+          </button></li>)}
+        </ul>
       ) : (
         <div className="table-wrap payment-register"><table><caption className="sr-only">{tr('ui.payment_ledger_49cf3f23')}</caption><thead><tr><th>{tr('ui.bookings_00f5b333')}</th><th>{tr('ui.amount_4cbdc55b')}</th><th>{tr('ui.status_cb31de81')}</th></tr></thead><tbody>{rows.map(row=><tr key={row.id} className={selected?.id===row.id?'is-selected':''}><td><button type="button" disabled={!!busy} onClick={()=>choose(row)} aria-pressed={selected?.id===row.id}><span><strong>{row.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</strong><small>{row.txnRef}</small><small>{row.user?.fullName} · {formatVietnamDateTime(row.createdAt)}</small></span><ArrowRight size={16} /></button></td><td>{money(row.amount)}</td><td><span className={'payment-state payment-'+paymentSessionStatus(row)}>{tr(labels[paymentSessionStatus(row)])}</span></td></tr>)}</tbody></table></div>
       )}
       <HelpDisclosure>{tr('ui.showing_up_to_100_recent_6f1a8435')}</HelpDisclosure>
       </div>
-      <aside ref={dossierRef} tabIndex={-1} className="payment-dossier" aria-label={tr('ui.payment_request_ec7f1b84')}>
-        <header><h2>{tr('ui.payment_request_ec7f1b84')}</h2></header>
+      <aside ref={dossierRef} tabIndex={-1} className="payment-dossier" aria-label={tr(selected?.status === 'success' ? 'ui.fulfillment.receipt' : 'ui.paymentJourney.viewDetails')}>
+        <header><h2>{tr(selected?.status === 'success' ? 'ui.fulfillment.receipt' : 'ui.paymentJourney.viewDetails')}</h2></header>
         {!selected && <p className="empty-state">{tr('ui.payments.selectTransaction')}</p>}
         {selected && <button type="button" className="btn btn-secondary" onClick={()=>void load()} disabled={loading||!!busy}>{tr('ui.refresh_status_5c5763c1')}</button>}
+            {selected?.status === "success" && (
+              <button
+                className="primary-button"
+                onClick={() => {
+                  void openReceipt(selected);
+
+                }}
+              >
+                 {translate("ui.open_receipt_68f863f1")} </button>
+            )}
         {selected && (
           <div className="payment-detail">
             <h2>{selected.booking?.title}</h2>
@@ -473,16 +493,7 @@ function PaymentsLedger({
                 <p role="status">{copied}</p>
               </>
             )}
-            {selected.status === "success" && (
-              <button
-                className="primary-button"
-                onClick={() => {
-                  void openReceipt(selected);
 
-                }}
-              >
-                 {translate("ui.open_receipt_68f863f1")} </button>
-            )}
             {admin && selected.reconciliationStatus === "manual_review" && (
               <div className="booking-form">
                 <label>
@@ -510,7 +521,6 @@ function PaymentsLedger({
           </div>
         )}
       </aside></div>
-      {admin && <ResourcePricingEditor />}
       <BaseModal2026
         isOpen={!!receipt}
         onClose={() => setReceipt(null)}
@@ -522,7 +532,7 @@ function PaymentsLedger({
       >
         {receipt && (
           <article className="payment-receipt">
-            <h2>{receipt.title}</h2>
+            <h2>{tr('ui.internal_payment_receipt_d9efbde5')}</h2>
             <p className="payment-state payment-success">
               {tr(labels[receipt.transaction.status])} ·{" "}
               {receipt.transaction.provider === "vnpay"
@@ -549,7 +559,7 @@ function PaymentsLedger({
                 </React.Fragment>
               ))}
             </dl>
-            <HelpDisclosure>{receipt.disclaimer}</HelpDisclosure>
+            <HelpDisclosure>{tr('ui.paymentJourney.receiptDisclaimer')}</HelpDisclosure>
           </article>
         )}
       </BaseModal2026>

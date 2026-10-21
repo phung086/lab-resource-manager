@@ -117,6 +117,7 @@ enum AuditActorType {
 }
 
 enum NotificationType {
+  WAITLIST_AVAILABLE
   BOOKING_APPROVED
   BOOKING_REJECTED
   BOOKING_UPCOMING
@@ -244,11 +245,14 @@ model Laboratory {
 }
 
 model LabPolicy {
+  revision              Int        @default(0)
+  turnaroundMinutes     Int        @default(0)
   id                    String     @id
   laboratoryId          String     @unique
   maxBookingMinutes     Int        @default(480)
   minBookingMinutes     Int        @default(15)
   maxAdvanceBookingDays Int        @default(30)
+  minAdvanceBookingMinutes Int    @default(30)
   checkInGraceMinutes   Int        @default(20)
   requiresApproval      Boolean    @default(false)
   allowWeekend          Boolean    @default(false)
@@ -262,6 +266,9 @@ model LabPolicy {
 }
 
 model User {
+  bookingBundles BookingBundle[]
+  bookingWaitlist BookingWaitlist[]
+  bookingChecklists BookingChecklistEntry[]
   teachingGroups TeachingGroup[] @relation("GroupLecturer")
   groupMemberships TeachingMembership[]
   stockMovements StockMovement[]
@@ -271,6 +278,7 @@ model User {
   role                         Role
   passwordHash                 String
   authVersion                  Int                   @default(0)
+  authSessions                 AuthSession[]
   deletedAt                    DateTime?
   studentId                    String?
   department                   String?
@@ -321,6 +329,22 @@ model User {
   chatgptBridgeRequests         ChatgptBridgeRequest[] @relation("ChatgptBridgeCustomer")
 
   @@map("users")
+}
+
+model AuthSession {
+  id             String    @id
+  userId         String
+  authVersion    Int
+  createdAt      DateTime  @default(now())
+  lastActiveAt   DateTime  @default(now())
+  idleExpiresAt  DateTime
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+  @@map("auth_sessions")
 }
 
 model LoyaltyPolicy {
@@ -455,6 +479,8 @@ model EmailOtp {
 }
 
 model Resource {
+  bookingWaitlist BookingWaitlist[]
+  fulfillment ResourceFulfillment?
   maxBookingMinutes Int?
   careInspectionRequired Boolean @default(false)
   careProfile ResourceCareProfile? @relation("CareResource")
@@ -613,6 +639,13 @@ model UserCertification {
 
 // PostgreSQL bookings_no_active_overlap is preserved externally; Prisma cannot model EXCLUDE.
 model Booking {
+  bundleId String?
+  bundle BookingBundle? @relation(fields: [bundleId], references: [id], onDelete: Restrict)
+  policySnapshot Json @default("{}")
+  checklistEntries BookingChecklistEntry[]
+  paymentDueAt DateTime?
+  fulfillmentSnapshot Json?
+  schedulingReleasedAt DateTime?
   operationSessions ResourceOperation[]
   teachingActivity TeachingActivity?
   feeAmountVnd      Int                   @default(0)
@@ -658,6 +691,65 @@ model Booking {
   @@index([status])
   @@index([idempotencyKey])
   @@map("bookings")
+}
+
+// A bundle is a creation group. Each booking retains its own payment and lifecycle.
+model BookingBundle {
+  id String @id
+  ownerId String
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  requestKey String @unique
+  requestHash String
+  title String
+  createdAt DateTime @default(now())
+  bookings Booking[]
+  @@index([ownerId, createdAt])
+  @@map("booking_bundles")
+}
+
+// Notification interest, never a reservation or an automatic charge.
+model BookingWaitlist {
+  id String @id
+  userId String
+  resourceId String
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  startAt DateTime
+  endAt DateTime
+  purposeCode String
+  status String @default("WAITING")
+  notifiedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, resourceId, startAt, endAt])
+  @@index([status, startAt])
+  @@map("booking_waitlist")
+}
+
+model BookingChecklistEntry {
+  id String @id
+  bookingId String
+  stage String
+  actorId String
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  items Json
+  notes String
+  createdAt DateTime @default(now())
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  @@unique([bookingId, stage])
+  @@map("booking_checklist_entries")
+}
+
+model ResourceFulfillment {
+  resourceId String @id
+  roomPasswordCiphertext String? @db.Text
+  deliveryAllowed Boolean @default(false)
+  pickupInstructions String?
+  version Int @default(0)
+  updatedAt DateTime @updatedAt
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+
+  @@map("resource_fulfillment")
 }
 
 model MaintenanceWindow {
@@ -1049,6 +1141,7 @@ model AiMessage {
 }
 
 model PaymentTransaction {
+  appOrigin String?
   id                   String                      @id
   bookingId            String?
   userId               String

@@ -1,6 +1,7 @@
 import { setImmediate as yieldEventLoop } from "node:timers/promises";
 import { assertNotAborted } from "./assistantRuntime.js";
 import { prisma } from "../db.js";
+import { earliestBookingStart, minimumBookingNotice } from '../services/bookingNoticePolicy.js';
 import { config } from "../config.js";
 import { HttpError } from "../middleware/errors.js";
 import { assertBookingAccess } from "../middleware/labScope.js";
@@ -13,6 +14,7 @@ import { assertCareReady } from "../services/resourceCareAccounting.js";
 import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
 import { serializeTelemetry } from "../services/telemetryService.js";
 import { getTrainingEligibility } from "../services/trainingEligibilityService.js";
+import { workspaceAssistantTools } from './workspaceTools.js';
 
 const str = { type: "string", minLength: 1, maxLength: 120 };
 const id = { type: "string", minLength: 1, maxLength: 100 };
@@ -97,6 +99,7 @@ const tool = (name, description, properties, required, handler) => ({
   handler,
 });
 export const assistantTools = [
+  ...workspaceAssistantTools,
   tool(
     "get_operational_summary",
     "Counts from persisted data within actor scope.",
@@ -230,8 +233,8 @@ const projectResource = (r) => ({
   ...Object.fromEntries(Object.keys(resourceSelect).map((k) => [k, r[k]])),
   requiresApproval: false,
 });
-const projectPolicy = (r) => r.laboratory?.labPolicy
-  ? { ...r.laboratory.labPolicy, requiresApproval: false } : null;
+const projectPolicy = (r) => ({ ...r.laboratory?.labPolicy,
+  minAdvanceBookingMinutes: minimumBookingNotice(r.laboratory?.labPolicy), requiresApproval: false });
 
 async function careBlockReason(resourceId) {
   try { await assertCareReady(prisma, resourceId); return null; }
@@ -401,7 +404,7 @@ async function blocks(resourceId, startAt, endAt) {
     prisma.booking.findMany({
       where: {
         resourceId,
-        status: { in: ACTIVE_BOOKING_STATUSES },
+        status: { in: ACTIVE_BOOKING_STATUSES }, schedulingReleasedAt: null,
         startAt: { lt: endAt },
         endAt: { gt: startAt },
       },
@@ -525,7 +528,7 @@ async function findSlots(input, actor, { signal } = {}) {
     // Fixed 15-minute grid in absolute time (UTC+7 has no DST); canonical policy evaluates VN wall time.
     for (
       let t =
-        Math.ceil(Math.max(from.getTime(), now.getTime()) / 900000) * 900000;
+        Math.ceil(Math.max(from.getTime(), +earliestBookingStart(resource.laboratory?.labPolicy, now)) / 900000) * 900000;
       t + duration * 60000 <= to.getTime();
       t += 900000
     ) {

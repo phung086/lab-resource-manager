@@ -20,9 +20,10 @@ thiếu thiết bị; không thay thế đề tài gốc hay tự đổi framewo
 2. Giám sát: nguồn được xác thực, chỉ số CPU/GPU/RAM/disk/online khi có nguồn,
    lịch sử mẫu, dashboard, ngưỡng, cảnh báo/sự cố và Prometheus.
 
-Thiếu phần cứng không phải lý do bỏ giám sát. Dùng simulator có nhãn trong môi
-trường demo riêng và ghi rõ nguồn tổng hợp; không giả số đo sản xuất hay tự đổi
-trạng thái vật lý. Preview quy tắc hiện có chưa phải simulator tích hợp.
+Thiếu phần cứng không phải lý do bỏ giám sát. Người dùng ngày 12/10 đã bác bỏ
+màn kịch bản/simulator cũ; không khôi phục chỉ vì Word từng đề xuất. Hiện giữ
+vận hành tài nguyên theo booking, workload/occupancy khai báo và giờ server;
+telemetry chỉ là số đo thật khi có nguồn xác thực. Không tự đổi trạng thái vật lý.
 
 ## Hỗ trợ và phần mở rộng
 
@@ -30,8 +31,11 @@ AI tập trung tìm lịch/tài nguyên phù hợp và tóm tắt vận hành c�
 quyết định quyền, trạng thái hay phê duyệt. Cần đánh giá hai luồng với provider
 thật trước khi tuyên bố đã hoàn thành. Dự báo bảo trì chỉ làm khi đủ dataset.
 
-Kho vật tư, nhóm học phần, VI/EN, guest OTP, pricing/payment và media đã được
-người dùng chấp thuận; giữ hợp đồng hiện có, không coi chúng là trọng tâm mới.
+Kho vật tư, nhóm học phần, VI/EN, guest OTP, pricing/payment, hỗ trợ, loyalty,
+fulfillment và ChatGPT bridge đã được người dùng chấp thuận; giữ hợp đồng hiện
+có theo ADR hiện hành, không coi chúng là trọng tâm mới. Ba role hiện tại là
+ADMIN, LAB_STAFF, CUSTOMER (ADR-033); paid hold theo ADR-038 thay tự xác nhận
+lịch có phí, không tự quay lại quy trình/role trong đề xuất Word cũ.
 QR demo, NSGA-II/Pareto, fair-share, tối ưu điện năng, chargeback, stress
 showcase và bản sao số 3D cũ không phải điều kiện của đề tài. Code nghiên cứu
 đã bị ngừng dùng được loại khỏi runtime và xóa theo allowlist đã kiểm tra; không

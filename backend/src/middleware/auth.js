@@ -1,6 +1,4 @@
-import jwt from "jsonwebtoken";
-
-import { config } from "../config.js";
+import { verifyUserToken, validSession } from "../services/authTokens.js";
 import { prisma } from "../db.js";
 import { isCanonicalRole, CANONICAL_ROLES } from "../constants/roles.js";
 
@@ -9,7 +7,8 @@ const PASSWORD_RESET_ALLOWLIST = new Set([
   "GET /api/users/me",
   "POST /api/auth/change-password",
   "POST /api/auth/password-otp/request",
-  "POST /api/auth/logout"
+  "POST /api/auth/logout",
+  "GET /api/auth/session", "POST /api/auth/activity", "POST /api/auth/logout-all"
 ]);
 
 function passwordResetRouteKey(req) {
@@ -35,7 +34,7 @@ export async function requireAuth(req, res, next) {
 
   let payload;
   try {
-    payload = jwt.verify(token, config.jwtSecret, { algorithms: ["HS256"] });
+    payload = verifyUserToken(token);
   } catch (error) {
     const expired = error?.name === "TokenExpiredError";
     return res.status(401).json({
@@ -51,8 +50,10 @@ export async function requireAuth(req, res, next) {
   }
 
   let user;
+  let session;
   try {
     user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    session = await prisma.authSession.findUnique({ where: { id: payload.sid } });
   } catch (dbErr) {
     // Database failure must NOT fall back to mock/memory — explicit error
     console.error("Auth DB lookup failed", { code: dbErr?.code || "UNKNOWN" });
@@ -71,6 +72,10 @@ export async function requireAuth(req, res, next) {
     return res.status(401).json({ error: { code: "AUTH_INVALID", message: "Session is no longer valid" } });
   }
 
+  if (!validSession(session, user)) {
+    return res.status(401).json({ error: { code: "AUTH_EXPIRED", message: "Session expired or revoked" } });
+  }
+
   // Reject unsupported role values
   if (!isCanonicalRole(user.role)) {
     console.error(`User ${user.id} has unsupported role: ${user.role}. Expected one of: ${CANONICAL_ROLES.join(", ")}`);
@@ -78,6 +83,8 @@ export async function requireAuth(req, res, next) {
   }
 
   req.user = user;
+  req.authSession = session;
+  res.set("Cache-Control", "no-store");
   if (user.passwordResetRequired && !PASSWORD_RESET_ALLOWLIST.has(passwordResetRouteKey(req))) {
     return res.status(403).json({
       error: {
@@ -105,7 +112,7 @@ export async function optionalAuth(req, res, next) {
 
   let payload;
   try {
-    payload = jwt.verify(token, config.jwtSecret, { algorithms: ["HS256"] });
+    payload = verifyUserToken(token);
   } catch {
     req.user = null;
     return next();
@@ -117,15 +124,18 @@ export async function optionalAuth(req, res, next) {
   }
 
   let user;
+  let session;
   try {
     user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    session = await prisma.authSession.findUnique({ where: { id: payload.sid } });
   } catch (dbErr) {
     console.error("Optional auth DB lookup failed", { code: dbErr?.code || "UNKNOWN" });
     return res.status(503).json({ error: { code: "DATABASE_UNAVAILABLE", message: "Authentication service unavailable" } });
   }
 
-  req.user = user && user.isActive && !user.deletedAt && isCanonicalRole(user.role) &&
+  req.user = user && validSession(session, user) && user.isActive && !user.deletedAt && isCanonicalRole(user.role) &&
     Number.isInteger(payload.authVersion ?? 0) && (payload.authVersion ?? 0) === user.authVersion ? user : null;
+  if (req.user) { req.authSession = session; res.set("Cache-Control", "no-store"); }
   return next();
 }
 

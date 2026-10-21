@@ -57,6 +57,7 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
       await tx.supportSession.update({ where: { id: next.id }, data: { status: 'ACTIVE', assignedStaffId: agent.userId, assignedAt: now } });
       await tx.supportPresence.update({ where: { userId: agent.userId }, data: { lastAssignedAt: now } });
       await event(tx, next.id, 'ASSIGNED', agent.userId);
+      await supportNotice(tx, [agent.userId], next, 'assigned', now);
     }
   }
   async function publicSession(tx, row) {
@@ -120,6 +121,8 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
       }
       await tx.supportMessage.create({ data: { id: randomUUID(), sessionId: data.requestId, senderId: actor.id, kind: 'CUSTOMER', body: data.message } });
       await event(tx, data.requestId, 'REQUESTED', actor.id);
+      const recipients = await tx.user.findMany({ where: { isActive: true, deletedAt: null, OR: [{ role: ADMIN }, { role: LAB_STAFF, labAssignments: { some: { laboratoryId: lab.id } } }] }, select: { id: true } });
+      await supportNotice(tx, recipients.map(row => row.id), { id: data.requestId, laboratoryId: lab.id }, 'requested', clock());
       await dispatch(tx);
       return publicSession(tx, await tx.supportSession.findUnique({ where: { id: data.requestId }, include }));
     }, { timeout: 15_000 });
@@ -172,10 +175,22 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
         ? { status: 'WAITING', assignedStaffId: null, assignedAt: null }
         : { status: action === 'finish' ? 'CLOSED' : 'CANCELLED', closedAt: clock(), resolution: reason } });
       await tx.supportMessage.create({ data: { id: randomUUID(), sessionId: id, senderId: actor.id, kind: 'SYSTEM', body: reason, eventType: action === 'finish' ? 'CLOSED' : action === 'cancel' ? 'CANCELLED' : 'REQUEUED' } });
+      await tx.notification.updateMany({ where: { dedupeKey: { startsWith: `support:${id}:` }, readAt: null }, data: { readAt: clock() } });
       await dispatch(tx);
       return publicSession(tx, await tx.supportSession.findUnique({ where: { id }, include }));
     });
   }
   return { metadata, list, detail, request, heartbeat, send, transition };
+}
+
+async function supportNotice(tx, recipients, session, eventType, now) {
+  for (const userId of recipients) {
+    const dedupeKey = `support:${session.id}:${eventType}:${userId}`;
+    await tx.notification.upsert({ where: { dedupeKey }, update: {}, create: {
+      id: randomUUID(), userId, dedupeKey, title: eventType === 'assigned' ? 'Bạn có phiên hỗ trợ mới' : 'Khách hàng cần hỗ trợ',
+      message: 'Mở chat hỗ trợ để xem yêu cầu.', titleKey: `support.${eventType}.title`, messageKey: 'support.open.message',
+      messageParams: { sessionId: session.id, laboratoryId: session.laboratoryId }, severity: 'info', sentAt: now
+    } });
+  }
 }
 export const supportService = createSupportService();

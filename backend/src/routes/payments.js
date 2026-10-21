@@ -61,20 +61,16 @@ router.get(
   "/vnpay/return",
   route(async (req, res) => {
     verifyVnpay(req.query);
-    const transaction = await prisma.paymentTransaction.findUnique({ where: { txnRef: req.query.vnp_TxnRef }, select: { bookingId: true } });
-    const appOrigin = process.env.PAYMENT_APP_URL || config.corsOrigins[0];
+    const transaction = await prisma.paymentTransaction.findUnique({ where: { txnRef: req.query.vnp_TxnRef }, select: { bookingId: true, appOrigin: true } });
+    const appOrigin = config.corsOrigins.includes(transaction?.appOrigin) ? transaction.appOrigin : process.env.PAYMENT_APP_URL || config.corsOrigins[0];
     const target = new URL(appOrigin);
     if (!["https:", "http:"].includes(target.protocol) || (config.isProduction && target.protocol !== "https:")) {
       throw new Error("PAYMENT_APP_URL must be a valid application URL");
     }
-    target.hash = transaction?.bookingId
-      ? `#/workspace/thanh-toan?booking=${encodeURIComponent(transaction.bookingId)}`
-      : "#/workspace/thanh-toan";
-    res
-      .type("html")
-      .send(
-        `<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Quay lại lịch đặt LAB</title><main><h1>Đã trở về từ VNPAY</h1><p>Hệ thống đang chờ thông báo xác thực giao dịch. Mở lịch đặt để xem kết quả đã lưu.</p><a href="${target.toString().replaceAll("&", "&amp;").replaceAll('"', "&quot;")}">Xem thanh toán lịch đặt</a></main></html>`,
-      );
+    target.pathname = '/workspace/payments'; target.hash = ''; target.search = '';
+    if (transaction?.bookingId) target.searchParams.set('booking', transaction.bookingId);
+    target.searchParams.set('returned', '1');
+    res.set('Cache-Control', 'no-store').redirect(303, target.toString());
   }),
 );
 router.use(requireAuth);
@@ -132,7 +128,7 @@ for (const provider of ["vnpay", "vietqr"])
         .strict()
         .parse(req.body || {});
       res.json(
-        await initiatePayment(req.params.id, req.user, provider, req.ip),
+        await initiatePayment(req.params.id, req.user, provider, req.ip, req.get('origin')),
       );
     }),
   );

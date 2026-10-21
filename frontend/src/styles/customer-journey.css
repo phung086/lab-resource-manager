@@ -1,0 +1,1042 @@
+/* ===========================================================================
+   customer-journey.css
+   Customer journey visual system: hero anchor → steps → timeline → catalog
+   → side column (finder + status + incidents).
+
+   Layered on top of workspace-home.css + overview-workflow.css without
+   changing either. The customer journey is built around a single anchor
+   (overdue → in-use → upcoming → empty) rather than a 3-tile count grid.
+   =========================================================================== */
+
+.workspace-shell .workspace-home.role-customer {
+  --journey-ink: #1f1a35;
+  --journey-cream: #fff9ee;
+  --journey-lavender: #f4effa;
+  --journey-mist: #ece4f5;
+  --journey-violet: var(--workspace-accent);
+  --journey-violet-deep: #2a1f3d;
+  --journey-violet-strong: var(--workspace-accent-hover);
+  --journey-violet-soft: #796798;
+  --journey-line: #a7a0b7;
+  --journey-line-soft: var(--workspace-border);
+  --journey-text: #211b30;
+  --journey-text-muted: #5b5170;
+  --journey-success: #276c4e;
+  --journey-warn: #b77817;
+  --journey-danger: #982d3f;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.workspace-shell .workspace-home.role-customer .customer-journey {
+  display: grid;
+  gap: 24px;
+  padding: 4px 0 32px;
+}
+
+/* -----------------------------------------------------------------------
+   HERO — single anchor above everything else. The data-state attribute
+   controls palette: overdue (danger), inUse (amber), upcoming (violet),
+   empty (calm cream).
+   ----------------------------------------------------------------------- */
+
+.workspace-shell .workspace-home.role-customer .journey-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 64px minmax(0,1fr);
+  gap: 28px;
+  padding: 30px 32px;
+  background: var(--journey-lavender);
+  color: var(--journey-ink);
+  border-radius: 16px;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 180px;
+}
+
+
+.workspace-shell .workspace-home.role-customer .journey-hero[data-state="overdue"] {
+  background: #fbecf0;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero[data-state="inUse"] {
+  background: #faf2df;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero[data-state="empty"] {
+  background: var(--journey-lavender);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+
+
+
+.workspace-shell .workspace-home.role-customer .journey-hero-art-mark {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #e7e0f0;
+  color: var(--journey-violet-strong);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+  align-content: center;
+}
+
+
+.workspace-shell .workspace-home.role-customer .journey-hero-title {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 700;
+  color: var(--journey-ink);
+  max-width: 30ch;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-lede {
+  margin: 0;
+  color: var(--journey-text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  max-width: 60ch;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px 18px;
+  margin: 4px 0 2px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid var(--journey-line-soft);
+  border-radius: 14px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-facts > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-facts dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--journey-text-muted);
+  font-weight: 600;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-facts dd {
+  margin: 0;
+  color: var(--journey-ink);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  text-decoration: none;
+  line-height: 1;
+  min-height: 40px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-cta-primary {
+  background: var(--journey-violet);
+  color: #ffffff;
+  border-color: var(--journey-violet);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-cta-primary:hover {
+  background: var(--journey-violet-strong);
+  border-color: var(--journey-violet-strong);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-cta-ghost {
+  background: #ffffff;
+  color: var(--journey-violet-strong);
+  border-color: var(--journey-line);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-cta-ghost:hover {
+  background: var(--workspace-accent-soft);
+  border-color: var(--journey-violet-strong);
+  color: var(--journey-violet-strong);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #ffffff;
+  color: var(--journey-violet-strong);
+  border: 1px solid var(--journey-line);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-badge[data-tone="now"] {
+  background: rgba(183, 120, 23, 0.22);
+  border-color: rgba(255, 215, 138, 0.55);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-hero-badge[data-tone="soon"] {
+  background: rgba(139, 102, 208, 0.28);
+  border-color: rgba(139, 102, 208, 0.55);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-reminder {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: -4px 0 4px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fdf0d6;
+  color: var(--journey-warn);
+  border: 1px solid #f3dba0;
+  font-size: 13px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+/* -----------------------------------------------------------------------
+   GRID — main column with steps + timeline + catalog; side column with
+   finder + status + incidents.
+   ----------------------------------------------------------------------- */
+
+.workspace-shell .workspace-home.role-customer .journey-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-column {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-section-note {
+  margin: -8px 0 4px;
+  color: var(--journey-text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* -----------------------------------------------------------------------
+   STEPS — three short rows. Number + content + tail button.
+   ----------------------------------------------------------------------- */
+
+.workspace-shell .workspace-home.role-customer .journey-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-steps > li {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  background: #fff;
+  border: 1px solid var(--journey-line-soft);
+  border-radius: 16px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-steps > li:hover {
+  border-color: var(--journey-violet-soft);
+  transform: translateY(-1px);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-step-num {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--journey-lavender);
+  color: var(--journey-violet-strong);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-steps > li > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-steps > li strong {
+  font-size: 15px;
+  color: var(--journey-ink);
+  font-weight: 700;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-steps > li small {
+  color: var(--journey-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-steps > li > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--journey-line);
+  color: var(--journey-violet-strong);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-steps > li > button:hover {
+  background: var(--journey-lavender);
+  border-color: var(--journey-violet-soft);
+}
+
+/* -----------------------------------------------------------------------
+   TIMELINE — vertical rail with state-coded dots; cards alongside.
+   ----------------------------------------------------------------------- */
+
+.workspace-shell .workspace-home.role-customer .journey-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-item {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-rail {
+  position: relative;
+  display: block;
+  min-height: 100%;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-dot {
+  position: absolute;
+  top: 14px;
+  left: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--journey-violet-soft);
+  box-shadow: 0 0 0 4px var(--journey-lavender);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-item[data-tone="now"] .journey-timeline-dot {
+  background: var(--journey-warn);
+  box-shadow: 0 0 0 4px #fdf0d6;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-item[data-tone="soon"] .journey-timeline-dot {
+  background: var(--journey-violet);
+  box-shadow: 0 0 0 4px var(--journey-lavender);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-item[data-tone="overdue"] .journey-timeline-dot {
+  background: var(--journey-danger);
+  box-shadow: 0 0 0 4px #fde7eb;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-line {
+  position: absolute;
+  top: 26px;
+  left: 11px;
+  bottom: -14px;
+  width: 2px;
+  background: var(--journey-line-soft);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px 18px;
+  background: #fff;
+  border: 1px solid var(--journey-line-soft);
+  border-radius: 14px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-item[data-tone="overdue"] .journey-timeline-card {
+  border-color: #e3b9c0;
+  background: linear-gradient(180deg, #fff 65%, #fde7eb);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-card:hover {
+  border-color: var(--journey-violet-soft);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-card time {
+  color: var(--journey-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--journey-lavender);
+  color: var(--journey-violet-strong);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-badge[data-tone="now"] {
+  background: #fdf0d6;
+  color: var(--journey-warn);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-badge[data-tone="soon"] {
+  background: #ece4f5;
+  color: var(--journey-violet);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-badge[data-tone="overdue"] {
+  background: #fde7eb;
+  color: var(--journey-danger);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-card h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--journey-ink);
+  font-weight: 700;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-card p {
+  margin: 0;
+  color: var(--journey-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-card > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-card > footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--journey-violet);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-timeline-card > footer button:hover {
+  color: var(--journey-violet-strong);
+}
+
+/* -----------------------------------------------------------------------
+   CATALOG — one hero card + two compact cards. Replaces a uniform grid.
+   ----------------------------------------------------------------------- */
+
+.workspace-shell .workspace-home.role-customer .journey-catalog {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  grid-auto-rows: minmax(0, auto);
+  gap: 16px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-card {
+  display: grid;
+  background: #fff;
+  border: 1px solid var(--journey-line-soft);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-card:hover {
+  border-color: var(--journey-violet-soft);
+  transform: translateY(-1px);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-card.is-hero {
+  grid-row: span 2;
+  background: var(--journey-lavender);
+  color: var(--journey-ink);
+  border: 1px solid var(--journey-line-soft);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-card.is-hero .journey-catalog-body small,
+.workspace-shell .workspace-home.role-customer .journey-catalog-card.is-hero .journey-catalog-body p {
+  color: var(--journey-text-muted);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-card.is-hero .journey-catalog-body h3 {
+  color: var(--journey-ink);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-card.is-hero .journey-catalog-state {
+  background: #e7e0f0;
+  color: var(--journey-violet-strong);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-cover {
+  position: relative;
+  min-height: 180px;
+  background: var(--journey-lavender);
+  display: grid;
+  place-items: center;
+  color: var(--journey-violet-strong);
+  overflow: hidden;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-card.is-hero .journey-catalog-cover {
+  min-height: 240px;
+  background: var(--journey-lavender);
+  color: var(--journey-violet-strong);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-code {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--journey-violet-strong);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-body {
+  display: grid;
+  align-content: start;
+  align-items: start;
+  gap: 6px;
+  padding: 16px 18px 18px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-body small {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--journey-text-muted);
+  font-weight: 700;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-body h3 {
+  margin: 2px 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--journey-ink);
+  line-height: 1.3;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-body p {
+  margin: 0;
+  color: var(--journey-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: start;
+  justify-self: start;
+  line-height: 1.5;
+  min-height: 24px;
+  box-sizing: border-box;
+  width: fit-content;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--journey-violet-strong);
+  background: var(--journey-lavender);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-body strong {
+  color: var(--journey-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-cta {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  align-self: start;
+  min-height: 44px;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  color: var(--journey-violet);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-card.is-hero .journey-catalog-cta {
+  color: var(--journey-violet-strong);
+  border-bottom-color: currentColor;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-cta:hover {
+  color: var(--journey-violet-strong);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-catalog-card.is-hero .journey-catalog-cta:hover {
+  color: var(--journey-violet-strong);
+  border-bottom-color: currentColor;
+}
+
+/* -----------------------------------------------------------------------
+   SIDE COLUMN — finder + status + incidents + help note.
+   ----------------------------------------------------------------------- */
+
+.workspace-shell .workspace-home.role-customer .journey-side-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid var(--journey-line-soft);
+  border-radius: 16px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-side-card h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--journey-violet-strong);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-side-card p {
+  margin: 0;
+  color: var(--journey-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-side-card-warn {
+  background: #fdf5f0;
+  border-color: #f0d8b5;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-side-card-warn h3 {
+  color: var(--journey-warn);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-finder {
+  display: grid;
+  gap: 10px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-finder-field {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--journey-line);
+  border-radius: 12px;
+  background: #fff;
+  min-height: 44px;
+  color: var(--journey-text-muted);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-finder-field input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--journey-text);
+  width: 100%;
+  min-width: 0;
+  padding: 8px 0;
+}
+.workspace-shell .workspace-home.role-customer .journey-finder-field input:is(:focus,:focus-visible) {
+  outline: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-finder-field:focus-within {
+  border-color: var(--journey-violet);
+  box-shadow: none;
+  outline: 1px solid #9582bc;
+  outline-offset: -1px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-finder-select {
+  display: block;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-finder-select select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--journey-line);
+  background: #fff;
+  color: var(--journey-text);
+  min-height: 44px;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-finder .journey-cta-primary {
+  width: 100%;
+  justify-content: center;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-finder-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin-top: 4px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-finder-shortcuts button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--journey-line);
+  background: #fff;
+  color: var(--journey-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-finder-shortcuts button:hover {
+  background: var(--journey-lavender);
+  border-color: var(--journey-violet-soft);
+  color: var(--journey-violet-strong);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-list > li {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--journey-line-soft);
+  border-radius: 12px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-list > li:hover {
+  border-color: var(--journey-violet-soft);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--journey-violet-soft);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-dot[data-tone="upcoming"] {
+  background: var(--journey-violet);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-dot[data-tone="overdue"] {
+  background: var(--journey-danger);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-dot[data-tone="pending"] {
+  background: var(--journey-warn);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-list > li > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-list strong {
+  font-size: 16px;
+  color: var(--journey-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-list small {
+  color: var(--journey-text-muted);
+  font-size: 11px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-list > li > button {
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  color: var(--journey-violet);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-status-list > li > button:hover {
+  background: var(--journey-lavender);
+  color: var(--journey-violet-strong);
+}
+
+.workspace-shell .workspace-home.role-customer .journey-incident-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-incident-list > li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #f0d8b5;
+  border-radius: 10px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-incident-list strong {
+  font-size: 13px;
+  color: var(--journey-ink);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-incident-list small {
+  color: var(--journey-text-muted);
+  font-size: 11px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-incident-list > li > button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--journey-warn);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-incident-list > li > button:hover {
+  text-decoration: underline;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-side-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #e8f3ed;
+  color: var(--journey-success);
+  font-size: 12px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+/* -----------------------------------------------------------------------
+   Responsive — collapse to single column and shrink the hero on narrow
+   viewports. Keep the rail column at 88px to match the staff cluster
+   so the workspace reads as one product.
+   ----------------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .workspace-shell .workspace-home.role-customer .journey-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace-shell .workspace-home.role-customer .journey-catalog {
+    grid-template-columns: 1fr;
+  }
+  .workspace-shell .workspace-home.role-customer .journey-catalog-card.is-hero {
+    grid-row: auto;
+  }
+  .workspace-shell .workspace-home.role-customer .journey-steps > li {
+    grid-template-columns: 44px 1fr;
+  }
+  .workspace-shell .workspace-home.role-customer .journey-steps > li > button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 600px) {
+  .workspace-shell .workspace-home.role-customer .journey-hero {
+    padding: 24px;
+    grid-template-columns: minmax(0,1fr);
+  }
+  .workspace-shell .workspace-home.role-customer .journey-hero-art { display:none; }
+  .workspace-shell .workspace-home.role-customer .journey-hero-title {
+    font-size: 22px;
+  }
+  .workspace-shell .workspace-home.role-customer .journey-timeline-item {
+    grid-template-columns: 18px 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-shell .workspace-home.role-customer .journey-cta,
+  .workspace-shell .workspace-home.role-customer .journey-steps > li,
+  .workspace-shell .workspace-home.role-customer .journey-timeline-card,
+  .workspace-shell .workspace-home.role-customer .journey-catalog-card,
+  .workspace-shell .workspace-home.role-customer .journey-status-list > li,
+  .workspace-shell .workspace-home.role-customer .journey-finder-shortcuts button {
+    transition: none;
+  }
+  .workspace-shell .workspace-home.role-customer .journey-cta-primary:hover,
+  .workspace-shell .workspace-home.role-customer .journey-steps > li:hover,
+  .workspace-shell .workspace-home.role-customer .journey-catalog-card:hover {
+    transform: none;
+  }
+}
+
+/* -----------------------------------------------------------------------
+   Focus rings — readable on the pale workspace surfaces.
+   ----------------------------------------------------------------------- */
+
+.workspace-shell .workspace-home.role-customer :is(button, a):focus-visible {
+  outline: 3px solid var(--journey-violet-soft);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.workspace-shell .workspace-home.role-customer .journey-cta:focus-visible,
+.workspace-shell .workspace-home.role-customer .journey-steps > li > button:focus-visible,
+.workspace-shell .workspace-home.role-customer .journey-finder-shortcuts button:focus-visible,
+.workspace-shell .workspace-home.role-customer .journey-timeline-card > footer button:focus-visible,
+.workspace-shell .workspace-home.role-customer .journey-catalog-cta:focus-visible,
+.workspace-shell .workspace-home.role-customer .journey-status-list > li > button:focus-visible,
+.workspace-shell .workspace-home.role-customer .journey-incident-list > li > button:focus-visible {
+  outline: 3px solid var(--journey-violet);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

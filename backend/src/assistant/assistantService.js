@@ -8,8 +8,12 @@ import { buildAssistantSummary, renderAssistantSummary } from './assistantSummar
 import { providerAvailability } from '../services/paymentProviders.js';
 import { AssistantConversationStore, CONVERSATION_LIMITS } from './assistantConversation.js';
 import { planWithModel, summarizeWithModel, validateModelPlan, modelInputFits } from './assistantModel.js';
+import { quickReplyKey } from './quickReplies.js';
+import { fastQueryPlan } from './fastQueries.js';
 export const suggestionKeys = ['assistant.prompt.slots', 'assistant.prompt.bookingHelp', 'assistant.prompt.payment', 'assistant.prompt.resources', 'assistant.prompt.bookings'];
-export const getAssistantSuggestions = (locale = 'vi') => suggestionKeys.map(key => localize(locale, key));
+export const getAssistantSuggestionKeys = role => ['ADMIN', 'LAB_STAFF'].includes(role)
+  ? ['assistant.prompt.schedule', 'assistant.prompt.stock', 'assistant.prompt.report', 'assistant.prompt.customers'] : suggestionKeys;
+export const getAssistantSuggestions = (locale = 'vi', role) => getAssistantSuggestionKeys(role).map(key => localize(locale, key));
 export const listAssistantTools = () => assistantTools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema, readOnly: true }));
 const plain = (text) =>
   text
@@ -22,6 +26,7 @@ const plain = (text) =>
 const introductionIntent = text => /^(?:ban la ai|who are you)\b/.test(text) ||
   /^(?:(?:xin )?chao(?: ban)?|hello|hi|hey|ban ten (?:la )?gi|ban co the lam (?:duoc )?gi|ban giup (?:duoc )?gi|gioi thieu ban than|what can you do|what is your name|introduce yourself|help me|giup toi)[?!.,…]*$/.test(text);
 const paymentIntent = text => /thanh toan|payment|tra tien|\bpay\b/.test(text);
+const explanationIntent = text => /^(?:vi sao|tai sao|giai thich|why\b|explain\b)/.test(text);
 const slotIntent = text => /lich(?: con)? trong|khung gio|thoi gian(?: con)? trong|(?:phong|thiet bi)(?: con)? trong(?=$|[?!.,…]|\s+(?:ngay|hom|luc|tuan|\d))|dat lich|\b(?:slots?|availability|book|reserve)\b/.test(text);
 // Relative dates and clock times in prose are not parsed by the local planner.
 // Require the explicit Vietnam-time controls rather than silently searching a different day.
@@ -43,6 +48,8 @@ function slotDuration(data, normalized) {
 export function planAssistantQuestion(data) {
   const n = plain(data.message);
   if (introductionIntent(n)) return [];
+  // Explanation questions mentioning equipment are not catalogue searches.
+  if (explanationIntent(n)) return [];
   const code = data.message.match(/\b[A-Z][A-Z0-9]*-[A-Z0-9-]+\b/)?.[0];
   const room = /\brooms?\b|phong/.test(n), equipment = /\bequipment\b|thiet bi/.test(n);
   const category = room !== equipment ? room ? 'ROOM' : 'EQUIPMENT' : undefined;
@@ -191,6 +198,19 @@ export function createAssistantService({ settings = config, clientFactory = real
       let modelStatus = 'NOT_CONFIGURED', selectedChoice = index !== null;
       const configured = Boolean(settings.openaiApiKey && settings.openaiModel);
       const conversationMode = configured && settings.assistantConversationEnabled;
+      const fastPlan = fastQueryPlan(data);
+      if (fastPlan && !['search_resources', 'find_available_slots'].includes(fastPlan.name)) {
+        const result = await call(fastPlan), results = [{ tool: fastPlan.name, result }];
+        const summary = buildAssistantSummary(results);
+        return respond({ answer: renderAssistantSummary(summary, (key, params) => localize(locale, key, params), locale), summary, locale,
+          provider: 'local', modelStatus: 'LOCAL_ONLY', toolsUsed: [fastPlan.name], toolResults: results, actions: [], source: 'authenticated_mcp', generatedAt: new Date().toISOString() });
+      }
+      const quickKey = quickReplyKey(data.message);
+      if (quickKey && !quickKey.endsWith('.payment')) {
+        const key = /\.(greeting|capabilities)$/.test(quickKey) ? ['ADMIN', 'LAB_STAFF'].includes(actorRole) ? 'assistant.quick.operator' : 'assistant.introduction' : quickKey;
+        return respond({ answer: localize(locale, key), summary: [{ key }], locale, provider: 'local',
+          modelStatus: 'LOCAL_ONLY', toolsUsed: [], toolResults: [], actions: [], source: 'local_guidance', generatedAt: new Date().toISOString() });
+      }
       if (conversationMode && !paymentIntent(plain(data.message))) {
         // Re-read referenced resources through MCP before sending any choice
         // names or details to a model. Old business prose is never replayed.
@@ -229,7 +249,9 @@ export function createAssistantService({ settings = config, clientFactory = real
       if (!plan.length) {
         const normalized = plain(data.message);
         let summary = [{ key: 'assistant.clarifyRequest' }];
-        if (selectedChoice) {
+        if (explanationIntent(normalized)) {
+          summary = [{ key: 'assistant.connectionNeeded' }];
+        } else if (selectedChoice) {
           summary = [{ key: 'assistant.choiceMissing' }];
         } else if (introductionIntent(normalized)) {
           summary = [{ key: 'assistant.introduction' }];

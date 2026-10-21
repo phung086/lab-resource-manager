@@ -1,6 +1,6 @@
 import { HelpDisclosure } from "./base/HelpDisclosure";
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Plus, RefreshCw, ArrowRight, ShieldCheck, UserCheck, UserX, Pencil, KeyRound, Trash2 } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Plus, RefreshCw, ArrowRight } from 'lucide-react';
 import { apiRequest } from '../api.js';
 import { useLocale } from '../providers/LocaleProvider';
 import { navigateApp, readRouteParams, workspacePathForTab } from '../workspaceRoutes.js';
@@ -10,22 +10,24 @@ import { BaseModal2026 } from './BaseModal2026';
 import { ManagedUserEditForm } from './features/accounts/ManagedUserEditForm';
 import { PasswordChangeForm } from './features/accounts/PasswordChangeForm';
 import { LoyaltyPolicySettings } from './features/accounts/LoyaltyPolicySettings';
+import { UserDirectoryList } from './features/accounts/UserDirectoryList';
+import { AccountDetailPanel } from './features/accounts/AccountDetailPanel';
+import { AccountAccessPanel, type AccountChange } from './features/accounts/AccountAccessPanel';
+import { UserCreatePanel } from './features/accounts/UserCreatePanel';
+import type { DirectoryUser, Laboratory, Assignment } from './features/accounts/accountDirectory.contract';
+import { roleLabels } from './features/accounts/accountDirectory.contract';
 import '../styles/users-workspace.css';
 
-const roleLabels: Record<UserRole, string> = { ADMIN: 'ui.administrator_d00831ec', LAB_STAFF: 'ui.lab_staff_1b410267', CUSTOMER: 'core.roles.customer' };
-type User = { id: string; email: string; fullName: string; role: UserRole; isActive: boolean; deletedAt?: string | null; phone?: string | null; organization?: string | null; department?: string | null; _count?: { bookings: number } };
-type Laboratory = { id: string; code: string; name: string; isActive: boolean };
-type Assignment = { laboratoryId: string; laboratory: Laboratory };
-type Change = { user: User; type: 'role' | 'active' | 'assign' | 'remove' | 'delete'; role?: UserRole; laboratory?: Laboratory };
+type Change = { user: DirectoryUser; type: 'role' | 'active' | 'assign' | 'remove' | 'delete'; role?: UserRole; laboratory?: Laboratory };
 const failure = (error: unknown) => error instanceof Error ? error.message : 'ui.users.requestFailed';
 const initialForm = { fullName: '', email: '', password: '', phone: '', organization: '', role: 'CUSTOMER' as UserRole };
 const initialRole = () => { const role = readRouteParams().get('role'); return USER_ROLES.includes(role as UserRole) ? role || '' : ''; };
 
 export function AccessUserManagement({ actorRole, actorId }: { actorRole: string; actorId: string }) {
-  const { tr } = useLocale(), formId = useId(), createRef = useRef<HTMLFormElement>(null), dossierRef = useRef<HTMLElement>(null);
+  const { tr } = useLocale(), createRef = useRef<HTMLFormElement>(null), dossierRef = useRef<HTMLElement>(null);
   const isAdmin = actorRole === 'ADMIN', allowedRoles = isAdmin ? USER_ROLES : ['CUSTOMER'] as const;
   const loadAbort = useRef<AbortController | null>(null), busyRef = useRef(false);
-  const [users, setUsers] = useState<User[]>([]), [laboratories, setLaboratories] = useState<Laboratory[]>([]);
+  const [users, setUsers] = useState<DirectoryUser[]>([]), [laboratories, setLaboratories] = useState<Laboratory[]>([]);
   const [loading, setLoading] = useState(true), [error, setError] = useState('');
   const [search, setSearch] = useState(''), [roleFilter, setRoleFilter] = useState(initialRole), [statusFilter, setStatusFilter] = useState('');
   const [selected, setSelected] = useState(() => readRouteParams().get('user') || '');
@@ -35,7 +37,7 @@ export function AccessUserManagement({ actorRole, actorId }: { actorRole: string
   const [showCreate, setShowCreate] = useState(false), [createForm, setCreateForm] = useState(initialForm);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({}), [createError, setCreateError] = useState('');
   const [change, setChange] = useState<Change | null>(null), [busy, setBusy] = useState(false), [actionError, setActionError] = useState(''), [notice, setNotice] = useState('');
-  const [editing, setEditing] = useState(false), [resetTarget, setResetTarget] = useState<User | null>(null), [reason, setReason] = useState('');
+  const [editing, setEditing] = useState(false), [resetTarget, setResetTarget] = useState<DirectoryUser | null>(null), [reason, setReason] = useState('');
   const reasonRef = useRef<HTMLInputElement>(null);
   const user = !loading && !error ? users.find(item => item.id === selected) : undefined, isStaff = isAdmin && user?.role === 'LAB_STAFF';
   const assignments = assignmentRead.userId === selected ? assignmentRead.rows : [];
@@ -112,71 +114,105 @@ export function AccessUserManagement({ actorRole, actorId }: { actorRole: string
     }
     finally { busyRef.current = false; setBusy(false); }
   }
-  const createFields = [
-    { name: 'fullName', label: 'ui.full_name_03de764f', type: 'text', max: 255, autocomplete: 'name' },
-    { name: 'email', label: 'ui.email_969ccbd3', type: 'email', max: undefined, autocomplete: 'off' },
-    { name: 'password', label: 'ui.initial_password_59759f04', type: 'password', max: 128, autocomplete: 'new-password' },
-    { name: 'phone', label: 'ui.contact_phone_3b6da57f', type: 'tel', max: 20, autocomplete: 'tel' },
-    { name: 'organization', label: 'ui.department_organization_e30b494a', type: 'text', max: 160, autocomplete: 'organization' }
-  ] as const;
+  function onProposeFromPanel(next: AccountChange) {
+    if (!user) return;
+    setRoles(current => ({ ...current, [user.id]: next.role ?? user.role }));
+    propose({ user, type: next.type, role: next.role });
+  }
+  function onAssignLab(lab: Laboratory) {
+    if (!user) return;
+    setLabChoices(current => ({ ...current, [user.id]: lab.id }));
+    propose({ user, type: 'assign', laboratory: lab });
+  }
+  function onRemoveLab(assignment: { laboratoryId: string; laboratory: Laboratory }) {
+    if (!user) return;
+    propose({ user, type: 'remove', laboratory: assignment.laboratory });
+  }
   const changeTitle = change?.type === 'delete' ? 'account.users.delete' : change?.type === 'role' ? 'ui.users.confirmRole' : change?.type === 'active' ? (change.user.isActive ? 'ui.users.deactivate' : 'ui.users.activate') : change?.type === 'remove' ? 'ui.users.removeLab' : 'ui.users.confirmAssignment';
+
+  const accessProps = user ? { isAdmin, actorId, user: { id: user.id, role: user.role, isActive: user.isActive, fullName: user.fullName }, busy, onPropose: onProposeFromPanel } : null;
 
   return <section className="view-section users-workspace" aria-busy={loading}>
     <header className="users-heading"><div><h1>{tr(isAdmin ? 'ui.user_administration_2a750b85' : 'account.users.customers')}</h1><HelpDisclosure>{tr(isAdmin ? 'ui.users.subtitle' : 'account.users.staffScope')}</HelpDisclosure></div><div className="users-actions">
       {isAdmin && <button type="button" className="btn btn-secondary" onClick={() => navigateApp(workspacePathForTab('chatgpt_bridge'))}>{tr('bridge.title')}</button>}
       <button type="button" className="btn btn-secondary" disabled={loading || busy} onClick={() => void load()}><RefreshCw size={16} />{tr('ui.refresh_46140fa8')}</button>
-      <button type="button" className="btn btn-primary" aria-expanded={showCreate} aria-controls={formId + '-create'} disabled={busy} onClick={() => setShowCreate(value => !value)}><Plus size={16} />{tr('ui.create_user_70f60575')}</button>
+      <button type="button" className="btn btn-primary" aria-expanded={showCreate} disabled={busy} onClick={() => setShowCreate(value => !value)}><Plus size={16} />{tr('ui.create_user_70f60575')}</button>
     </div></header>
     {notice && <p className="users-notice" role="status">{tr(notice)}</p>}
     {isAdmin && <LoyaltyPolicySettings />}
-    <div id={formId + '-create'} hidden={!showCreate} className="users-create">
-      <div><h2>{tr('ui.create_user_70f60575')}</h2><p>{tr(isAdmin ? 'ui.users.createHint' : 'account.users.staffCreateHint')}</p></div>
-      <form ref={createRef} className="users-form" onSubmit={create} noValidate>
-        {Object.keys(fieldErrors).length > 0 && <div className="users-error users-form-summary" role="alert"><strong>{tr('ui.users.checkFields')}</strong><ul>{Object.entries(fieldErrors).map(([name, key]) => <li key={name}><a href={'#' + formId + '-' + name} onClick={event => { event.preventDefault(); createRef.current?.querySelector<HTMLElement>('[name="' + name + '"]')?.focus(); }}>{tr(key)}</a></li>)}</ul></div>}
-        {createError && <p className="users-error users-form-summary" role="alert">{tr(createError)}</p>}
-        {createFields.map(field => <label key={field.name} htmlFor={formId + '-' + field.name}>{tr(field.label)}<input id={formId + '-' + field.name} name={field.name} type={field.type} value={createForm[field.name]} maxLength={field.max} autoComplete={field.autocomplete} required={['fullName','email','password'].includes(field.name)} aria-invalid={!!fieldErrors[field.name]} aria-describedby={fieldErrors[field.name] ? formId + '-error-' + field.name : field.name === 'password' ? formId + '-password-hint' : undefined} disabled={busy} onChange={event => { setCreateForm(current => ({ ...current, [field.name]: event.target.value })); setFieldErrors(current => { const next = { ...current }; delete next[field.name]; return next; }); }} />{fieldErrors[field.name] && <span id={formId + '-error-' + field.name} className="users-field-error">{tr(fieldErrors[field.name])}</span>}{field.name === 'password' && <small id={formId + '-password-hint'}>{tr('ui.users.passwordHint')}</small>}</label>)}
-        <label htmlFor={formId + '-role'}>{tr('ui.role_35195dea')}<select id={formId + '-role'} name="role" value={createForm.role} disabled={busy} onChange={event => setCreateForm(current => ({ ...current, role: event.target.value as UserRole }))}>{allowedRoles.map(role => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}</select></label>
-        <div className="users-actions users-form-summary"><button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setShowCreate(false)}>{tr('ui.cancel_74fcd352')}</button><button type="submit" className="btn btn-primary" disabled={busy}>{tr(busy ? 'ui.creating_45c27eb9' : 'ui.create_user_70f60575')}</button></div>
-      </form>
-    </div>
+    {showCreate && (
+      <UserCreatePanel
+        isAdmin={isAdmin}
+        actorRole={actorRole as UserRole}
+        busy={busy}
+        onCreated={(id) => { setShowCreate(false); setNotice('ui.users.created'); void load(); setSelected(id); const params = readRouteParams(); params.set('user', id); navigateApp(workspacePathForTab('users', params), { notify: false }); }}
+        onBusyChange={(value) => { busyRef.current = value; setBusy(value); }}
+        onCollapse={() => { setShowCreate(false); setFieldErrors({}); setCreateError(''); }}
+      />
+    )}
     {error && <div className="users-error" role="alert">{tr(error)} <button type="button" className="btn btn-secondary" disabled={loading || busy} onClick={() => void load()}>{tr('ui.users.retry')}</button></div>}
     <div className="users-layout">
-      <div className="users-directory">
-        <div className={isAdmin ? "users-filters" : "users-filters users-filters-customer"}>
-          <label>{tr('ui.home.directory.search')}<input type="search" value={search} maxLength={120} placeholder={tr('ui.home.directory.placeholder')} onChange={event => setSearch(event.target.value)} /></label>
-          {isAdmin && <label>{tr('ui.role_35195dea')}<select value={roleFilter} onChange={event => filterRole(event.target.value)}><option value="">{tr('ui.home.directory.all')}</option>{USER_ROLES.map(role => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}</select></label>}
-          <label>{tr('ui.status_cb31de81')}<select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="">{tr('ui.users.allStatuses')}</option><option value="true">{tr('ui.active_767d67bb')}</option><option value="false">{tr('ui.inactive_50157a4c')}</option></select></label>
-        </div>
-        <p className="users-result-count" role="status">{loading ? tr('ui.loading_data_84c68bd5') : tr('ui.users.resultCount', { count: visible.length, total: users.length })}</p>
-        <div className="table-wrap users-table"><table><caption className="sr-only">{tr('ui.users_roles_and_laboratory_assignments_0f27b670')}</caption><thead><tr><th>{tr('ui.users_9e9519eb')}</th><th>{tr('ui.role_35195dea')}</th><th>{tr('ui.status_cb31de81')}</th></tr></thead><tbody>{visible.map(item => <tr key={item.id} className={item.id === selected ? 'is-selected' : ''}><td><button type="button" disabled={busy} aria-pressed={item.id === selected} className="users-account" onClick={() => choose(item.id)}><span><strong>{item.fullName || item.email}</strong><small>{item.email}</small></span><ArrowRight size={16} aria-hidden="true" /></button></td><td>{tr(roleLabels[item.role])}</td><td><span className={item.isActive ? 'users-status is-active' : 'users-status'}>{tr(item.deletedAt ? 'account.users.removed' : item.isActive ? 'ui.active_767d67bb' : 'ui.inactive_50157a4c')}</span></td></tr>)}</tbody></table></div>
-        {!loading && !error && !visible.length && <div className="users-empty"><h2>{tr(users.length ? 'ui.users.noMatches' : 'ui.users.noAccounts')}</h2><p>{tr(users.length ? 'ui.users.filterHint' : 'ui.users.createHint')}</p>{users.length > 0 && <button className="btn btn-secondary" type="button" onClick={() => { setSearch(''); filterRole(''); setStatusFilter(''); }}>{tr('ui.users.clearFilters')}</button>}</div>}
-      </div>
+      <UserDirectoryList
+        users={users}
+        total={users.length}
+        isAdmin={isAdmin}
+        selectedId={selected}
+        search={search}
+        roleFilter={roleFilter as '' | UserRole}
+        statusFilter={statusFilter as '' | 'true' | 'false'}
+        busy={busy}
+        onSearch={setSearch}
+        onRoleFilter={filterRole}
+        onStatusFilter={setStatusFilter}
+        onSelect={choose}
+      />
       <aside ref={dossierRef} tabIndex={-1} className="users-dossier" aria-label={tr('ui.users.accountDetails')}>
-        {!user ? <div className="users-empty"><ShieldCheck size={28} aria-hidden="true" /><h2>{tr(selected && !loading ? 'ui.users.accountUnavailable' : 'ui.users.selectAccount')}</h2><p>{tr('ui.users.selectHint')}</p></div> : <>
-          <header><h2>{user.fullName || user.email}</h2><p>{user.email}</p><span className={user.isActive ? 'users-status is-active' : 'users-status'}>{tr(user.deletedAt ? 'account.users.removed' : user.isActive ? 'ui.active_767d67bb' : 'ui.inactive_50157a4c')}</span></header>
-          <dl><div><dt>{tr('ui.role_35195dea')}</dt><dd>{tr(roleLabels[user.role])}</dd></div>{user.department && <div><dt>{tr('ui.users.department')}</dt><dd>{user.department}</dd></div>}<div><dt>{tr('ui.users.bookingCount')}</dt><dd>{user._count?.bookings ?? '—'}</dd></div></dl>
-          {!user.deletedAt && <section className="users-contact-actions"><div className="users-actions"><button type="button" className="btn btn-secondary" disabled={busy} aria-expanded={editing} onClick={() => setEditing(value => !value)}><Pencil size={16} />{tr('account.users.editContact')}</button>{user.id !== actorId && <button type="button" className="btn btn-secondary" disabled={busy || !user.isActive} onClick={() => setResetTarget(user)}><KeyRound size={16} />{tr('account.users.resetPassword')}</button>}</div>{editing && <ManagedUserEditForm key={user.id} user={user} onCancel={() => setEditing(false)} onBusyChange={value => { busyRef.current=value; setBusy(value); }} onSaved={() => { setEditing(false); setNotice('ui.users.saved'); void load(); }} />}</section>}
-          {!user.deletedAt && <section className="users-permissions"><h3>{tr('ui.users.access')}</h3><p>{tr(isAdmin ? 'ui.users.accessHint' : 'account.users.staffAccessHint')}</p>
-            {isAdmin && <><label>{tr('ui.users.newRole')}<select disabled={busy} value={roles[user.id] || user.role} onChange={event => setRoles(current => ({ ...current, [user.id]: event.target.value as UserRole }))}>{USER_ROLES.map(role => <option key={role} value={role}>{tr(roleLabels[role])}</option>)}</select></label>
-            <button type="button" className="btn btn-secondary" disabled={busy || !roles[user.id] || roles[user.id] === user.role} onClick={() => propose({ user, type: 'role', role: roles[user.id] })}>{tr('ui.users.reviewRole')}</button></>}
-            <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => propose({ user, type: 'active' })}>{user.isActive ? <UserX size={16} /> : <UserCheck size={16} />}{tr(user.isActive ? 'ui.users.deactivate' : 'ui.users.activate')}</button><button type="button" className="btn btn-secondary" disabled={busy} onClick={() => propose({ user, type: 'delete' })}><Trash2 size={16} />{tr('account.users.delete')}</button>
-          </section>}
-          {isStaff && <section className="users-lab-scope" aria-busy={assignmentsLoading}><h3>{tr('ui.laboratory_assignments_79925c7e')}</h3><p>{tr('ui.users.labHint')}</p>
-            {assignmentsLoading ? <p role="status">{tr('ui.loading_data_84c68bd5')}</p> : assignmentsError ? <p className="users-error" role="alert">{tr(assignmentsError)} <button type="button" className="btn btn-secondary" onClick={() => setAssignmentRevision(value => value + 1)}>{tr('ui.users.retry')}</button></p> : <>
-              {assignments.length ? <ul className="users-labs">{assignments.map(assignment => <li key={assignment.laboratoryId}><div><strong>{assignment.laboratory.code}</strong><span>{assignment.laboratory.name}</span>{!assignment.laboratory.isActive && <small>{tr('ui.inactive_50157a4c')}</small>}</div><button type="button" className="btn btn-secondary" disabled={busy} aria-label={tr('ui.users.removeLab') + ': ' + assignment.laboratory.code} onClick={() => propose({ user, type: 'remove', laboratory: assignment.laboratory })}>{tr('ui.users.remove')}</button></li>)}</ul> : <p className="users-muted">{tr('ui.users.noAssignments')}</p>}
-              <label>{tr('ui.choose_laboratory_09dc49a7')}<select disabled={busy} value={labChoices[user.id] || ''} onChange={event => setLabChoices(current => ({ ...current, [user.id]: event.target.value }))}><option value="">{tr('ui.choose_laboratory_09dc49a7')}</option>{laboratories.filter(lab => !assignments.some(assignment => assignment.laboratoryId === lab.id)).map(lab => <option key={lab.id} value={lab.id}>{lab.code} · {lab.name}{lab.isActive ? '' : ' (' + tr('ui.inactive_50157a4c') + ')'}</option>)}</select></label>
-              <button type="button" className="btn btn-primary" disabled={busy || !laboratories.some(lab => lab.id === labChoices[user.id])} onClick={() => propose({ user, type: 'assign', laboratory: laboratories.find(lab => lab.id === labChoices[user.id]) })}>{tr('ui.users.reviewAssignment')}</button>
-            </>}
-          </section>}
-        </>}
+        {!user ? <div className="users-empty users-dossier-empty"><h2>{tr(selected && !loading ? 'ui.users.accountUnavailable' : 'ui.users.selectAccount')}</h2><p>{tr('ui.users.selectHint')}</p></div> : (
+          <>
+            <AccountDetailPanel
+              key={user.id}
+              user={user}
+              isAdmin={isAdmin}
+              canEdit={!user.deletedAt && (isAdmin || (actorRole === 'LAB_STAFF' && user.role === 'CUSTOMER'))}
+              busy={busy}
+              onEdit={() => { setEditing(true); setActionError(''); setNotice(''); }}
+              onChangePassword={() => { setResetTarget(user); }}
+              onClose={() => choose('')}
+            />
+            {!user.deletedAt && accessProps && (
+              <AccountAccessPanel
+                isAdmin={accessProps.isAdmin}
+                actorId={accessProps.actorId}
+                user={accessProps.user}
+                busy={accessProps.busy}
+                onPropose={accessProps.onPropose}
+              />
+            )}
+            {isStaff && (
+              <section className="users-lab-scope" aria-busy={assignmentsLoading}>
+                <header className="users-lab-scope-head">
+                  <p className="users-lab-scope-eyebrow">{tr('ui.users.detail.labScopeEyebrow')}</p>
+                  <h4>{tr('ui.laboratory_assignments_79925c7e')}</h4>
+                  <p>{tr('ui.users.labHint')}</p>
+                </header>
+                {assignmentsLoading ? <p role="status">{tr('ui.loading_data_84c68bd5')}</p> : assignmentsError ? <p className="users-error" role="alert">{tr(assignmentsError)} <button type="button" className="btn btn-secondary" onClick={() => setAssignmentRevision(value => value + 1)}>{tr('ui.users.retry')}</button></p> : <>
+                  {assignments.length ? <ul className="users-labs">{assignments.map(assignment => <li key={assignment.laboratoryId}><div><strong>{assignment.laboratory.code}</strong><span>{assignment.laboratory.name}</span>{!assignment.laboratory.isActive && <small>{tr('ui.inactive_50157a4c')}</small>}</div><button type="button" className="btn btn-secondary" disabled={busy} aria-label={tr('ui.users.removeLab') + ': ' + assignment.laboratory.code} onClick={() => onRemoveLab(assignment)}>{tr('ui.users.remove')}</button></li>)}</ul> : <p className="users-lab-empty">{tr('ui.users.noAssignments')}</p>}
+                  <label>{tr('ui.choose_laboratory_09dc49a7')}<select disabled={busy} value={labChoices[user.id] || ''} onChange={event => setLabChoices(current => ({ ...current, [user.id]: event.target.value }))}><option value="">{tr('ui.choose_laboratory_09dc49a7')}</option>{laboratories.filter(lab => !assignments.some(assignment => assignment.laboratoryId === lab.id)).map(lab => <option key={lab.id} value={lab.id}>{lab.code} · {lab.name}{lab.isActive ? '' : ' (' + tr('ui.inactive_50157a4c') + ')'}</option>)}</select></label>
+                  <button type="button" className="btn btn-primary" disabled={busy || !laboratories.some(lab => lab.id === labChoices[user.id])} onClick={() => onAssignLab(laboratories.find(lab => lab.id === labChoices[user.id])!)}>{tr('ui.users.reviewAssignment')}</button>
+                </>}
+              </section>
+            )}
+            {editing && <ManagedUserEditForm key={user.id} user={user} onCancel={() => setEditing(false)} onBusyChange={value => { busyRef.current=value; setBusy(value); }} onSaved={() => { setEditing(false); setNotice('ui.users.saved'); void load(); }} />}
+          </>
+        )}
       </aside>
     </div>
     <BaseModal2026 isOpen={!!change} onClose={() => { if (!busy) { setChange(null); setActionError(''); } }} title={tr(changeTitle)} dismissible={!busy}>
       {change && <div className="users-confirm"><h4>{change.user.fullName || change.user.email}</h4><p>{change.user.email}</p>
         {change.type === 'role' && <><p>{tr(roleLabels[change.user.role])} <ArrowRight size={16} aria-hidden="true" /> {tr(roleLabels[change.role!])}</p>{change.user.role === 'LAB_STAFF' && change.role !== 'LAB_STAFF' && <p className="users-error">{tr('ui.users.assignmentRemovalWarning')}</p>}</>}
-        {change.type === 'active' && <p>{tr(change.user.isActive ? 'ui.users.deactivateHint' : 'ui.users.activateHint')}</p>}{change.type === 'delete' && <><p>{tr('account.users.deleteHint')}</p><label htmlFor={formId + '-delete-reason'}>{tr('account.security.reason')}<input ref={reasonRef} id={formId + '-delete-reason'} value={reason} required maxLength={500} disabled={busy} aria-invalid={actionError === 'account.security.reasonInvalid'} aria-describedby={actionError ? formId + '-action-error' : undefined} onChange={event => { setReason(event.target.value); setActionError(''); }} /></label></>}
+        {change.type === 'active' && <p>{tr(change.user.isActive ? 'ui.users.deactivateHint' : 'ui.users.activateHint')}</p>}{change.type === 'delete' && <><p>{tr('account.users.deleteHint')}</p><label>{tr('account.security.reason')}<input ref={reasonRef} value={reason} required maxLength={500} disabled={busy} aria-invalid={actionError === 'account.security.reasonInvalid'} aria-describedby={actionError ? 'action-error' : undefined} onChange={event => { setReason(event.target.value); setActionError(''); }} /></label></>}
         {change.laboratory && <p><strong>{change.laboratory.code}</strong> · {change.laboratory.name}</p>}
-        {actionError && <p id={formId + '-action-error'} className="users-error" role="alert">{tr(actionError)}</p>}
+        {actionError && <p id="action-error" className="users-error" role="alert">{tr(actionError)}</p>}
         <div className="users-actions"><button type="button" className="btn btn-secondary" disabled={busy} onClick={() => { setChange(null); setActionError(''); }}>{tr('ui.cancel_74fcd352')}</button><button type="button" className="btn btn-primary" disabled={busy} onClick={() => void applyChange()}>{tr(busy ? 'ui.users.saving' : 'ui.users.confirm')}</button></div>
       </div>}
     </BaseModal2026>

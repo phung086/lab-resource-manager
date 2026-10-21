@@ -1,23 +1,92 @@
 /* Structural continuation of the pinned LAB world: one work surface, supporting registers. */
-.workspace-shell .lab-home .home-welcome{background:transparent;border:0;padding:0 0 20px;border-bottom:1px solid #ded5ed;border-radius:0}
+/* Uses design tokens from lab-design-system.css for visual consistency */
+.workspace-shell .lab-home .home-welcome{background:transparent;border:0;padding:0 0 20px;border-bottom:1px solid var(--lab-line,var(--lab-line-strong,#ded5ed));border-radius:0}
 .workspace-shell .lab-home .home-welcome h1{font-size:clamp(25px,2.2vw,32px);font-weight:650;max-width:36ch}
 .workspace-shell .lab-home .workspace-header{margin:0;align-items:start}.workspace-shell .lab-home .workspace-subtitle{max-width:64ch}
 .workspace-shell .lab-home .home-command-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,350px);gap:24px;align-items:start}
 .workspace-shell .lab-home :is(.home-command-primary,.home-command-aside){display:grid;gap:20px;min-width:0}
-.workspace-shell .lab-home .home-command-panel{background:#fff;border:1px solid #ded5ed;border-radius:12px;padding:22px;min-width:0;box-shadow:none}
+.workspace-shell .lab-home .home-command-panel{background:var(--lab-surface-primary,#fff);border:1px solid var(--lab-line,var(--lab-line-strong,#ded5ed));border-radius:12px;padding:22px;min-width:0;box-shadow:0 1px 3px rgba(32,33,56,.04)}
 .workspace-shell .lab-home .home-section-heading{align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}.workspace-shell .lab-home .home-section-heading h2{font-size:19px;line-height:1.4;margin:0}
-.workspace-shell .lab-home :is(.home-queue-register,.home-people-register){display:grid;gap:0;border-block:1px solid #ded5ed;margin-bottom:18px}
-.workspace-shell .lab-home :is(.home-queue-register,.home-people-register)>button{display:grid;grid-template-columns:minmax(0,1fr) auto 18px;align-items:center;gap:14px;width:100%;min-height:54px;padding:12px 2px;text-align:left;border:0;border-bottom:1px solid #eee8f5;border-radius:0;background:transparent;color:#30283f;font:inherit;font-size:14px}
-.workspace-shell .lab-home :is(.home-queue-register,.home-people-register)>button:last-child{border-bottom:0}.workspace-shell .lab-home :is(.home-queue-register,.home-people-register)>button:hover{background:#f8f5fc}.workspace-shell .lab-home :is(.home-queue-register,.home-people-register)>button strong{font-size:18px;font-variant-numeric:tabular-nums}
-.workspace-shell .lab-home .home-register-summary{display:grid;gap:12px;margin:0 0 20px}.home-register-summary>div{display:flex;justify-content:space-between;gap:16px}.home-register-summary dd{margin:0;font-weight:600}.home-register-summary dt{font-size:13px;color:#65596f}
-.workspace-shell .lab-home .home-control-links{padding-block:6px}.workspace-shell .lab-home .home-quick-link{border:0;border-radius:0;border-bottom:1px solid #ded5ed;box-shadow:none;background:transparent;padding:16px 0;min-width:0}.workspace-shell .lab-home .home-quick-link:last-child{border-bottom:0}.workspace-shell .lab-home .home-quick-link small{line-height:1.6}
-.home-incident-register{list-style:none;padding:0;margin:0}.home-incident-register button{width:100%;display:flex;align-items:center;gap:12px;text-align:left;background:transparent;border:0;border-bottom:1px solid #ded5ed;padding:15px 0;color:#30283f;font:inherit}.home-incident-register button span{flex:1;display:grid;gap:6px}.home-incident-register small{color:#65596f}
+.workspace-shell .lab-home :is(.home-queue-register,.home-people-register){display:grid;gap:0;border-block:1px solid var(--lab-line,var(--lab-line-strong,#ded5ed));margin-bottom:18px}
+.workspace-shell .lab-home :is(.home-queue-register,.home-people-register)>button{display:grid;grid-template-columns:minmax(0,1fr) auto 18px;align-items:center;gap:14px;width:100%;min-height:54px;padding:12px 2px;text-align:left;border:0;border-bottom:1px solid var(--lab-primary-tint,#eee8f5);border-radius:0;background:transparent;color:var(--lab-ink,#30283f);font:inherit;font-size:14px}
+.workspace-shell .lab-home :is(.home-queue-register,.home-people-register)>button:last-child{border-bottom:0}.workspace-shell .lab-home :is(.home-queue-register,.home-people-register)>button:hover{background:var(--lab-primary-tint,#eee8fc)}.workspace-shell .lab-home :is(.home-queue-register,.home-people-register)>button strong{font-size:18px;font-variant-numeric:tabular-nums}
+.workspace-shell .lab-home .home-register-summary{display:grid;gap:12px;margin:0 0 20px}.home-register-summary>div{display:flex;justify-content:space-between;gap:16px}.home-register-summary dd{margin:0;font-weight:600}.home-register-summary dt{font-size:13px;color:var(--lab-text-secondary,#65596f)}
+.workspace-shell .lab-home .home-control-links{padding-block:6px}.workspace-shell .lab-home .home-quick-link{border:0;border-radius:0;border-bottom:1px solid var(--lab-line,var(--lab-line-strong,#ded5ed));box-shadow:none;background:transparent;padding:16px 0;min-width:0}.workspace-shell .lab-home .home-quick-link:last-child{border-bottom:0}.workspace-shell .lab-home .home-quick-link small{line-height:1.6}
+.home-incident-register{list-style:none;padding:0;margin:0}.home-incident-register button{width:100%;display:flex;align-items:center;gap:12px;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--lab-line,var(--lab-line-strong,#ded5ed));padding:15px 0;color:var(--lab-ink,#30283f);font:inherit}.home-incident-register button span{flex:1;display:grid;gap:6px}.home-incident-register small{color:var(--lab-text-secondary,#65596f)}
 .home-course-disclosure summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:18px;font-weight:600}.home-course-disclosure[open] summary{margin-bottom:18px}
-.workspace-shell .lab-home .home-command-panel .home-empty{padding:16px 0;min-height:0}.workspace-shell .lab-home .home-command-panel .home-group-grid{grid-template-columns:repeat(2,minmax(0,1fr));padding:0}
-.workspace-shell .lab-home .attention-bar{display:flex;flex-wrap:wrap;gap:0;border-block:1px solid #ded5ed;background:transparent}.workspace-shell .lab-home .attention-card{flex:1 1 180px;min-height:76px;padding:12px 18px;border:0;border-radius:0;background:transparent;box-shadow:none}.workspace-shell .lab-home .attention-count{font-size:23px}.workspace-shell .lab-home .attention-icon{width:32px;height:32px;background:transparent}
+.workspace-shell .lab-home .home-command-panel .home-empty{padding:20px 0;min-height:0;text-align:center;display:grid;gap:10px;align-items:center}.workspace-shell .lab-home .home-command-panel .home-group-grid{grid-template-columns:repeat(2,minmax(0,1fr));padding:0}
+.workspace-shell .lab-home .home-empty-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:12px;background:var(--lab-primary-tint,#eee8fc);color:var(--lab-primary,#6441d9);margin:0 auto}
+.workspace-shell .lab-home .home-empty h3{font-size:15px;font-weight:600;color:var(--lab-ink,#26243a);margin:0}
+.workspace-shell .lab-home .home-empty p{font-size:13px;color:var(--lab-ink-secondary,#625d72);margin:0}
+.workspace-shell .lab-home .home-text-button{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--lab-primary,#6441d9);background:transparent;border:0;padding:6px 10px;border-radius:6px;cursor:pointer;transition:background .12s,color .12s}.workspace-shell .lab-home .home-text-button:hover{background:var(--lab-primary-tint,#eee8fc)}.workspace-shell .lab-home .home-text-button:active{transform:scale(.97)}
+.workspace-shell .lab-home .attention-bar{display:flex;flex-wrap:wrap;gap:0;border-block:1px solid var(--lab-line,var(--lab-line-strong,#ded5ed));background:transparent}.workspace-shell .lab-home .attention-card{flex:1 1 180px;min-height:76px;padding:12px 18px;border:0;border-radius:0;background:transparent;box-shadow:none}.workspace-shell .lab-home .attention-count{font-size:23px}.workspace-shell .lab-home .attention-icon{width:32px;height:32px;background:transparent}
 .workspace-shell .lab-home .home-next-ticket{background:transparent;border:0;padding:20px;border-radius:0;box-shadow:none}.workspace-shell .lab-home .home-ticket-top{justify-content:flex-end;margin:0}
-.password-setup-form .password-field-error{display:block;margin-top:7px;font-size:13px;color:#9b283b}.password-setup-form [aria-invalid=true]{border-color:#9b283b}.password-setup-form label{color:#65596f!important}
+.password-setup-form .password-field-error{display:block;margin-top:7px;font-size:13px;color:var(--lab-danger-500,#9b283b)}.password-setup-form [aria-invalid=true]{border-color:var(--lab-danger-500,#9b283b)}.password-setup-form label{color:var(--lab-text-secondary,#65596f)!important}
 @media(max-width:1000px){.workspace-shell .lab-home .home-command-grid{grid-template-columns:1fr}.workspace-shell .lab-home .home-command-aside{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:700px){.workspace-shell .lab-home .home-command-panel{padding:18px}.workspace-shell .lab-home .home-command-aside{grid-template-columns:1fr}.workspace-shell .lab-home .attention-card{flex-basis:100%;padding:12px 0;min-height:64px;border-bottom:1px solid #eee8f5}.workspace-shell .lab-home .home-command-panel .home-group-grid{grid-template-columns:1fr}.workspace-shell .lab-home .home-welcome{padding:0 0 18px}}
+@media(max-width:700px){.workspace-shell .lab-home .home-command-panel{padding:18px}.workspace-shell .lab-home .home-command-aside{grid-template-columns:1fr}.workspace-shell .lab-home .attention-card{flex-basis:100%;padding:12px 0;min-height:64px;border-bottom:1px solid var(--lab-primary-tint,#eee8f5)}.workspace-shell .lab-home .home-command-panel .home-group-grid{grid-template-columns:1fr}.workspace-shell .lab-home .home-welcome{padding:0 0 18px}}
 
 .workspace-shell .lab-home .home-quick-link{display:flex;align-items:center;gap:12px;width:100%;text-align:left}.workspace-shell .lab-home .home-quick-link>span:nth-child(2){display:grid;gap:5px;flex:1;min-width:0}.workspace-shell .lab-home .home-quick-link>svg{flex-shrink:0}.workspace-shell .lab-home .home-icon-box{display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px}.workspace-shell .lab-home .tools-title{text-transform:none;letter-spacing:0}.workspace-shell .lab-home .context-note{border-left-width:1px}.workspace-shell .lab-home .home-quick-link :is(strong,small){display:block;overflow-wrap:anywhere}
+
+/* Priority tiles grid */
+.workspace-shell .lab-home .home-priorities{width:100%}
+.workspace-shell .lab-home .home-attention-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;width:100%}
+.workspace-shell .lab-home .home-attention-card{display:flex;align-items:center;gap:14px;width:100%;min-height:96px;padding:18px;border:1px solid var(--lab-line,var(--lab-line-strong,#ded5ed));border-radius:12px;background:var(--lab-surface-primary,#fff);text-align:left;color:var(--lab-ink,#30283f);font:inherit;cursor:pointer;box-shadow:0 1px 3px rgba(32,33,56,.04);transition:border-color .15s,background .15s,transform .15s,box-shadow .15s}
+.workspace-shell .lab-home .home-attention-card:hover{border-color:var(--lab-primary,#6441d9);background:var(--lab-primary-tint,#f8f5fc);box-shadow:0 4px 12px rgba(100,65,217,.1);transform:translateY(-1px)}
+.workspace-shell .lab-home .home-attention-card:active{transform:translateY(0)}
+.workspace-shell .lab-home .home-attention-card.is-urgent{background:var(--lab-warning-50,#fff9f5);border-color:var(--lab-warning-400,#e9c9b8)}
+.workspace-shell .lab-home .home-attention-card.is-urgent:hover{border-color:var(--lab-warning-500,#d4a088);background:var(--lab-warning-50,#fff5f0)}
+.workspace-shell .lab-home .home-priority-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:10px;background:var(--lab-primary-tint,#eee8fc);color:var(--lab-primary,#6441d9)}
+.workspace-shell .lab-home .home-attention-card.is-urgent .home-priority-icon{background:var(--lab-danger-100,#fae9e7);color:var(--lab-danger-500,#a43634)}
+.workspace-shell .lab-home .home-priority-copy{flex:1;min-width:0;display:grid;gap:4px}
+.workspace-shell .lab-home .home-priority-copy strong{display:flex;align-items:baseline;gap:8px;font-size:24px;font-weight:650;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--lab-ink,#26243a)}
+.workspace-shell .lab-home .home-priority-copy strong span{font-size:14px;font-weight:500;color:var(--lab-ink-secondary,#625d72)}
+.workspace-shell .lab-home .home-priority-copy small{font-size:12px;color:var(--lab-ink-secondary,#625d72);line-height:1.5}
+
+/* Booking list redesign */
+.workspace-shell .lab-home .home-booking-list{display:grid;gap:8px;padding:0;margin:0}
+.workspace-shell .lab-home .home-booking-row{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:14px;width:100%;min-height:80px;padding:16px 18px;border:1px solid var(--lab-line,var(--lab-line-strong,#ded5ed));border-radius:12px;background:var(--lab-surface-primary,#fff);text-align:left;color:var(--lab-ink,#30283f);font:inherit;cursor:pointer;box-shadow:0 1px 3px rgba(32,33,56,.04);transition:border-color .15s,background .15s,transform .15s,box-shadow .15s}
+.workspace-shell .lab-home .home-booking-row:hover{border-color:var(--lab-primary,#6441d9);background:var(--lab-primary-tint,#f8f5fc);box-shadow:0 4px 12px rgba(100,65,217,.1);transform:translateY(-1px)}
+.workspace-shell .lab-home .home-booking-row:active{transform:translateY(0)}
+.workspace-shell .lab-home .home-booking-row .home-icon-box{background:var(--lab-primary-tint,#eee8fc);border-radius:10px;padding:10px;color:var(--lab-primary,#6441d9);flex:0 0 auto}
+.workspace-shell .lab-home .home-booking-copy{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.workspace-shell .lab-home .home-booking-copy strong{font-size:16px;font-weight:600;color:var(--lab-ink,#26243a);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.workspace-shell .lab-home .home-booking-copy small{font-size:11px;font-family:var(--lab-font-mono,monospace);color:var(--lab-primary,#6441d9);text-transform:uppercase;letter-spacing:.04em}
+.workspace-shell .lab-home .home-booking-copy time{font-size:13px;color:var(--lab-ink-secondary,#625d72)}
+.workspace-shell .lab-home .home-booking-copy > span:last-child{font-size:12px;color:var(--lab-ink-secondary,#625d72)}
+.workspace-shell .lab-home .home-booking-copy > span:first-child{font-size:10px;color:var(--lab-text-muted,#9b95a8);display:flex;align-items:center;gap:6px}
+
+/* Booking reference chip */
+.workspace-shell .booking-reference{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--lab-font-mono,monospace);color:var(--lab-primary,#6441d9);background:var(--lab-primary-tint,#eee8fc);padding:3px 8px;border-radius:5px;border:1px solid var(--lab-primary-tint,#dbd0f4);letter-spacing:.02em}
+
+/* Notices panel */
+.workspace-shell .lab-home .home-notice-list{display:grid;gap:8px}
+.workspace-shell .lab-home .home-panel.home-notices{padding:0}
+.workspace-shell .lab-home .home-panel.home-notices .home-section-heading{padding:20px 22px 0}
+.workspace-shell .lab-home .home-panel.home-notices .home-notice-list{padding:16px 22px 20px}
+.workspace-shell .lab-home .home-panel.home-notices .home-notices-empty{padding:16px 22px 20px;font-size:13px;color:var(--lab-ink-secondary,#625d72)}
+.workspace-shell .lab-home .home-notice{display:flex;align-items:flex-start;gap:12px;width:100%;padding:14px 16px;border:1px solid var(--lab-line,var(--lab-line-strong,#ded5ed));border-radius:10px;background:var(--lab-surface-primary,#fff);text-align:left;color:var(--lab-ink,#30283f);font:inherit;cursor:pointer;box-shadow:0 1px 3px rgba(32,33,56,.04);transition:border-color .15s,background .15s,transform .15s,box-shadow .15s}
+.workspace-shell .lab-home .home-notice:hover{border-color:var(--lab-primary,#6441d9);background:var(--lab-primary-tint,#f8f5fc);box-shadow:0 4px 12px rgba(100,65,217,.1);transform:translateY(-1px)}
+.workspace-shell .lab-home .home-notice:active{transform:translateY(0)}
+.workspace-shell .lab-home .home-notice > svg:first-child{flex-shrink:0;color:var(--lab-primary,#6441d9);margin-top:2px}
+.workspace-shell .lab-home .home-notice > span:nth-child(2){flex:1;display:grid;gap:5px;min-width:0}
+.workspace-shell .lab-home .home-notice > span:nth-child(2) strong{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--lab-ink,#26243a);line-height:1.4}
+.workspace-shell .lab-home .home-notice > span:nth-child(2) span:nth-child(2){font-size:13px;color:var(--lab-ink-secondary,#625d72);line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.workspace-shell .lab-home .home-notice > span:nth-child(2) time{font-size:11px;font-family:var(--lab-font-mono,monospace);color:var(--lab-text-muted,#9b95a8)}
+.workspace-shell .lab-home .home-notice > svg:last-child{flex-shrink:0;color:var(--lab-text-muted,#9b95a8)}
+.workspace-shell .lab-home .home-unread{display:inline-flex;align-items:center;flex-shrink:0;width:auto;height:auto;padding:2px 7px;border-radius:4px;background:var(--workspace-accent-soft);color:var(--workspace-accent-hover);margin-left:6px;font-size:11px;font-weight:600;line-height:1.4;white-space:nowrap}
+.workspace-shell .lab-home .home-notice > span:nth-child(2) strong{flex-wrap:wrap}
+.workspace-shell .lab-home .home-notice > span:nth-child(2) span:nth-child(2){white-space:normal;overflow-wrap:anywhere}
+
+/* Data scope label */
+.workspace-shell .lab-home .home-data-scope{font-size:11px;color:var(--lab-text-muted,#9b95a8);text-align:right;margin-top:10px;font-family:var(--lab-font-mono,monospace);letter-spacing:.02em}
+
+/* Next booking ticket */
+.workspace-shell .lab-home .home-next-ticket{background:transparent;border:0;padding:20px;border-radius:0;box-shadow:none}
+.workspace-shell .lab-home .home-ticket-top{justify-content:flex-end;margin:0}
+.workspace-shell .lab-home .home-ticket-purpose{font-size:13px;color:var(--lab-ink-secondary,#625d72);margin:6px 0 0}
+.workspace-shell .lab-home .home-ticket-details{display:grid;gap:10px;margin:16px 0}
+.workspace-shell .lab-home .home-ticket-details > div{display:flex;align-items:center;gap:8px}
+.workspace-shell .lab-home .home-ticket-details dt{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--lab-text-secondary,#65596f);font-weight:500}
+.workspace-shell .lab-home .home-ticket-details dd{font-size:13px;color:var(--lab-ink,#30283f);font-weight:500;margin:0}
+.workspace-shell .lab-home .home-ticket-note{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--lab-ink-secondary,#625d72);margin:16px 0;padding:10px 12px;background:var(--lab-primary-tint,#f8f5fc);border-radius:8px}
+.workspace-shell .lab-home .home-ticket-note svg{color:var(--lab-primary,#6441d9);flex-shrink:0}

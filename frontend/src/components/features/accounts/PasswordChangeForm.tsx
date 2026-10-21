@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { KeyRound, Mail } from 'lucide-react';
+import { Check, KeyRound, Mail } from 'lucide-react';
 import { apiRequest, storeAuthResult } from '../../../api.js';
 import { useLocale } from '../../../providers/LocaleProvider';
 import { formatVietnamDateTime } from '../../../utils/timezone';
@@ -7,9 +7,9 @@ import { passwordServerFields, safePasswordFailure, validatePasswordCode, valida
 import '../../../styles/account-security.css';
 
 type Challenge = { challengeId: string; maskedEmail: string; expiresAt: string; resendAfter: string };
-type Props = { email?: string; targetId?: string; onSuccess?: (result: unknown) => void; onBusyChange?: (busy: boolean) => void };
+type Props = { email?: string; targetId?: string; showSteps?: boolean; onSuccess?: (result: unknown) => void; onBusyChange?: (busy: boolean) => void };
 
-export function PasswordChangeForm({ email, targetId, onSuccess, onBusyChange }: Props) {
+export function PasswordChangeForm({ email, targetId, showSteps = false, onSuccess, onBusyChange }: Props) {
   const { tr } = useLocale(), id = useId(), formRef = useRef<HTMLFormElement>(null), busyRef = useRef(false), requestRef = useRef<AbortController | null>(null), mountedRef = useRef(true);
   const assisted = Boolean(targetId);
   const [draft, setDraft] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -71,6 +71,7 @@ export function PasswordChangeForm({ email, targetId, onSuccess, onBusyChange }:
     { name: 'confirmPassword' as const, label: 'ui.confirm_new_password_7a0fe0f4' }
   ];
   return <form ref={formRef} onSubmit={submit} noValidate className="account-security-form">
+    {showSteps && <ol className="account-security-steps" aria-label={tr('ui.profile.passwordSteps')}>{['ui.profile.passwordStep', 'ui.profile.emailStep', 'ui.profile.doneStep'].map((key, index) => { const step = success ? 2 : challenge ? 1 : 0; return <li key={key} aria-current={index===step?'step':undefined} data-complete={index<step}><span aria-hidden="true">{index<step?<Check size={14} />:index+1}</span>{tr(key)}</li>; })}</ol>}
     {success ? <p className="account-security-success" role="status">{tr(assisted ? 'account.security.assistedSuccess' : 'ui.your_password_has_been_updated_90d53208')}</p> : <>
       <p className="account-security-hint">{tr(assisted ? 'account.security.assistedHint' : 'account.security.selfHint')}</p>
       {!challenge && email && <p className="account-security-recipient"><Mail size={16} aria-hidden="true" />{email}</p>}

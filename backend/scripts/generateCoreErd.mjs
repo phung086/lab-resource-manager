@@ -14,7 +14,8 @@ const coreNames = ["Campus", "Building", "Laboratory", "LabPolicy", "User", "Use
 const extensionNames = ["Resource", "User", "Booking", "MaintenanceWindow", "StockItem", "StockMovement", "TeachingGroup", "TeachingMembership", "TeachingActivity"];
 const supportNames = ["Laboratory", "User", "UserLabAssignment", "SupportSession", "SupportMessage", "SupportPresence"];
 const emailNames = ["User", "EmailDelivery"];
-const accountNames = ["User", "PasswordChallenge", "LoyaltyPolicy"];
+const accountNames = ["User", "AuthSession", "PasswordChallenge", "LoyaltyPolicy"];
+const fulfillmentNames = ["User", "Resource", "ResourceFulfillment", "Booking", "BookingBundle", "BookingWaitlist", "BookingChecklistEntry"];
 const simulationNames = ["ResourceCareProfile", "ResourceOperation", "ResourcePart"];
 const modelMap = new Map(Prisma.dmmf.datamodel.models.map(model => [model.name, model]));
 const types = { String: "string", Int: "int", Boolean: "boolean", DateTime: "datetime", Float: "float", Decimal: "decimal", Json: "json" };
@@ -26,7 +27,7 @@ function diagram(names) {
     const primary = new Set(model.primaryKey?.fields || model.fields.filter(field => field.isId).map(field => field.name));
     const foreign = new Set(model.fields.flatMap(field => field.relationFromFields || []));
     lines.push(`    ${name} {`);
-    for (const field of model.fields.filter(field => field.kind !== "object" && (primary.has(field.name) || foreign.has(field.name) || field.isUnique || ["role", "status", "category", "operationalStatus", "startAt", "endAt", "action", "detectedAt"].includes(field.name)))) {
+    for (const field of model.fields.filter(field => field.kind !== "object" && (primary.has(field.name) || foreign.has(field.name) || field.isUnique || ["role", "status", "category", "operationalStatus", "startAt", "endAt", "action", "detectedAt", "schedulingReleasedAt", "fulfillmentSnapshot", "deliveryAllowed", "paymentDueAt"].includes(field.name)))) {
       const keys = [primary.has(field.name) ? "PK" : "", foreign.has(field.name) ? "FK" : "", field.isUnique && !primary.has(field.name) ? "UK" : ""].filter(Boolean);
       lines.push(`        ${types[field.type] || field.type} ${field.name}${keys.length ? ` ${keys.join(",")}` : ""}`);
     }
@@ -118,6 +119,18 @@ ${diagram(simulationNames)}
 Virtual operations retain booking, actor, declared load and server timestamps.
 Maintenance policy and component condition belong to existing catalogue resources.
 Physical-state mutations remain explicit, scoped and history-backed.
+
+## Resource collection and room access
+
+${diagram(fulfillmentNames)}
+
+ResourceFulfillment stores optional encrypted room access and ADMIN delivery
+eligibility. Booking keeps the accepted collection/address snapshot; only an
+authorized owner/operator may read its private contact information. Actual
+return releases the scheduling hold while retaining RETURNED for staff
+inspection. The GiST and booking/maintenance triggers apply the same release
+predicate. Room credentials do not certify an integrated physical door lock.
+See ADR-037.
 
 Payment, shipment, AI, camera and optimization tables are outside this diagram's
 core projection. Their presence in the schema does not certify those integrations.

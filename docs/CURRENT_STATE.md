@@ -1,646 +1,723 @@
 # Trạng thái dự án hiện tại
 
-Cập nhật 14/10/2026. Đây là checkpoint gọn; hợp đồng đầy đủ ở SRS, DECISIONS,
-hai guideline, schema/migrations và source/tests liên quan.
+## Tích hợp vào booking hiện có — kiểm browser21/10/2026
 
-## Bản local tích hợp — 14/10/2026
+Theo yêu cầu user, đã bỏ menu/page “Điều phối sử dụng LAB”. URL cũ chuyển về
+booking, giữ query. Đặt nhóm1..5 cùng LAB/giờ ở SelectionPage hiện có; hồ sơ
+trong lịch sử booking; waitlist trong booking; quy tắc ADMIN trong đúng
+AdminResourceConsole; phân tích trong OperationsReport. Không đổi schema/role/
+status hay thanh toán riêng từng booking. Hướng dẫn code ở services/planning/README.
 
-User cho phép tích hợp để demo/test cùng hệ thống. Checkout chính
-C:/Projects/lab-resource-manager, main09d125c sau cherry-pick sáu feature commits
-account/OTP/loyalty/bridge/dock; không đem snapshot/artifacts đã dọn trở lại.
-Backup source ở codex/local-before-unified-20261014; pg_dump custom đã kiểm TOC
-ở backend/logs/unified-local/before-unified-20261014.dump (gitignored).
-Ba forward migrations mới đã áp dụng, chạy db:migrate lần hai không pending;
-schema29 migrations up-to-date, SQL/baseline/history cũ không bị sửa.
+Browser thật21/10 CUSTOMER/ADMIN/STAFF: redirect/menu PASS; hồ sơ của booking
+COMPLETED đọc được, ghi checklist bị khóa; group quote15.000+5.000=20.000VND;
+giờ đảo ngược bị khóa; trộn LAB báo lỗi/khóa và phục hồi khi bỏ mục sai;
+giữ draft khi đổi chế độ; mobile390px content380px, một cột; VI/EN report PASS.
+ADMIN đọc policy và preview0/0, không lưu; STAFF không có editor policy và đọc
+report được. Report15 bookings từ DB; UI scope không thay thế test RBAC server.
 
-Một UI5173/API8000/database lab_resources_local_demo và một ngrok target8000.
-8001/8002/8003/5174 đã dừng. dev:demo build/bật Docker + UI, payment/assistant/monitoring
-cùng bật; startup không seed lại dữ liệu. Backend/.env giữ VNPAY/SMTP/JWT cũ,
-thêm bridge origin/UI/khóa mã hóa riêng; không chép secrets từ worktree review.
-Một plugin LAB Support cùng issuer/app/scopes, ADMIN chính cấp grant30 ngày.
-Public DCR metadata giữ để app không mất registration; không sao chép grants,
-tokens, user hoặc chat history. Pause/resume đúng Work receiver hiện có tạo một
-subscription VERIFIED bằng challenge thật. Grant/subscription còn sau restart.
+Đã phát hiện/sửa trong lượt browser: mô tả atomic khác independent; mất draft
+khi đổi mode; ô chọn chế độ inline vỡ khung mobile; policy gắn nhầm component
+phụ không chạy cho ADMIN. Thêm validation nhóm cùng LAB/1..5, giữ request key
+khi retry gặp401/403/408/429 thay vì coi là rollback. Không tạo booking QA trên
+DB demo. Sau kiểm vẫn6users/25resources/15bookings/17payment_transactions.
+Tài khoản và tab trả về CUSTOMER/profile; lựa chọn QA đã bỏ.
 
-Verification trên code tích hợp: backend required107 +lint, frontend required43
-+lint/typecheck/build, ERD projection PASS. Integration trên DB riêng: accounts12,
-loyalty11, bridge21, support9; UI support22 trên frontend5173 và API/DB fixture
-thật. Main API read-only10 kiểm ba role, staff thấy mọi CUSTOMER nhưng không đọc
-ADMIN (404), customer không quản lý account/connection (403), loyalty đọc80.000đ
-từ khoản success thật, policy vẫn disabled. Không dùng fixture protocol làm GPT.
+Full FE required91 PASS (thêm2 helper +1 route), lint/typecheck/build PASS;
+diff check PASS. Evidence/ảnh ở
+`C:/Users/Admin/AppData/Local/Temp/lrm-integrated-ui-20261021/`;
+log `lrm-integrated-ui-final-20261021.log` trong Temp.
+Frontend lúc đầu dừng làm tab báo locale failure; khởi động bằng dev-local.mjs
+và reload nạp được catalog có hash khớp; không nới integrity check.
 
-Luồng thật từ UI CUSTOMER riêng e6737a8c-439c-4cd8-9ba0-742f6b6965aa: GPT tự
-tra LOCAL-ROOM-06 và mục đích SERVICE; hai lượt82,5/67,6giây, form80.000đ,
-16/10/2026 14:00–15:00. Khách xác nhận tạo booking4538ef34-3be8-46eb-834c-
-6a2056d92548 CONFIRMED. NCB Sandbox chính thức trả thành công; IPN ký hợp lệ
-qua ngrok8000 lưu payment943f1815-30e1-4b24-8815-9d81c25d6625, txnRef
-20D6BC5722EB16443A78, success80.000đ, paidAt2026-10-14T06:53:32Z,
-vnpTransactionNo15704117, reconciliation none. Reload UI vẫn Đã xác minh thanh
-toán; không sửa payment thủ công. User xác nhận điều khoản Sandbox tại bước đó.
-Bot sau đó đọc đúng success và trạng thái RETURNED do STAFF thao tác trên bản
-chính trong lúc test; cảnh báo ngày thuê còn tương lai. Không rollback lịch sử
-STAFF; cửa sổ bàn giao sớm chưa có policy riêng, không suy đây là PASS thời điểm.
+Giới hạn: chưa tạo nhóm mới hoặc giả mất mạng/429 qua browser, chưa lưu policy/
+checklist hay kiểm in PDF trong lượt này; các thao tác ghi cần QA DB riêng.
+Backend planning integration10 và các suite91 của20/10 là evidence trước đó,
+không gộp vào số test chạy21/10. Chưa load-test/live provider/production deploy.
+Next: E2E ghi nhóm→retry→handover/return/checklist/in trên runtime QA tách biệt,
+đối chiếu trạng thái DB; không cần thêm màn hình chức năng mới.
 
-Handoff cùng dock trên chính trang checkout: phiên345bbf5b-dac9-4b67-847f-
-abaaf88649a8 WAITING#1 → staff được giao → tin nhắn hai chiều qua UI/API thật →
-CLOSED. ADMIN đọc đúng lịch sử. Test staff chỉ được phân LOCAL-LAB-2 và đã ngừng
-nhận/deactivate sau test; không can thiệp yêu cầu local cũ ở LAB khác.
-dev:demo đã chạy thực, chỉ còn cổng5173/8000/4040; ngrok hiện đang hoạt động.
-Câu toán ngoài LAB sau restart nhận reply GPT thật x=4 sau63,8giây, readCount1;
-tra khoản VNPAY mất96,5giây. Không suy tốc độ vài giây hoặc chính xác mọi câu.
-ADMIN UI giám sát đọc23 phòng/thiết bị từ API, connection UI hiển thị Sẵn sàng
-nhận câu hỏi sau restart. CUA viewport yêu cầu1440 nhưng pane thực tế386px;
-chỉ xác minh không overflow ở kích thước thật, không ghi main desktop PASS từ
-override không có hiệu lực. Matrix1440/375 của suite support22 là test riêng.
+## Kiểm thử và tối ưu UI/UX planning — 20/10/2026
 
-Chưa push/deploy production. Chưa có SMTP thật nên gửi inbox/OTP vẫn BLOCKED;
-NCB success không chứng nhận QR/production/refund. Work còn chậm, phụ thuộc quota;
-bridge transcript chưa copy sang staff history. Không có whole-system UI/load/
-hardware PASS. SYSTEM_TEST_GUIDE là hướng dẫn test ba role; một mục hướng dẫn
-không phải kết quả đã chạy. Các checkpoint tách bên dưới là lịch sử trước tích hợp.
+Đã kiểm UI thật CUSTOMER tại `/workspace/planning`. Thêm tìm tên/mã/LAB không
+dấu, danh sách đã chọn và bỏ chọn, lý do khóa khác LAB, validation giờ, giữ
+bản nháp khi đổi tab, loading/error/retry/empty riêng biệt, trạng thái từng hồ
+sơ và giải thích checklist đã ghi/chưa đủ trạng thái. Sửa title thiếu dịch,
+locale lịch sử policy, biểu đồ giờ đọc được theo danh sách. Quyền API giữ nguyên.
+`planningPresentation.ts` chứa helper thuần;3 test mới vào test:required.
 
-## Chỉ đạo hiện hành
+Tái hiện input datetime thay đổi giá trị hiển thị nhưng draft React chưa cập
+nhật trong browser automation; dùng onInput để cập nhật ngay. Browser recheck:
+14:00→13:00 báo lỗi/khóa quote;14:00→15:00 lấy quote thật10.000VND.
+Tìm “cam bien”, chuyển hồ sơ rồi về giữ title/selection, empty dossier và VI/EN
+PASS. Mobile390px: content380px, media600px true, layout một cột344px.
+Full FE required88 PASS, lint (hai warning cũ), typecheck/build PASS; sau sửa
+onInput, typecheck/build kiểm lại PASS. Diff check PASS.
 
-Refactor UI toàn hệ thống đã dừng. Ngày 12/10 người dùng giao riêng phần danh mục
-tài nguyên: thêm phòng/thiết bị mẫu, tách nhóm, lưới ba cột và hồ sơ chi tiết.
-Phạm vi này đã thực hiện bên dưới; rollout/điều phối UI cũ không tự mở lại.
-Sau đó người dùng giao triển khai mô phỏng thực tế chức năng giám sát tài nguyên.
-Người dùng đã bác bỏ màn kịch bản demo. Chỉ đạo mới 12/10: UI ít chữ, chi tiết
-on-demand, booking tự xác nhận, bảng giá từng tài nguyên, chu kỳ bảo trì có
-cảnh báo staff/admin. Người dùng làm rõ áp dụng trên toàn hệ thống: đã rà luồng
-đặt lịch, projections và cách trình bày các màn hình chính; checkpoint bên dưới.
-Người dùng sẽ giao redesign tiếp cho Claude khi hồi limit;
-Claude tự quyết thiết kế, kế hoạch và cách code. Hướng mỹ thuật, queue, brief,
-allowlist và lịch điều phối cũ đã hủy; automation đã xóa, không tạo lại.
-Không coi lịch sử hoặc backlog là task mới. Không có whole-system UI PASS.
-Chỉ đạo 13/10: chuyển hệ thống sang CUSTOMER/LAB_STAFF/ADMIN, đăng ký bằng
-email/password và lấy thông tin liên hệ khi đặt lịch; checkpoint riêng bên dưới.
-Giữ nghiệp vụ, API/RBAC, dữ liệu thật và kiến trúc; ưu tiên laptop VI/EN/ba role,
-1366x768/1440x900. Bảo toàn responsive; mobile matrix deferred.
+Runtime bị ngắt giữa phiên (Chrome mất kết nối, Docker engine dừng); khởi động
+lại Docker Desktop và frontend nền bằng script hiện có, không seed/reset.
+IAB sau đó truy cập thành công. Business counts vẫn6/25/15/17.
+Ảnh cuối: `C:/Users/Admin/AppData/Local/Temp/lrm-planning-ux/planning-final.png`.
+Logs: `lrm-planning-ux-final.log`, `lrm-planning-ux-input-check.log` trong Temp.
+Chưa browser QA đầy đủ ADMIN/STAFF, lưu checklist/in PDF và fault injection.
+Không coi kiểm tra CUSTOMER là nghiệm thu toàn bộ UI hay production/load test.
 
-## Phạm vi và kiến trúc
+## Mở rộng lập kế hoạch và hồ sơ — 20/10/2026
 
-Đề tài: **Xây dựng hệ thống đặt lịch và giám sát tài nguyên phòng thí nghiệm**.
-Hai năng lực bắt buộc là điều phối sử dụng tài nguyên và giám sát tài nguyên.
-React/Vite ở `frontend/`; Express/Prisma ở `backend/`; PostgreSQL 16.
-Cấu trúc ánh xạ với hướng dẫn giảng viên nằm trong PROJECT_STRUCTURE.md.
+User đã duyệt triển khai các hướng phát triển phần mềm, không cần phần cứng,
+không nặng thuật toán. Checkout main48ccd96; giữ các thay đổi có trước.
+Đã thêm `/workspace/planning`, API `/api/planning`, các module riêng trong
+`backend/src/services/planning/` và component `features/planning/`.
+Phạm vi ADR-045: chính sách revision/audit/preview, nhóm tối đa5 tài nguyên tạo
+nguyên tử và retry idempotent, hồ sơ/checklist, gợi ý giờ/thay thế theo thông số,
+waitlist thông báo trong ứng dụng, báo cáo có scope. Hướng dẫn đọc code:
+`backend/src/services/planning/README.md`.
 
-Ba vai trò: ADMIN, LAB_STAFF, CUSTOMER (ADR-033). Backend quyết định quyền,
-phạm vi lab, điều kiện, trạng thái và dữ liệu. Schema thay đổi bằng forward migration; giữ baseline và
-lịch sử migration; không dùng db push, sửa migration đã áp dụng hay reset DB.
-Booking dùng khoảng `[startAt,endAt)` và khóa chống trùng ở database.
-`Resource.operationalStatus` là trạng thái vật lý; availability được suy ra.
-NO_SHOW là outcome/event. Xem SRS, DECISIONS và hai guideline cho hợp đồng đầy đủ.
+Hai migration20261020000100/20261020000200 đã áp dụng local sau backup custom
+dump tại `C:/Users/Admin/AppData/Local/Temp/lrm-before-planning-20261020.dump`;
+pg_restore --list đọc được. Không seed/reset/push/deploy production.
+Sau áp dụng:6users/25resources/15bookings/17payment_transactions, khớp trước;
+backend health200, Docker healthy. Checklist là khai báo, không chứng minh
+thiết bị vật lý; thanh toán/vòng đời vẫn riêng từng lịch, waitlist không giữ chỗ.
 
-## Tài khoản khách hàng và đăng ký — 13/10/2026
+Kiểm chứng: BE required144 PASS, FE required85 PASS; lint/typecheck/build PASS
+(hai warning frontend có trước). ERD check và git diff --check PASS.
+Integration PostgreSQL riêng: planning10, operational-audit12, resources9,
+calendar17, operations13, fulfillment13, payment-hold17 =91 PASS khi hợp nhất
+lượt đầu và resource recheck. Lượt đầu resources phát hiện detail giới hạn30 ngày
+làm mất lịch xa; đã sửa giữ lịch tương lai, recheck9/9. Rerun dùng localhost
+gặp timeout mở connection; cùng bài với127.0.0.1 PASS, không nới timeout nghiệp vụ.
+Logs: `C:/Users/Admin/AppData/Local/Temp/lrm-planning-regression/`,
+`lrm-planning-resource-recheck.log`, `lrm-planning-*-check.log`,
+`lrm-planning-final-{fe,be}.log`.
 
-Theo yêu cầu mới: ba vai trò thật, CUSTOMER thay STUDENT/LECTURER. Migration
-20261012001000 đã áp dụng trên local; 4 tài khoản giữ ID/credentials, 4 booking,
-2 payment và 128 audit giữ nguyên số lượng. Audit snapshot role giữ text lịch sử.
-Auth đăng ký chỉ email/password; tên chưa nhập được giữ trống, header dùng email.
-Booking yêu cầu họ tên/phone, lưu contactSnapshot/profile cùng transaction.
-CUSTOMER chỉ own scope; staff chỉ assigned LAB; ADMIN global. Màn học phần và
-mutation ngừng dùng, archive ADMIN-only giữ dữ liệu. UI VI/EN, ba trang chủ,
-user role controls, header/footer, profile/booking/support đã đổi contract;
-form giữ label/error và bỏ ví dụ placeholder dài. Đặt lịch hợp lệ vẫn CONFIRMED.
+Giới hạn: browser bị URL policy chặn trong phiên này; chưa visual QA, chưa
+browser E2E cho workspace mới/in hồ sơ. Chưa load-test production; mức giới hạn
+tìm kiếm12/phút/user,3 truy vấn đồng thời/process không thay thế đo tải.
+Mẫu checklist dùng chung ba bước; chưa có mẫu riêng theo category.
+Gợi ý và preview có giới hạn hữu hạn, không chứng minh tối ưu/công suất thực.
+Chưa nghiệm thu live payment/SMTP/AI provider trong batch này.
+Next: kiểm UI thật desktop/mobile VI/EN, thao tác nhóm–dossier–waitlist–policy/
+report theo3role, sau đó đo tải và xác minh cấu hình môi trường trước phát hành.
 
-Verification: backend required 88, frontend required 20, customer integration 8,
-auth/RBAC 10, booking/calendar 32, resource care 15, support 9, email 10 và
-workspace/archive 4 tests pass. Lint/typecheck/build pass; hai lint warnings FE
-cũ còn nguyên. Browser kiểm tra đăng nhập thật ba vai trò, VI/EN, 390/1440px;
-đăng ký hai trường, lỗi đúng trường/focus và booking thật CONFIRMED có contact
-snapshot/phí 20.000đ qua API + PostgreSQL test riêng. Không có pageerror trong
-các context QA. Migration fixture giữ IDs/password hashes và audit role lịch sử.
-SMTP được kiểm tra bằng loopback protocol fixture, chưa có nhà cung cấp gửi thật;
-VNPAY NCB Sandbox đã xác minh trong checkpoint thanh toán bên dưới; email gửi thật chưa được xác minh.
-Không deploy production, không tự mở batch mới.
+## Rà logic vận hành toàn hệ thống — 19/10/2026
 
+Human yêu cầu rà logic toàn hệ thống. Checkout main48ccd96,
+`C:/Projects/lab-resource-manager`; giữ295 thay đổi có trước. Không seed/reset,
+đổi schema, push/merge/deploy. Phạm vi rà gồm booking,
+payment, handover/return, maintenance/care, stock, account/session/OTP, support,
+notifications/reporting, media và scope frontend/API theo SRS/ADR hiện hành.
 
-## Tài khoản, OTP, loyalty và tích hợp GitHub — 13/10/2026
+Đã tái hiện rồi sửa12 lỗi qua PostgreSQL16 riêng:
 
-User yêu cầu triển khai nếu GitHub chưa có task, staff quản lý tất cả CUSTOMER,
-loyalty xét theo chi tiêu; UI redesign và ChatGPT connection chỉ nghiên cứu.
-Fetch/PR check thấy origin/main vẫn bd83a97, chưa có account/OTP changes đã push.
-Đã tạo worktree C:/Users/Admin/.codex/worktrees/customer-security-loyalty/lab-resource-manager,
-nhánh codex/customer-security-loyalty. Snapshot e2358e61 giữ nguyên toàn bộ code
-local có sẵn (roles/customer signup, booking/care, chat/email, VNPAY merchant mới).
-Feature mới là các commit sau snapshot; không pull/merge đè checkout chính.
+- Reschedule vào LAB đóng; actor ADMIN bị thu hồi vẫn được transition; cancel
+  dùng scope cũ khi tài nguyên đổi LAB trong lúc chờ khóa; staff bỏ qua preflight
+  để create ngoài LAB. Booking mutations recheck actor/version/owner/LAB trong
+  transaction, khóa resource→booking và giữ SHARE assignment/LAB khi cần.
+- Phòng RETURNED đã giải phóng vẫn bị detail báo RESERVED; schedule catalog
+  chưa expire hold khi worker dừng; lọc AVAILABLE theo giờ bỏ sót LAB policy.
+- Ngày sai tạo booking trả500; bảo trì thiếu1ms vẫn được chấp nhận do làm tròn;
+  CUSTOMER đọc được job/notes/operator bảo trì nội bộ. Giữ lịch public an toàn.
+- Dashboard bỏ actual custody quá hạn khi planned end ngoài kỳ30 ngày; endpoint
+  unread-count cap100. Tổng unread server đếm đầy đủ, header/sidebar dùng tổng,
+  chưa đọc được thì ẩn badge thay vì suy từ preview50 thông báo.
 
-Đã thêm account service/RBAC: ADMIN mọi tài khoản; staff global CUSTOMER-only,
-không mở quyền LAB/chat. Tạo/sửa contact/active/xóa mềm, immutable email, chặn
-booking/loan và support mở, giữ history, self/last-admin guards, audit transactional.
-OTP 6 số qua email hiện tại, 10 phút/60 giây/5 lần sai, actor/target/purpose/version
-binding, hash-only, delivered evidence và one-use. Self cần mật khẩu hiện tại;
-assisted cần lý do. Credential/role/activation tăng authVersion, phiên cũ mất hiệu
-lực; self renew JWT. Shared User/dispatch locks chặn create/delete race. Frontend
-giữ JWT mới khi request cũ trả401, focus lỗi sau render, không fallback bỏ password
-gate khi refresh profile lỗi. Public recovery/đổi email chưa nằm trong batch.
+Frontend App giữ cache sau đổi account. Thêm
+`workspaceScope.js`: chỉ mount workspace khi read group thuộc đúng actor/role/
+credential-version, đóng private modal khi đổi scope. Test phản hồi cũ đến muộn
+và đổi account/role/version PASS; chưa có browser reproduction/visual QA.
 
-LoyaltyPolicy SYSTEM mặc định tắt, admin cấu hình ngưỡng/rate/version. Chi tiêu
-chỉ từ eligible settled VND payments đúng chủ, phí và trạng thái; loại pending,
-failed/refunded/orphan/reconciliation/cancelled. Quote private CUSTOMER lưu giá gốc,
-giảm/net và policy version, payment đúng net; guest giữ accepted public list price.
-Profile đọc snapshot đồng nhất, legacy user loyalty fields không là authority.
-Schema audit metadata nullable được đối chiếu với SQL đã áp dụng (mismatch cũ);
-chỉ chỉnh Prisma cho đúng DDL, không sửa audit history hoặc applied migration.
-Hai forward migrations mới: account_security và spend_loyalty_policy.
+Evidence: `C:/Users/Admin/.codex/lab-controller/production-qa-20261018/operational-audit-*`.
+Lượt full24 nhóm integration257 tests PASS; sau bổ sung count/policy, audit
+kiểm lại12/12 và resource9/9 PASS (259 ca phân biệt khi hợp nhất). BE required
+141/141, lint/config/ERD PASS; FE required84/84, lint0 errors với2 warnings có
+trước, typecheck/build PASS. Suite mới được thêm vào release runner.
 
-Verification trên PG16/25439, DB test riêng: required backend99, accounts12,
-loyalty integration11, auth/RBAC10, guest integrity13 đều PASS, không skip; lint
-và Prisma generate, migration deploy/idempotence, schema diff0, ERD check đạt.
-Frontend required34 tests, 3202 VI/EN keys/projection, lint/typecheck/build đạt,
-còn hai warnings trước đó. Browser UI41 assertions đạt: STAFF CRUD/assistedOTP,
-ADMIN roles/policy, CUSTOMER selfOTP/session renewal/reload, mobile390/desktop1440,
-0pageerrors; SMTP loopback thật, không real inbox. Guards sai host/port/DB/protocol
-bị từ chối. Các test API18043/preview5185/SMTP được dừng sau QA.
-CI thêm job account-security-loyalty dùng guarded PG16+SMTP+browser; YAML parse
-đạt, chưa dispatch GitHub Actions. Snapshot checksum của 1164 paths, HEAD/branch/
-status checkout chính đều không đổi; không dùng primary .env/secrets/DB/runtime.
+Local API readiness200, UI5173 HTTP200;6 users/25 resources/15 bookings/17 payments
+giữ nguyên so với checkpoint trước. Không ghi test vào demo.
+Hai PostgreSQL audit đã dừng, giữ dữ liệu.
 
-Đã cập nhật SRS, ADR034/035, FE/BE guideline, threat model, ERD, README và
-[INTEGRATION_GUIDE](INTEGRATION_GUIDE.md): thứ tự đọc, dependencies và cách tích
-hợp snapshot/feature thay vì blind pull. Research UI đề xuất catalogue ưu tiên đặt
-lịch, staff operation queue và admin exception dashboard, chưa redesign toàn bộ.
-Chatbot hiện có Responses+MCP nội bộ; plugin ChatGPT remote cần OAuth/HTTPS mới,
-ChatKit là phương án khác có thêm integration; chi tiết/nguồn ở AI_ASSISTANT_MCP.
+Giới hạn: browser vẫn bị URL-policy chặn. Chưa chứng nhận tải production/provider
+SLA hoặc toàn bộ SOP thật. Notice/cleaning buffer, hủy/no-show/refund/damage fees
+cần quy tắc LAB thực tế; không tự áp chế tài. ADR-037 hiện cho ROOM tái đặt sau
+owner return trước staff inspection; nếu SOP yêu cầu kiểm tra trước tái sử dụng
+phải duyệt thay contract, không giả inspection. Bước tiếp theo: browser cho các
+case đổi account/role, filter/return/count; nghiệm thu SOP và release gates trong
+PRODUCTION_READINESS. Không tự mở batch mới.
 
-Giới hạn: SMTP bên ngoài và AI provider chưa xác minh; loyalty tắt đến khi admin
-bật. Bản mới chỉ có trong worktree review, chưa đưa lên runtime chính hoặc push/
-merge/deploy. Thanh toán VNPAY thật đã PASS riêng ở checkpoint trước, được giữ
-nguyên trong snapshot; test loyalty callback là fixture ký trên DB test, không
-phải một lượt thanh toán provider mới. Dừng ở phạm vi batch đã yêu cầu.
+## Chặn đặt sát giờ, bảo vệ hạn thanh toán — 19/10/2026
 
-## Kết nối chatbot với tài khoản ChatGPT — kiểm thử thật, 14/10/2026
+Checkout `C:/Projects/lab-resource-manager`, main `48ccd96`; giữ diff có trước,
+không commit/push/merge/deploy/reset/seed. Human báo tạo lúc15:19 cho lịch15:20
+nhưng còn thanh toán tới15:34. Đã xác nhận nguyên nhân: chỉ kiểm tương lai,
+chưa có minimum notice. ADR-044/FR-BKG-13 bổ sung baseline ứng dụng30 phút,
+ADMIN tăng theo LAB qua API có expected notice, reason và audit. Chưa có form
+cấu hình notice riêng; không coi30 phút là quy trình chính thức của mọi LAB.
 
-Nhánh codex/chatgpt-plugin-bridge trong worktree customer-security-loyalty kế thừa
-d2f1ff4. Đã triển khai OAuth S256, MCP Events, câu hỏi bền vững, publish reply theo
-request/generation, polling/cancel phía CUSTOMER và màn quản lý kết nối ADMIN.
-Bridge mặc định tắt; một kết nối hoạt động, đọc bằng quyền CUSTOMER của câu hỏi,
-không cấp quyền sửa booking/thanh toán/tài khoản/bảo trì. Đổi kết nối hoặc thông
-tin xác thực thu hồi quyền và chặn công việc cũ. Forward migration bảy bảng mới
-chỉ được áp dụng trên DB test lab_resources_chatgpt_bridge_test và DB integration
-lab_resources_chatgpt_actions_test; DB nghiệp vụ,
-runtime chính và cấu hình SMTP/VNPAY/ngrok không bị thay đổi bởi batch bridge.
-Checkout chính đã được công việc khác commit thành 0de9471; 68 file trong snapshot
-ban đầu đổi hash, gồm contracts/schema/migrations. Trước merge phải đọc lại các
-contracts mới và đối chiếu diff; không ghi đè migration đã áp dụng. Batch này chỉ
-sửa worktree riêng, chưa merge/push/deploy.
+BE thêm `bookingNoticePolicy`, `labBookingPolicyService`, LabPolicy field và
+forward migration `20261019000200_booking_minimum_notice`; cập nhật pricing,
+readiness/create/reschedule, availability, calendar, assistant. Không có policy
+vẫn chặn sát giờ. Create khóa chia sẻ LAB và recheck ở thời điểm ghi. Hạn hold
+hiệu lực luôn min(stored deadline,startAt), áp dụng read/worker/resource expiry/
+checkout/retry/IPN; callback muộn giữ bằng chứng/manual_review, không hồi sinh
+lịch. Không hủy lịch đã xác nhận/đã trả tiền vì notice mới. FE form signed-in/
+guest, policy summary, planner và payment countdown/action dùng cùng nguyên tắc,
+hiển thị hướng dẫn VI/EN; locale projection và ERD đã đồng bộ.
 
-Kiến thức phiên bản 2026-10-14.2 gồm 16 nhóm nghiệp vụ; dữ liệu giá, lịch, payment,
-loyalty và sự cố phải đọc mới từ 16 read tools có giới hạn. Đây là context nghiệp
-vụ được duyệt theo code, không fine-tuning hoặc sao chép toàn DB sang ChatGPT.
-Giới hạn: câu hỏi 10 phút, history cùng khách 30 phút/10 lượt/12 KB, tổng dữ liệu
-động 24 KB và 13 lần đọc. Chat text được lưu để hỗ trợ hội thoại; chưa có chính
-sách xóa tự động hoặc chuyển transcript bridge sang nhân viên.
+Đã backup DB local bằng pg_dump custom, kiểm pg_restore list, rồi canonical
+migrate/generate qua restart backend, không seed. Counts trước/sau vẫn6 users,
+25 resources,15 bookings,17 payments. API health200, UI5173 HTTP200, backend/DB
+healthy. Public quote cho LOCAL-KIT-02 bắt đầu sau1 phút trả400
+BOOKING_NOTICE_REQUIRED kèm earliestStartAt. Lịch trong ảnh được đọc thấy
+CANCELLED; không sửa tay bản ghi hoặc hạn cũ.
 
-Đã thêm đề xuất BOOKING/STAFF_SUPPORT theo schema chặt, server kiểm tra lại lịch,
-policy/care/training/quote hoặc LAB có staff hoạt động; chỉ lưu nháp tối đa 5 phút.
-Nút Xem và xác nhận mở form thường, khách gửi mới có booking/yêu cầu hỗ trợ. Bot
-không được đổi giá, actor, role hoặc gọi business write. Đã sửa lỗi gửi lặp cùng
-đề xuất do JSONB đổi thứ tự trường. Đề xuất không thay thế checks cuối của API.
+Kiểm chứng: BE required141/141, lint sạch; FE required83/83, typecheck/build
+PASS,2 lint warnings có trước. PostgreSQL16 riêng: lượt đầu21/23 nhóm PASS;
+sửa2 fixture chưa đủ notice rồi chạy lại calendar/payment-hold/monitoring/
+assistant đều PASS. Hợp nhất23 nhóm247 test PASS; payment-hold service sau tách
+logic khỏi route kiểm lại17/17. Boundary±1ms, free/priced/public quote/preflight/
+direct API/guest OTP rollback/reschedule, đổi notice sau review, legacy start
+expiry và late IPN có test. ERD check PASS. Evidence ngoài repo trong
+`C:/Users/Admin/.codex/lab-controller/production-qa-20261018/booking-notice-*`.
+Hai PostgreSQL QA mới đã stop, giữ dữ liệu; chỉ stack local chính còn chạy.
 
-Kiểm thử bridge: 28 backend (21 integration + 5 network + 2 time), 9 frontend đều PASS;
-required backend/frontend, lint, typecheck, build, locale và ERD PASS. Frontend
-còn hai lint warnings có sẵn. Fixture protocol/provider không là bằng chứng
-GPT trả lời thật. Bộ 21 tình huống đánh giá nằm trong chatgptBridgeEvaluation.json.
-Kiểm tra xác nhận qua API booking/support thật trên DB actions: giá thay đổi bị
-409/PRICING_CHANGED, quote mới tạo CONFIRMED/payment pending, trùng lịch bị 409;
-support gửi lặp cùng requestId tạo một WAITING và giữ nguyên nội dung khách.
+Giới hạn: công cụ browser vẫn chặn URL local, chưa xác nhận trực quan thay đổi
+form/countdown; không né bằng Playwright/CDP. Chưa có bằng chứng production tải
+thật hoặc SLA Work5–10s; các release gates ở checkpoint dưới vẫn còn. Bước tiếp
+theo khi có quyền browser là kiểm form sát giờ và countdown legacy trên UI thật;
+quy trình vận hành cần chọn notice lớn hơn qua API nếu LAB thực tế yêu cầu.
+Không tự mở batch mới.
 
-Đã chuyển sang tài khoản Market Agri Plus, kiểm tra mới thấy ban đầu còn 83% hạn
-mức 5 giờ, tạo app LAB Support Connection 14-10
-(asdk_app_6ace700c035081919aaecc37ed2c87db), user tự cấp quyền review-admin. Work
-chat Đăng ký webhook LAB tạo một subscription VERIFIED và monitor Tiếp nhận hỗ trợ
-LAB. Đã nhận 9 phản hồi model tự động; câu đầu gửi từ UI CUSTOMER, các câu tiếp
-gửi qua API CUSTOMER thật. Kiểm tra nội dung/DB và câu đầu hiển thị trên website.
-Hai câu về ngày mai dùng sai ngày Việt Nam: thêm timeContext với giờ Việt Nam,
-today/tomorrow, cập nhật kiến thức và skill; unit/integration PASS. Đã thử lại
-hai câu 2/5: model trả đúng ngày 15/10, loại giờ 10–11 đã đặt khỏi lịch trống và
-đọc đúng booking của khách. Các câu 10–15 đã nhận reply thật; injection bị từ
-chối, payment pending được đọc đúng, thiếu thông tin thì hỏi lại, STAFF_SUPPORT
-chỉ là nháp. Câu 10 cũ và câu 16 lần đầu dừng khi Work hết quota đã được hủy
-qua API CUSTOMER, không chấm PASS. Sau phục hồi runtime, 16–21 đã nhận reply;
-16 từ chối bypass, 17/18 trả đúng UTC+7/x=4, 20 không tiết lộ OTP/credential,
-21 hỏi lại interval thiếu. Câu19 chưa đạt nội dung: ba giá USD chênh20đ so với
-bảng Vietcombank được mở đối chiếu, cùng timestamp09:23. Đã siết knowledge/skill
-yêu cầu dòng dữ liệu nguồn gốc, đúng ngày/cột/đơn vị; link/snippet không đủ và
-thiếu dữ liệu động phải nói chưa xác minh. Thử lại19 nhận ANSWERED sau42,5giây:
-nêu rõ trang nguồn đọc được thiếu dòngUSD, không đoán số và đưa link ngân hàng
-hợp lệ. Đạt tiêu chí giới hạn xác minh, không là PASS cung cấp tỷ giá live.
-Không kết luận chất lượng từ webhook2xx, trạng thái ANSWERED hoặc protocol fixture.
+## Bảo mật phiên, SEO, booking và độ trễ chatbot —19/10/2026
 
-App cùng tài khoản đã cập nhật 1.0.1 qua Upload new version: Apps 1, Skills 1;
-giữ nguyên app ID/OAuth/metadata, thêm skill. Source portable 0.1.4 không gắn app
-ID tài khoản. Fresh usage sau lượt kiểm tra hiển thị 0% hạn mức 5 giờ, 69% tuần,
-reset khoảng 01:59 ngày 14/10; đây là quota dùng chung, không quy toàn bộ cho
-suite này. User đã đổi sang PĐ HƯNG Plus; fresh usage còn 79% hạn mức 5 giờ và
-65% tuần. Kết nối cũ trên tài khoản này trỏ tunnel đã ngừng, không có sửa URL
-trong màn Manage; tạo app LAB Support Connection Current
-(asdk_app_6ace7c55a1b0819184522db6d50521e5) tới endpoint hiện tại. Skill 1.0.1
-đã cập nhật qua Plugin Creator và đọc lại, giữ app mapping/metadata. User đã cấp
-consent ADMIN, grant lúc 02:00 ngày14/10 và một monitor/subscription đã nhận reply.
-Khi Work dừng, fresh usage lúc 02:22 cho thấy 0%/53%; đây là quota dùng chung.
-Sau khi runtime/tunnel bị dừng và hostname cũ không còn dùng được, đã phục hồi
-test DB và API8001/gateway8002/UI5174. Fresh usage lúc 11:08 có 100% hạn mức5giờ,
-53% tuần; không dùng reset credit hay mua quota. App phục hồi LAB Support
-Connection Local (asdk_app_6acf0120dd18819185e94ea9078f09c5) đã được cập nhật1.0.1,
-giữ mapping/metadata qua ZIP gốc và thêm skill; sau lỗi tỷ giá đã lên1.0.2. Grant mới lúc11:18 và subscription
-VERIFIED; Work chat 6acf0345-2a64-83ec-9797-bc8d0211dbc3 nhận các case còn lại.
+Human yêu cầu tiếp tục tăng bảo mật/JWT/tự đăng xuất, SEO, làm rõ booking,
+nghiên cứu tính năng khả thi và bắt đầu trả lời chat trong5–10s. main HEAD48ccd96;
+giữ diff có trước, không commit/push/merge/deploy. Không reset/seed/import demo.
 
-Đã thêm fixture cấu hình phòng/giá SERVICE 60.000đ/giờ và staff phân công trong
-DB review riêng; không tạo telemetry/audit/lịch sử vận hành hay kết quả model.
-Runtime review bật riêng kiểm tra quote/pending charge, vẫn tắt VNPAY/SMTP/
-schedulers thanh toán. Câu đặt phòng thực từ UI CUSTOMER đã nhận BOOKING model;
-trước xác nhận không có booking, sửa/đóng form không ghi DB. Gửi form tạo booking
-ce570c2b-2afc-4d2b-a2e0-6e7965f80550, CONFIRMED ngày15/10 10–11, fee60.000đ.
-Gửi lại cùng giờ báo xung đột và vẫn chỉ một booking. Payment còn pending;
-không có settlement/provider thật trên DB review.
+Đã làm: AuthSession PostgreSQL qua forward migration20261019000100; JWT bắt buộc
+HS256/issuer/audience/iat/exp/sid/authVersion. Server kiểm phiên/tài khoản mỗi
+request; idle mặc định30 phút, absolute8 giờ, env chỉ giảm giới hạn. Polling không
+gia hạn; activity chủ động có quota và không vượt absolute. Logout thu hồi sid,
+logout-all tăng authVersion; OTP/quyền hiện hành giữ nguyên. Đăng ký/guest phát
+phiên trong transaction nghiệp vụ; cleanup1000 phiên quá hạn/h. FE bỏ token
+localStorage, dùng sessionStorage, báo sắp hết hạn/tiếp tục, xử lý visibility/
+pageshow và hiển thị hạn thật trong hồ sơ. JWT cũ buộc đăng nhập lại. Login giới
+hạn độ dài và dùng dummy bcrypt12 cho account không tồn tại, không fake login.
 
-Luồng STAFF_SUPPORT thật đã hoàn tất lúc 12:03 ngày 14/10: câu hỏi từ UI
-CUSTOMER nhận reply sau 56,7 giây, ba scoped reads. Trước xác nhận vẫn có 0 phiên
-hỗ trợ. Form điền đúng LAB/BOOKING; khách sửa nội dung rồi gửi tạo phiên
-28b50da9-c3b1-4f92-8c23-2a6ca2c428a1 WAITING, UI hiển thị #1. Staff bật sẵn sàng
-qua API xác thực, phiên tự ACTIVE; staff gửi tin, khách trả lời qua UI, staff
-kết thúc qua API. ADMIN đọc lại đủ bảy tin/event qua API, đúng handler và CLOSED;
-UI khách giữ transcript sau kết thúc. Không dùng tool model để dispatch hoặc
-gửi giả danh staff. Lượt này chưa kiểm UI staff/admin hoặc hàng đợi nhiều staff;
-không suy coverage đó từ luồng một staff. Đã sửa title/header hỗ trợ thiếu key
-dịch; locale sync và frontend required/lint/typecheck/build PASS.
-Gate nhánh riêng sau sửa: backend required 106, frontend required 43, bridge
-integration 21 PASS. Gate integration dùng DB actions riêng, không reset DB
-review đang giữ consent/monitor. Còn một grant/subscription và 0 câu hỏi chờ.
+Booking đăng nhập có preflight dùng chung readiness với create, review riêng
+giờ/contact/giá/cách nhận/địa chỉ có tên, recheck sau60s có thông báo. Không giữ
+chỗ ở preflight; create vẫn khóa/recheck. Khóa form khi gửi, focus trong form,
+guest single-flight và uncertain fence; không hứa idempotency qua reload.
+SEO build tạo4 HTML giới thiệu/canonical/OG/sitemap/robots; private/auth/error
+noindex từ HTML đầu, no-store cho private, unknown404. Chỉ index khi có HTTPS
+origin thật và opt-in; default build vẫn chặn index. Nginx có CSP cùng security
+headers. Danh mục động vẫn cần JS/API; không có public resource-detail SSR.
 
-Review riêng: API8001, gateway OAuth/MCP8002, frontend5174. Checkpoint mới 14/10
-chuẩn hóa một [LAB Support](https://chatgpt.com/plugins/plugin_asdk_app_6acf13e36eec81918a51082417a0e8b7)
-Cloud1.0.1 (portable0.1.4) ở domain ngrok
-projector-blaspheme-angelfish.ngrok-free.dev. Đã gỡ cài đặt các bản LAB Current,
-Connection, Customer Support0.1.2 và Local; giữ source/lịch sử, không xóa định
-nghĩa cloud vĩnh viễn. Bộ nhận cũ Current đã tạm dừng; bộ nhận Local đã được
-chuyển sang app ngrok và tên Tiếp nhận hỗ trợ LAB, không tạo task thứ hai.
-Grant mới lúc12:34, một subscription VERIFIED. Câu UI mới trả lời tự động sau
-33,6giây, một read; không thao tác GPT sau khi khách gửi. Hai câu tiếp theo đúng
-owned booking ngày15/10 10–11 (48,5giây, hai reads) vàx=4 (105,9giây, một read).
-Trước đó sau rút gọn
-prompt mất43,2giây; host không có tùy chọn batching/debounce. Chưa đạt SLA vài
-giây, phụ thuộc Work quota/độ trễ. Đổi tài khoản không sửa code nếu giữ hostname,
-nhưng cần đăng ký app/OAuth/consumer một lần; gói Cloud có ID tài khoản riêng.
+Chat bridge thêm tối đa3 partial text tích lũy1500 ký tự, context/actor/grant/
+generation/TTL guards, sequence/idempotency và client chống lùi/sửa; final mới
+ANSWERED. Bổ sung fast query có giới hạn, sửa câu giải thích bị trả danh mục do
+keyword. Work rule/plugin source0.1.6 hướng dẫn publish nội dung thật sớm; chưa
+cập nhật cài đặt plugin hay tạo/chiếm consumer. Backlog có nghiên cứu ICS, báo
+khung giờ trống, passkey/MFA và QR tham chiếu, chưa triển khai các mục đó.
 
-Ngrok hiện tới gateway8003: exact OAuth/MCP allowlist→8002, mọi đường còn lại
-→backend chính8000; business API review vẫn không public. Backend chính health200,
-unsigned IPN trả97 INVALID_SIGNATURE giống nhau trên8000/8003/domain. Có regression
-gateway giữ query/body/auth bytes, loại forwarded spoof và chặn reserved path sai.
-Cloudflare quick tunnel cũ đã ngừng dùng. Đây là cấu hình local, không production.
+Evidence: FE required82 PASS, i18n3763 keys, lint0 errors (hai warnings có trước),
+typecheck/build PASS; BE required120 PASS, lint/production-config/ERD PASS.
+PostgreSQL16 riêng:227 tests/22 suites PASS; sau atomic issuance và cleanup,
+49 tests/5 nhóm sessions/guest/auth/customer/email PASS.14 migration-safety cases
+PASS, không sửa lịch sử migration. FE runner image cuối build bằng npm ci PASS;
+nginx -t,48 SEO/security HTTP checks và65 media checks PASS.48 mixed reads/8
+workers p95~198ms local, không phải tải production. Một smoke trúng nodemon
+restart trả upstream connection refused; đã đợi API healthy và chạy lại PASS.
+Các test cũ dùng token sau logout được sửa sang401/re-login, không nới auth.
 
-Theo yêu cầu cùng khung chat, CUSTOMER handoff/proposal không đổi URL nữa:
-CustomerSupportChat trong dock giữ AI turns, form chỉnh/sent, WAITING#1 rồi ACTIVE,
-tin nhắn thật và CLOSED. Model proposal mới nhận43giây; xác nhận UI tạo phiên
-171eda04-085e-40d4-b978-2b33d1a73dab, staff API nhận/gửi/kết thúc, khách chat trong
-dock. Thu nhỏ/mở lại giữ draft; mobile390px không overflow, HTML là text. Suite
-backend support9 và UI22 PASS trên lab_resources_support_test riêng: hai staff,
-FIFO#1/#2, quick replies chỉ draft, admin xem/requeue, VI/EN, mất mạng giữ draft.
-Ca bổ sung reload/mở lại đã nối đúng phiên staff trong dock. Lần đầu test kiểm
-trước khi lazy dock tải xong; thêm wait đúng control rồi chạy lại toàn UI22 PASS.
-Frontend required43/lint/typecheck/build và detector PASS sau thay đổi; backend
-bridge suite tăng8 do thêm gateway test, lint PASS. Bridge AI transcript vẫn chưa
-copy sang staff; chỉ context local server-owned được chia sẻ opt-in.
+Local migration đã có pg_dump custom trước đó; counts trước/sau giữ6 users,
+25 resources,15 bookings,17 payments. API/DB dùng chung và UI5173 còn hoạt động;
+container QA đã dừng sau kiểm tra. Image QA giữ trong Docker local; logs/dump/
+build logs ở ngoài Git tại C:/Users/Admin/.codex/lab-controller/production-qa-20261018/security-*.
 
-Quy trình tích hợp và cấu hình ở AI_ASSISTANT_SETUP, AI_ASSISTANT_MCP,
-INTEGRATION_GUIDE và ADR-036. Chưa bật cho khách thật: cần tích hợp nhánh riêng vào
-checkout chính, domain ổn định, SMTP và kiểm thử UI/provider theo môi trường
-triển khai. Còn giới hạn độ trễ/quota Work; model không có bảo đảm chính xác mọi
-câu hỏi. Đã thêm SYSTEM_TEST_GUIDE cho ba
-role, positive/negative/permission, care, booking/payment, support, OTP/mail,
-loyalty và chatbot; đánh dấu demo runbook cũ không còn đúng role/approval hiện tại.
-Gate mới trên checkout chính0de9471: backend required92/lint và frontend required26
-(lint/typecheck/build) PASS, hai lint warnings cũ; không chứng minh cả UI/live
-provider hoặc các tính năng nhánh riêng đã tích hợp vào main. Cổng8080 thuộc
-AgentService, không phải backend LAB; sau chuẩn hóa ngrok forward8003 như trên.
+Blockers/limits: Work enabled/authorized nhưng connected=false, subscriptions0.
+Mẫu tra thiết bị local có nội dung thật160ms; câu cần AI trả thông báo chưa kết
+nối11ms, không tính là first useful answer. Chưa chứng minh mục tiêu5–10s qua
+provider. Browser control bị URL-policy chặn; không chạy visual/Playwright UI
+lượt này và không đi đường vòng. SessionStorage vẫn chịu XSS; bearer bị đánh cắp
+có thể gửi activity tới absolute limit; chưa có MFA/login recovery/distributed
+limiter hoặc penetration test. SEO chưa có domain/Search Console thật; giới hạn
+SMTP/payment/storage/CDN/host/hardware trước đó vẫn theo release gate.
+
+Bước tiếp theo: khôi phục consumer/subscription Work hiện có, refresh discovery
+partial tool và đo first-useful p50/p95; mở lại quyền browser để kiểm warning/
+logout/review trên desktop/mobile; cấu hình origin/TLS/SEO opt-in và nghiệm thu
+host/provider thật. Không tuyên bố toàn hệ thống đã sẵn sàng production.
+
+## Danh mục cho thuê và hiệu năng media — 18/10/2026
+
+Human yêu cầu tìm thêm tài nguyên cho thuê và chuẩn bị ảnh/video vận hành thực
+tế. main HEAD48ccd96, giữ diff có trước; không seed/import tài nguyên, không
+push/merge/deploy. REAL_DATA_RUNBOOK có12 nhóm ứng viên có nguồn nhà cung cấp
+(TRS, MeanLab, Tara Tech, Máy Đo Đạc Miền Nam, SUCOMO) và điều kiện tiếp nhận.
+Đây là nghiên cứu, chưa xác minh tài sản/giá/tồn kho của LAB.
+
+Đã làm: ảnh hero1147262→68384B (mobile23030B), poster122938→17716B; giữ originals.
+Vite hash assets; hero responsive/eager/high priority, ảnh catalogue lazy/async,
+Wikimedia resize320/640/960 và detail1280, không sửa signed URLs. Resource video
+chỉ gắn src sau Play, pause khi hidden/offscreen. Landing tôn trọng Save-Data/
+mạng chậm nếu browser hỗ trợ. Có CLI media:prepare offline (Sharp dev-only),
+640/1600WebP, strip metadata,24MP/20MiB guard, ngân sách byte/deadline và không
+ghi đè. Không cài/chạy FFmpeg; lệnh encode và tiêu chí VOD/CDN được ghi trong
+DEPLOYMENT, không transcode trong HTTP request.
+
+Upload có progress/cancel/deadline120s/no retry và single-flight. Backend giới
+hạn20 media writes/phút/user; S3 client tái dùng pool16 sockets, timeout3/10s,
+maxAttempts2. Presigned PUT ký length/type/cache-control và không ký CRC của
+body rỗng; HEAD kiểm tra actual size/MIME/key/extension, phân biệt missing409
+với unavailable503. Nginx /media có404/cache1d/single-range, không SPA fallback.
+
+Evidence: FE required77 PASS, i18n3731 keys, lint0 errors (hai warnings cũ),
+typecheck/build PASS; sau sửa cuối media4/typecheck/build PASS. BE required116
+PASS và media4 PASS (đã đưa media vào required); lint PASS. FE full và runtime
+npm audit0 sau cập nhật typescript-eslint/source-map-js; Sharp không vào runtime.
+Docker frontend runner mới build PASS với npm ci trên Alpine. Nginx image cuối
+nginx -t PASS và65 HTTP checks:404/MIME/cache/security/206/416/304/faststart,
+48 reads media+health+catalogue với8 workers, p95~180ms local. Không phải giới
+hạn tải production; backend dùng chung dev. Hai container media QA đã dừng;
+shared API/DB vẫn healthy. Logs/artifacts ngoài Git: C:/Users/Admin/.codex/lab-controller/production-qa-20261018/media-*.
+
+Blockers: storageConfigured=false, chưa PUT/HEAD/CDN thật, chưa đo host production
+hoặc browser frame stalls. Browser control bị tắt trong Work settings; không
+chạy lại playback UI, chỉ cập nhật test dossier theo play-on-demand. HEAD không
+sniff/malware-scan; chỉ trusted operators, chưa có public upload/quarantine flow.
+DEPLOYMENT/PRODUCTION_READINESS ghi CORS, cache invalidation, quotas/orphans,
+bandwidth, peak-test và vận hành thiết bị. Bước còn lại để nghiệm thu production:
+cấu hình kho/CDN thật, browser playback/seek/slow-network, tải peak trên host đích
+và kiểm kê/duyệt các tài sản thực. Không tự coi nghiên cứu hoặc smoke là chứng nhận.
+
+## Tái thiết kế toàn bộ hồ sơ cá nhân — 18/10/2026
+
+Theo yêu cầu human làm lại toàn bộ Profile, tiếp nối việc bỏ Khoa/Tổ chức và
+nhóm tự khai. Checkout main HEAD48ccd96; giữ diff có trước, không push/deploy.
+Bố cục mới: nhận diện và trạng thái tài khoản ở đầu, bốn mục điều hướng ngang;
+nội dung chính bên trái, hạng thành viên và giải thích theo ngữ cảnh bên phải.
+Mobile chuyển một cột, nội dung chính trước. Giữ thứ tự mục mặc định theo role.
+
+- Liên hệ: họ tên bắt buộc/điện thoại tùy chọn ghi rõ; địa chỉ thu gọn, giữ draft,
+  lỗi tự mở và focus. Theo dõi thay đổi chưa lưu; sau PATCH đồng bộ form với
+  dữ liệu server thực lưu. Không gửi organization/customerType hoặc sửa email.
+- Bảo mật: trạng thái tài khoản/mật khẩu và ba bước gắn với state thật của
+  PasswordChangeForm: mật khẩu → OTP email → hoàn tất. showSteps là opt-in
+  của Profile; shell và assisted reset giữ luồng cũ. Không đổi OTP/API/RBAC.
+- Điều kiện: role, số chứng nhận VALID, ngày cấp/hết hạn; trạng thái trống giải
+  thích và dẫn tới điều kiện từng tài nguyên, không khẳng định được truy cập
+  mọi tài nguyên. Status chưa biết giữ nhãn từ server.
+- Hoạt động: tổng/active/completed từ server; bảng thanh ngang có số lượng và
+  tỷ lệ từng trạng thái trên tổng lịch, toàn bộ thời gian. Không vẽ số0 giả
+  khi snapshot thiếu hoặc không nhất quán. Thanh toán hợp lệ/số giao dịch/
+  lần gần nhất dùng profile.spending. Hạng hiển thị chi tiêu, mức giảm, tiến độ,
+  ngưỡng tiếp theo, còn thiếu và policy disabled theo server; không suy giá.
+
+Files: ProfilePage, ProfileActivity/ProfileAccess, profileActivity helper,
+LoyaltySummary, PasswordChangeForm, account-workspace/loyalty-account CSS,
+VI/EN catalog+manifest, test_profile_activity và test:accounts. Tham khảo bố cục
+thông tin GOV.UK Check answers và data visualization Carbon, giữ nhận diện LAB.
+
+Evidence: npm run test:required PASS73 tests, i18n3724 keys và backend projection
+khớp, lint0 errors (hai warnings cũ), typecheck/build PASS. Sau sửa mobile,
+test:accounts17 PASS, typecheck/build PASS. Browser CUSTOMER: cả4 mục VI/EN
+1440/375, không overflow; số9/4/1 và tỷ lệ44,4%/11,1%/44,4% đúng; kiểm tra dirty
+state, field errors/focus, giữ draft và keyboard mở địa chỉ. Form mật khẩu trống
+bị chặn, chưa tạo OTP challenge. Solid-background text scan34 mẫu ở access không
+finding; không coi là WCAG certification. Console cuối không có error mới.
+Lượt đầu gặp HMR khi code/catalog chưa đồng bộ; mobile bị global table min-width
+và flex nhận diện dồn chữ, đã sửa và xác nhận. Không PATCH hợp lệ/gửi OTP/đổi
+mật khẩu hay dữ liệu demo; không kiểm thử lại live-provider hoặc mọi role/states.
+Ảnh, checks và logs ngoài Git: C:/Users/Admin/.codex/lab-controller/production-qa-20261018/profile-redesign/ và profile-redesign-required.log.
+Phần UI được giao đã hoàn tất; giới hạn production vẫn theo checkpoint bên dưới.
+
+## Kiểm thử và chuẩn bị production — 18/10/2026
+
+Human giao tiếp tục đến hết phần hoàn thiện/kiểm thử, không hỏi các quyết định
+thường lệ. Checkout C:/Projects/lab-resource-manager, main, HEAD48ccd96; giữ toàn
+bộ diff có trước. Không commit/push/merge/deploy; không seed/reset/migrate DB demo.
+Các forward migrations chưa commit vẫn được giữ; tracked baseline/migrations
+không thay đổi trong lượt này.
+
+Đã sửa trong lượt này:
+
+- MCP client2.0.0→2.3.1 để xử lý advisory OAuth; cập nhật lockfile, vá transitive
+  brace-expansion. Prisma CLI6.19.3 chuyển sang runtime dependencies để image
+  production prune dev packages mà vẫn migrate đúng khi khởi động.
+- Docker ignore loại env/dependencies/output khỏi context. Production Compose
+  truyền cấu hình bridge/legacy room key, không ép VNPAYQR khi thiếu bank code,
+  reminder mặc định30 phút. Nginx proxy OAuth/discovery/MCP, không log URL các
+  giao thức này, bỏ buffering và tăng timeout75 giây; không rơi vào SPA200 giả.
+- Booking.createdAt và paymentDueAt dùng cùng server timestamp, đúng15 phút;
+  không rewrite lịch cũ hoặc đổi deadline khi retry. Test care/pricing giữ assertion
+  chính xác thay vì dung sai để che lệch giữa clock ứng dụng và default DB.
+- Landing VI/EN đúng3 role và giữ chỗ có phí. Lịch ngày desktop dùng thanh thời
+  gian đúng tỷ lệ với nhãn riêng đọc được, không cắt giờ/badge ở lịch ngắn;
+  sửa tương phản empty lane. Mobile giữ agenda, không đổi quyền/API.
+- Runner release21 suites, từ chối DB đã tồn tại, chuẩn bị predecessor CUSTOMER
+  fixture đúng thứ tự. Helpers dùng URL test được truyền trước .env. Sửa fixture
+  legacy approval/contact/handover/reminder và UI selectors theo ADR hiện hành;
+  không nới guard runtime để làm test xanh. Thêm browser calendar và production
+  smoke script; workflow production-readiness có jobs contracts và production images.
+- Cập nhật PRODUCTION_READINESS, DEPLOYMENT, SYSTEM_TEST_GUIDE và guideline/threat
+  model; không tạo thêm báo cáo AI trong repo.
+
+| Kiểm chứng mới | Kết quả và giới hạn |
+|---|---|
+| Backend required |116/116 PASS; lint, production config (gồm bridge negative cases), ERD PASS |
+| Frontend required |63/63 PASS, i18n3680 keys, lint/typecheck/build PASS; hai warnings cũ ResourceStatusModal/LocaleProvider |
+| PostgreSQL16 integration |218 test nodes qua21 suites PASS ở các lượt chọn cuối: concurrency/persistence, auth/RBAC, resources, calendar/privacy, operations, incidents/reminders, hardening, telemetry, CUSTOMER migration, account OTP, loyalty, fulfillment, payment hold, support, email, care, stock/workspace, queues, assistant, reports và bridge. Các FAIL fixture/dependency race ở lượt đầu đã có rerun PASS; không xóa bằng chứng lỗi. |
+| Critical browser |Fulfillment14, payment hold21, calendar37 checks PASS. Calendar6 cấu hình3role VI1440/EN375: event dài/phút lẻ, privacy/LAB scope, ngày/tuần, keyboard dialog, đúng resource vào form, không tạo booking khi preview/đóng, không overflow/page errors; đã xem ảnh thật desktop/mobile. |
+| UI read-only main |CUSTOMER/STAFF14 role checks và ADMIN8 role checks hoàn tất, không finding tương phản nền đặc/overflow/page errors. Lượt tổng final bị lỗi tải home ADMIN; chạy ADMIN riêng PASS. Đây không phải WCAG certification/mọi trạng thái. |
+| Production images |Build hai image cuối PASS; Nginx→API NODE_ENV=production→DB riêng:51 checks PASS, gồm OAuth metadata/token validation, MCP auth, private projection, SPA/static/CORS và20 readiness reads đồng thời. API UID1000, có Prisma6.19.3, không nodemon/ESLint/Supertest/.env. Không phải load/capacity benchmark hoặc deploy thật. |
+| Migration/restore |14 safety cases PASS, kể cả tamper/history/fingerprint/partial resume. pg_dump/custom→DB restore riêng PASS; users/resources/bookings/payments/audit/migrations khớp14/22/23/4/13/32. Không chứng nhận DR/RPO/RTO production. |
+| Dependency/config |npm audit --omit=dev cả hai app0 advisory; full BE còn3 High ở dev nodemon/chokidar/braces, không đóng gói production. Compose config --quiet, workflow YAML và git diff --check PASS; workflow chưa chạy trên GitHub. |
+
+Live integrations: SMTP hiện đã configured và verify kết nối thật PASS; email
+automation đang false, outbox có8 PENDING. Không bật worker/gửi mail tồn hoặc OTP
+tới người khác trong lượt này; chưa có bằng chứng inbox. Ban đầu Work nhận event
+nhưng get_question_context lỗi internal, readCount0: ngrok không chạy (public404).
+Đã bật lại đúng một tunnel domain cũ→8000, metadata200; giữ grant/receiver/scope.
+Hủy đúng QA request còn chờ của mình rồi thử lại: local guidance22ms, ChatGPT thật
+ANSWERED/provider=chatgpt/source=chatgpt_bridge sau35,29giây, lời giải x=4 đúng.
+Hai lượt có tổng4 assistant requests QA; không booking/support/payment write trên
+DB demo. Không coi một reply là SLA hoặc chứng minh auto-renew receiver dài hạn.
+
+Evidence ngoài Git: C:/Users/Admin/.codex/lab-controller/production-qa-20261018/.
+integration-final-summary.json và các logs theo suite; các FAIL đầu còn nguyên;
+booking-care-final.log, incidents-final-fresh.log, payment-final/ là rerun cuối.
+calendar-ui-final/, ui-final/ + ui-final-admin/, production-smoke-final.json,
+migration-safety.log, isolated-restore.dump, live-bridge-before-tunnel.json và
+live-bridge.json. Không đưa secrets/signed URLs vào checkpoint.
+
+**Boundary:** hoàn tất sửa lỗi và kiểm thử local trong phạm vi trên; chưa GO LIVE.
+Chưa có .env.production/host/domain/TLS được xác minh, VNPAY merchant production,
+inbox OTP/receipt, S3/hardware/camera/door, đa trình duyệt hoặc sustained load.
+Không bật email automation hay thay tích hợp thật chỉ để checklist xanh. Các job
+CI đã thêm và parse YAML, chưa push nên chưa có remote CI result. Giữ UI5173,
+API8000/PostgreSQL demo và tunnel hiện hành; containers test của lượt này dừng sau
+kiểm tra, giữ dữ liệu/dump để đối chiếu. Next concrete step: provision staging/
+production secrets + TLS/merchant/storage theo DEPLOYMENT, kiểm inbox có recipient
+được chỉ định và chạy release gate trên host đó trước khi mở traffic.
+
+## Lịch đặt theo tác vụ cho ba role — 17/10/2026
+
+Human giao Codex tự chốt và triển khai sau ba vòng trao đổi Gemini 4 Argon/Cao.
+Checkout C:/Projects/lab-resource-manager, main; giữ thay đổi có sẵn, không sửa
+worktree497f và không tiếp tục Claude automation. Quyết định ở ADR-042.
+
+SmartCalendarView chuyển sang planner: CUSTOMER chọn theo tài nguyên hoặc giờ;
+LAB_STAFF/ADMIN mặc định lịch ngày theo LAB từ API scope, nhóm tài nguyên, 12
+dòng mỗi trang kết quả đã tải. Mobile có agenda dọc. Tuần so sánh một tài nguyên
+bằng bảy cột ngày có event, không lặp booking mỗi giờ; tháng giữ overview phụ.
+Giờ phục vụ lấy policy, không hardcode08–20. ResourceDayBoard, ResourceWeekOverview,
+BookingSlotPicker, plannerModel và calendar-planner.css giữ tone tím/lavender/kem.
+App truyền đúng resource context vào form chung kể cả deep link ngoài list cap.
+
+Sau feedback ảnh chụp của human: BookingSlotPicker gom các khoảng liên tục còn
+trống theo thời lượng, trừ hợp của booking/bảo trì thay cho lưới giờ bắt đầu30phút.
+Đọc một khoảng bảy ngày của tài nguyên đang xem; gợi ý tối đa ba ngày tiếp theo
+trong range đã tải. Ngày trong range dùng lại event, không gọi availability mỗi ô.
+Date strip lăn bảy ngày thay cho tuần chứa nhiều ngày đã qua. Giữ phút lẻ như
+09:10 khi khoảng đó đủ thời lượng. “Đặt giờ này” tự precheck trước khi mở form;
+bỏ nút kiểm tra riêng. Kết quả tới muộn sau đổi lựa chọn bị hủy/loại. Sửa busy
+không kết thúc khi lọc hết tài nguyên; bỏ khung giờ mặc định cũ khỏi tóm tắt khi
+không có lựa chọn hợp lệ. VI/EN rút ngắn, dùng ngôn ngữ thực tế.
+
+ResourceSearchField dùng chung cho Header và planner, một viền/focus ngoài,
+input không có viền/outline lồng. Calendar chỉ giữ search cục bộ, ẩn search header
+trùng; xóa hết chữ cũng xóa filter. Header ở các màn khác giữ tìm toàn danh mục.
+
+Khay SelectionPage thêm chép giờ chung vào draft chưa tạo và kiểm tra tuần tự.
+selectionPrecheck dừng429/network/auth, hủy/loại kết quả cũ, cache tối đa một phút;
+không tự retry mutation hoặc tạo booking đồng loạt. Giữ pending/uncertain fence,
+trạng thái thanh toán/paymentDueAt thật. Có VI/EN; không đổi API, RBAC hoặc DB.
+
+Gates cuối sau feedback: test:required63 tests PASS (15 planner/precheck), i18n3680 keys,
+lint/typecheck/build PASS; hai lint warnings cũ ở ResourceStatusModal/LocaleProvider.
+Detector cơ học Impeccable không có finding; diff whitespace check PASS. API thật
+read-only3role: auth, LAB scope, resources, events, interval candidates và exact
+availability trả200/đúng shape; mỗi role dùng LAB có12resources/12policy, range
+QA không có event. Fixture kiểm kín lịch cả ngày, overlap/adjacency, phút lẻ và
+giới hạn ngày gợi ý PASS; không phải booking thật trên DB. Không suy thành
+lifecycle hoặc privacy matrix PASS.
+
+**Giới hạn ngày17/10, đã gỡ bằng QA18/10 ở trên**: CUA báo Local browser use is disabled in Work
+settings, vẫn bị chặn ở lượt sửa theo ảnh. Đã hỏi human bật Browser/mở lại Work; chưa nhận xác
+nhận. Không dùng trình duyệt khác để lách chặn, không chụp ảnh giả/claim responsive
+PASS. Cần khi Browser khả dụng: kiểm VI/EN3role desktop1440/mobile375, event dài/
+chồng, điều hướng form, keyboard, stale/cooldown và empty/error; sửa lỗi chứng minh
+được trong cùng scope. Không tạo business writes trong QA hoặc reset/seed/migrate.
+
+Evidence ngoài Git: C:/Users/Admin/.codex/lab-controller/calendar-implementation-20261017/
+(refinement-gates.log, refinement-build.log, refinement-runtime-results.json,
+check-refinement-runtime.mjs, các gates/runtime-results trước và baseline/); quyết định thảo luận
+ở ../gemini-calendar-decision-20261017/decision.md. Source implementation xong;
+visual acceptance còn pending do quyền trình duyệt. Không whole-system PASS.
+
+Cập nhật 16/10/2026. Đây là ngữ cảnh hiện hành, thay các nhật ký tác vụ cũ.
+Hợp đồng đầy đủ nằm ở SRS, DECISIONS, guideline, schema/migrations và tests.
+Không xem kết quả một lần chạy cũ là PASS mới hoặc tự mở batch tiếp theo.
 
 ## Checkout và runtime
 
-- Chỉ C:/Projects/lab-resource-manager, claude/lrm-redesign-v2. Working tree có
-  nhiều sửa/xóa/untracked từ trước; giữ nguyên, không quy toàn bộ diff cho mình.
-- Không sửa worktree497f, commit/push/merge/deploy hoặc sửa dữ liệu trong lượt dọn.
-- Runtime đã dùng: frontend5173, bản so sánh5180; Docker backend8000 và PostgreSQL
-  dùng chung, DB lab_resources_local_demo. Phải kiểm tra trạng thái live trước khi dùng.
-- Tái dùng server; startup backend có migration/demo seed, không coi đó là QA.
-  Không reset/down -v/seed tự động khi QA, sửa migration đã áp dụng hay prisma db push.
-  Lượt danh mục 12/10 được người dùng yêu cầu thêm mẫu và dùng seed local có guard.
+- Checkout phát triển: C:/Projects/lab-resource-manager, main, HEAD 48ccd96.
+  Có nhiều thay đổi chưa commit từ trước; không reset hoặc quy toàn bộ diff cho đợt dọn.
+- React/Vite trong frontend/, Express/Prisma trong backend/, PostgreSQL 16.
+  Giữ ánh xạ logic với code/frontend và code/backend của giảng viên; không di chuyển source.
+- Runtime kiểm tra 16/10: UI5173, API8000; Docker lrm-local-review-backend-1 và
+  lrm-local-review-postgres-1 healthy, /health/ready trả database=ready.
+- DB nghiệp vụ lab_resources_local_demo, volume lrm-local-review_review-data.
+  Chỉ còn database này và postgres trong instance LAB sau dọn; không reset/seed lại.
+- Bật Docker, ở frontend/ chạy npm run dev:backend rồi npm run dev; dev:demo
+  chuẩn bị backend + frontend. Khởi động thường dùng lại image/container; rebuild
+  dành cho thay đổi dependency/Dockerfile. Đọc README và dev-local.mjs trước vận hành.
+- Không sửa các worktree khác, tài nguyên Haneul, tài khoản/plugin cloud hoặc tunnel
+  trong lượt dọn. Không commit/push/merge/deploy. Kiểm tra lại topology trước khi dùng.
 
-## Chức năng đang có
+## Phạm vi đề tài và chức năng hiện có
 
-| Nhóm | Implementation và ranh giới |
+Đề tài: xây dựng hệ thống đặt lịch và giám sát tài nguyên phòng thí nghiệm.
+Quản lý phòng, GPU server, Raspberry Pi, UAV, camera và tài nguyên dùng chung;
+đặt lịch, phân quyền, nhật ký, thông báo và giám sát nguồn được cấu hình.
+Nguồn giảng viên ở docs/instructor/ được giữ. Hướng triển khai.docx là đề xuất,
+không tự cấp quyền đổi framework hoặc tạo bảng/trạng thái song song.
+
+| Nhóm | Hợp đồng và implementation cần giữ |
 |---|---|
-| Tài khoản | Đăng nhập, quản trị tài khoản/phân công lab; backend kiểm tra active user. |
-| Tài nguyên | Catalog công khai an toàn, hồ sơ/media, trạng thái, lịch và quản trị. |
-| Booking | Tự xác nhận sau kiểm tra chính sách/đào tạo/chống trùng/bảo trì; đổi lịch, hủy, bàn giao/hoàn trả và lịch sử. Duyệt/từ chối dành cho bản ghi legacy. |
-| Vận hành | Bảo trì, sự cố, thông báo, audit, hàng đợi phân trang và tổng đúng scope. |
-| Kho/học phần | Ledger vật tư và nhóm/hoạt động học tập đã được người dùng chấp thuận. |
-| Giám sát | Nguồn xác thực, mẫu lưu DB, freshness, ngưỡng, alert episode, sự cố liên kết, camera metadata/audit; thiếu nguồn không hiện số đo giả. |
-| Báo cáo | Tổng hợp 7/30 ngày từ actualStartAt/actualEndAt, lịch hủy, sự cố và bảo trì; không suy ra giờ CPU/motor hay occupancy. |
-| AI | MCP read-only có RBAC, tra cứu lịch/nguồn, tóm tắt và ngữ cảnh hội thoại hữu hạn. Provider thật chưa được kiểm chứng. |
-| Tích hợp tùy chọn | Guest OTP, pricing/VNPAY và media; NCB Sandbox local đã kiểm chứng, production và các provider khác cần xác minh riêng. |
+| Vai trò | ADMIN, LAB_STAFF, CUSTOMER theo ADR-033; staff theo LAB cho vận hành, global CUSTOMER-only cho account APIs theo ADR-034. |
+| Tài khoản | Đăng ký email/password; contact khi booking. OTP đổi mật khẩu theo actor/target/purpose/version, delivered evidence, one-use; authVersion thu hồi phiên cũ. |
+| Tài nguyên | Catalog public an toàn, nhóm phòng/thiết bị/vật tư, hồ sơ/specs/media/guide và lịch/giá thật; ADMIN quản lý tariff, duration, care, fulfillment. |
+| Booking | Bảy status canonical; khoảng [startAt,endAt), chống trùng ở DB. Policy/training/LAB/state/care/duration/pricing kiểm ở backend. NO_SHOW là outcome. |
+| Thanh toán | Miễn phí CONFIRMED ngay. Có phí PENDING_APPROVAL + paymentDueAt cố định creation+15 phút; chỉ IPN hợp lệ trước hạn xác nhận. Expiry hủy/giải phóng slot; late settlement manual_review, không lấy lại slot. Legacy approval không có paymentDueAt. |
+| Nhận/trả | Handover/ROOM owner check-in trong start-30 phút đến trước end; kiểm tra fresh payment/state/care. Owner ROOM return ghi RETURNED + schedulingReleasedAt, giải phóng slot; staff kiểm tra rồi COMPLETE. Không giả inspection hoặc sửa history legacy. |
+| Quyền truy cập phòng | ResourceFulfillment mã hóa AES-GCM với khóa riêng; chỉ owner booking hợp lệ được đọc. Không đưa password vào public/admin projection, AI, audit hoặc notification; chưa có khóa cửa vật lý. |
+| Giao thiết bị | Pickup nội bộ hoặc địa chỉ Việt Nam đầy đủ khi ADMIN bật cho EQUIPMENT/EXPERIMENT_KIT. Snapshot contact/address riêng; chưa có GHN/tracking/quote hãng thật. |
+| Vận hành | Booking CHECKED_OUT, operator đúng LAB, workload/occupancy khai báo và giờ server. Không nhận là cảm biến đo thật. Return dừng phiên; hỏng/bảo trì/inspection giữ quyền nghiệp vụ. |
+| Bảo trì | Chu kỳ ngày/giờ/lượt; warning mặc định 80%, due 100%; due chặn booking/handover. Notices dedupe theo baseline/stage/recipient; job completed và inspection đạt mới reset baseline. |
+| Giám sát | TelemetrySource xác thực, TelemetrySample/freshness, policy/alert episodes, incidents và camera metadata/audit. Không fake số đo, tự đổi physical state hoặc khôi phục simulator đã bị người dùng bác bỏ ngày12/10. |
+| Báo cáo | Tổng hợp 7/30 ngày theo toàn scope, tách lịch dự kiến, actual handover/return, bảo trì và sự cố; không suy ra motor/CPU runtime, điện năng hoặc occupancy đo thực. |
+| Kho/học phần | Ledger, nhóm/hoạt động đã được chấp thuận; giữ hợp đồng và lịch sử, không xóa vì không nằm trên trang chủ. |
+| Hỗ trợ | CUSTOMER → FIFO đúng LAB → staff được phân công → CLOSED; ADMIN đọc/requeue. Chat lưu DB; AI transcript chưa tự copy vào staff history. |
+| Email/loyalty | Email outbox/retry/idempotence, không coi SENT là inbox-confirmed. Loyalty SYSTEM mặc định tắt; tính từ eligible settled VND payments, giữ quote/net/policy version. |
 
-### Vận hành, đặt lịch, bảng giá và chu kỳ — 12/10/2026
+Physical Resource.operationalStatus là authority; availability suy từ status,
+booking, maintenance và policy. Không nới RBAC, giả thành công hoặc sửa applied migrations.
+Ba forward migrations fulfillment/released-maintenance/payment-hold hiện còn
+trong working tree; không được xóa như output. Schema/baseline/history được giữ.
 
-Checkout claude/lrm-redesign-v2, HEAD bd83a97; bảo toàn thay đổi có trước.
-Đã gỡ simulator/preview/panel/brief cũ và hai resource SIM cùng dữ liệu thử.
-Giữ applied migration 00300–00500 bất biến. Lifecycle qua 00600–00800; lượt này
-thêm 00900 (intervalUses, warningPercent, Resource.maxBookingMinutes), 25 migrations.
+## Trợ lý và kết nối ChatGPT hiện hành
 
-Booking mới qua conflict/maintenance/training/policy/state/duration checks rồi
-CONFIRMED tự động (approvedAt server, approvedById null). Legacy PENDING_APPROVAL
-và API xử lý vẫn giữ; staff home/booking queue ưu tiên bàn giao. Đã sửa chốt
-bookingState != bookable và lab ngừng phục vụ, không bỏ qua đào tạo/inspection.
-Staff/admin đổi lịch CONFIRMED với lý do + expectedStartAt, giữ duration/fee,
-kiểm tra lại conflicts và eligibility, audit/log/reminders/owner notification.
-Calendar week dùng giờ Việt Nam rõ +07:00; không dùng timezone host. Slots chỉ
-mở trong giờ LAB, phản ánh hard state/maintenance/cycle. API quote + booking
-cùng giới hạn thời lượng resource/LAB; snapshot booking cũ giữ nguyên khi đổi giá.
+Theo ADR-036/039/040: cùng dock và bridge cho ba role; giữ ChatGPT Work,
+không tự thêm API key. OAuth S256, grant/subscription/events, generation/owner,
+authVersion/current role và current assignment kiểm ở backend mọi lượt/history.
+Grant ADMIN cho kết nối không nâng quyền người hỏi. Plugin portable0.1.5;
+cloud LAB Support gần nhất được ghi nhận1.0.1, lần cập nhật tiếp bị từ chối;
+không tuyên bố đã publish hoặc thay OAuth/account khi chỉ sửa source.
 
-Chu kỳ dùng giờ actualStartAt → actualEndAt, phiên còn mượn đến thời điểm đọc;
-lượt = bàn giao đã hoàn trả sau baseline, không đếm requests/đổi workload.
-Mốc 80% gần hạn, 100% đến hạn; tài nguyên đến hạn chặn booking/bàn giao. Notices
-lưu DB một lần/resource/baseline/stage/recipient cho admin và staff đúng LAB;
-transaction giữ resource lock, cảnh báo cũ được đánh dấu đã đọc sau inspection.
-Popup polling 30s trong app; worker kiểm tra 30s, không hứa push tức thì.
-Inspection sau job completed và xử lý hết incident/linh kiện hỏng giữ nguyên.
-Thời gian mượn không phải đo giờ motor/điện năng; UI dùng nhãn giờ sử dụng.
+Fast grammar đọc dữ liệu thật: tài nguyên/slot, lịch ngày/tuần có thời gian rõ,
+kho, báo cáo7/30 ngày và CUSTOMER contacts. Staff calendar/stock/report theo LAB;
+contact theo ADR-034. CUSTOMER chỉ lịch/dữ liệu riêng, không kho/report/contact list.
+Unknown stock ledger là unknown; đếm tổng trước preview; không đoán câu ghép.
+Fast lookup ANSWERED/authenticated_mcp, exact guidance local_guidance, không tạo
+Work event. Câu mở/câu ghép theo receiver và evidence read-only; không fake provider.
 
-configureLocalRentalCatalog.mjs có guard đúng local DB, đã cấu hình 25 resources:
-2.000–250.000 VND/giờ, max 2–12h theo loại; bốn purpose cùng rate. 23 resources
-có chu kỳ ngày/giờ/lượt + warning 80%; vật tư giữ ledger riêng. Giữ baseline,
-booking/payment cũ và trạng thái có chứng cứ. Chỉ ba trạng thái khởi tạo
-EQ-02 CALIBRATION, EQ-03 OFFLINE, MC-02 MAINTENANCE chưa có history/job/incident/
-booking được chuyển AVAILABLE qua status history/audit. Không tự clear lỗi thật.
-Giá/chu kỳ là cấu hình nội bộ do user giao; không tuyên bố giá thị trường/spec hãng.
+4 admission slots; fast30/phút, Work create/cancel6/phút, ingress180/actor;
+event poll500ms, bounded GET recovery3 lần; không tự retry POST/auth/invalid data.
+History fast data là re-read marker, không replay contact như evidence.
+BOOKING/STAFF_SUPPORT chỉ là đề xuất CUSTOMER, nháp có hạn và xác nhận qua API chuẩn.
+Không có business write tool; secret/OTP/room access/address không vào model.
 
-FE: giá ngay trên thẻ, bảng giá riêng 25 resources public và theo nhóm workspace;
-ADMIN sửa giá+duration qua transaction, có UI tại quản lý tài nguyên/payments.
-Details chỉ hiện mục được hover/focus/click; metadata/guide/credits/care controls
-mở theo nhu cầu. Bỏ boilerplate demo khỏi màn khách; provenance vẫn giữ DB/docs.
-Maintenance page có tổng gần hạn/đến hạn và danh sách chu kỳ mở khi chọn; không
-đưa cấu hình dài ra mặc định. Monitoring hiển thị tiến độ giờ/lượt và facts ngắn.
+Enter hiển thị tin ngay, xóa composer cho draft tiếp; ShiftEnter/IME và cuộn giữ đúng.
+Chatbot có VI/EN riêng trên shared catalog; đổi locale toàn app đồng bộ vào dock.
+Giữ draft/history/error/cancel/retry và nút về tài nguyên/lịch. Không phô provider metadata.
 
-Kiểm chứng: backend required 89 tests + lint; integration PostgreSQL riêng
-12/12 (auth/scope, concurrent start/booking, lifecycle, cycles/notices/dedupe,
-tariff/snapshot/limit, VN calendar, scoped move/stale/conflict); frontend required
-20 tests + lint/typecheck/build, VI/EN 3095 keys, hai warnings cũ. ERD check đạt.
-Browser: hover đúng panel, giá 30k máy hiện sóng, VI/EN; bảng giá public đủ 25,
-GPU 180k/giờ max2h; details/table/maintenance 390px không overflow. Staff xem
-23 chu kỳ. Customer UI đặt camera 13/10 10–11h nhận CONFIRMED, fee25k;
-504647ab-8bc1-46c5-965b-502ed1c43ffa đã CANCELLED sau QA bằng owner API. Lịch/
-charge/notifications/audit giữ chứng cứ, không fake paid. DB hiện 25 resources,
-4 bookings, 2 payments (thêm đúng lượt QA/charge, ba booking cũ giữ nguyên).
+## Bằng chứng trước lượt dọn và giới hạn
 
-Lượt làm rõ toàn hệ thống: resource/calendar/AI đều chiếu requiresApproval=false;
-AI kiểm tra chu kỳ và giới hạn thuê, không gợi ý slot cho tài nguyên đến hạn.
-Sửa availability chỉ tính booking/maintenance giao với khoảng truy vấn, thay vì
-khóa danh mục vì có lịch tương lai. LAB inactive chặn cả catalogue/calendar.
-Home student/lecturer, queue staff và progress ưu tiên xác nhận/bàn giao; bộ lọc
-pending chỉ hiện nếu có bản ghi cũ. HelpDisclosure thu gọn hướng dẫn ở resources,
-payments/checkout, profile, users, notifications, teaching, materials và home;
-thẻ tài nguyên thu gọn specs, booking dossier thu gọn identity/purpose. Lỗi, giá,
-trạng thái và trường bắt buộc vẫn hiện; chi tiết tài nguyên giữ hover/focus/click.
+Các checkpoint 14–15/10 ghi nhận required/backend/frontend và nhiều guarded
+integration/UI suites trên PG16 test riêng: account/OTP/loyalty, bridge scopes,
+hỗ trợ, fulfillment và payment hold. Protocol fixtures không phải bằng chứng
+provider thật. Script và guards còn trong source; hướng dẫn ở SYSTEM_TEST_GUIDE.
 
-Kiểm chứng bổ sung: integration 15/15 (gồm 20 booking cho 5 category × 4 role),
-Batch4 32/32 trên lab_resources_b4_booking_autoconfirm_20261012 ở PG test riêng,
-backend required 89 + lint, frontend required 20 + lint/typecheck/build; VI/EN
-3098 keys. Các assertion approval cũ của Batch4 được cập nhật theo ADR-032;
-không thêm APPROVE giả vào history. Browser: ba home customer/staff/lecturer
-không có bước chờ duyệt mặc định; 9 màn hình chính, Help bàn phím, VI/EN, card
-specs mở/đóng, danh mục student/staff 390px không overflow, không pageerror mới.
-Mọi dữ liệu tạo thêm lượt này nằm ở DB test; local vẫn 25 resources/23 care
-profiles/4 bookings/2 payments. Runtime5173 đã bật lại; backend8000 healthy.
+Bản local tích hợp đã có một giao dịch VNPAY NCB Sandbox được xác minh qua IPN
+và reload, cùng support hai chiều/đóng phiên và Work replies thực. Đây là bằng
+chứng lịch sử có giới hạn, không chứng nhận payment hold mới với ngân hàng thật,
+VNPAY production/QR/refund, mọi role/UI hoặc chất lượng mọi câu trả lời.
+Work từng mất khoảng33–106 giây; fast lookup từng124–215ms trong lượt đo riêng,
+không là SLA hoặc kết quả đo mới. Provider-dependent questions vẫn có thể chậm/hết quota.
 
-Giới hạn: không kiểm thử load lớn hoặc phần cứng; VNPAY/SMTP/provider vẫn cần
-kiểm chứng riêng. Không coi lượt này là whole-system/production PASS; không
-mở batch khác hoặc deploy. Nguồn/tests/schema hiện hành là hợp đồng kế tiếp.
+SMTP inbox/OTP ngoài máy, physical telemetry/camera/door lock, S3, GHN,
+Firefox/Safari/load/production chưa được xác minh đầy đủ. Guest recovery,
+transcript handoff và chính sách retention cần task riêng. Không tự mở backlog.
 
-## UI/source và bằng chứng cần giữ
+## Dọn và kiểm tra ngày16/10/2026
 
-Source đã có các màn public/auth, bốn role home, resources/detail/selection,
-calendar/booking, queue/dossier, maintenance/incidents, materials/teaching,
-users/profile/notifications và các nhánh monitoring/payments tùy điều kiện.
-Các màn/locale/route/shared shell đã thay đổi nhiều trong working tree; các
-chỉ thị palette, sidebar, composition và thứ tự rollout cũ không còn bắt buộc.
+Đã xóa220 targets/560 files, khoảng24,24 MiB:45 ảnh root, output Playwright,
+logs/browser snapshots, build FE, bản schema/migration/patch tạm và poster.png
+không được gọi. Runtime ảnh/video/provenance và cấu hình vẫn giữ. Hai dump
+rollback trước tích hợp/fulfillment trong backend/logs/unified-local được giữ,
+tổng dưới0,5 MiB; không coi chúng là báo cáo AI.
 
-Selection dùng quote/API từng tài nguyên, không atomic/group success; timeout
-hoặc kết quả không chắc chắn cần kiểm tra booking, không tự thử lại để ghi trùng.
-GET /api/dashboard/trends?period=day|week|month: ADMIN/LAB_STAFF, scope lab từ
-UserLabAssignment. Actual use từ bàn giao/hoàn trả; requests từ createdAt,
-không phải lượt truy cập. Collections chỉ ADMIN, payment bật, VND thành công
-có paidAt và không manual_review; không gọi khoản chờ thu/net revenue là doanh thu.
+Docker: xóa database lab_resources_chatgpt_bridge_test sau khi xác minh không
+kết nối và107 users đều fixture @bridge.test; xóa lrm-support-test + anonymous
+volume. Build cache về0; docker builder prune báo5,081GB reclaimed (dung lượng
+logic Docker, không đồng nghĩa ổ C tăng ngay5GB). Giữ LAB demo và Haneul.
+Không compact/xóa VHDX, shutdown WSL hoặc xóa dữ liệu ngoài dự án.
 
-Bằng chứng gần nhất R4-C (trước lượt dọn tài liệu): frontend test:required;
-backend test:required/lint và năm trends tests pass. Hai lint warnings cũ ở
-ResourceStatusModal/LocaleProvider. Actual API admin/staff và student403;
-16 overview captures (4roles×VI/EN×2laptop), catalogue/detail/selection/form,
-shortlist/title draft và disclosure đã kiểm. QA không submit booking thành công.
-Evidence ngoài Git: C:/Users/Admin/.codex/lab-controller/joint-review-20261009/codex/R4-C-*.
-Đây là bằng chứng cũ theo phạm vi, không chứng minh redesign mới hay mọi màn PASS.
+Đã quét C: theo metadata, không đọc nội dung cá nhân và không xóa ngoài dự án.
+Main checkout khoảng0,66GiB gồm dependencies/Git; AppData, media, installers và
+VM chiếm phần lớn máy. Không coi Zalo/Chrome profiles/Apple backups/Windows là rác.
 
-## Danh mục phòng/thiết bị — 12/10/2026
+Hai CSS không có importer: frontend/src/styles/profile.css và teaching-workspace.css.
+Tổng18.002bytes; lệnh xóa bị kiểm duyệt chặn: blocked by policy. Chúng vẫn còn,
+không thử cách lách. Xóa các thư mục output rỗng cũng bị chặn; không chứa dữ liệu
+đáng kể và được giữ. Không nhầm hai phần còn lại này với560files đã xóa thành công.
+Không tìm thấy module JS/TS backend/src không có importer; không xóa code chỉ vì cũ.
 
-- Local demo hiện có 25 tài nguyên: 6 ROOM, 10 EQUIPMENT, 4 MACHINE,
-  3 EXPERIMENT_KIT, 2 MATERIAL. Thêm 14 bản ghi; bổ sung mô tả/thông số/hướng dẫn
-  mặc định của 11 bản ghi LOCAL DEMO. Không thay tên, lab, trạng thái, booking,
-  giá hay thông số đã chỉnh; không tạo lịch, thanh toán hoặc lịch sử giả.
-- `seedLocalDemo.mjs` gọi `localDemoCatalog.mjs`; chỉ chạy ở
-  `DEMO_MODE=true`, DB local `lab_resources_local_demo`, không có migration mới.
-  Kiểm chứng thực: hash toàn bộ booking/payment/pricing/log/history/sự cố/telemetry
-  giữ nguyên; ID và trạng thái 11 tài nguyên cũ giữ nguyên. Seed lần hai không đổi
-  resource/media/version/updatedAt hoặc dữ liệu nghiệp vụ.
-- Catalog đăng nhập có Phòng / Thiết bị / Vật tư & khác. Nhóm Thiết bị bao gồm
-  EQUIPMENT/MACHINE/EXPERIMENT_KIT; nhóm khác giữ MATERIAL và category chưa xác định.
-  Không suy ra category từ subtype. Lưới 3 cột ở desktop, 2 ở tablet, 1 ở mobile.
-  `catalogueGroup` lưu vào URL khi đổi nhóm, giữ qua reload/detail/back/selection.
-- Hồ sơ có nhận diện, sức chứa/số lượng, thông số JSON lồng nhau và phụ kiện,
-  hướng dẫn/chính sách, giá theo purpose từ API và lịch thật. Giá lỗi hiển thị
-  lỗi/retry; không biến thành miễn phí. Quote/booking vẫn do backend tính.
-  History vẫn tải theo yêu cầu và quyền hiện hành. Public/admin modal dùng cùng
-  renderer thông số; LOCAL DEMO và hướng dẫn minh họa có nhãn rõ.
-- Kiểm chứng: frontend required 20 tests + i18n/lint/typecheck/build; backend
-  required 86 tests + lint; catalogue browser fixtures 30 assertions (375/768/
-  1108/1440, nhóm/bộ lọc/back/VI-EN/pricing failure/history403). Actual browser/API
-  local student đọc 25 mẫu, nhóm 6/17/2, hồ sơ và giá ROOM-01 50.000đ/giờ.
-  Dossier fixtures 23 assertions pass, gồm public media/guide, giữ draft VI/EN,
-  sửa hướng dẫn giữ specs, mở/đóng modal; cập nhật locator cho shell/route hiện hành.
-  Không chứng minh toàn UI, thanh toán VNPAY hay thiết bị thật đã hoạt động.
-- Ảnh cũ là minh họa ngoài hệ thống, có nguồn trong gallery; tài nguyên mới chưa
-  có ảnh thực tế nên dùng biểu tượng. List API hiện giới hạn 250, chưa thêm phân trang.
+Verification đợt này: backend required110/110, lint, ERD PASS. Frontend38 tests
+routes/auth/accounts/payment/bridge PASS; i18n catalog3376 parity/integrity PASS,
+source audit FAIL vì CustomerHome dùng ui.home.* chưa có trong catalog. Thêm9
+API/locale tests PASS, tổng47 frontend tests đã chạy. Lint PASS với2 warnings
+cũ, typecheck và Vite production build PASS (write=false, không tạo lại dist).
+Các thay đổi UI có trước vẫn được giữ; không nới audit hoặc nhận toàn gate PASS.
+Không chạy DB/browser mutation, provider live hay seed vào demo trong lượt dọn.
 
-## Giới hạn đã biết
+## Rà UI theo role ngày 17/10/2026
 
-- Toàn bộ UI chưa đạt mong muốn người dùng; cần actual browser/flow verification
-  khi Claude thực hiện redesign. Populated queues/events và mobile chưa đủ coverage.
-- Payments mặc định tắt; phiên local bật theo yêu cầu đã kiểm chứng thành công
-  NCB Sandbox ngày13/10 (checkpoint bên dưới). Provider AI, SMTP gửi thật,
-  VNPAY production/phương thức khác, object storage và phần cứng/camera thật
-  còn cần xác minh riêng.
-- Vận hành ảo dùng workload/occupancy khai báo và thời gian server. Chưa có đo
-  cảm biến vật lý; không suy ra sức khỏe máy, nhiệt độ hoặc hiệu suất năng lượng.
-- JWT revocation/rotation và guest setup recovery còn cần thiết kế/kiểm chứng;
-  kiểm tra hợp đồng/source trước khi thay đổi. Không tự mở các mục backlog.
+Theo phản hồi tiếp theo của user, mọi role dùng chung tím #6441D9, lavender
+và nền kem #FFF9EE đồng bộ landing; bỏ phân màu xanh/xám theo role. Rail và
+trang đầu vẫn ưu tiên tác vụ riêng của từng role. Menu tài khoản có header
+lavender, avatar tím, icon nhất quán, hàng thao tác 44px và bỏ divider lặp.
+Sửa tương phản
+hover, nhãn thông báo Mới bị ép chiều rộng, viền focus lồng ở tìm kiếm, khung
+chi tiết staff bị co thành cột và thẻ hồ sơ tài khoản lồng nhau. Trang khách
+phân biệt giữ chỗ chờ thanh toán với duyệt legacy và dùng bộ lọc lịch hợp lệ.
+Trang admin không diễn giải thiếu dữ liệu sự cố thành không có sự cố.
+Khôi phục nút sửa liên hệ/hỗ trợ mật khẩu CUSTOMER cho staff theo ADR-034;
+backend authorization và OTP không đổi. Sửa các khóa dịch home nằm ngoài messages.
 
-## Kết nối VNPAY Sandbox local — cập nhật 13/10/2026
+Frontend test:required PASS: 47 tests, i18n source/parity/integrity, lint,
+typecheck và production build; còn hai lint warnings đã biết ở ResourceStatusModal
+và LocaleProvider. Typecheck chạy lại sau sửa quyền hiển thị PASS; diff check PASS.
+test_ui_contrast.mjs (npm run test:ui:contrast) chạy Chrome local, chặn mọi business
+write: 92 lượt route qua ba role, VI/EN desktop và VI mobile, không phát hiện
+lỗi tương phản nền đặc/tràn ngang/runtime trong phạm vi đã quét. Chạy riêng
+từng role hoàn tất sau một lượt tổng bị timeout chờ shell. Kiểm tra bổ sung
+form sửa liên hệ staff mobile PASS; 12 lượt public desktop/mobile đã quét PASS.
+Lượt bổ sung form admin mobile bị rate-limit đăng nhập HTTP 429, chưa xác minh
+riêng form này; không thay đổi hoặc bỏ qua giới hạn đăng nhập để chạy test.
+Đây không phải chứng nhận WCAG hoặc kiểm tra mọi trạng thái/modal; chữ trên
+ảnh/gradient cần xem trực quan. Không seed hay thay đổi dữ liệu nghiệp vụ.
 
-Checkout C:/Projects/lab-resource-manager, claude/lrm-redesign-v2, HEAD bd83a97;
-giữ thay đổi có trước. Phạm vi: nạp cấu hình merchant mới và kiểm thử thanh toán
-local thật trên Sandbox; chưa deploy. Backend8000/DB lab_resources_local_demo,
-frontend5173 bật bằng --payments. Credentials nằm trong backend/.env gitignored.
+Sau điều chỉnh trở lại tone landing: typecheck/build/lint PASS (hai warnings
+cũ); menu tài khoản staff mobile kiểm tra trực quan và contrast PASS. Quét lại
+72 lượt route CUSTOMER/STAFF VI/EN/mobile và ADMIN VI desktop không có finding
+trước khi timeout shell ở ADMIN EN; không ghi nhận toàn bộ lượt chạy này PASS.
 
-Terminal hiện tại 3G9D8W0K đã được nạp lại vào Docker. Ngrok HTTPS
-projector-blaspheme-angelfish.ngrok-free.dev forward8000; Return
-/api/payments/vnpay/return, IPN /api/payments/vnpay/ipn. Merchant mới đã lưu và
-mở lại kiểm tra IPN/GET/HMACSHA512. Đường dẫn cấu hình: tên tài khoản → Thông tin
-tài khoản → dòng Terminal → bút sửa. Biến môi trường không tự đăng ký callback.
+Rà căn chỉnh nhãn: sửa Grid catalog kéo giãn badge Sẵn sàng thành hình oval,
+giữ hàng nội dung theo kích thước tự nhiên và CTA cao tối thiểu 44px. Chuẩn hóa
+căn giữa/chiều cao theo nội dung cho badge, status-badge, resource-status-pill,
+status-badge-inline, booking-status-chip; icon trong nút/nhãn không bị co.
+Thêm regression đo chiều cao và tâm chữ badge catalog ở VI/EN desktop/mobile.
+Build PASS; 22 lượt CUSTOMER và 10 lượt STAFF/ADMIN mobile PASS, không finding
+tương phản/tràn ngang/runtime trong các trạng thái quét. Không coi đây là
+xác minh mọi trạng thái trên toàn hệ thống.
 
-Lượt ép VNPAYQR bị cổng từ chối mã76 (trace PJYGIVdFji, 13:16:42 giờ Việt Nam).
-Thêm VNPAY_BANK_CODE: không khai báo giữ QR; khai báo rỗng bỏ bankCode để khách
-chọn phương thức merchant hỗ trợ. Local hiện dùng rỗng. Backend ký đúng code
-được cấu hình; guard FE giữ HTTPS/domain và từ chối bankCode trùng/sai định dạng.
-UI dùng nhãn VNPAY; .env examples/production Compose giữ được giá trị rỗng.
-Không thay thuật toán HMAC hoặc dùng QueryDr/Return để settle.
+## Tiếp quản UI và phục hồi hành trình thanh toán ngày17/10/2026
 
-Luồng thật qua UI CUSTOMER: booking720a720e-e2cb-4d67-9b95-ea600d1704ea,
-LOCAL-ROOM-03, 14/10/2026 10:00–11:00, SERVICE 90.000đ, tự CONFIRMED. Khách mở
-VNPAY, chọn NCB, dùng thẻ/OTP Sandbox công khai từ tài liệu VNPAY. Provider trả
-00/00. IPN hợp lệ đã lưu payment8eeeb0de-ed9d-4906-b7d7-4058ccf7ed53,
-txnRef F335328542BFC65B65B4, status success, vnpTransactionNo15702944,
-paidAt2026-10-13T06:33:39Z (13:33:39 giờ Việt Nam), bankNCB/ATM,
-reconciliationStatus none. Booking vẫn CONFIRMED. Return ký hợp lệ hiển thị link
-đúng booking; bấm link về checkout và làm mới vẫn hiện đã xác minh90.000đ.
-Ngrok Free có trang Visit Site lần đầu trên trình duyệt; IPN server đã đến LAB.
-Không giả callback, chỉnh success thủ công hay ghi raw signed URL/secret vào log.
+Theo yêu cầu trực tiếp, Codex tiếp tục resource core đang dở và các gap role UI
+trong checkout chính; Claude automation vẫn PAUSED. Docker/backend/PostgreSQL
+đã healthy sau khi human mở từ Windows. Đã sửa lọc ADMIN resource, cấu trúc
+list/detail/form, profile/notifications/incidents/payment theo role; bổ sung
+biên nhận rõ, selection tray và owner access ngay đầu chi tiết lịch. Mã phòng
+lấy từ contactSnapshot.phone theo ADR-041; giữ quyền owner, payment/time/audit.
+Giảm poll và bổ sung cooldown429/Retry-After, không tự retry mutation, giữ draft.
 
-Verification: backend required92/92 +lint; frontend required26/26,
-typecheck/build đạt, hai lint warnings cũ. Thêm4 unit regression về bankCode và
-chữ ký, mở rộng6 tests payment guard; i18n3137 keys đạt. Compose kiểm riêng
-unset/blank/NCB. Metadata gọn gitignored ở backend/logs/vnpay-latest-flow.json;
-log gates ở backend/logs và frontend/logs. Đây là PASS luồng thành công NCB
-Sandbox local, không suy ra mọi phương thức hoặc production đã được xác minh.
+Frontend48 tests + lint/typecheck/build và backend116 tests + lint PASS; còn hai
+warnings frontend cũ. Runtime read-only CUSTOMER VI desktop/EN mobile xác nhận
+paid receipt/no-repay/phone snapshot/selection; ADMIN và STAFF VI desktop/EN
+mobile xác nhận resource detail/edit và filter. Fault-injection429 xác nhận dừng
+request, retry chủ động và giữ draft. Không seed, migration hay business writes
+trên DB chính; chưa chạy lại fulfillment DB integration và chưa có khóa cửa thật.
+Không coi là whole-system PASS. Chi tiết/evidence/giới hạn:
+[UI_RESUME_20261017.md](UI_RESUME_20261017.md).
 
-IPN enqueue đúng một PAYMENT_RECEIPT. Email còn PENDING, attempts0,
-SMTP_NOT_CONFIGURED, chưa gửi thật. Chưa chạy luồng hủy/thất bại/duplicate IPN
-thật hoặc production/QueryDr/refund tự động trong lượt này. Tunnel phải tiếp tục
-chạy để callback local tới được LAB; muốn QR cần VNPAY bật phương thức cho
-merchant. Khi deploy thay Return/IPN/PAYMENT_APP_URL, đăng ký lại IPN và thử lại;
-domain chính thức không tự biến Sandbox thành production. Dừng ở batch thanh toán.
+## Robot nổi và workspace hỗ trợ ngày17/10/2026
 
-Lịch sử chẩn đoán: Terminal cũ TV6PYXRB từng trả70/Sai chữ ký (trace QyLdVKnK4s),
-QueryDr trả97. Test call IPN merchant có hash9 ký tự chỉ chứng minh routing.
-Khoản thử cũ không bị sửa thành success. Merchant mới đã vượt qua lỗi chữ ký và
-hoàn tất luồng nói trên; không kết luận key cũ bị VNPAY thay đổi.
+Theo yêu cầu user, chuyển AssistantLauncher từ header ra góc phải dưới shell;
+dùng RobotMascot SVG dùng chung (robot toàn thân, pose chào, cùng tone tím).
+Panel nonmodal mở phía trên mascot, giữ Esc/focus return, bản nháp và LocaleScope;
+ẩn launcher khi navigation/password modal mở. Tránh selection tray ở375/1024/1440.
+Không sửa provider, API, RBAC, handoff hay quyền ghi.
 
-## Chat hỗ trợ người dùng → staff → admin — 12/10/2026
+Support CUSTOMER chia Yêu cầu mới/Phiên của tôi; form gọn trong sidebar cạnh
+conversation, robot hướng dẫn mở trợ lý. Giữ draft khi chuyển mục; deep link
+mobile đưa vào session đã chọn. STAFF/ADMIN giữ queue, presence và xử lý theo
+phân quyền cũ. Bỏ chi tiết thời gian polling khỏi câu hướng dẫn UI.
 
-Checkout C:/Projects/lab-resource-manager, claude/lrm-redesign-v2, HEAD bd83a97;
-giữ thay đổi có trước và checkpoint VNPAY. User yêu cầu bản đầu chat thật cho
-người đã đăng nhập, tự trỏ staff rảnh, nhiều staff đồng thời, hàng đợi #1/#2
-và admin xem lịch sử. Không triển khai upgrade/provider/deploy tiếp theo.
+Frontend test:required48 tests, i18n3592 keys, lint/typecheck/build PASS (hai warning
+cũ). Runtime read-only6 cấu hình: CUSTOMER/STAFF/ADMIN VI1440 và EN375 xác nhận
+vị trí, panel trong viewport, bàn phím và giữ draft; không page errors. Test chặn
+hai heartbeat presence POST của staff, không coi là kiểm chứng mutation/presence
+thật. Collision test375/1024/1440 PASS; đã xem screenshots desktop/mobile.
+Evidence: C:/Users/Admin/.codex/lab-controller/assistant-mascot-20261017/;
+gates ở ../assistant-mascot-20261017-gates.log. Không business writes trên DB demo.
 
-Đã thêm SupportSession/Message/Presence và migration forward
-20261012000100_support_chat. Partial unique indexes: một request mở/customer,
-một ACTIVE/staff trên toàn bộ LAB. Dispatch FIFO theo lab hợp lệ, current
-UserLabAssignment và heartbeat; gửi/kết thúc có transaction/row locks và
-retry UUID. Staff bật sẵn sàng, nhập kết quả khi kết thúc; mẫu trả lời chỉ
-chèn bản nháp. Admin đọc lịch sử/handling events và requeue kèm lý do.
+## Header, nhãn mascot và chẩn đoán kết nối ngày17/10/2026
 
-Backend support routes/service, server-owned assistant display handoff; frontend
-SupportPage/supportApi, route/sidebar/AI handoff, locale VI/EN đã nối. Truy cập
-/workspace/support hoặc nút Chat với nhân viên hỗ trợ trong trợ lý. Khách chọn
-LAB, mô tả vấn đề và quyết định chia sẻ ngữ cảnh trợ lý. Tin nhắn lưu PostgreSQL,
-không giả trạng thái booking/payment hoặc cấp quyền qua browser.
+Header thêm tìm nhanh tài nguyên và lối tắt CUSTOMER→lịch đặt,
+LAB_STAFF→vận hành, ADMIN→tài khoản. Giữ guard quyền/password setup của App;
+thu gọn khi thiếu chiều rộng. Mascot chỉ hiện nhãn khi hover/focus-visible.
+Tìm tự do mặc định nhóm Tất cả để kết quả phòng không bị nhóm Thiết bị che;
+giữ nhóm cụ thể khi người dùng chọn, lưu ALL trong browse context.
 
-Verification: Prisma validate/generate, backend required/lint, frontend required
-(routes/auth/i18n/lint/typecheck/build), ERD generate/check đạt; giữ hai warnings
-frontend cũ. Chín integration tests qua Express/PostgreSQL thật kiểm hai agent,
-FIFO/position, concurrency/multi-lab capacity, RBAC/revocation, durable messages,
-pagination, stale presence/requeue, AI handoff privacy, DB constraints và rate
-limits riêng cho polling. Browser
-20 assertions đạt với bảy session độc lập: AI→human consent, chat hai chiều,
-mẫu draft, admin history, completion→next FIFO, reload, XSS text, network recovery,
-draft/locale, VI/EN ở 1440/375px và admin requeue phản ánh đúng màn staff/khách.
-Harness forward request tới Express/Prisma thật
-trên DB lab_resources_support_test; không mock response thành công. Migration
-safety matrix 14 cases đạt trên DB support_migration_test tách biệt.
-CI đã thêm job support-chat để chạy hai suite này; chưa dispatch GitHub Actions.
+Trợ lý kiểm tra trạng thái một lần mỗi lần mở hoặc bấm Kiểm tra trạng thái;
+cache danh sách tài nguyên trong vòng đời widget, không thêm polling/retry ghi.
+Hiển thị rõ tra cứu LAB sẵn sàng/câu hỏi mở ngoại tuyến, link quản lý cho ADMIN.
+BRIDGE_UNAVAILABLE trong lúc gửi chuyển trạng thái offline, giữ câu hỏi lỗi,
+không tự chuyển provider hoặc gửi lại. Trang kết nối chỉ cách tiếp tục bộ nhận
+Work Cloud hiện có, không coi refresh là khởi động lại consumer.
 
-Shared Docker local được rebuild qua launcher chính thức với --payments;
-volume lab_resources_local_demo giữ nguyên, forward migration áp dụng và
-readiness đạt. Không reset/shared-seed chat thử trong DB nghiệp vụ. API/UI
-local vẫn 8000/5173. Test container lrm-support-test dùng PG16/25439, chỉ DB test;
-log/screenshot ngoài Git nằm trong backend/logs/support-*.
-Shared API/UI smoke qua tài khoản staff thật đạt: LAB assignment, màn hỗ trợ,
-hàng đợi trống, không lỗi trình duyệt. Không chèn phiên hỗ trợ thử vào DB chung.
-Đã dừng riêng container test sau kiểm thử (docker start lrm-support-test để
-chạy lại); backend/database local chung vẫn healthy, frontend5173 tiếp tục chạy.
+Runtime thật: health backend và ngrok HTTPS200, grant ADMIN còn hạn tới13/11;
+subscription duy nhất đã expiresAt=2026-10-16T07:36:38.693Z (14:36 UTC+7),
+subscriptionCount=0, connected=false. Hai câu local trả200, nguồn local_guidance
+và authenticated_mcp; không phải bằng chứng ChatGPT đã hồi phục. Không sửa TTL,
+grant, token, provider, RBAC hoặc dữ liệu nghiệp vụ.
 
-Giới hạn bản đầu: polling 2 giây, heartbeat 15 giây, presence TTL45 giây;
-giữ trang staff mở. Phiên ACTIVE mất kết nối vẫn giữ handler, admin có thể
-requeue; chưa tự chuyển phiên dở, read receipts, attachments hoặc WebSocket.
-Trợ lý/provider giữ chế độ cấu hình hiện có, chưa kiểm chứng AI provider thật.
-Checkpoint chat không giải quyết mã70 VNPAY; merchant mới đã được kiểm chứng
-riêng trong checkpoint thanh toán13/10. Dừng ở feature chat.
+User yêu cầu mở ChatGPT để tiếp tục phiên hỗ trợ. Cua fresh inventory trả
+"Local browser use is disabled in Work settings"; không có tab truy cập được.
+Đã báo user cần bật quyền trình duyệt; chưa mở/tiếp tục phiên Work Cloud,
+chưa đăng ký lại receiver, chưa xác nhận trả lời ChatGPT end-to-end.
 
-## Email đăng ký và thanh toán tự động — 12/10/2026
+Frontend test:required48 tests, i18n3606 keys, lint/typecheck/build PASS (hai warning
+cũ). Browser read-only6 cấu hình3 role VI1440/EN375, thêm viewport768–1920 và
+menu ghim: header không overlap/overflow, tìm mã phòng hiển thị card thật,
+hover/focus, draft, cache resources và fresh status PASS, không page errors.
+Fault fixtures riêng xác nhận offline→online khi mở lại, lỗi status giữ draft,
+send thất bại không tự retry/provider switch; không phải provider QA thật.
+Evidence C:/Users/Admin/.codex/lab-controller/assistant-header-20261017/
+(results.json, edge-results.json, screenshots); scripts/log nằm cùng thư mục cha.
+Next: sau khi user bật browser, mở đúng phiên Work Cloud Tiếp nhận hỗ trợ LAB,
+tiếp tục consumer hiện có, kiểm subscription mới/connected và một câu trả lời thật.
+Điều phối Claude vẫn paused; không tạo thêm task/automation/consumer.
 
-User yêu cầu gửi mail khi đăng ký thành công và thanh toán lịch sử dụng thiết
-bị thành công. Đã thêm EmailDelivery, migration forward
-20261012000200_email_deliveries, transaction enqueue tại public registration,
-new guest account sau OTP và verified VNPAY success IPN. Snapshot không chứa
-password/hash/OTP/token. Thư welcome hướng dẫn mật khẩu đã chọn/setup; biên
-nhận có mã lịch, thiết bị/LAB, giờ UTC+7, số tiền và mã giao dịch. Return,
-callback sai/thất bại, account reuse không tạo thêm thư. Lịch đã hủy giữ nguyên
-và thư báo đối soát. Không backfill tài khoản hoặc khoản thanh toán cũ.
+### Đã khôi phục bộ nhận ChatGPT chiều17/10/2026
 
-Worker riêng mỗi 10 giây, SMTP sau commit; dedupeKey, SKIP LOCKED và lease token
-điều phối concurrent workers. Thiếu cấu hình giữ PENDING không tăng attempts;
-lỗi gửi thử lại tối đa 5 lần rồi FAILED, CLI email:retry hỗ trợ operator sau
-khi kiểm tra nguyên nhân. Đã loại Ethereal/console fake-success. CLI email:check
-đọc config flags, verify SMTP không gửi thư và queue summary/failed IDs, không
-echo credential/nội dung mail. Registration VI/EN theo request; receipt mặc
-định VI. Không thêm giao diện quản trị mail hoặc password recovery mới.
+Browser đã truy cập được sau khi user mở lại ứng dụng. Đúng cuộc trò chuyện
+Đăng ký bộ nhận LAB tại /c/6acf0345-2a64-83ec-9797-bc8d0211dbc3 có luồng
+Tiếp nhận hỗ trợ LAB. UI đang Monitoring nhưng backend connected=false,
+subscriptionCount=0; tạm Pause rồi Resume chính luồng hiện có đã đăng ký lại
+receiver: connected=true, đúng1 subscription còn hiệu lực. Không đổi prompt,
+OAuth grant, quyền, provider hoặc tạo thêm task/consumer. Claude vẫn paused.
 
-Verification: 10 integration cases đạt trên PG16 lab_resources_email_test với
-Express/Prisma và SMTP loopback thật: welcome/escaping/no password, thiếu SMTP,
-backoff/5 failures, concurrent worker/lease recovery, atomic rollback account
-và payment, verified/duplicate IPN, Return, invalid/failed callbacks, cancelled
-late success, guest OTP/new account/reuse. Backend required 86 tests + lint,
-frontend required (20 tests, i18n/lint/typecheck/build; hai warnings cũ), Prisma
-generate và ERD generate/check đạt. Migration safety matrix 14 cases đạt trên
-email_migration_test riêng. Production configuration check đạt sau tách fixture
-khỏi key VNPAY trong .env; production Compose config đạt. CI thêm suite email
-vào fresh-database job; chưa dispatch GitHub Actions.
+Một câu hỏi CUSTOMER demo về ghi chép kết quả thí nghiệm đi thật qua webhook
+và ChatGPT, trả ANSWERED/provider=chatgpt/source=chatgpt_bridge sau65giây.
+Hội thoại ChatGPT xác nhận publish ANSWERED. Website LAB đăng nhập CUSTOMER,
+mở widget và xác nhận không còn thông báo câu hỏi mở ngoại tuyến. Chỉ kiểm
+chứng một câu VI, không khẳng định mọi role/locale hoặc độ ổn định dài hạn.
+Không tạo booking/support session hoặc business writes; có1 assistant request QA.
 
-Shared local backend đã rebuild bằng launcher --payments, apply forward
-migration, readiness đạt. Giữ volume lab_resources_local_demo, không tạo
-account/thanh toán/email thử trong DB chung. backend/.env đã thêm sẵn SMTP
-fields trống và EMAIL_APP_URL=http://localhost:5173. Kiểm tra runtime:
-automationEnabled=true, smtpConfigured=false, queue trống. User xác nhận chưa
-có nhà cung cấp/tài khoản SMTP; chưa gửi/xác minh inbox thật. SMTP SENT chỉ
-chứng minh server nhận thư; crash sau acceptance trước DB write vẫn có thể
-gửi lại, Message-ID ổn định không bảo đảm exactly-once. Lượt thanh toán13/10
-đã enqueue một biên nhận từ IPN thật; thư PENDING/SMTP_NOT_CONFIGURED, chưa gửi.
-Hướng dẫn bật SMTP nằm trong README; dừng ở feature email.
-
-## Dọn tài liệu và skill — 10/10/2026
-
-Đã gỡ skill LAB thiết kế tự viết .claude/skills/lab-product-redesign, tài liệu
-DESIGN trùng chỉ đạo, brief/spec/controller/rules mỹ thuật cũ và output tạm.
-Giữ skill GitHub đã cài, tim-dung-file, lab-task/lab-handoff/lab-preflight và
-quy tắc nghiệp vụ. Skill không liên quan LAB chuyển sang gọi thủ công trong
-project; không sửa nội dung skill GitHub, provider/model hoặc permissions.
-Rút lịch sử UI khỏi checkpoint và guideline; giữ contract, giới hạn và chỉ dẫn
-token. Nguồn giảng viên, SRS, ERD, security, runbooks, source/tests/assets/DB giữ nguyên.
-
-Backup có hash trước lượt này:
-C:/Users/Admin/.codex/lab-controller/archive-custom-design-20261010-131325.
-Backup lượt dọn467file trước:
-C:/Users/Admin/.codex/lab-controller/archive-free-design-20261010-130641.
-Prompt chờ người dùng gửi:
-C:/Users/Admin/.codex/lab-controller/claude-autonomous-redesign-prompt.txt.
-Lượt này chỉ sửa tài liệu/config/helper preflight, không sửa ứng dụng. Backup/hash
-đạt;389file skill cá nhân không đổi; JSON/link/tham chiếu/diff đạt. Node syntax
-check và preflight exit0, UI/API HTTP200/database ready. Đây không phải UI/E2E PASS.
+Evidence bổ sung cùng assistant-header-20261017/: bridge-recovery-e2e.json,
+chatgpt-receiver-recovered.png, browser-access-diagnostic.json (đã đánh dấu resolved).
+Giữ Docker/ngrok và luồng Monitoring. Gia hạn TTL tự động trong tương lai chưa
+được xác minh; không thay TTL hoặc cấu hình bảo mật để làm trạng thái xanh.

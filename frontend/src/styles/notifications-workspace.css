@@ -42,3 +42,8 @@
 .notifications-workspace :is(input,button,a):focus-visible,.inbox-detail:focus-visible { outline:2px solid var(--workspace-accent,#7258c7); outline-offset:3px; }
 @media(max-width:900px) { .inbox-layout { grid-template-columns:1fr; gap:24px; } }
 @media(max-width:600px) { .inbox-heading { flex-direction:column; gap:16px; } .inbox-heading>.inbox-actions { width:100%; } .inbox-actions>.btn { flex:1; } .inbox-detail { padding:24px 16px; } .inbox-row { padding:18px 16px; } }
+@media(min-width:901px) {
+ .notifications-workspace[data-role="CUSTOMER"] .inbox-layout { grid-template-columns:minmax(0,1.35fr) minmax(280px,.75fr); }
+ .notifications-workspace[data-role="LAB_STAFF"] .inbox-layout { grid-template-columns:minmax(300px,.75fr) minmax(0,1.25fr); }
+ .notifications-workspace[data-role="ADMIN"] .inbox-row { padding:14px 18px; }
+}

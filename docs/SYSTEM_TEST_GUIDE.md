@@ -1,19 +1,49 @@
 # Hướng dẫn kiểm thử toàn hệ thống LAB
 
-Cập nhật 14/10/2026. Giờ Việt Nam (UTC+7). Đây là quy trình kiểm thử và tiêu chí
+Cập nhật 19/10/2026. Giờ Việt Nam (UTC+7). Đây là quy trình kiểm thử và tiêu chí
 đạt; một dòng trong hướng dẫn không đồng nghĩa chức năng đó đã được chạy PASS.
 Kết quả thực tế và vướng mắc được duy trì trong [CURRENT_STATE](CURRENT_STATE.md).
+
+Rà logic vận hành: `npm run test:release:integration -- operational-audit` dùng
+runner PostgreSQL16 riêng tại port25439. Suite tự guard tên DB
+`lab_resources_operational_audit_test` và từ chối dữ liệu tài khoản ngoài fixture.
+Không chạy vào DB demo. Các ca: LAB đóng khi đổi giờ; quyền/assignment đổi khi
+đang chờ khóa; staff gọi create trực tiếp ngoài LAB; phòng trả sớm giải phóng
+lịch trong hồ sơ; ngày không hợp lệ trả400; hold hết hạn khi worker dừng; filter
+slot ngoài giờ mở cửa; bảo trì thiếu1ms; khách không đọc notes/job nội bộ;
+actual custody quá hạn ngoài kỳ kế hoạch; đếm137 thông báo chưa đọc không bị
+cap100. Xem mã và assertions ở `backend/test/operationalAudit.integration.test.js`.
+`frontend/test_security_seo.mjs` kiểm cache workspace khi đổi account/role/version
+và read cũ đến muộn. Browser cần xác minh riêng: đổi tài khoản khi đang ở workspace,
+không thấy notification/modal/job cũ trước khi dữ liệu của người mới tải xong.
+
+Giữ chỗ thanh toán (ADR-038, 15/10): chuẩn bị PostgreSQL 16 local riêng, đặt
+PAYMENT_HOLD_TEST_DATABASE_URL trỏ đúng `lab_resources_payment_hold_test` trên
+localhost/127.0.0.1; không dùng DB demo. Trong backend, đặt DATABASE_URL cùng
+URL test rồi chạy `npm run db:migrate`, `npm run db:generate` và
+`npm run test:payment-hold`. Với frontend5173 đang chạy có bật payments, chạy
+`npm run test:ui:payment-hold` ở frontend. UI test khởi tạo API thật riêng và
+chuyển toàn bộ /api sang DB test, không ghi nghiệp vụ vào API8000.
+
+Các ca phải giữ: phòng/thiết bị có phí chờ trả tiền, checkout mở ngay, hạn cố
+định không gia hạn khi reload/retry, miễn phí xác nhận ngay, worker chạy cả khi
+đóng trình duyệt, expiry chính xác và idempotent, hai khách đặt lại chỉ một
+thành công, callback muộn đối soát không lấy lại slot, account lock vẫn chặn
+credential change. UI VI desktop/EN mobile kiểm countdown, mở URL VNPAY đã ký,
+badge/queue và lịch tự tải lại lúc hết hạn. Test rút ngắn hạn chỉ trên DB riêng;
+chữ ký/provider-destination fixture không chứng minh giao dịch ngân hàng thật.
 
 Kết quả đã xác minh trong lượt 14/10:
 
 | Phạm vi | Kết quả | Giới hạn |
 |---|---|---|
 | Bản chính đã tích hợp | Backend required107, frontend required43, lint/typecheck/build/ERD PASS | Chưa chứng nhận mọi màn hình/load/hardware |
-| DB integration | Accounts12, loyalty11, bridge21, support9 PASS | PostgreSQL test riêng; protocol fixture không là model thật |
+| DB integration | Accounts12, loyalty11, bridge21, support10, fulfillment13 PASS | PostgreSQL test riêng; protocol fixture không là model thật |
 | Ba role trên API chính | 10 kiểm tra read/RBAC/loyalty/connection PASS | Không suy mọi mutation account đã chạy trên DB chính |
 | GPT thật trên bản chính | Tra lịch/giá, BOOKING draft và đọc khoản VNPAY vừa success | Có độ trễ/quota; bộ21 model trước đó thuộc review |
 | Đặt lịch → NCB Sandbox | Form xác nhận tạo CONFIRMED80.000đ; IPN thật ghi success, reload UI đúng | Chỉ NCB success; QR/production/refund chưa xác minh |
-| Chuyển hỗ trợ | Trên bản chính: cùng dock WAITING#1 → ACTIVE → chat hai chiều → CLOSED, admin history. Suite UI22 chạy lại PASS | Suite nhiều staff/FIFO dùng DB riêng; không chứng minh tải production |
+| Chuyển hỗ trợ | Trên bản chính: cùng dock WAITING#1 → ACTIVE → chat hai chiều → CLOSED, admin history. Suite UI24 PASS | Suite nhiều staff/FIFO dùng DB riêng; không chứng minh tải production |
+| Nhận/trả, biên lai và giao thiết bị | FulfillmentUI13 PASS: room owner check-in/return, staff inspection, thời gian, receipt/mobile/reload, địa chỉ thật từ directory lưu trong test booking | Payment của suite là signed fixture; GHN/khóa cửa chưa kết nối |
 | SMTP | Chưa có nhà cung cấp | Inbox/OTP thật BLOCKED, không giả gửi thành công |
 
 Nên chạy theo thứ tự: đăng ký/đăng nhập → khám phá/đặt lịch CUSTOMER → staff
@@ -75,6 +105,46 @@ SMTP thật chưa có nên gửi mail/OTP ngoài hệ thống vẫn BLOCKED.
 
 ## 2. Chuẩn bị dữ liệu kiểm thử
 
+### Luồng nhận/trả mới — 14/10/2026
+
+1. ADMIN: Phòng & thiết bị → hồ sơ tài nguyên → Bảng giá thuê → **Cấu hình
+   nhận tài nguyên**. Phòng dùng phone trong contactSnapshot của chính booking
+   làm mã truy cập (ADR-041), không nhập mật khẩu dùng chung. Thiết bị/bộ thí
+   nghiệm: bật nhận tại nhà và nhập điểm nhận tại LAB. Giữ khóa mã hóa legacy
+   đã có qua restart; không công khai secret trong form hoặc báo cáo.
+2. CUSTOMER đặt phòng có phí, thanh toán NCB Sandbox. Khi trở về, trang
+   **Biên lai lịch đặt** tự đọc IPN; pending chưa phải paid. Sau success hiển thị
+   thời gian, phí, transaction reference, liên hệ và mã từ phone snapshot.
+   Booking thiếu contact hợp lệ báo lỗi, không fallback sang mật khẩu chung.
+3. Thử trước lịch31 phút: nút Vào phòng chưa được dùng; gọi API cũng409
+   BOOKING_HANDOVER_TOO_EARLY. Trong cửa sổ start−30 phút đến trước end, bấm
+   **Vào phòng**: booking CHECKED_OUT, actualStartAt và vật lý IN_USE lưu thật.
+   Không tự ghi khách đã đến chỉ vì đồng hồ đến giờ.
+4. Bấm **Trả phòng**, khai báo tình trạng và xác nhận đã rời phòng. Được trả
+   sớm hoặc quá giờ sau check-in; RETURNED + schedulingReleasedAt, tài nguyên
+   AVAILABLE nếu không có trạng thái cứng. Khoảng lịch được giải phóng, còn
+   staff có **Hoàn tất kiểm tra** riêng; khách không ghi inspection đạt.
+5. CUSTOMER đặt thiết bị được phép giao tại nhà: chọn cách nhận, tỉnh/thành,
+   phường/xã, số nhà/đường và liên hệ. Giao nội bộ hiện0đ; chưa GHN. STAFF đúng
+   LAB thấy địa chỉ/contact snapshot, kiểm tra và bàn giao trong cửa sổ30 phút;
+   khách không được self-check-in thiết bị. Nhận tại LAB có chỉ dẫn đến điểm nhận.
+6. Lịch đã paid/free có thông báo30 phút trước start và15 phút trước end. Khi
+   khách đang mở tài khoản, popup đọc notification thật mỗi5 giây; đóng bằngX
+   hoặc tự thu gọn sau10 giây, thông báo chưa đọc vẫn ở inbox. Restart không
+   phát lại reminder đã hết hiệu lực/cancelled/unpaid. Trả xong hủy reminder còn chờ.
+7. CUSTOMER yêu cầu support trong cùng khung chat: ADMIN và STAFF đúng LAB có
+   notification; staff được giao có link vào đúng phiên. Staff khác mở hàng
+   đợi trong phạm vi của mình. Khách và staff dùng Enter gửi, Shift+Enter xuống
+   dòng; cuộn đọc lịch sử không bị kéo xuống mỗi lần có tin mới.
+
+Tách bằng chứng: test_fulfillment_ui dùng frontend5173 nhưng chuyển request tới
+Express/Prisma/database fulfillment test riêng, signed IPN là protocol fixture,
+không chứng minh ngân hàng thật. VNPAY thật đã có lượt NCB success trước batch;
+không gọi fixture là live bank test. Password chỉ là cấu hình truy cập ứng dụng,
+chưa có bộ khóa cửa vật lý. Dùng CUSTOMER để thử GPT; ADMIN/STAFF là trợ lý
+nghiệp vụ nội bộ hiện hành. UI có câu trả lời không bảo đảm GPT nhanh hoặc mọi
+câu đúng; kiểm source/provider và trạng thái bridge.
+
 1. Dùng DB riêng nếu cần tạo lịch, thay giá, gây sự cố hoặc sửa chu kỳ bảo trì.
    Không chạy `db push`, reset DB, `down -v` hoặc sửa migration đã áp dụng.
 2. Chuẩn bị ADMIN, STAFF-A của LAB-A, STAFF-B của LAB-B, staff chưa phân LAB,
@@ -84,8 +154,9 @@ SMTP thật chưa có nên gửi mail/OTP ngoài hệ thống vẫn BLOCKED.
    đào tạo nếu đang cấu hình yêu cầu này. Category và subtype nhập riêng.
 4. Cấu hình giờ mở cửa, thời lượng tối thiểu/tối đa, giới hạn đặt trước, giá thuê
    và care cycle. Chọn ngày/giờ còn ở tương lai theo giờ Việt Nam.
-   Muốn kiểm bàn giao ngay, chọn giờ bắt đầu còn khoảng 10–20 phút trong giờ mở
-   cửa; không đổi đồng hồ hoặc sửa timestamp DB để vượt guard bàn giao.
+   Theo ADR-044, tạo lịch trước ít nhất30 phút (hoặc notice lớn hơn của LAB),
+   rồi đợi tới cửa sổ nhận tài nguyên start−30 phút. Không tạo mới lịch chỉ còn
+   10–20 phút; không đổi đồng hồ hoặc sửa timestamp DB để vượt guard bàn giao.
 5. Kiểm tra SMTP nếu test OTP/email; VNPAY Sandbox nếu test provider. Thiếu
    provider ghi BLOCKED, không đổi DB thành success để đi tiếp.
 6. Mỗi test lưu: mã test, checkout/commit, role, LAB/resource ID, giờ, bước thực
@@ -256,6 +327,13 @@ npm.cmd run test:required
 ```
 
 Các suite DB/UI có guard riêng; đọc script và cấu hình đúng DB test trước chạy.
+Release runner: `npm run test:release:integration` với RELEASE_TEST_ADMIN_URL
+trỏ /postgres của instance PostgreSQL16 riêng ở127.0.0.1:25439. Runner tạo các
+DB test cố định, từ chối nếu đã tồn tại và không reset. Có thể chọn tên suite
+ở argument để chạy phạm vi hẹp; xem scripts/runReleaseIntegration.mjs. Thêm
+frontend `test:ui:calendar-planner` dùng FULFILLMENT_TEST_DATABASE_URL riêng.
+CI hiện hành ở .github/workflows/production-readiness.yml; các lệnh và việc
+cấu hình gate không tự chứng minh GitHub Actions hoặc production đã PASS.
 Không chạy `test:all` hoặc E2E legacy tùy ý để sửa test bằng cách mở lại role/module
 đã ngừng. Bản tích hợp có thêm `test:accounts:integration`,
 `test:loyalty:integration`, `test:chatgpt-bridge:integration`, frontend
@@ -280,3 +358,13 @@ Trước kết luận toàn hệ thống: hoàn tất các role, phép thử sco
 lifecycle/care, provider được cấu hình và live chatbot; liệt kê phần chưa test.
 Không suy production hoặc hardware PASS từ sandbox, dữ liệu vận hành khai báo
 hoặc build thành công. Cập nhật CURRENT_STATE, giữ bản main và dữ liệu hiện có.
+
+## Nhóm planning (20/10/2026)
+
+`npm run test:planning` kiểm validation/buffer thuần. Release runner nhận nhóm
+`planning`; dùng PostgreSQL16 riêng tại cổng25439 và DB test sạch, không dùng DB
+chính. Integration bao gồm nhóm booking nguyên tử/retry, policy revision, quyền
+checklist, waitlist, gợi ý và privacy trên lịch/catalog. Kiểm thêm các nhóm
+resources, calendar, operational-audit, operations, fulfillment, payment-hold.
+Frontend: `npm run test:required`; trình duyệt thật vẫn cần kiểm responsive,
+đổi tab, form lỗi, retry, báo giá và in hồ sơ trước khi nghiệm thu hình ảnh.

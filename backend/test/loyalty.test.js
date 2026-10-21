@@ -41,7 +41,8 @@ function pricingClient({ rate = 100001, spend = 1500000, role = "CUSTOMER", rule
     $queryRaw: async () => [{ totalSpendVnd: spend, successfulPayments: 1, lastPaidAt: new Date() }]
   };
 }
-const period = { resourceId: "resource", purposeCode: "SERVICE", startAt: "2026-10-14T03:00:00Z", endAt: "2026-10-14T04:00:00Z" };
+const quoteStart = Math.ceil((Date.now() + 48 * 3600000) / 60000) * 60000;
+const period = { resourceId: "resource", purposeCode: "SERVICE", startAt: new Date(quoteStart).toISOString(), endAt: new Date(quoteStart + 3600000).toISOString() };
 test("public quotes preserve list price; only server-selected customers receive integer discounted quotes", async () => {
   const publicQuote = await quoteBooking(pricingClient(), period);
   assert.equal(publicQuote.amountVnd, 100001); assert.equal(publicQuote.discountBps, 0); assert.equal(publicQuote.loyaltyPolicyVersion, null);

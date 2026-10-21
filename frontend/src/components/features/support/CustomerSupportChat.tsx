@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { submitChatOnEnter } from '../../../utils/chatKeyboard';
 import { Send, Headphones } from 'lucide-react';
 import { useLocale } from '../../../providers/LocaleProvider';
 import { supportApi, type SupportDetail, type SupportMetadata, type SupportSession } from '../../../services/support';
@@ -118,7 +119,7 @@ export default function CustomerSupportChat({ visible, initialDraft, initialMess
     {!selected && !loading && <form className="assistant-human-request" onSubmit={event => { event.preventDefault(); void mutate(request); }}>
       <label>{tr('support.lab')}<select required value={laboratoryId} onChange={event => setLaboratoryId(event.target.value)}><option value="">{tr('support.chooseLab')}</option>{metadata?.laboratories.map(lab => <option key={lab.id} value={lab.id}>{lab.code} · {lab.name}</option>)}</select></label>
       <label>{tr('support.category')}<select value={category} onChange={event => setCategory(event.target.value)}>{categories.map(value => <option key={value} value={value}>{tr(`support.category.${value}`)}</option>)}</select></label>
-      <label>{tr('support.describe')}<textarea required minLength={3} maxLength={2000} rows={3} value={message} onChange={event => setMessage(event.target.value)} /></label>
+      <label>{tr('support.describe')}<textarea onKeyDown={submitChatOnEnter} required minLength={3} maxLength={2000} rows={3} value={message} onChange={event => setMessage(event.target.value)} /></label>
       {conversationId && <label className="assistant-human-share"><input type="checkbox" checked={shareContext} onChange={event => setShareContext(event.target.checked)} />{tr('support.inlineShareContext')}</label>}
       <button type="submit" className="primary-button" disabled={busy || !ready || !laboratoryId || message.trim().length < 3}>{tr('support.request')}</button>
     </form>}
@@ -134,7 +135,7 @@ export default function CustomerSupportChat({ visible, initialDraft, initialMess
       {open(session) && <>
         <form className="assistant-compose" onSubmit={event => { event.preventDefault(); void mutate(send); }}>
           <label className="sr-only" htmlFor="assistant-human-message">{tr('support.message')}</label>
-          <textarea id="assistant-human-message" rows={2} required maxLength={2000} value={draft} onChange={event => setDraft(event.target.value)} />
+          <textarea id="assistant-human-message" rows={2} required maxLength={2000} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={submitChatOnEnter} />
           <button type="submit" className="primary-button" disabled={busy || !draft.trim()} aria-label={tr('support.send')}><Send size={18} aria-hidden="true" /></button>
         </form>
         <details><summary>{tr('support.cancel')}</summary><form className="assistant-human-request" onSubmit={event => { event.preventDefault(); void mutate(cancel); }}><label>{tr('support.cancelReason')}<input required minLength={3} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} /></label><button type="submit" disabled={busy || reason.trim().length < 3}>{tr('support.cancel')}</button></form></details>

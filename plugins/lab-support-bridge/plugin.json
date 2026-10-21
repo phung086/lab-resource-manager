@@ -1,15 +1,15 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "lab-support-bridge",
-  "version": "0.1.4",
-  "description": "Receive LAB customer questions and return grounded replies through the authenticated support bridge.",
+  "version": "0.1.6",
+  "description": "Receive LAB questions from customers, staff and admins; return role-scoped replies through the authenticated support bridge.",
   "author": { "name": "LAB Resource Manager" },
   "extensions": {
     "com.openai": {
       "interface": {
         "displayName": "LAB Customer Support",
         "shortDescription": "LAB booking support",
-        "longDescription": "Support signed-in LAB customers using current resource, booking, tariff, payment and loyalty data. Receive question events, read the request-scoped business context, and publish a concise answer back to the customer. This plugin cannot change bookings, payments, accounts or maintenance.",
+        "longDescription": "Support signed-in LAB customers, staff and admins using current role-scoped data. Receive question events, read current context, and publish concise verified partial or final answers. This plugin cannot change bookings, payments, accounts or maintenance.",
         "developerName": "LAB Resource Manager",
         "category": "Productivity",
         "defaultPrompt": "Start LAB customer support in Work/Cloud: subscribe to lab.assistant.question.created, read each question context, check relevant current customer data, and publish the grounded answer to LAB."

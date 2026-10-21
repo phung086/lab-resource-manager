@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import jwt from "jsonwebtoken";
+
 import request from "supertest";
 import { configureQueueTestEnvironment, seedQueueFixture } from "./helpers/queuePaginationFixture.js";
 
@@ -8,9 +8,18 @@ configureQueueTestEnvironment();
 const [{ createApp }, { prisma }] = await Promise.all([import("../src/app.js"), import("../src/db.js")]);
 const app = createApp();
 let fixture;
-const auth = name => ({ Authorization: `Bearer ${jwt.sign({ sub: fixture.users[name].id }, process.env.JWT_SECRET)}` });
+const { signUserToken } = await import("../src/services/authTokens.js");
+const tokens = {};
+const auth = name => ({ Authorization: `Bearer ${tokens[name]}` });
 const get = (path, name = "staff") => request(app).get(`/api${path}`).set(auth(name));
-test.before(async () => { fixture = await seedQueueFixture(prisma); });
+test.before(async () => {
+  fixture = await seedQueueFixture(prisma);
+  for (const [key, user] of Object.entries(fixture.users)) {
+    if (!user.isActive) await prisma.user.update({ where: { id: user.id }, data: { isActive: true } });
+    tokens[key] = await signUserToken({ ...user, isActive: true });
+    if (!user.isActive) await prisma.user.update({ where: { id: user.id }, data: { isActive: false } });
+  }
+});
 test.after(async () => { await prisma.$disconnect(); });
 
 test("legacy reads retain arrays and caps; paginated reads reach records beyond both caps", async () => {

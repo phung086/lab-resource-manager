@@ -53,7 +53,9 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
           {event.isMine && <span aria-hidden="true" className="calendar-own-marker mr-1">●</span>}
           {title}
         </h4>
-        <BookingStatusBadge status={event.status} occupancy={event.occupancy} />
+        {event.type === 'booking'
+          ? <BookingStatusBadge status={event.status} paymentDueAt={event.paymentDueAt} occupancy={event.occupancy} />
+          : <span>{tr(event.type === 'preparation' ? 'planning.preparation' : 'ui.maintenance_calibration_79fdebcb')}</span>}
       </div>
 
       <div className="calendar-event-meta flex items-center gap-3 text-xs">

@@ -9,8 +9,11 @@ export function safeVnpayUrl(value: unknown) {
  if(typeof value!=='string')return '';
  try{const target=new URL(value);const banks=target.searchParams.getAll('vnp_BankCode');return target.protocol==='https:' && !target.username && !target.password && /(^|\.)vnpay(?:ment)?\.vn$/i.test(target.hostname) && banks.length<=1 && (banks.length===0 || /^[A-Z0-9]{3,20}$/.test(banks[0]))?target.toString():'';}catch{return '';}
 }
-export function canInitiateBookingPayment(actor: { id: string }, booking: { requestedById: string; status: string } | null, charge: { userId: string; status: string } | null) {
- return !!actor.id && booking?.requestedById === actor.id && charge?.userId === actor.id && booking.status === 'CONFIRMED' && ['pending','failed','expired'].includes(charge.status);
+export function isAwaitingPayment(booking: { status?: string; paymentDueAt?: string | null } | null | undefined) {
+ return booking?.status === 'PENDING_APPROVAL' && Boolean(booking.paymentDueAt);
+}
+export function canInitiateBookingPayment(actor: { id: string }, booking: { requestedById: string; status: string; paymentDueAt?: string | null; startAt?: string } | null, charge: { userId: string; status: string } | null) {
+ return !!actor.id && booking?.requestedById === actor.id && charge?.userId === actor.id && (booking.status === 'CONFIRMED' || isAwaitingPayment(booking)) && (!booking.paymentDueAt || Date.parse(booking.paymentDueAt) > Date.now()) && (!isAwaitingPayment(booking) || !booking.startAt || Date.parse(booking.startAt) > Date.now()) && ['pending','failed','expired'].includes(charge.status);
 }
 // Display the hosted session's deadline without inventing provider settlement.
 export function paymentSessionStatus(charge: { status: string; provider: string; paymentUrlExpiresAt?: string | null }, now = Date.now()) {

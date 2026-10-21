@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, CalendarDays, ShieldCheck, Wrench, GraduationCap, Search, Microscope, DoorOpen, CheckCircle } from 'lucide-react';
-import labHero from '../assets/lab-workbench-hero.webp';
+import labHero from '../assets/lab-workbench-hero-optimized.webp';
+import labHeroSmall from '../assets/lab-workbench-hero-small.webp';
 import { PublicResourceCatalog } from './PublicResourceCatalog';
 import { useLocale } from '../providers/LocaleProvider';
 import { PublicShell } from './PublicShell';
@@ -126,7 +127,7 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
           </div>
         </div>
         <div className="landing-hero-visual">
-          <img src={labHero} alt={t('ui.final.heroAlt')} className="landing-hero-image" />
+          <img src={labHero} srcSet={`${labHeroSmall} 640w, ${labHero} 1536w`} sizes="(max-width: 800px) calc(100vw - 40px), 55vw" width={1536} height={1024} fetchPriority="high" decoding="async" alt={t('ui.final.heroAlt')} className="landing-hero-image" />
           <div className="landing-hero-floating-card landing-hero-floating-card-1">
             <div className="landing-hero-floating-icon landing-hero-floating-icon-violet">
               <CalendarDays size={24} aria-hidden="true" />

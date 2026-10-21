@@ -17,6 +17,12 @@ COPY scripts ./scripts
 EXPOSE 8000
 CMD ["sh", "-c", "npm run db:migrate && npm run db:seed:admin && npm run dev"]
 
+FROM deps AS production-deps
+
+# Prisma CLI is a runtime dependency: production startup deploys migrations.
+# Keep lint/watch/test tooling out of the shipped API image.
+RUN npm prune --omit=dev
+
 FROM node:22-alpine AS runner
 
 RUN apk add --no-cache postgresql-client
@@ -26,7 +32,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN mkdir -p /app/data && chown node:node /app /app/data
 
-COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=production-deps --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node package*.json ./
 COPY --chown=node:node prisma ./prisma
 COPY --chown=node:node src ./src

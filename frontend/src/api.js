@@ -1,4 +1,5 @@
 import { getActiveLocale, hasMessage } from "./i18n.js";
+import { getAccessToken, getAuthUser, removeAuth, saveAuth } from './services/authStorage.js';
 
 const configuredApiBase = import.meta.env?.VITE_API_BASE_URL || `http://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:8000`;
 const API_BASE_URL = `${configuredApiBase.replace(/\/$/, "")}${/\/api$/.test(configuredApiBase) ? "" : "/api"}`;
@@ -12,7 +13,16 @@ export class ApiError extends Error {
   }
 }
 
+const rateCooldowns = new Map();
+const rateBucket = path => /^\/(support|assistant\/bridge)(\/|$)/.test(path) ? "support" : /^\/(telemetry|resource-care)(\/|$)/.test(path) ? "monitoring" : "api";
+export function getApiCooldownUntil() {
+  return Math.max(0, ...rateCooldowns.values());
+}
+
 export async function apiRequest(path, options = {}) {
+  const bucket = rateBucket(path);
+  const until = rateCooldowns.get(bucket) || 0;
+  if (until > Date.now()) throw new ApiError("api.RATE_LIMITED", 429, { retryAfterSeconds: Math.ceil((until - Date.now()) / 1000) }, "RATE_LIMITED");
   const { signal: externalSignal, timeoutMs = path === "/assistant/chat" ? 65000 : 30000, ...requestOptions } = options;
   const controller = new AbortController();
   const cancel = () => controller.abort(externalSignal.reason);
@@ -20,7 +30,7 @@ export async function apiRequest(path, options = {}) {
   else externalSignal?.addEventListener("abort", cancel, { once: true });
   const milliseconds = Number.isFinite(timeoutMs) ? Math.max(1, Math.min(timeoutMs, 120000)) : 30000;
   const timer = setTimeout(() => controller.abort(), milliseconds);
-  const token = localStorage.getItem("lrm_token");
+  const token = getAccessToken();
   const headers = {
     "Content-Type": "application/json",
     "Accept-Language": getActiveLocale(),
@@ -36,8 +46,15 @@ export async function apiRequest(path, options = {}) {
 
     if (!response.ok) {
       const error = body?.error || {};
+      if (response.status === 429 && error.code === "RATE_LIMITED") {
+        const retry = Number(response.headers.get("Retry-After") || error.details?.retryAfterSeconds || 60);
+        const seconds = Number.isFinite(retry) ? Math.max(1, Math.min(retry, 3600)) : 60;
+        rateCooldowns.set(bucket, Date.now() + seconds * 1000);
+        error.details = { ...error.details, retryAfterSeconds: seconds };
+        window.dispatchEvent(new CustomEvent("lrm:rate-limited"));
+      }
       if (response.status === 401 && !["/auth/login", "/auth/register"].includes(path) &&
-          token === localStorage.getItem("lrm_token")) {
+          token === getAccessToken()) {
         clearSession();
         window.dispatchEvent(new CustomEvent("lrm:session-invalid"));
       }
@@ -58,8 +75,7 @@ export async function apiRequest(path, options = {}) {
 }
 
 export function storeAuthResult(result) {
-  localStorage.setItem("lrm_token", result.accessToken);
-  localStorage.setItem("lrm_user", JSON.stringify(result.user));
+  saveAuth(result);
   return result;
 }
 
@@ -81,8 +97,8 @@ export async function register(userData) {
 
 export async function logout() {
   try {
-    if (localStorage.getItem("lrm_token")) {
-      await apiRequest("/auth/logout", { method: "POST" });
+    if (getAccessToken()) {
+      await apiRequest("/auth/logout", { method: "POST", timeoutMs: 5000 });
     }
   } finally {
     clearSession();
@@ -94,16 +110,16 @@ export async function getCurrentUser() {
 }
 
 export function hasStoredSession() {
-  return Boolean(localStorage.getItem("lrm_token"));
+  return Boolean(getAccessToken());
 }
 
 export function clearSession() {
-  localStorage.removeItem("lrm_token");
-  localStorage.removeItem("lrm_user");
+  removeAuth();
+  window.dispatchEvent(new CustomEvent('lrm:session-changed'));
 }
 
 export function getStoredUser() {
-  const raw = localStorage.getItem("lrm_user");
+  const raw = getAuthUser();
   if (!raw) return null;
   try {
     return JSON.parse(raw);

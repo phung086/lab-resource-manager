@@ -181,7 +181,13 @@ test("account and email enqueue roll back together if outbox persistence fails",
 
 test("verified IPN creates exactly one receipt; browser return and duplicate callbacks never enqueue another", async () => {
   const { payment, booking } = await paymentFixture(); const query = callback(payment);
-  assert.equal((await request(app).get("/api/payments/vnpay/return").query(query)).status, 200);
+  const returned = await request(app).get("/api/payments/vnpay/return").query(query);
+  assert.equal(returned.status, 303);
+  const destination = new URL(returned.headers.location);
+  assert.equal(destination.pathname, "/workspace/payments");
+  assert.equal(destination.searchParams.get("booking"), booking.id);
+  assert.equal(destination.searchParams.get("returned"), "1");
+  assert.equal((await prisma.paymentTransaction.findUniqueOrThrow({ where: { id: payment.id } })).status, "pending");
   assert.equal(await prisma.emailDelivery.count(), 0);
   const [one, two] = await Promise.all([request(app).get("/api/payments/vnpay/ipn").query(query), request(app).get("/api/payments/vnpay/ipn").query(query)]);
   assert.deepEqual([one.body.RspCode, two.body.RspCode].sort(), ["00", "02"]);

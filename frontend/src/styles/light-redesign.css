@@ -311,6 +311,24 @@ h3 { font-weight: 600; font-size: 15px; line-height: 1.4; margin: 0 0 8px; }
 .btn:disabled, .primary-button:disabled, .btn-cyan-gradient:disabled { opacity: .55; box-shadow: none !important; transform: none; }
 
 .badge, .status-badge, .resource-status-pill, .status-badge-inline { font-family: var(--font-sans); letter-spacing: 0; }
+.badge, .status-badge, .resource-status-pill, .status-badge-inline, .booking-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  justify-self: start;
+  flex: 0 0 auto;
+  gap: 5px;
+  max-width: 100%;
+  height: fit-content;
+  line-height: 1.5;
+  text-align: center;
+  box-sizing: border-box;
+}
+:is(.btn,.primary-button,.secondary-button,.badge,.status-badge,.resource-status-pill,.status-badge-inline,.booking-status-chip) > svg {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
 .status-available, .status-badge.approved, .status-badge.available, .status-badge.completed,
 .booking-status-chip.is-confirmed, .booking-approval-badge.is-instant, .telemetry-state--healthy { color: #065f46; border-color: #a7f3d0; background: var(--emerald-50); }
 .status-reserved, .status-in_use, .status-badge.checked_out, .status-badge.in_use,

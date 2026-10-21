@@ -120,6 +120,18 @@ async function seed() {
 test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", { timeout: 240000 }, async (t) => {
   await seed();
 
+  await t.test('short-notice guest booking rolls back account and booking creation without consuming OTP', async () => {
+    const target = email('short-notice'); await issueOtp(target);
+    const before = await isolated.emailOtp.findFirst({ where: { email: target }, orderBy: { createdAt: 'desc' } });
+    const response = await request(app).post('/api/guest-booking/book').send(completionPayload(target, resources.free, 0, {
+      booking: { startAt: new Date(Date.now() + 60000).toISOString(), endAt: new Date(Date.now() + 3660000).toISOString() }
+    }));
+    assert.equal(response.status, 400, JSON.stringify(response.body));
+    assert.equal(response.body.error.code, 'BOOKING_NOTICE_REQUIRED');
+    assert.equal(await isolated.user.count({ where: { email: target } }), 0);
+    assert.deepEqual(await isolated.emailOtp.findUnique({ where: { id: before.id } }), before);
+  });
+
   await t.test("OTP is hashed, attempts persist, fifth failure locks, and sixth attempt cannot validate", async () => {
     const target = email("attempts");
     const validCode = await issueOtp(target);

@@ -4,6 +4,18 @@
 .account-loyalty-tier span { color:var(--workspace-accent,#6046a7); font-size:.8rem; font-weight:600; }
 .account-loyalty p,.account-loyalty small { color:var(--workspace-text-muted,#625b70); margin:0; font-size:.8rem; line-height:1.6; }
 .account-loyalty progress { width:100%; height:8px; accent-color:var(--workspace-accent,#7258c7); }
+.account-loyalty h2 { font-size:.8125rem; margin:0 0 8px; color:var(--workspace-text-muted,#625b70); font-weight:500; }
+.account-loyalty-tier strong { font-size:1.125rem; }
+.account-loyalty-spend { margin:12px 0 10px; }
+.account-loyalty-spend dt { font-size:.75rem; color:var(--workspace-text-muted,#625b70); margin-bottom:5px; }
+.account-loyalty-spend dd { margin:0; font-size:1.375rem; font-weight:650; font-variant-numeric:tabular-nums; }
+.account-loyalty-progress { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:.75rem; margin-top:4px; }
+.account-loyalty-progress strong { color:var(--workspace-accent,#6046a7); font-variant-numeric:tabular-nums; }
+.account-loyalty progress { display:block; height:7px; border:0; border-radius:4px; overflow:hidden; background:#ddd4e9; }
+.account-loyalty progress::-webkit-progress-bar { background:#ddd4e9; border-radius:4px; }
+.account-loyalty progress::-webkit-progress-value { background:var(--workspace-accent,#7258c7); border-radius:4px; }
+.account-loyalty progress::-moz-progress-bar { background:var(--workspace-accent,#7258c7); border-radius:4px; }
+.account-loyalty .account-loyalty-policy { padding-top:14px; margin-top:4px; border-top:1px solid #d9cde9; font-size:.75rem; }
 .loyalty-policy { margin-bottom:24px; border:1px solid var(--color-border,#d8d2e1); border-radius:12px; padding:16px 24px; background:var(--color-surface,#fff); }
 .loyalty-policy summary { cursor:pointer; font-weight:600; min-height:32px; display:list-item; padding:4px 0; }
 .loyalty-policy p { color:var(--color-text-secondary,#625b70); font-size:.875rem; line-height:1.6; }
