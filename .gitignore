@@ -36,3 +36,11 @@ frontend/baseline_results.json
 /*.png
 /*.jpg
 /*.jpeg
+
+# AI tooling working dirs (local evidence, not project source)
+.codex/
+.impeccable/
+.qa/
+frontend/.impeccable/
+frontend/probe_*_tmp.mjs
+frontend/src/.ui_b*_tmp.mjs
