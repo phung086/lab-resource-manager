@@ -10,8 +10,8 @@ import '../../styles/monitoring-workspace.css';
 import { ResourceCareView } from '../../components/features/monitoring/ResourceCareView';
 
 interface Props { userRole?: string; mode?: 'operations' | 'telemetry'; dashboard: DashboardPayload | null; loading?: boolean; onRefresh?: () => void; }
-export const MonitoringDashboardPage: React.FC<Props> = ({dashboard,loading=false,onRefresh,mode='telemetry'}) => {
- const { tr }=useLocale();
+ export const MonitoringDashboardPage: React.FC<Props> = ({dashboard,loading=false,onRefresh,mode='telemetry'}) => {
+ const { tr, locale }=useLocale();
  const operations=mode==='operations';
  const queue=dashboard ? [
   {key:'pending',count:dashboard.summary.pendingApprovalCount,label:'ui.pending_approval_6af96613',href:workspacePathForTab('bookings',{filter:'PENDING_APPROVAL'})},
@@ -28,6 +28,20 @@ export const MonitoringDashboardPage: React.FC<Props> = ({dashboard,loading=fals
    </section></div>
    <aside className="monitor-queue"><h2>{tr('ui.monitor.workQueues')}</h2><p>{tr('ui.monitor.queueHint')}</p><ul>{queue.map(item=><li key={item.key}><a href={item.href}><span>{tr(item.label)}<strong>{item.count}</strong></span><ArrowRight size={16} aria-hidden="true" /></a></li>)}</ul>
     <dl><div><dt>{tr('ui.total_resources_69ad5e68')}</dt><dd>{dashboard.summary.totalResources}</dd></div><div><dt>{tr('ui.unread_notifications_66bab952')}</dt><dd><a href={workspacePathForTab('escalations',{filter:'unread'})}>{dashboard.summary.unreadNotifications}</a></dd></div></dl><p className="monitor-source-note">{tr('ui.source_saved_bookings_handover_return_5d03d25a')}</p>
+    {dashboard.utilization && (() => {
+      const numeric = new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-GB');
+      const utilization = dashboard.utilization;
+      return <section className="monitor-utilization" aria-labelledby="monitor-utilization-title">
+        <h3 id="monitor-utilization-title">{tr('ui.monitor.utilizationTitle', { days: utilization.windowDays })}</h3>
+        <dl>
+          <div><dt>{tr('ui.monitor.utilizationScheduled')}</dt><dd>{numeric.format(utilization.scheduledMinutes)}</dd></div>
+          <div><dt>{tr('ui.monitor.utilizationActual')}</dt><dd>{numeric.format(utilization.actualUsageMinutes)}</dd></div>
+          <div><dt>{tr('ui.monitor.utilizationScheduledRate')}</dt><dd>{new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-GB', { maximumFractionDigits: 2 }).format(utilization.scheduledUtilizationRate)}%</dd></div>
+          <div><dt>{tr('ui.monitor.utilizationActualRate')}</dt><dd>{new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-GB', { maximumFractionDigits: 2 }).format(utilization.actualUtilizationRate)}%</dd></div>
+        </dl>
+        <p className="monitor-source-note">{tr('ui.monitor.utilizationSource', { days: utilization.windowDays })}</p>
+      </section>;
+    })()}
    </aside>
   </div>}
  </section>;

@@ -269,3 +269,25 @@
 .booking-access-panel>.primary-button { margin-top:10px; min-height:48px; }
 @media(min-width:1001px) { .payment-dossier { position:sticky; top:112px; max-height:calc(100vh - 128px); overflow:auto; } }
 @media(max-width:600px) { .customer-payment-list button { grid-template-columns:1fr; padding:16px; }.customer-payment-list .customer-payment-amount { grid-column:1; grid-row:auto; }.booking-access-panel { margin:16px; padding:16px; } }
+
+/* Ticket language sync 27/10: customer payment rows read like the My Bookings itinerary
+   tickets — same masthead, card geometry, hover response and dashed action separator. */
+.payment-ledger .page-section-header,
+.booking-checkout .page-section-header { align-items:center; gap:14px; padding:26px 28px; border:1px solid #e1d9ed; border-radius:25px; background:linear-gradient(120deg,#e7dff8,#f3f0fb 55%,#e2f2ea); }
+.payment-ledger .page-section-header h1,
+.booking-checkout .page-section-header h1 { margin:0; font-size:32px; letter-spacing:-.035em; line-height:1.2; }
+.payment-ledger .page-section-header .secondary-button,
+.booking-checkout .page-section-header .secondary-button { background:#ffffffb8; border-radius:12px; min-height:44px; }
+.booking-checkout-order { border:1px solid #dfdce8; border-radius:19px; background:#fff; box-shadow:0 8px 24px -23px #392357; }
+.booking-checkout-payment { border-top:1px dashed #d8d0e2; }
+.customer-payment-list button { border:1px solid #dfdce8; border-radius:19px; box-shadow:0 8px 24px -23px #392357; transition:border-color .22s,box-shadow .22s; }
+.customer-payment-list button[aria-pressed="true"] { border-color:#7852b4; box-shadow:0 0 0 2px #7852b41c; background:var(--workspace-surface,#fff); }
+.customer-payment-list .customer-payment-amount { font-variant-numeric:tabular-nums; font-weight:650; color:#30283d; }
+.customer-payment-list .customer-payment-action { border-top:1px dashed #d8d0e2; font-weight:600; }
+.customer-payment-list .payment-state { border-radius:8px; padding:4px 10px; font-weight:600; }
+@media(hover:hover) {
+  .customer-payment-list button:hover { border-color:#b5a3ce; box-shadow:0 12px 24px -20px #452c6d88; }
+  .customer-payment-list button[aria-pressed="true"]:hover { border-color:#7852b4; }
+}
+@media(max-width:600px) { .payment-ledger .page-section-header { padding:20px; border-radius:20px; } .payment-ledger .page-section-header h1 { font-size:26px; } }
+@media(prefers-reduced-motion:reduce) { .customer-payment-list button { transition:none; } }
