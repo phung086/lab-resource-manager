@@ -8,9 +8,10 @@ type Access = { mode: string; roomPassword: string | null; roomAccessConfigured:
 export function BookingAccessPanel({ bookingId, status, category, onChanged }: { bookingId: string; status: string; category?: string | null; onChanged?: () => void }) {
   const { tr } = useLocale();
   const [access, setAccess] = useState<Access | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false), [revision, setRevision] = useState(0);
+  const [windowClosed, setWindowClosed] = useState(false);
   const [condition, setCondition] = useState(''), [returning, setReturning] = useState(false), [copied, setCopied] = useState(false);
   useEffect(() => {
-    setAccess(null); setError(''); setReturning(false); setCondition('');
+    setAccess(null); setError(''); setWindowClosed(false); setReturning(false); setCondition('');
     if (!['CONFIRMED','CHECKED_OUT'].includes(status)) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
@@ -18,7 +19,15 @@ export function BookingAccessPanel({ bookingId, status, category, onChanged }: {
       if (controller.signal.aborted) return;
       if (document.hidden) { timer = setTimeout(() => void load(), 30000); return; }
       try { const result = await apiRequest(`/bookings/${bookingId}/access`, { signal: controller.signal }); if (!controller.signal.aborted) { setAccess(result); setError(''); } }
-      catch (cause: any) { if (!controller.signal.aborted) { setAccess(null); if (cause.code !== 'BOOKING_PAYMENT_REQUIRED') setError(cause.message); } return; }
+      catch (cause: any) {
+        if (controller.signal.aborted) return;
+        setAccess(null);
+        // Server-authoritative state: a CONFIRMED booking whose handover window has passed can no
+        // longer be picked up by the customer — inform instead of offering a retry that cannot help.
+        if (cause.code === 'BOOKING_INVALID_TRANSITION') setWindowClosed(true);
+        else if (cause.code !== 'BOOKING_PAYMENT_REQUIRED') setError(cause.message);
+        return;
+      }
       if (!controller.signal.aborted) timer = setTimeout(() => void load(), 30000);
     }
     void load();
@@ -31,6 +40,7 @@ export function BookingAccessPanel({ bookingId, status, category, onChanged }: {
     finally { setBusy(false); }
   }
   return <section className="booking-access-panel" aria-label={tr('ui.fulfillment.title')}>
+    {windowClosed && <div className="alert warning" role="status"><p>{tr('ui.fulfillment.handoverWindowClosed')}</p></div>}
     {error && <div className="alert danger" role="alert"><p>{tr(error)}</p><button type="button" className="btn btn-secondary" onClick={() => setRevision(value => value + 1)}>{tr('ui.retry_c58d068c')}</button></div>}
     {access && <>
       {category === 'ROOM' ? <>

@@ -1,0 +1,77 @@
+/* Customer itinerary: full-width tickets until a record is opened. Staff queues retain their layout. */
+.workspace-shell.lab-spectrum .my-schedule .operations-header { display:flex; align-items:center; gap:14px; padding:28px; border-radius:25px; background:linear-gradient(120deg,#e7dff8,#f3f0fb 55%,#e2f2ea); border:1px solid #e1d9ed; margin-bottom:22px; }
+.workspace-shell.lab-spectrum .my-schedule .operations-header-group { flex:1; }
+.workspace-shell.lab-spectrum .my-schedule .operations-header h1 { font-size:34px; letter-spacing:-.035em; line-height:1.2; margin:0; }
+.workspace-shell.lab-spectrum .my-schedule .operations-header p { margin:10px 0 0; font-size:14px; line-height:1.6; color:#625970; }
+.workspace-shell.lab-spectrum .my-schedule .schedule-new { display:flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:12px 18px; border-radius:12px; white-space:nowrap; }
+.workspace-shell.lab-spectrum .my-schedule .operations-refresh-btn { background:#ffffffb8; border-radius:12px; }
+.schedule-priorities { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:0 0 20px; }
+.schedule-priorities button { display:flex; align-items:center; gap:15px; padding:22px; border:1px solid #e8d4ca; border-radius:20px; background:#fcece2; color:#88502e; text-align:left; cursor:pointer; transition:transform .2s,box-shadow .2s; }
+.schedule-priorities button[data-tone="ready"] { color:#624696; background:#eee7fc; border-color:#ded1f2; }
+.schedule-priorities button[data-tone="active"] { color:#276c58; background:#e2f3ea; border-color:#cde5d9; }
+.schedule-priorities button[aria-pressed="true"] { box-shadow:inset 0 -4px currentColor; }
+.schedule-priorities button > svg { flex-shrink:0; stroke-width:1.5; }
+.schedule-priorities button > span { display:grid; gap:7px; flex:1; }
+.schedule-priorities strong { font-size:15px; }
+.schedule-priorities small { font-size:12px; line-height:1.5; }
+.schedule-priorities b { font-size:30px; line-height:1; font-weight:600; }
+.workspace-shell.lab-spectrum .my-schedule .operations-filter-row { display:flex; flex-wrap:wrap; background:transparent; border:0; gap:6px; margin:12px 0 24px; padding:0; }
+.workspace-shell.lab-spectrum .my-schedule .operations-filter-btn { border:1px solid transparent; background:transparent; border-radius:11px; padding:10px 14px; min-height:42px; }
+.workspace-shell.lab-spectrum .my-schedule .operations-filter-btn.is-active { color:#6040ce; background:#fff; border-color:#d8cbea; box-shadow:0 4px 12px -8px #6040ce77; }
+.workspace-shell.lab-spectrum .my-schedule .operations-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:24px; }
+.workspace-shell.lab-spectrum .my-schedule:not(.has-selection) .operations-dossier-col { display:none; }
+.workspace-shell.lab-spectrum .my-schedule .operations-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+.workspace-shell.lab-spectrum .my-schedule .operations-queue-header { padding:0 0 16px; }
+.workspace-shell.lab-spectrum .my-schedule .operations-queue-title { font-size:18px; }
+.workspace-shell.lab-spectrum .my-schedule .customer-booking-ticket { --ticket-ink:#65547d; --ticket-wash:#f0edf5; border:1px solid #dfdce8; border-radius:21px; background:white; overflow:hidden; margin:0; box-shadow:0 8px 24px -23px #392357; transition:border-color .22s,box-shadow .22s; }
+.workspace-shell.lab-spectrum .my-schedule .customer-booking-ticket[data-tone="payment"] { --ticket-ink:#945232; --ticket-wash:#fff0e6; }
+.workspace-shell.lab-spectrum .my-schedule .customer-booking-ticket[data-tone="ready"] { --ticket-ink:#62429d; --ticket-wash:#eee7fb; }
+.workspace-shell.lab-spectrum .my-schedule .customer-booking-ticket[data-tone="active"] { --ticket-ink:#266b54; --ticket-wash:#e6f5ed; }
+.workspace-shell.lab-spectrum .my-schedule .operation-card-select { display:flex; flex-direction:column; gap:0; width:100%; text-align:left; padding:0; background:none; border:0; color:#30283d; font:inherit; }
+.ticket-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; padding:16px 20px 12px; }
+.ticket-main { display:flex; align-items:center; gap:20px; padding:12px 20px 22px; width:100%; }
+.ticket-date { display:flex; flex-direction:column; align-items:center; justify-content:center; width:76px; min-height:95px; flex-shrink:0; border-radius:15px; background:var(--ticket-wash); color:var(--ticket-ink); gap:3px; }
+.ticket-date > span { font-size:12px; }
+.ticket-date > strong { font-size:32px; line-height:1.1; font-weight:600; }
+.ticket-date small { font-size:12px; }
+.ticket-description { display:flex; flex-direction:column; gap:9px; min-width:0; }
+.workspace-shell.lab-spectrum .my-schedule .operation-card-resource { font-size:18px; line-height:1.4; margin:0; }
+.ticket-time,.ticket-location { display:flex; align-items:center; gap:7px; font-size:12px; line-height:1.5; }
+.ticket-location { color:#776d82; }
+.ticket-description svg { flex-shrink:0; }
+.ticket-footer { position:relative; display:flex; align-items:center; justify-content:space-between; gap:14px; border-top:1px dashed #d8d0e2; width:100%; padding:14px 20px; background:#fcfbfe; }
+.ticket-footer::before,.ticket-footer::after { content:''; position:absolute; width:16px; height:16px; top:-9px; border:1px solid #ddd6e8; border-radius:50%; background:#f3f2fa; }
+.ticket-footer::before { left:-9px; }.ticket-footer::after { right:-9px; }
+.ticket-fee { display:grid; gap:4px; justify-items:start; }
+.ticket-fee small { font-size:12px; color:#766980; }
+.ticket-fee strong { font-size:15px; white-space:nowrap; }
+.ticket-deadline { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:8px; background:#fff; border:1px solid #f3d9c4; color:#945232; font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
+.ticket-deadline svg { animation:deadline-pulse 2.4s ease-in-out infinite; transform-origin:center; }
+@keyframes deadline-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.88); } }
+.workspace-shell.lab-spectrum .my-schedule .operation-card-inspect { display:flex; gap:8px; align-items:center; color:var(--ticket-ink); background:var(--ticket-wash); padding:9px 12px; border-radius:10px; font-size:12px; font-weight:600; margin:0; }
+.workspace-shell.lab-spectrum .my-schedule .customer-booking-ticket.is-selected { border-color:#7852b4; box-shadow:0 0 0 2px #7852b41c; }
+.workspace-shell.lab-spectrum .my-schedule.has-selection .operations-layout { grid-template-columns:minmax(300px,.9fr) minmax(0,1.3fr); }
+.workspace-shell.lab-spectrum .my-schedule.has-selection .operations-list { grid-template-columns:minmax(0,1fr); }
+.workspace-shell.lab-spectrum .my-schedule .operations-dossier-col { border:1px solid #dcd5e7; border-radius:24px; overflow:hidden; background:#fff; min-width:0; animation:itinerary-open .25s ease-out; }
+.workspace-shell.lab-spectrum .my-schedule .operations-dossier-header { background:linear-gradient(120deg,#eee7fa,#e9f5ef); padding:22px; }
+.workspace-shell.lab-spectrum .my-schedule .operations-empty { background:#ffffffba; border:1px dashed #d7cde4; border-radius:22px; min-height:240px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px; }
+.schedule-waitlist { margin-top:26px; padding:18px 22px; background:#ffffff8c; border-radius:16px; }
+@keyframes itinerary-open { from { opacity:.3; transform:translateX(14px); } to { opacity:1; transform:translateX(0); } }
+@media(hover:hover) { .schedule-priorities button:hover { transform:translateY(-3px); box-shadow:0 9px 18px -14px currentColor; } .workspace-shell.lab-spectrum .my-schedule .customer-booking-ticket:hover { border-color:#b5a3ce; box-shadow:0 12px 24px -20px #452c6d88; } }
+@media(max-width:1050px) { .schedule-priorities button { padding:16px; gap:10px; } .schedule-priorities small { display:none; } .workspace-shell.lab-spectrum .my-schedule.has-selection .operations-layout { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:700px) {
+ .workspace-shell.lab-spectrum .my-schedule .operations-header { flex-wrap:wrap; padding:22px; }
+ .workspace-shell.lab-spectrum .my-schedule .operations-header-group { flex-basis:100%; }
+ .workspace-shell.lab-spectrum .my-schedule .operations-header h1 { font-size:28px; }
+ .workspace-shell.lab-spectrum .my-schedule .operations-list { grid-template-columns:minmax(0,1fr); }
+ .schedule-priorities { gap:8px; }
+ .schedule-priorities button { flex-direction:column; padding:14px 6px; text-align:center; gap:10px; }
+ .schedule-priorities strong { font-size:12px; }
+ .schedule-priorities b { font-size:25px; }
+ .ticket-main { gap:14px; padding:12px 16px 18px; }
+ .ticket-heading,.ticket-footer { padding-inline:16px; }
+ .ticket-date { width:62px; min-height:88px; }
+ .workspace-shell.lab-spectrum .my-schedule .operation-card-resource { font-size:16px; }
+ .workspace-shell.lab-spectrum .my-schedule .operations-filter-btn { padding:8px 10px; font-size:12px; }
+}
+@media(prefers-reduced-motion:reduce) { .workspace-shell.lab-spectrum .my-schedule .operations-dossier-col { animation:none; } .schedule-priorities button,.workspace-shell.lab-spectrum .my-schedule .customer-booking-ticket { transition:none; transform:none; } .ticket-deadline svg { animation:none; } }

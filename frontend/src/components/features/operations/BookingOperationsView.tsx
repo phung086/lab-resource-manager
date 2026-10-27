@@ -1,11 +1,14 @@
+import { CustomerBookingCard } from "./CustomerBookingCard";
+import "../../../styles/my-schedule.css";
 import { BookingWaitlist } from '../planning/BookingWaitlist';
+import { BookingStatusLegend } from '../../BookingStatusLegend';
 import { navigateApp, readRouteParams, workspacePathForTab } from '../../../workspaceRoutes.js';
 import { apiRequest } from "../../../api.js";
 import type { LocaleMessage } from "../../../providers/LocaleProvider";
 import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
-import { AlertCircle, ClipboardList, History, RefreshCw, X, Clock, FileText } from "lucide-react";
+import { AlertCircle, ClipboardList, History, RefreshCw, X, Clock, FileText, CalendarPlus, CreditCard, PackageCheck, Timer } from "lucide-react";
 import { BookingActionModal } from "../../BookingActionModal.js";
 import { BaseModal2026 } from "../../BaseModal2026.js";
 import { BookingOperationCard } from "./BookingOperationCard.js";
@@ -86,8 +89,9 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   const [historyState, setHistoryState] = useState<BookingHistoryResponse | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [cancelState, setCancelState] = useState<BookingRecord | null>(null);
+  const [queuePageSize, setQueuePageSize] = useState(20);
 
-  const queue = useQueuePage<BookingRecord, BookingQueueSummary>("/bookings", filter, `${user.id}:${user.role}`, 20);
+  const queue = useQueuePage<BookingRecord, BookingQueueSummary>("/bookings", filter, `${user.id}:${user.role}`, queuePageSize);
   const { items: bookings, loading } = queue;
   const loadError = queue.error;
 
@@ -264,17 +268,23 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   if (filter === 'PENDING_APPROVAL' || (counts?.PENDING_APPROVAL || 0) > 0) filters.push('PENDING_APPROVAL');
 
   return (
-    <div className="operations-view" data-testid="operations-view">
-      <BookingWaitlist/>
+    <div className={`operations-view${!isStaff ? " my-schedule" : ""}${selectedBookingId ? " has-selection" : ""}`} data-testid="operations-view">
+      {isStaff && <BookingWaitlist/>}
       <header className="operations-header">
         <div className="operations-header-group">
           <h1>{isStaff ? tr("ui.bookings_and_handover_3e0e5754") : tr("ui.my_bookings_094ca2d9")}</h1>
+          {!isStaff && <p>{tr("ui.mySchedule.intro")}</p>}
         </div>
+        {!isStaff && <button type="button" className="btn btn-primary schedule-new" onClick={() => navigateApp(workspacePathForTab("smart_calendar"))}><CalendarPlus size={18} aria-hidden="true" />{tr("ui.mySchedule.new")}</button>}
         <button type="button" className="operations-refresh-btn" onClick={loadBookings} disabled={loading}>
           <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
           {tr("ui.refresh_b4c61340")}
         </button>
       </header>
+      {!isStaff && <nav className="schedule-priorities" aria-label={tr('ui.mySchedule.quickGroups')}>
+        {([{ key: 'PENDING_PAYMENT', icon: CreditCard, title: 'ui.paymentHold.pending', hint: 'ui.mySchedule.paymentHint', tone: 'payment' }, { key: 'CONFIRMED', icon: PackageCheck, title: 'ui.awaiting_handover_de28611f', hint: 'ui.mySchedule.handoverHint', tone: 'ready' }, { key: 'CHECKED_OUT', icon: Timer, title: 'ui.in_use_a07a3647', hint: 'ui.mySchedule.returnHint', tone: 'active' }] as const).map(item => <button key={item.key} type="button" data-tone={item.tone} aria-pressed={filter === item.key} onClick={() => selectFilter(item.key)}><item.icon size={25} aria-hidden="true" /><span><strong>{tr(item.title)}</strong><small>{tr(item.hint)}</small></span><b>{counts ? counts[item.key] || 0 : '—'}</b></button>)}
+      </nav>}
+      <BookingStatusLegend />
 
       {(error || loadError) && (
         <div className="operations-alert danger" role="alert">
@@ -313,7 +323,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
         {/* Left: Queue */}
         <div className="operations-queue-col">
           <div className="operations-queue-header">
-            <span className="operations-queue-title">{tr("ui.home.staff.queueTitle")}</span>
+            <span className="operations-queue-title">{tr(isStaff ? "ui.home.staff.queueTitle" : "ui.mySchedule.list")}</span>
           </div>
 
           {loading ? (
@@ -334,22 +344,18 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
               <ClipboardList size={22} className="empty-icon" />
               <strong>{tr("ui.no_bookings_in_this_group_1391cc5e")}</strong>
               <span>{tr("ui.choose_another_group_to_view_00eb6689")}</span>
+              {!isStaff && <button type="button" className="btn btn-primary" onClick={() => navigateApp(workspacePathForTab("smart_calendar"))}>{tr("ui.mySchedule.new")}</button>}
             </div>
           ) : (
             <>
               <div className="operations-list">
-                {bookings.map((booking) => (
-                  <BookingOperationCard
-                    key={booking.id}
-                    booking={booking}
-                    busy={busyId === booking.id}
-                    isSelected={selectedBookingId === booking.id}
-                    onSelect={selectBooking}
-                  />
-                ))}
+                {bookings.map((booking) => {
+                  const Card = isStaff ? BookingOperationCard : CustomerBookingCard;
+                  return <Card key={booking.id} booking={booking} busy={busyId === booking.id} isSelected={selectedBookingId === booking.id} onSelect={selectBooking} />;
+                })}
               </div>
               {queue.pagination && (
-                <QueuePagination pagination={queue.pagination} onPage={queue.setPage} disabled={loading || Boolean(busyId)} />
+                <QueuePagination pagination={queue.pagination} onPage={queue.setPage} disabled={loading || Boolean(busyId)} pageSizes={[20, 50, 100]} onPageSize={setQueuePageSize} />
               )}
             </>
           )}
@@ -380,6 +386,8 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
           )}
         </div>
       </div>
+
+      {!isStaff && <div className="schedule-waitlist"><BookingWaitlist/></div>}
 
       {/* Action modal */}
       {actionState && (

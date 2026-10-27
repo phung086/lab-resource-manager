@@ -40,7 +40,7 @@
 .calendar-workspace .calendar-week-cell.is-available :is(.calendar-slot-action,.calendar-slot-hover-icon) { opacity:1; color:#604482; font-size:12px; font-weight:500; }
 .calendar-workspace .calendar-week-cell.is-available:hover { background:#f3edff; box-shadow:inset 0 0 0 1px #bda5e9; transform:none; }
 .calendar-workspace :is(.calendar-week-cell.is-past,.calendar-day-available.is-past) { background:#f5f4f7; color:#726b7d; cursor:default; }
-.calendar-workspace .calendar-week-cell.is-past .calendar-slot-action { opacity:1; color:#726b7d; font-size:11px; font-weight:400; }
+.calendar-workspace .calendar-week-cell.is-past .calendar-slot-action { opacity:1; color:#726b7d; font-size: 12px; font-weight:400; }
 .calendar-workspace .calendar-week-cell.is-past svg { display:none; }
 .calendar-workspace .calendar-week-cell.is-mine { background:#eef8f2; color:#1b6140; }
 .calendar-workspace .calendar-week-cell.is-booked { background:#f1eff5; color:#574f65; }

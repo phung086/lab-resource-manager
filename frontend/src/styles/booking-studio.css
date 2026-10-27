@@ -1,0 +1,138 @@
+/* Session studio: time controls beside a persistent session ticket. */
+.workspace-shell.lab-spectrum .calendar-planner .planner-slot-panel { padding:0; border:0; background:transparent; box-shadow:none; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-studio { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:24px; align-items:start; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-editor { min-width:0; padding:26px; background:#fff; border:1px solid #e0ddea; border-radius:24px; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-slot-heading { margin:0 0 14px; padding:0 0 16px; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-slot-heading h2 { font-size:25px; letter-spacing:-.025em; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-slot-panel .planner-datebar { display:grid; grid-template-columns:1fr auto; gap:12px; padding:0 0 16px; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-datebar h2 { grid-column:1/-1; grid-row:2; margin:0; font-size:16px; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-input { min-width:0; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-input input { max-width:150px; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); margin-bottom:22px; gap:6px; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip button { min-width:0; padding:12px 3px; min-height:103px; border:1px solid #e8e4f0; background:#f7f5fc; border-radius:14px; transition:background .2s,box-shadow .2s,transform .2s; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip strong { font-size:23px; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip small { font-size:10px; line-height:1.4; white-space:normal; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip button[aria-pressed="true"] { background:#6040ce; color:#fff; border-color:#6040ce; box-shadow:0 7px 14px -8px #6040ceaa; transform:translateY(-3px); }
+.workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip button[aria-pressed="true"] :is(span,small,strong) { color:#fff; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-duration { background:#f6f3fb; border-radius:13px; padding:12px 14px; margin:0 0 22px; gap:12px; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-duration label { font-size:13px; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-free-windows { gap:10px; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-free-windows button { min-height:80px; padding:16px; border:1px solid #dce3df; border-radius:16px; background:#f7faf8; transition:background .2s,border-color .2s; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-free-windows button[aria-pressed="true"] { background:#e5f4ed; border-color:#6da992; color:#265f4b; box-shadow:inset 4px 0 #6da992; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-free-windows button[aria-pressed="true"] strong { color:#265f4b; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-next-times { border-top:1px solid #e7e1ef; margin-top:20px; padding-top:8px; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-next-times summary { padding:12px 0; cursor:pointer; font-size:13px; color:#625574; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-custom-time { margin:14px 0 0; padding:14px; border:1px solid #ded6eb; border-radius:14px; background:#fbf9fe; }
+.workspace-shell.lab-spectrum .calendar-planner .planner-custom-time summary { cursor:pointer; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-ticket { position:sticky; top:100px; min-width:0; background:#fff; border:1px solid #ddd5e9; border-radius:24px; overflow:hidden; box-shadow:0 18px 32px -26px #41276888; }
+.slot-ticket-art { height:168px; background:linear-gradient(130deg,#e5def7,#e0f1e8); }
+.slot-ticket-art .resource-category-art { height:100%; width:100%; padding:8px 30px; }
+.slot-ticket-body { padding:22px; }
+.slot-ticket-code { font-size:11px; color:#746587; letter-spacing:.03em; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-ticket h2 { margin:8px 0; font-size:22px; line-height:1.3; letter-spacing:-.02em; }
+.slot-ticket-body > p { margin:6px 0 14px; color:#6a6176; font-size:12px; line-height:1.6; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-ticket .planner-choice { position:relative; display:flex; flex-direction:column-reverse; align-items:flex-start; margin:20px -22px; padding:20px 22px; gap:8px; border-block:1px dashed #c9bdd9; background:#f8f5fc; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-ticket .planner-choice strong { display:block; font-size:29px; color:#513780; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-ticket .planner-choice span { font-size:12px; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-ticket .planner-booking-actions { display:grid; gap:10px; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-ticket .planner-booking-actions button { width:100%; justify-content:center; min-height:48px; border-radius:12px; font-size:13px; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-ticket .planner-policy-note { font-size:11px; line-height:1.6; padding:0; margin:14px 0 0; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-studio { animation:session-enter .28s ease-out; }
+/* This class is passed through BaseModal's existing width slot; other dialogs are unchanged. */
+.modal-backdrop-2026 .modal-container-2026.modal-container-2026.booking-studio-modal { width:min(1060px,calc(100vw - 40px)); max-width:1060px; border-radius:26px; max-height:94dvh; overflow:hidden; }
+.modal-container-2026.booking-studio-modal .modal-heading-2026 { padding:22px 28px; background:linear-gradient(120deg,#eee8fc,#f6f4fc 60%,#e7f4ee); border-bottom:1px solid #e2dcec; }
+.modal-container-2026.booking-studio-modal .modal-heading-2026 h3 { font-size:22px; letter-spacing:-.02em; }
+.modal-container-2026.booking-studio-modal .modal-heading-2026 p { color:#6b607b; font-size:12px; }
+.modal-container-2026.booking-studio-modal .modal-language-row { padding:6px 26px; background:#f9f8fd; }
+.modal-container-2026.booking-studio-modal .modal-body-2026 { padding:0 26px 26px; background:#f9f8fd; }
+.modal-container-2026.booking-studio-modal .booking-compose { display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:22px; align-items:start; }
+.modal-container-2026.booking-studio-modal .booking-compose-steps { grid-column:1/-1; display:flex; list-style:none; padding:0; margin:0; gap:24px; border-bottom:1px solid #e2dceb; }
+.modal-container-2026.booking-studio-modal .booking-compose-steps li { display:flex; align-items:center; gap:9px; padding:12px 0 16px; color:#786e86; font-size:13px; border-bottom:3px solid transparent; }
+.modal-container-2026.booking-studio-modal .booking-compose-steps li[aria-current="step"] { color:#6040ce; border-bottom-color:#6040ce; font-weight:600; }
+.booking-compose-steps li > span { display:grid; place-items:center; width:27px; height:27px; border-radius:50%; background:#eee9f7; }
+.booking-compose-steps li[aria-current="step"] > span { background:#6040ce; color:white; }
+.modal-container-2026.booking-studio-modal .booking-edit-fields { min-width:0; padding:24px; background:white; border:1px solid #e4dfed; border-radius:20px; margin:0; display:flex; flex-direction:column; gap:18px; }
+.modal-container-2026.booking-studio-modal .booking-edit-fields[hidden] { display:none; }
+.modal-container-2026.booking-studio-modal .booking-workspace .booking-contact { border:0; padding:0; margin:0 0 4px; }
+.modal-container-2026.booking-studio-modal .booking-contact legend { font-size:17px; margin:0 0 14px; padding:0; }
+.modal-container-2026.booking-studio-modal .booking-workspace .booking-label { text-transform:none; letter-spacing:0; font-size:13px; display:flex; flex-direction:row; flex-wrap:wrap; justify-content:flex-start; align-items:center; gap:5px; line-height:1.5; }
+.modal-container-2026.booking-studio-modal .booking-workspace .booking-label > span:first-child { width:auto; }
+.modal-container-2026.booking-studio-modal .booking-workspace .booking-input,
+.modal-container-2026.booking-studio-modal .booking-workspace :is(input,select,textarea) { border-radius:11px; min-height:44px; background:#fdfcfe; font-size:14px; }
+.modal-container-2026.booking-studio-modal .booking-workspace .booking-time-grid { gap:12px; }
+.modal-container-2026.booking-studio-modal .booking-workspace .booking-review-note { margin:0; padding:11px 13px; font-size:12px; border:0; background:#f3effa; }
+.modal-container-2026.booking-studio-modal .booking-compose-summary { position:sticky; top:0; border:1px solid #dcd3e8; border-radius:20px; overflow:hidden; background:#fff; }
+.booking-summary-art { height:170px; background:linear-gradient(135deg,#ded6f3,#e4f3e9); }
+.booking-summary-art .resource-category-art { width:100%; height:100%; padding:8px 28px; }
+.booking-summary-content { padding:22px; }
+.booking-summary-content > h3 { font-size:21px; line-height:1.35; margin:8px 0 18px; color:#332744; }
+.booking-summary-time { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:0 -22px; padding:18px 22px; background:#f8f5fc; border-block:1px dashed #cfc4e0; }
+.booking-summary-time dt { color:#766984; font-size:11px; }
+.booking-summary-time dd { font-size:15px; margin:6px 0 0; font-weight:600; color:#4e376d; }
+.booking-summary-fee h4 { font-size:12px; color:#766984; font-weight:500; margin:22px 0 10px; }
+.modal-container-2026.booking-studio-modal .booking-summary-fee .alert { padding:0; background:none; border:0; margin:0; font-size:12px; line-height:1.6; }
+.booking-summary-fee .alert strong { display:block; font-size:30px; letter-spacing:-.02em; color:#513780; margin:6px 0 10px; }
+.booking-summary-note { border-top:1px solid #eee9f3; margin:18px 0 0; padding-top:16px; color:#756a82; font-size:11px; line-height:1.6; }
+.modal-container-2026.booking-studio-modal .booking-review { padding:24px; border:1px solid #d0e5da; border-radius:20px; background:linear-gradient(145deg,#edf8f1,#fff 70%); min-width:0; animation:session-enter .28s ease-out; }
+.modal-container-2026.booking-studio-modal .booking-review h3 { margin:0 0 12px; font-size:24px; color:#285c48; }
+.modal-container-2026.booking-studio-modal .booking-review p { font-size:13px; line-height:1.65; }
+.modal-container-2026.booking-studio-modal .booking-review dl { display:grid; grid-template-columns:1fr; gap:5px; margin:20px 0; }
+.modal-container-2026.booking-studio-modal .booking-review dt { font-size:11px; color:#6c7b73; margin-top:10px; }
+.modal-container-2026.booking-studio-modal .booking-review dd { margin:0; font-size:14px; overflow-wrap:anywhere; }
+.modal-backdrop-2026 .modal-container-2026.booking-studio-modal .modal-footer-2026 { padding:16px 26px; background:#fff; border-top:1px solid #e0d8ea; }
+.modal-backdrop-2026 .modal-container-2026.booking-studio-modal .modal-footer-2026 .btn { min-height:48px; padding:12px 20px; border-radius:12px; }
+@keyframes session-enter { from { opacity:.25; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@media(max-width:1100px) {
+ .workspace-shell.lab-spectrum .calendar-planner .slot-studio { grid-template-columns:minmax(0,1fr) 270px; gap:18px; }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-editor { padding:20px; }
+}
+@media(max-width:850px) {
+ .workspace-shell.lab-spectrum .calendar-planner .slot-studio { grid-template-columns:minmax(0,1fr); }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-ticket { position:static; display:grid; grid-template-columns:150px minmax(0,1fr); }
+ .slot-ticket-art { height:100%; min-height:180px; }
+ .slot-ticket-art .resource-category-art { padding:10px; }
+ .modal-container-2026.booking-studio-modal .booking-compose { grid-template-columns:minmax(0,1fr); }
+ .modal-container-2026.booking-studio-modal .booking-compose-summary { position:static; grid-row:2; }
+ .modal-container-2026.booking-studio-modal .booking-summary-art { display:none; }
+ .booking-summary-content { display:grid; grid-template-columns:1fr 1fr; gap:8px 18px; padding:18px; }
+ .booking-summary-content > h3 { grid-column:1; margin:0; font-size:17px; }
+ .booking-summary-content > .slot-ticket-code { grid-column:1/-1; }
+ .booking-summary-time { grid-column:1; margin:0; padding:12px 0; border:0; background:none; }
+ .booking-summary-fee { grid-column:2; grid-row:2/4; }
+ .booking-summary-fee h4 { margin:0; }
+ .booking-summary-fee .alert strong { font-size:24px; }
+ .booking-summary-note { grid-column:1/-1; margin:0; padding-top:10px; }
+}
+@media(max-width:520px) {
+ .workspace-shell.lab-spectrum .calendar-planner .slot-editor { padding:18px 12px; }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip { gap:3px; }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip button { min-height:84px; padding:10px 2px; border-radius:10px; }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip strong { font-size:19px; }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip small { font-size:9px; }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-datebar { grid-template-columns:1fr!important; }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-input { justify-content:flex-start; }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-datebar h2 { grid-row:auto; }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-ticket { grid-template-columns:1fr; }
+ .slot-ticket-art { display:none; }
+ .modal-backdrop-2026 .modal-container-2026.modal-container-2026.booking-studio-modal { width:calc(100vw - 16px); margin:8px; max-height:96dvh; border-radius:20px; }
+ .modal-container-2026.booking-studio-modal .modal-heading-2026 { padding:16px; }
+ .modal-container-2026.booking-studio-modal .modal-heading-2026 h3 { font-size:18px; }
+ .modal-container-2026.booking-studio-modal .modal-body-2026 { padding:0 12px 16px; }
+ .modal-container-2026.booking-studio-modal .booking-compose { gap:14px; }
+ .modal-container-2026.booking-studio-modal .booking-compose-steps { gap:15px; }
+ .modal-container-2026.booking-studio-modal .booking-compose-steps li { font-size:11px; }
+ .modal-container-2026.booking-studio-modal .booking-edit-fields,.modal-container-2026.booking-studio-modal .booking-review { padding:16px; }
+ .modal-backdrop-2026 .modal-container-2026.booking-studio-modal .modal-footer-2026 { padding:12px; gap:8px; flex-wrap:nowrap; }
+ .modal-backdrop-2026 .modal-container-2026.booking-studio-modal .modal-footer-2026 .btn { padding:10px 12px; font-size:12px; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .workspace-shell.lab-spectrum .calendar-planner .slot-studio,.modal-container-2026.booking-studio-modal .booking-review { animation:none; }
+ .workspace-shell.lab-spectrum .calendar-planner .slot-editor .planner-date-strip button,.workspace-shell.lab-spectrum .calendar-planner .planner-free-windows button { transition:none; transform:none; }
+}
+@media(max-width:520px) {
+ .modal-container-2026.booking-studio-modal .booking-summary-time { grid-column:1/-1; grid-row:3; }
+ .modal-container-2026.booking-studio-modal .booking-summary-fee { grid-row:2; }
+ .modal-container-2026.booking-studio-modal .booking-summary-time dd { white-space:nowrap; }
+ .modal-container-2026.booking-studio-modal .modal-icon-surface { display:none; }
+}
+.workspace-shell.lab-spectrum .calendar-planner .planner-booking-layout:not(.is-step-time):not(.is-step-resource) .slot-studio { grid-template-columns:minmax(0,1fr); }

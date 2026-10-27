@@ -1,3 +1,5 @@
+import { ResourceCategoryArt } from "./ResourceCategoryArt";
+import "../styles/booking-studio.css";
 import '../styles/calendar-workspace.css';
 import { BookingAvailabilityHelp } from './features/planning/BookingAvailabilityHelp';
 import type { LocaleMessage } from "../providers/LocaleProvider";
@@ -446,7 +448,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       subtitle={tr("ui.availability_is_checked_when_your_ab603059")}
       icon={Calendar}
       iconColor="text-blue-600"
-      maxWidth="max-w-xl"
+      maxWidth="booking-studio-modal"
       footer={
         showSuccess ? (
           <div className="w-full flex items-center justify-between">
@@ -530,7 +532,8 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>{tr('ui.agreed_fee_e147e0c0')}{createdBooking.feeAmountVnd.toLocaleString('vi-VN')} {tr('ui.vnd_789721c8')}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>{tr('ui.view_booking_payment_3a007567')}</button>}</div>}
         </div>
       ) : (
-        <form ref={formRef} id="quick-booking-form" onSubmit={handleSubmit} className="booking-form booking-workspace" noValidate>
+        <form ref={formRef} id="quick-booking-form" onSubmit={handleSubmit} className="booking-form booking-workspace booking-compose" noValidate>
+          <ol className="booking-compose-steps" aria-label={tr('ui.bookingStudio.steps')}><li aria-current={!reviewing ? 'step' : undefined}><span>1</span>{tr('ui.bookingStudio.details')}</li><li aria-current={reviewing ? 'step' : undefined}><span>2</span>{tr('ui.bookingReview.title')}</li></ol>
           {reviewing && <section className="booking-review" aria-labelledby="booking-review-heading">
             <h3 id="booking-review-heading" tabIndex={-1} ref={reviewHeading}>{tr('ui.bookingReview.title')}</h3>
             <p>{tr('ui.bookingReview.checked')}</p>
@@ -693,8 +696,6 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
           {/* Purpose */}
           {pricingRules.length > 0 && new Set(pricingRules.map(rule => rule.hourlyRateVnd)).size > 1 && <label className="booking-field">{tr("ui.pricing_purpose_f1a0b490")}<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{pricingRules.map(rule => <option key={rule.id} value={rule.purposeCode}>{rule.label} — {rule.hourlyRateVnd.toLocaleString("vi-VN")} {tr("ui.vnd_hour_c2aca1ee")}</option>)}</select></label>}
-          <div className="alert" aria-live="polite">{quoteError ? <span role="alert">{translate(quoteError)} <button className="secondary-button" type="button" onClick={() => setPricingRetry(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></span> : quote?.key === quoteKey ? <span>{tr("ui.usage_fee_10b23fee")}<strong>{quote.amountVnd.toLocaleString("vi-VN")} {tr("ui.vnd_bf502a39")}</strong>{quote.amountVnd > 0 ? tr("ui.pay_after_confirmation_and_before_2effbba2") : tr("ui.no_payment_required_a44e1364")}</span> : !timeIsValid ? tr("ui.calendarWorkspace.validTimeForFee") : tr("ui.updating_usage_fee_be66cd3f")}</div>
-          <QuoteDiscountSummary quote={quote?.key === quoteKey ? quote : null} />
           <div className="booking-field">
             <label htmlFor="booking-purpose" className="booking-label">
               {tr("ui.usage_purpose_701ce708")}</label>
@@ -716,6 +717,16 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           <p className="booking-review-note">{tr("ui.rental.quickConfirm")}</p>
           <LabPolicySummary policy={{...currentPolicy, maxBookingMinutes: currentResource?.maxBookingMinutes ?? currentPolicy?.maxBookingMinutes}} requiresApproval={currentResource ? effectiveRequiresApproval : undefined} />
           </fieldset>
+          <aside className="booking-compose-summary" aria-label={tr('ui.bookingStudio.summary')}>
+            <div className="booking-summary-art"><ResourceCategoryArt category={currentResource?.category} /></div>
+            <div className="booking-summary-content"><span className="slot-ticket-code">{currentResource?.code}</span><h3>{currentResource?.name || tr('ui.choose_a_resource_1ba6fed9')}</h3>
+            <dl className="booking-summary-time"><div><dt>{tr('ui.booking_date_502b0188')}</dt><dd>{selectedDate || '—'}</dd></div><div><dt>{tr('ui.time_b295fd62')}</dt><dd>{startTime}–{endTime}</dd></div></dl>
+            <div className="booking-summary-fee"><h4>{tr('ui.bookingStudio.fee')}</h4>
+          <div className="alert" aria-live="polite">{quoteError ? <span role="alert">{translate(quoteError)} <button className="secondary-button" type="button" onClick={() => setPricingRetry(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></span> : quote?.key === quoteKey ? <span>{tr("ui.usage_fee_10b23fee")}<strong>{quote.amountVnd.toLocaleString("vi-VN")} {tr("ui.vnd_bf502a39")}</strong>{quote.amountVnd > 0 ? tr("ui.pay_after_confirmation_and_before_2effbba2") : tr("ui.no_payment_required_a44e1364")}</span> : !timeIsValid ? tr("ui.calendarWorkspace.validTimeForFee") : tr("ui.updating_usage_fee_be66cd3f")}</div>
+          <QuoteDiscountSummary quote={quote?.key === quoteKey ? quote : null} />
+            </div><p className="booking-summary-note">{tr('ui.bookingStudio.notReserved')}</p></div>
+          </aside>
+
         </form>
       )}
     </BaseModal2026>

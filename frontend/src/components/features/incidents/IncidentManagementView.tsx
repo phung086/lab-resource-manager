@@ -589,8 +589,17 @@ export const IncidentManagementView: React.FC<Props> = ({
           ) : filtered.length === 0 ? (
             <div className="incident-empty">
               <CheckCircle2 size={28} />
-              <h3>{tr("ui.no_incidents_match_the_current_e09d6f91")}</h3>
-              <p>{tr("ui.incident.emptyHint")}</p>
+              {queue.pagination?.total === 0 && filter === "ALL" ? (
+                <>
+                  <h3>{tr("ui.incident.noneRecorded")}</h3>
+                  <p>{tr("ui.incident.noneRecordedHint")}</p>
+                </>
+              ) : (
+                <>
+                  <h3>{tr("ui.no_incidents_match_the_current_e09d6f91")}</h3>
+                  <p>{tr("ui.incident.emptyHint")}</p>
+                </>
+              )}
             </div>
           ) : (
             <ul className="incident-job-list" aria-label={tr("ui.incident.queue")}>
