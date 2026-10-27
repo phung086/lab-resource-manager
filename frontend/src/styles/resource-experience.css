@@ -1,0 +1,139 @@
+/* Resource discovery: a collection of laboratory tools, with a persistent booking dossier. */
+.workspace-shell.lab-spectrum .resource-browse-studio > .workspace-header { display:block; padding:28px 30px 22px; border:0; border-radius:26px; background:linear-gradient(115deg,#e6ddfa,#edf1fc 58%,#ddf1e9); margin-bottom:22px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .workspace-title { font-size:clamp(27px,3vw,42px); line-height:1.15; max-width:650px; letter-spacing:-.035em; }
+.workspace-shell.lab-spectrum .resource-browse-studio .catalogue-studio-intro { margin:12px 0 18px; max-width:640px; color:#56526d; line-height:1.6; font-size:15px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .workspace-title-group { display:block; }
+.workspace-shell.lab-spectrum .resource-browse-studio .workspace-title-group .help-disclosure { margin:0 0 12px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .catalogue-quick-actions { margin-top:18px; gap:10px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .catalogue-quick-search { flex:1 1 320px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .catalogue-quick-search input { min-height:50px; border-radius:14px; background:white; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups { gap:12px; margin-bottom:18px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups button { position:relative; min-height:102px; padding:20px; border:1px solid transparent; border-radius:18px; background:#eee8fc; overflow:hidden; color:#514172; transition:background .22s,box-shadow .22s,transform .22s; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups button:nth-child(2) { background:#e1f1e9; color:#28695b; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups button:nth-child(3) { background:#e4edfc; color:#3b6096; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups button:nth-child(4) { background:#fbe9e0; color:#8c543b; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups button > svg { flex-shrink:0; width:34px; height:34px; stroke-width:1.4; transition:transform .35s; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups button[aria-pressed="true"] { border-color:currentColor; box-shadow:inset 0 -4px currentColor; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups strong { font-size:17px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .results-bar { padding:8px 0; background:transparent; border:0; box-shadow:none; min-height:54px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-grid { gap:22px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-card { position:relative; border-radius:24px; border:1px solid #dedfea; overflow:hidden; background:#fff; box-shadow:0 7px 18px -16px #2b1f59; transition:box-shadow .28s,border-color .28s; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-cover { height:215px; position:relative; overflow:hidden; background:linear-gradient(145deg,#e8e2f9,#f4f0fc); }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-card[data-category="ROOM"] .resource-catalogue-cover { background:linear-gradient(145deg,#d6eee3,#edf7f0); }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-card[data-category="MACHINE"] .resource-catalogue-cover { background:linear-gradient(145deg,#dce9fa,#edf4fc); }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-card[data-category="EXPERIMENT_KIT"] .resource-catalogue-cover { background:linear-gradient(145deg,#f8e5d7,#fff3e9); }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-card[data-category="MATERIAL"] .resource-catalogue-cover { background:linear-gradient(145deg,#f4dfeb,#fff1f6); }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-cover > img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:transform .6s cubic-bezier(.2,.65,.3,1); }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-category-art { padding:12px 18px; transition:transform .5s cubic-bezier(.2,.65,.3,1); }
+.workspace-shell.lab-spectrum .resource-browse-studio .catalogue-cover-link { position:absolute; inset:0; border:0; border-radius:0; background:transparent; display:flex; align-items:flex-end; justify-content:flex-end; padding:18px; z-index:2; cursor:pointer; }
+.catalogue-cover-link > svg { box-sizing:content-box; padding:10px; background:#fffffff0; color:#57418b; border-radius:50%; box-shadow:0 3px 12px #38265b16; transition:transform .2s; }
+.workspace-shell.lab-spectrum .resource-browse-studio .catalogue-cover-category { position:absolute; left:16px; top:16px; z-index:1; background:#ffffffed; padding:6px 11px; border-radius:9px; font-size:11px; color:#514962; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-body { padding:20px 20px 14px; display:flex; flex-direction:column; gap:9px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-meta { margin:0; font-size:11px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-meta > span:last-child { display:none; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-body h2 { margin:0; font-size:19px; line-height:1.4; min-height:2.8em; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-lab { margin:0; order:1; }
+.workspace-shell.lab-spectrum .resource-browse-studio .rental-card-price { font-size:21px; line-height:1.3; color:#3b295d; order:2; margin:4px 0; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-status { order:3; margin:0; padding:8px 0; border:0; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-more { order:4; margin:0; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-more summary { min-height:32px; font-size:12px; color:#666176; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-actions { padding:14px 20px 18px; background:#fff; border-top:1px solid #eeedf4; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-actions > .btn-primary,
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-actions > .btn-selected { grid-column:1/-1; min-height:44px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-actions > button { font-size:12px; border-radius:11px; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-card.is-selected { border-color:#5d9c8b; box-shadow:0 0 0 2px #5d9c8b25; }
+.workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-card.is-selected .btn-selected { animation:selection-confirm .35s ease-out; background:#e3f3ec; color:#245f4f; }
+/* Dossier: media and information on the left, identity + booking on the right. */
+.workspace-shell.lab-spectrum .resource-detail-page .resource-detail-layout { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(310px,1fr); gap:30px; align-items:start; margin-top:22px; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-detail-main { min-width:0; display:flex; flex-direction:column; gap:22px; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-detail-sidebar { position:sticky; top:24px; display:flex; flex-direction:column; gap:0; background:#fff; border:1px solid #e1dcec; border-radius:26px; overflow:hidden; box-shadow:0 20px 45px -34px #3d265e77; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-hero { display:flex; flex-direction:column; align-items:stretch; padding:28px 26px 22px; background:linear-gradient(145deg,#eee7fc,#f6f3fc 65%,#e8f5ef); border:0; border-radius:0; gap:18px; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-symbol { width:54px; height:54px; border-radius:16px; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-symbol svg { width:28px; height:28px; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-identity h1 { font-size:clamp(24px,2.5vw,34px); line-height:1.2; margin:12px 0; letter-spacing:-.025em; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-meta { flex-wrap:wrap; font-size:12px; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-facts { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding-top:16px; border-top:1px solid #dcd5e9; margin:0; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-facts dd { font-size:13px; line-height:1.5; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-sidebar-card { padding:24px 26px; border:0; border-radius:0; box-shadow:none; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-sidebar-title { font-size:28px; letter-spacing:-.025em; color:#45305f; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-sidebar-actions { gap:10px; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-sidebar-actions button { min-height:48px; border-radius:12px; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-detail-gallery { border:0; padding:0; margin:0; background:transparent; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-resource-gallery { margin:0; position:relative; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-heading { padding:0 4px 12px; margin:0; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-resource-gallery figure { border:0; border-radius:24px; background:#edf0f7; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-resource-gallery figure img,
+.workspace-shell.lab-spectrum .resource-detail-page .lab-resource-gallery figure video { width:100%; max-height:480px; aspect-ratio:4/3; object-fit:contain; background:#edf0f7; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-empty { min-height:360px; border:0; border-radius:24px; background:linear-gradient(145deg,#e7e1f8,#e4f1ee); padding:24px; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-empty .resource-category-art { height:250px; max-width:400px; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-empty p { font-size:13px; }
+.workspace-shell.lab-spectrum .resource-detail-page .gallery-frame { animation:gallery-reveal .3s ease-out; }
+.gallery-stepper { display:flex; align-items:center; justify-content:center; gap:18px; margin:14px 0; font-size:12px; }
+.gallery-stepper button { display:grid; place-items:center; width:40px; height:40px; border:1px solid #d9d1e7; background:#fff; color:#554077; border-radius:50%; cursor:pointer; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-choices { grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-choices button { position:relative; display:flex; flex-direction:column; padding:6px; border-radius:14px; min-width:0; gap:8px; box-shadow:none; overflow:hidden; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-choices img { width:100%; height:66px; aspect-ratio:auto; object-fit:cover; border-radius:9px; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-choices button > svg { position:absolute; top:12px; right:12px; background:white; padding:3px; box-sizing:content-box; border-radius:6px; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-choices button > span { font-size:11px; padding:3px; }
+.workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-choices button[aria-pressed="true"] { border-color:#7958bb; background:#f1ebfb; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-nav { display:flex; gap:5px; flex-wrap:wrap; padding:7px; margin:0; border:1px solid #e0dbea; border-radius:16px; background:#fff; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-nav button { padding:11px 13px; border:0; border-radius:11px; font-size:12px; color:#666075; transition:background .2s,color .2s; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-nav button[aria-pressed="true"] { background:#6040ce; color:#fff; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-detail-section { border:0; border-radius:20px; padding:25px; background:#ffffffd9; box-shadow:none; margin:0; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-detail-section:not([hidden]) { animation:dossier-panel .24s ease-out; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-detail-section[hidden] { display:none; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-description { font-size:15px; line-height:1.75; }
+@keyframes gallery-reveal { from { opacity:.35; transform:scale(.985); } to { opacity:1; transform:scale(1); } }
+@keyframes dossier-panel { from { opacity:.3; transform:translateX(10px); } to { opacity:1; transform:translateX(0); } }
+@keyframes selection-confirm { 50% { transform:scale(.97); } }
+@media(hover:hover) {
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-card:hover { box-shadow:0 18px 34px -22px #59428666; border-color:#bfb0da; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-cover:hover > img { transform:scale(1.055); }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-cover:hover .resource-category-art { transform:scale(1.06) rotate(-2deg); }
+ .resource-catalogue-cover:hover .art-moving { transform:translateY(-5px); }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups button:hover > svg { transform:rotate(-8deg) scale(1.1); }
+ .catalogue-cover-link:hover > svg { transform:scale(1.1); }
+}
+.art-moving { transition:transform .4s ease; }
+@media(max-width:1100px) {
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-detail-layout { grid-template-columns:minmax(0,1.2fr) minmax(290px,1fr); gap:20px; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups button { padding:14px; }
+}
+@media(max-width:760px) {
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-detail-layout { grid-template-columns:minmax(0,1fr); }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-detail-sidebar { position:static; grid-row:1; }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-profile-symbol { display:none; }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-profile-hero { padding:22px; }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-sidebar-card { padding:20px 22px; }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-profile-facts { gap:10px; }
+ .workspace-shell.lab-spectrum .resource-detail-page .lab-gallery-empty { min-height:280px; }
+ .workspace-shell.lab-spectrum .resource-browse-studio > .workspace-header { padding:22px 18px; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups { grid-template-columns:1fr 1fr; gap:8px; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups button { min-height:94px; padding:12px; gap:10px; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups strong { font-size:15px; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups small { font-size:11px; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-cover { height:225px; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-body h2 { min-height:0; }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-profile-nav button { flex:1 1 auto; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .resource-category-art,.art-moving,.gallery-frame,.resource-detail-section,.resource-catalogue-card,.resource-catalogue-cover > img,.catalogue-cover-link > svg,.resource-catalogue-groups button,.resource-catalogue-groups button > svg,.resource-profile-nav button,.btn-selected { animation:none!important; transition:none!important; transform:none!important; }
+}
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-identity { flex:0 0 auto; }
+.workspace-shell.lab-spectrum .resource-detail-page .resource-profile-facts { flex:0 0 auto; }
+.workspace-shell.lab-spectrum .resource-browse-studio .workspace-title-group { padding:0; margin:0; }
+.workspace-shell.lab-spectrum .resource-browse-studio .workspace-title-group h1 { max-width:800px; }
+
+@media(max-width:760px) {
+ .workspace-shell.lab-spectrum .resource-browse-studio .workspace-title { font-size:26px; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .catalogue-studio-intro { font-size:13px; margin:10px 0; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .catalogue-quick-actions { margin-top:12px; }
+ .workspace-shell.lab-spectrum .resource-browse-studio .resource-catalogue-groups button { min-height:78px; }
+ .workspace-shell.lab-spectrum .resource-detail-page { padding-inline:0; }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-detail-main,
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-detail-sidebar { display:contents; }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-profile-hero { grid-row:1; border-radius:22px; }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-detail-gallery { grid-row:2; }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-sidebar-card { grid-row:3; border-radius:22px; background:white; }
+ .workspace-shell.lab-spectrum .resource-detail-page .resource-profile-nav { grid-row:4; }
+}

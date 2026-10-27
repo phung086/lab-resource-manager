@@ -1,3 +1,4 @@
+import "../styles/resource-experience.css";
 /**
  * ResourceDetailPage.tsx
  * Dedicated page for viewing resource details (R3-A repair)
@@ -220,7 +221,6 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
 
   const bookings = schedule?.bookings || [];
   const maintenance = schedule?.maintenanceWindows || [];
-  const cover = resource.media?.find((item: any) => item.kind === "IMAGE");
 
   return (
     <div className="workspace-container resource-detail-page">
@@ -237,30 +237,19 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
         </button>
       </nav>
 
-      <header className="resource-profile-hero">
-        <div className="resource-profile-symbol" aria-hidden="true">{resource.category === "ROOM" ? <DoorOpen size={42} strokeWidth={1.4} /> : <Microscope size={42} strokeWidth={1.4} />}</div>
-        <div className="resource-profile-identity">
-          <div className="resource-profile-meta"><span className="resource-detail-code">{resource.code}</span><span>{resource.category ? tr(categoryLabels[resource.category]) : tr("ui.unclassified_10fe63fa")}</span></div>
-          <h1>{resource.name}</h1>
-          <p><MapPin size={16} aria-hidden="true" />{resource.laboratory?.name || resource.location || tr("ui.not_assigned_ebe3cb5d")}</p>
-        </div>
-        <dl className="resource-profile-facts">
-          <div><dt><Users size={16} aria-hidden="true" />{tr(resource.category === "ROOM" ? "ui.catalogue.seats" : "ui.catalogue.quantity")}</dt><dd>{resource.capacity}</dd></div>
-          <div><dt><ShieldCheck size={16} aria-hidden="true" />{tr("ui.approval_required_cc220dc0")}</dt><dd>{tr(resource.effectiveRequiresApproval ? "ui.approval_required_dc95ee8f" : "ui.confirm_automatically_when_eligible_e47b0eb4")}</dd></div>
-        </dl>
-      </header>
-      <nav className="resource-profile-nav" aria-label={tr("ui.catalogue.detailNavigation")}>
-        {[ ["overview", "ui.resourceDiscovery.overview"], ["specs", "ui.catalogue.specifications"], ["usage", "ui.usage_guide_28e5af8d"], ["pricing", "ui.rental.pricing"], ["schedule", "ui.resourceDiscovery.schedule"] ].map(([value,label]) => <button key={value} type="button" aria-pressed={section === value} aria-controls={`${value}-heading`} onPointerEnter={() => setSection(value)} onFocus={() => setSection(value)} onClick={() => setSection(value)}>{tr(label)}</button>)}
-      </nav>
       {/* Main Content Grid */}
       <div className="resource-detail-layout">
         {/* Left Column: Gallery + Details */}
-        <div className="resource-detail-main">
+        <div className="resource-detail-main" data-section={section}>
           {/* Gallery */}
-          <section className="resource-detail-gallery" aria-labelledby="gallery-heading" hidden={section !== "overview"}>
+          <section className="resource-detail-gallery" aria-labelledby="gallery-heading">
             <h2 id="gallery-heading" className="sr-only">{tr("ui.resourceDiscovery.media")}</h2>
-            <ResourceGallery key={resource.id} resourceId={resource.id} initialItems={resource.media} />
+            <ResourceGallery key={resource.id} resourceId={resource.id} initialItems={resource.media} category={resource.category} studio />
           </section>
+
+      <nav className="resource-profile-nav" aria-label={tr("ui.catalogue.detailNavigation")}>
+        {[ ["overview", "ui.resourceDiscovery.overview"], ["specs", "ui.catalogue.specifications"], ["usage", "ui.usage_guide_28e5af8d"], ["pricing", "ui.rental.pricing"], ["schedule", "ui.resourceDiscovery.schedule"] ].map(([value,label]) => <button key={value} type="button" aria-pressed={section === value} aria-controls={`${value}-heading`} onClick={() => setSection(value)}>{tr(label)}</button>)}
+      </nav>
 
           {/* Overview */}
           <section className="resource-detail-section" aria-labelledby="overview-heading" hidden={section !== "overview"}>
@@ -415,6 +404,19 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
 
         {/* Right Column: Actions Sidebar */}
         <aside className="resource-detail-sidebar">
+      <header className="resource-profile-hero">
+        <div className="resource-profile-symbol" aria-hidden="true">{resource.category === "ROOM" ? <DoorOpen size={42} strokeWidth={1.4} /> : <Microscope size={42} strokeWidth={1.4} />}</div>
+        <div className="resource-profile-identity">
+          <div className="resource-profile-meta"><span className="resource-detail-code">{resource.code}</span><span>{resource.category ? tr(categoryLabels[resource.category]) : tr("ui.unclassified_10fe63fa")}</span></div>
+          <h1>{resource.name}</h1>
+          <p><MapPin size={16} aria-hidden="true" />{resource.laboratory?.name || resource.location || tr("ui.not_assigned_ebe3cb5d")}</p>
+        </div>
+        <dl className="resource-profile-facts">
+          <div><dt><Users size={16} aria-hidden="true" />{tr(resource.category === "ROOM" ? "ui.catalogue.seats" : "ui.catalogue.quantity")}</dt><dd>{resource.capacity}</dd></div>
+          <div><dt><ShieldCheck size={16} aria-hidden="true" />{tr("ui.approval_required_cc220dc0")}</dt><dd>{tr(resource.effectiveRequiresApproval ? "ui.approval_required_dc95ee8f" : "ui.confirm_automatically_when_eligible_e47b0eb4")}</dd></div>
+        </dl>
+      </header>
+
           <div className="resource-sidebar-card">
             {/* Header */}
             <div className="resource-sidebar-header">

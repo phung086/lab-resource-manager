@@ -286,7 +286,7 @@ export function PublicResourceCatalog({
     <div className="public-live-catalog">
       <div className="catalog-head">
         <div>
-          <h3>{tr("ui.explore_lab_rooms_and_equipment_be952c10")}</h3>
+          <h2>{tr("ui.explore_lab_rooms_and_equipment_be952c10")}</h2>
           <p>
             {tr("ui.review_physical_condition_access_requirements_f841db8b")}</p>
         </div>
@@ -371,7 +371,7 @@ export function PublicResourceCatalog({
                 <span className="catalog-card-meta">
                   {tr(categoryLabels[row.category || ""] || row.category || "")} · {row.code}
                 </span>
-                <h4>{row.name}</h4>
+                <h3>{row.name}</h3>
                 <p className="catalog-card-loc">{row.location}</p>
                 <strong className="rental-card-price">{row.rental ? new Intl.NumberFormat("vi-VN").format(row.rental.hourlyRateVnd) + " ₫ / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</strong>
 
@@ -398,7 +398,7 @@ export function PublicResourceCatalog({
               <span>
                 {tr(categoryLabels[selected.category || ""])} · {selected.code}
               </span>
-              <h3 id="catalog-detail-title" ref={detailHeading} tabIndex={-1}>{selected.name}</h3>
+              <h2 id="catalog-detail-title" ref={detailHeading} tabIndex={-1}>{selected.name}</h2>
               <p>{selected.laboratory?.name || selected.location}</p>
             </div>
             <button type="button" onClick={closeDetails} aria-label={tr("ui.close_details_f6d87bfc")}>
@@ -418,7 +418,7 @@ export function PublicResourceCatalog({
           <div className="catalog-detail-layout">
             <div className="catalog-media-gallery">
               <div hidden={detailSection!=="overview"}><ResourceGallery key={selected.id} resourceId={selected.id} initialItems={selected.media}/></div>
-              <section className="resource-detail-section" hidden={detailSection!=="specs"}><h4>{tr("ui.recorded_specifications_eeeff271")}</h4><ResourceSpecifications specs={selected.specs} /></section>
+              <section className="resource-detail-section" hidden={detailSection!=="specs"}><h3>{tr("ui.recorded_specifications_eeeff271")}</h3><ResourceSpecifications specs={selected.specs} /></section>
               <div hidden={detailSection!=="usage"}><ResourceUsageGuide guide={selected.specs?.usageGuide}/></div>
             </div>
 

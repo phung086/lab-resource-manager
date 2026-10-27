@@ -1,3 +1,5 @@
+import { ResourceCategoryArt } from "./ResourceCategoryArt";
+import "../styles/resource-experience.css";
 import { HelpDisclosure } from "./base/HelpDisclosure";
 import type { LocaleMessage } from "../providers/LocaleProvider";
 import { translate } from "../i18n.js";
@@ -16,6 +18,7 @@ import {
   Microscope,
   FlaskConical,
   Package,
+  SlidersHorizontal,
   Wrench
 } from "lucide-react";
 
@@ -341,18 +344,28 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
   }
 
   return (
-    <div className={`workspace-container resource-management-view ${managementMode ? `resource-workspace-${user.role.toLowerCase()}` : ""} ${browseMode ? "" : "stagger"}`}>
+    <div className={`workspace-container resource-management-view ${managementMode ? `resource-workspace-${user.role.toLowerCase()}` : ""} ${browseMode ? "resource-browse-studio" : "stagger"}`}>
       {detailError && <div className="alert danger resource-detail-error" role="alert">{tr(detailError)}</div>}
 
       {/* Workspace Header */}
       <div className="workspace-header">
         <div className="workspace-title-group">
-          <h1 className="workspace-title">{managementMode ? tr(user.role === "ADMIN" ? "ui.resourceAdmin.title" : "ui.resourceAdmin.staffTitle") : tr("ui.laboratory_resource_catalogue_84d37caf")}</h1>
-          <HelpDisclosure>{managementMode ? tr("ui.resources.managementDescription") : tr("ui.browse_rooms_and_equipment_review_6eb416ab")}</HelpDisclosure>
+          <h1 className="workspace-title">{managementMode ? tr(user.role === "ADMIN" ? "ui.resourceAdmin.title" : "ui.resourceAdmin.staffTitle") : tr("ui.experience.catalogTitle")}</h1>
+          {browseMode && <p className="catalogue-studio-intro">{tr("ui.experience.catalogIntro")}</p>}
+          {managementMode && <HelpDisclosure>{tr("ui.resources.managementDescription")}</HelpDisclosure>}
         </div>
-        <div className="workspace-actions">
+        <div className="workspace-actions catalogue-quick-actions">
+          <label className="catalogue-quick-search">
+            <span className="sr-only">{tr("ui.code_name_location_or_laboratory_30a6bca0")}</span>
+            <span className="search-box"><Search size={16} aria-hidden="true" /><input type="search" maxLength={120} value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder={tr("ui.code_name_location_or_laboratory_30a6bca0")} aria-label={tr("ui.code_name_location_or_laboratory_30a6bca0")} /></span>
+          </label>
+          <div className="catalogue-quick-filters" role="group" aria-label={tr("ui.current_availability_f57c5e36")}>
+            {[["", "ui.all_49c73a31"], ["AVAILABLE", "ui.available_now_d746228e"], ["RESERVED", "ui.currently_reserved_d9123964"], ["UNAVAILABLE", "ui.unavailable_567f82dd"]].map(([value, key]) => (
+              <button key={value || "ALL"} type="button" aria-pressed={filters.availability === value} className={filters.availability === value ? "is-active" : ""} onClick={() => setFilters({ ...filters, availability: value })}>{tr(key)}</button>
+            ))}
+          </div>
           <button type="button" className="btn btn-secondary" aria-expanded={filtersOpen} aria-controls="catalog-filters" onClick={() => { setManagementSection("directory"); setFiltersOpen(managementSection !== "directory" || !filtersOpen); }}>
-            <Search size={16} aria-hidden="true" />
+            <SlidersHorizontal size={16} aria-hidden="true" />
             {tr("refine.searchFilters")}
             {Object.entries(filters).filter(([key, value]) => value !== initialFilters[key as keyof typeof initialFilters]).length > 0 && (
               <span className="filter-count">{Object.entries(filters).filter(([key, value]) => value !== initialFilters[key as keyof typeof initialFilters]).length}</span>
@@ -386,19 +399,14 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
         </button>)}
       </div>}
 
-      {/* Filters Panel */}
+      {/* Filters Panel — advanced facets; search and availability live in the header */}
       <div id="catalog-filters" hidden={!filtersOpen} className="queue-panel resource-filter-grid" aria-label={tr("ui.resource_filters_08961fcd")}>
         <div className="resource-filter-grid-inner">
-          <label className="resource-search-field">
-            <span>{tr("ui.code_name_location_or_laboratory_30a6bca0")}</span>
-            <span className="search-box"><Search size={17} aria-hidden="true" /><input type="search" maxLength={120} value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder={tr("ui.code_name_location_or_laboratory_30a6bca0")} /></span>
-          </label>
           <label><span id="resource-filter-laboratoryId-label">{tr("ui.laboratory_eb85976f")}</span><select aria-labelledby="resource-filter-laboratoryId-label" value={filters.laboratoryId} onChange={(event) => setFilters({ ...filters, laboratoryId: event.target.value })}><option value="">{tr("ui.all_49c73a31")}</option>{laboratories.map((lab) => <option key={lab.id} value={lab.id}>{lab.code} - {lab.name}</option>)}</select></label>
           <label><span id="resource-filter-category-label">{tr("ui.resource_category_5fc170bb")}</span><select aria-labelledby="resource-filter-category-label" value={filters.category} onChange={(event) => { if (event.target.value) setCatalogueGroup(groupForCategory(event.target.value)); setFilters({ ...filters, category: event.target.value, classification: "ALL" }); }}><option value="">{tr("ui.all_49c73a31")}</option>{categories.map((value) => <option key={value} value={value}>{tr(categoryLabels[value])}</option>)}</select></label>
           <label><span id="resource-filter-classification-label">{tr("ui.classification_a077263e")}</span><select aria-labelledby="resource-filter-classification-label" value={filters.classification} onChange={(event) => { if (event.target.value === "UNRESOLVED") setCatalogueGroup("OTHER"); setFilters({ ...filters, classification: event.target.value, category: "" }); }}><option value="ALL">{tr("ui.all_49c73a31")}</option><option value="UNRESOLVED">{tr("ui.unclassified_10fe63fa")}</option></select></label>
           <label><span id="resource-filter-subtype-label">{tr("ui.technical_subtype_f4ef03ac")}</span><select aria-labelledby="resource-filter-subtype-label" value={filters.subtype} onChange={(event) => setFilters({ ...filters, subtype: event.target.value })}><option value="">{tr("ui.all_49c73a31")}</option>{subtypes.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
           <label><span id="resource-filter-operationalStatus-label">{tr("ui.physical_status_e07deca7")}</span><select aria-labelledby="resource-filter-operationalStatus-label" value={filters.operationalStatus} onChange={(event) => setFilters({ ...filters, operationalStatus: event.target.value })}><option value="">{tr("ui.all_49c73a31")}</option>{operationalStatuses.map((value) => <option key={value} value={value}>{tr(statusLabels[value])}</option>)}</select></label>
-          <label><span id="resource-filter-availability-label">{tr("ui.current_availability_f57c5e36")}</span><select aria-labelledby="resource-filter-availability-label" value={filters.availability} onChange={event => setFilters({ ...filters, availability: event.target.value })}><option value="">{tr("ui.all_49c73a31")}</option><option value="AVAILABLE">{tr("ui.available_now_d746228e")}</option><option value="RESERVED">{tr("ui.currently_reserved_d9123964")}</option><option value="UNAVAILABLE">{tr("ui.unavailable_567f82dd")}</option></select></label>
           <button type="button" className="btn btn-secondary" disabled={JSON.stringify(filters) === JSON.stringify(initialFilters)} onClick={() => setFilters(initialFilters)}>
             <FilterX size={16} aria-hidden="true" />
             {tr("ui.clear_filters_f8f509b1")}
@@ -491,12 +499,12 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
             const technical = resource.specs?.technical || {};
             const highlights = Object.entries(technical).filter(([, value]) => typeof value === "string" || typeof value === "number").slice(0, 2);
             return (
-              <article className={`resource-catalogue-card ${isSelected ? 'is-selected' : ''}`} key={resource.id} data-resource-code={resource.code}>
+              <article className={`resource-catalogue-card ${isSelected ? 'is-selected' : ''}`} data-category={resource.category || "OTHER"} key={resource.id} data-resource-code={resource.code}>
                 <div className="resource-catalogue-cover">
-                  <span className="resource-catalogue-icon" aria-hidden="true">
-                    {React.createElement(({ ROOM: DoorOpen, EQUIPMENT: Microscope, MACHINE: Wrench, EXPERIMENT_KIT: FlaskConical, MATERIAL: Package } as Record<string, typeof Server>)[resource.category] || Server, { size: 64, strokeWidth: 1.2 })}
-                  </span>
+                  <ResourceCategoryArt category={resource.category} />
                   {cover && <img key={cover.url} {...resourceImageProps(cover.url)} alt={cover.altText || cover.title || resource.name} onError={event => { event.currentTarget.hidden = true; }} />}
+                  <button type="button" className="catalogue-cover-link" aria-label={`${tr("ui.resourceDiscovery.details")}: ${resource.name}`} onClick={() => onViewDetails ? onViewDetails(resource.id, browseContext) : openDetail(resource)}><Eye size={18} aria-hidden="true" /></button>
+                  <span className="catalogue-cover-category">{resource.category ? tr(categoryLabels[resource.category]) : tr("ui.unclassified_10fe63fa")}</span>
                 </div>
                 <div className="resource-catalogue-body">
                   <div className="resource-catalogue-meta"><span>{resource.code}</span><span>{resource.category ? tr(categoryLabels[resource.category]) : tr("ui.unclassified_10fe63fa")}</span></div>
