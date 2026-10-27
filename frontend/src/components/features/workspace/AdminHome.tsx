@@ -69,13 +69,13 @@ export function AdminHome(props: Props) {
   return (
     <div className="home-control-room workspace-container">
       {/* Cluster 1: Exception overview — server-authoritative counts only */}
-      <section className="home-control-cluster" aria-labelledby="admin-excep-title">
+      <section className="home-control-cluster admin-excep" aria-labelledby="admin-excep-title">
         <SectionTitle titleKey="ui.home.admin.excepTitle" />
         <PriorityTiles items={exceptionItems} scopeKey="ui.home.admin.scopeSummary" />
       </section>
 
       {/* Cluster 2: People register — full /users list (server-side filtered for ADMIN) */}
-      <section className="home-control-cluster" aria-labelledby="admin-people-title">
+      <section className="home-control-cluster admin-people" aria-labelledby="admin-people-title">
         <header className="home-cluster-header">
           <h2 id="admin-people-title">{t("ui.home.admin.peopleTitle")}</h2>
         </header>
@@ -122,7 +122,7 @@ export function AdminHome(props: Props) {
       </section>
 
       {/* Cluster 3: Operational health — dashboard.summary (server-side aggregate) */}
-      <section className="home-control-cluster" aria-labelledby="admin-health-title">
+      <section className="home-control-cluster admin-health" aria-labelledby="admin-health-title">
         <header className="home-cluster-header">
           <h2 id="admin-health-title">{t("ui.home.admin.healthTitle")}</h2>
         </header>
@@ -174,7 +174,7 @@ export function AdminHome(props: Props) {
       </section>
 
       {/* Cluster 4: Resource administration — classification, maintenance, incidents */}
-      <section className="home-control-cluster" aria-labelledby="admin-resource-title">
+      <section className="home-control-cluster admin-resource" aria-labelledby="admin-resource-title">
         <header className="home-cluster-header">
           <h2 id="admin-resource-title">{t("ui.home.admin.resourceTitle")}</h2>
         </header>

@@ -11,7 +11,7 @@
 .project-public-shell .public-header .project-brand { display:flex; align-items:center; gap:12px; flex-shrink:0; color:var(--public-ink); }
 .project-public-shell .public-header .project-brand>svg { width:36px; height:36px; color:var(--public-accent); filter:drop-shadow(0 2px 8px rgba(100,65,217,.25)); }
 .project-public-shell .public-header .project-brand>span { font-size:26px; font-weight:700; line-height:1.1; letter-spacing:-.02em; }
-.project-public-shell .public-header .project-brand>span>span { display:block; font-size:10px; font-weight:500; margin-top:7px; letter-spacing:.03em; color:var(--public-muted); }
+.project-public-shell .public-header .project-brand>span>span { display:block; font-size: 12px; font-weight:500; margin-top:7px; letter-spacing:.03em; color:var(--public-muted); }
 .public-header nav { display:flex; align-items:center; gap:28px; font-size:13px; font-weight:500; }
 .public-header nav a { display:flex; align-items:center; min-height:44px; position:relative; }
 .public-header nav a::after { content:''; position:absolute; bottom:8px; left:0; right:0; height:2px; background:var(--public-accent); border-radius:2px; transform:scaleX(0); transition:transform .2s ease-out; }
@@ -46,7 +46,7 @@
 .lab-step-number { font-family:var(--font-mono); color:#9ed0d8; font-size:13px; }
 .lab-process-plate li>span:nth-child(2) { flex:1; }
 .lab-process-plate li>svg { color:#9ed0d8; }
-.lab-process-plate figcaption { border-top:1px solid #456377; padding-top:18px; color:#b9d0dd; font-size:11px; }
+.lab-process-plate figcaption { border-top:1px solid #456377; padding-top:18px; color:#b9d0dd; font-size: 12px; }
 .public-section { padding-block:76px; }
 .public-site h2 { font-size:clamp(28px,2.5vw,38px); line-height:1.22; letter-spacing:-.025em; margin:0 0 20px; text-wrap:balance; }
 .public-site h3 { font-size:17px; line-height:1.4; margin:0 0 10px; }
@@ -120,7 +120,7 @@
 .public-page-heading h1 { margin:12px 0 16px; font-size:clamp(30px,3.8vw,48px); line-height:1.15; letter-spacing:-.025em; color:var(--lab-ink,#202138); }
 .public-page-heading p { max-width:65ch; margin:0; color:var(--lab-ink-muted,#51465e); line-height:1.7; font-size:16px; }
 .project-public-shell .public-auth-page .auth-screen { min-height:0; padding:16px 0 0; background:transparent; }
-.route-status-page { width:min(720px,100%); margin-inline:auto; padding:72px 24px; text-align:center; }
+.route-status-page { width:100%; min-height:540px; display:grid; place-items:center; padding:72px 24px; text-align:center; }
 .route-status-page h1 { font-size:clamp(28px,4vw,42px); line-height:1.2; margin:12px 0; }
 .route-status-page p { color:var(--lab-ink-muted,#51465e); line-height:1.7; margin-bottom:24px; }
 .route-status-code { font:600 16px/1.5 var(--font-sans); color:var(--lab-primary,#6441d9); }

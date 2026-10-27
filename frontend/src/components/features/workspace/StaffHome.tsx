@@ -114,17 +114,6 @@ export function StaffHome({ user, bookingSummary, incidentSummary, maintenance, 
 
   return (
     <div className="ops-cluster" data-view={activeRecordId ? "item" : activeLane === "overview" ? "console" : "queue"}>
-      {/* LEVEL 1 — Shift Console (top-of-page focus panels) */}
-      {!activeRecordId && <ShiftConsole
-        overdueCount={overdueCount}
-        incidentCount={incidentCount}
-        maintenanceCount={maintenanceCount}
-        jobsPreview={jobs.slice(0, 3)}
-        onOpenLane={(id) => { setActiveRecordId(null); setActiveLane(id); }}
-        onOpenIncidents={() => onNavigate("incidents")}
-        onOpenMaintenance={() => onNavigate("maintenance")}
-      />}
-
       {/* LEVEL 2/3 — Workflow Queue + Item detail */}
       {activeRecordId ? (
         <ItemDetail
@@ -147,7 +136,18 @@ export function StaffHome({ user, bookingSummary, incidentSummary, maintenance, 
         />
       )}
 
-      {/* LEVEL 1.b — Persistent operations icon rail (replaces sidebar tools) */}
+      {/* Shift context follows the primary workflow queue */}
+      {!activeRecordId && <ShiftConsole
+        overdueCount={overdueCount}
+        incidentCount={incidentCount}
+        maintenanceCount={maintenanceCount}
+        jobsPreview={jobs.slice(0, 3)}
+        onOpenLane={(id) => { setActiveRecordId(null); setActiveLane(id); }}
+        onOpenIncidents={() => onNavigate("incidents")}
+        onOpenMaintenance={() => onNavigate("maintenance")}
+      />}
+
+      {/* Supporting operations tools */}
       <IconRail onOpen={(entry) => onNavigate(entry.tab, entry.params)} />
     </div>
   );

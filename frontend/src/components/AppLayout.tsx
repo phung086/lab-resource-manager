@@ -60,7 +60,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 }) => {
   const { tr } = useLocale();
   const [navigationPinned, setNavigationPinned] = useState(() => {
-    try { return localStorage.getItem('lrm.navigation.pinned') === 'true' && window.innerWidth >= 1100; } catch { return false; }
+    try { return localStorage.getItem('lrm.navigation.pinned') !== 'false' && window.innerWidth >= 1100; } catch { return false; }
   });
   function pinNavigation(pinned: boolean) {
     setNavigationPinned(pinned);
@@ -167,7 +167,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     chatgpt_bridge: tr("bridge.title"),
     incidents: tr("ui.resource_incidents_0cba217b"),
     training: translate("ui.lab_training_and_safety_26f5f367"),
-    logs: translate("ui.audit_logs_da29e2f6"),
+    logs: tr("ui.audit_logs_883aea8a"),
     users: tr(user?.role === "ADMIN" ? "ui.user_administration_4150792e" : "account.users.customers")
   };
 
@@ -175,7 +175,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const unreadCount = notificationUnreadCount === null ? null : notificationUnreadCount ?? notifications.filter((n) => !n.readAt).length;
 
   return (
-    <div className="app-shell-2026 workspace-shell" data-workspace-role={user?.role}>
+    <div className="app-shell-2026 workspace-shell lab-spectrum" data-workspace-role={user?.role}>
       <a className="skip-link" href="#workspace-main">{translate("ui.skip_to_main_content_a75d7c33")}</a>
       {/* Primary navigation */}
       <Sidebar

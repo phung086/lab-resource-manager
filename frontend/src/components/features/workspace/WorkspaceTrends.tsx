@@ -22,10 +22,21 @@ export function WorkspaceTrends({identity,refreshKey}:{identity:string;refreshKe
  const total=report?.buckets.reduce((n,b)=>n+value(b),0)??0;
  return <section className="home-trends" aria-labelledby="home-trends-title" aria-busy={!current}>
  <header><div><h2 id="home-trends-title">{tr('workbench.trends')}</h2><p>{tr('workbench.scope.'+(report?.scope||'loading'))}</p></div><div className="home-trends-period" role="group" aria-label={tr('workbench.period')}>{['day','week','month'].map(p=><button key={p} aria-pressed={period===p} onClick={()=>setPeriod(p)}>{tr('workbench.'+p)}</button>)}</div></header>
- {!current?<p role="status">{tr('workbench.loading')}</p>:current.error?<div role="alert"><p>{tr('workbench.error')}</p><button className="secondary-button" onClick={()=>setRetry(n=>n+1)}>{tr('ui.retry_c58d068c')}</button></div>:report&&<>
+ {!current?<TrendsSkeleton label={tr('workbench.loading')} />:current.error?<div role="alert"><p>{tr('workbench.error')}</p><button className="secondary-button" onClick={()=>setRetry(n=>n+1)}>{tr('ui.retry_c58d068c')}</button></div>:report&&<>
  <div className="home-trends-metrics" role="group" aria-label={tr('workbench.metric')}>{(['usageMinutes','requests','collectedVnd'] as const).filter(m=>m!=='collectedVnd'||report.paymentState!=='restricted').map(m=><button key={m} aria-pressed={metric===m} onClick={()=>setMetric(m)}>{tr('workbench.'+m)}</button>)}</div>
  {!available?<p className="home-trends-unavailable">{tr('workbench.paymentsDisabled')}</p>:<><div className="home-trends-total"><strong>{numeric.format(total)}</strong><span>{tr('workbench.unit.'+metric)}</span></div><div className="home-trends-chart" aria-hidden="true">{report.buckets.map(b=><div className="home-trends-column" key={b.startAt} title={date(b.startAt)+': '+numeric.format(value(b))}><span style={{height:(value(b)/max*100)+'%'}}/></div>)}</div><div className="home-trends-axis"><span>{date(report.startAt)}</span><span>{date(report.endAt)}</span></div>{total===0&&<p>{tr('workbench.noActivity')}</p>}<details className="home-trends-data"><summary>{tr('workbench.table')}</summary><div className="home-trends-table-wrap"><table><caption>{tr('workbench.'+metric)} · {report.timezone}</caption><thead><tr><th>{tr('workbench.period')}</th><th>{tr('workbench.unit.'+metric)}</th></tr></thead><tbody>{report.buckets.map(b=><tr key={b.startAt}><td><time dateTime={b.startAt}>{date(b.startAt)}</time> – <time dateTime={b.endAt}>{date(b.endAt)}</time></td><td>{numeric.format(value(b))}</td></tr>)}</tbody></table></div></details></>}
- <HelpDisclosure>{tr('workbench.basis.'+metric)}</HelpDisclosure>
  </>}
+ <HelpDisclosure>{tr('workbench.basis.'+metric)}</HelpDisclosure>
  </section>;
+}
+/* Loading placeholder mirroring the loaded block heights (metrics row, total figure,
+   160px chart, axis, table disclosure) so the data landing does not shift the page. */
+function TrendsSkeleton({ label }: { label: string }) {
+ return <div className="home-trends-skeleton" role="status" aria-label={label}>
+ <div className="home-trends-metrics" aria-hidden="true"><span /><span /><span /></div>
+ <div className="home-trends-total" aria-hidden="true"><span className="home-trends-skeleton-figure" /></div>
+ <div className="home-trends-chart" aria-hidden="true">{[34, 58, 22, 76, 45, 63, 30].map((h, i) => <div className="home-trends-column" key={i}><span className="home-trends-skeleton-column" style={{ height: h + '%' }} /></div>)}</div>
+ <div className="home-trends-axis" aria-hidden="true"><span>{'\u00a0'}</span><span>{'\u00a0'}</span></div>
+ <details className="home-trends-data" aria-hidden="true"><summary>{'\u00a0'}</summary></details>
+ </div>;
 }

@@ -62,7 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, 
   function allowed(id: string) {
     if (!isTabEnabled(id)) return false;
     if (id === "teaching") return false;
-    if (id === "logs") return role === "ADMIN";
+    if (id === "logs") return staff;
     if (id === "users") return staff;
     if (["stock", "dashboard", "monitoring", "maintenance", "admin_management"].includes(id)) return staff;
     return true;

@@ -50,13 +50,13 @@
 .workspace-shell .lab-home .home-booking-row .home-icon-box{background:var(--lab-primary-tint,#eee8fc);border-radius:10px;padding:10px;color:var(--lab-primary,#6441d9);flex:0 0 auto}
 .workspace-shell .lab-home .home-booking-copy{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
 .workspace-shell .lab-home .home-booking-copy strong{font-size:16px;font-weight:600;color:var(--lab-ink,#26243a);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.workspace-shell .lab-home .home-booking-copy small{font-size:11px;font-family:var(--lab-font-mono,monospace);color:var(--lab-primary,#6441d9);text-transform:uppercase;letter-spacing:.04em}
+.workspace-shell .lab-home .home-booking-copy small{font-size: 12px;font-family:var(--lab-font-mono,monospace);color:var(--lab-primary,#6441d9);text-transform:uppercase;letter-spacing:.04em}
 .workspace-shell .lab-home .home-booking-copy time{font-size:13px;color:var(--lab-ink-secondary,#625d72)}
 .workspace-shell .lab-home .home-booking-copy > span:last-child{font-size:12px;color:var(--lab-ink-secondary,#625d72)}
-.workspace-shell .lab-home .home-booking-copy > span:first-child{font-size:10px;color:var(--lab-text-muted,#9b95a8);display:flex;align-items:center;gap:6px}
+.workspace-shell .lab-home .home-booking-copy > span:first-child{font-size: 12px;color:var(--lab-text-muted,#9b95a8);display:flex;align-items:center;gap:6px}
 
 /* Booking reference chip */
-.workspace-shell .booking-reference{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--lab-font-mono,monospace);color:var(--lab-primary,#6441d9);background:var(--lab-primary-tint,#eee8fc);padding:3px 8px;border-radius:5px;border:1px solid var(--lab-primary-tint,#dbd0f4);letter-spacing:.02em}
+.workspace-shell .booking-reference{display:inline-flex;align-items:center;gap:5px;font-size: 12px;font-family:var(--lab-font-mono,monospace);color:var(--lab-primary,#6441d9);background:var(--lab-primary-tint,#eee8fc);padding:3px 8px;border-radius:5px;border:1px solid var(--lab-primary-tint,#dbd0f4);letter-spacing:.02em}
 
 /* Notices panel */
 .workspace-shell .lab-home .home-notice-list{display:grid;gap:8px}
@@ -71,14 +71,14 @@
 .workspace-shell .lab-home .home-notice > span:nth-child(2){flex:1;display:grid;gap:5px;min-width:0}
 .workspace-shell .lab-home .home-notice > span:nth-child(2) strong{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--lab-ink,#26243a);line-height:1.4}
 .workspace-shell .lab-home .home-notice > span:nth-child(2) span:nth-child(2){font-size:13px;color:var(--lab-ink-secondary,#625d72);line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.workspace-shell .lab-home .home-notice > span:nth-child(2) time{font-size:11px;font-family:var(--lab-font-mono,monospace);color:var(--lab-text-muted,#9b95a8)}
+.workspace-shell .lab-home .home-notice > span:nth-child(2) time{font-size: 12px;font-family:var(--lab-font-mono,monospace);color:var(--lab-text-muted,#9b95a8)}
 .workspace-shell .lab-home .home-notice > svg:last-child{flex-shrink:0;color:var(--lab-text-muted,#9b95a8)}
-.workspace-shell .lab-home .home-unread{display:inline-flex;align-items:center;flex-shrink:0;width:auto;height:auto;padding:2px 7px;border-radius:4px;background:var(--workspace-accent-soft);color:var(--workspace-accent-hover);margin-left:6px;font-size:11px;font-weight:600;line-height:1.4;white-space:nowrap}
+.workspace-shell .lab-home .home-unread{display:inline-flex;align-items:center;flex-shrink:0;width:auto;height:auto;padding:2px 7px;border-radius:4px;background:var(--workspace-accent-soft);color:var(--workspace-accent-hover);margin-left:6px;font-size: 12px;font-weight:600;line-height:1.4;white-space:nowrap}
 .workspace-shell .lab-home .home-notice > span:nth-child(2) strong{flex-wrap:wrap}
 .workspace-shell .lab-home .home-notice > span:nth-child(2) span:nth-child(2){white-space:normal;overflow-wrap:anywhere}
 
 /* Data scope label */
-.workspace-shell .lab-home .home-data-scope{font-size:11px;color:var(--lab-text-muted,#9b95a8);text-align:right;margin-top:10px;font-family:var(--lab-font-mono,monospace);letter-spacing:.02em}
+.workspace-shell .lab-home .home-data-scope{font-size: 12px;color:var(--lab-text-muted,#9b95a8);text-align:right;margin-top:10px;font-family:var(--lab-font-mono,monospace);letter-spacing:.02em}
 
 /* Next booking ticket */
 .workspace-shell .lab-home .home-next-ticket{background:transparent;border:0;padding:20px;border-radius:0;box-shadow:none}

@@ -65,7 +65,7 @@
 .workspace-shell .lab-home .home-resource-card:last-child { border-bottom:0; }
 .workspace-shell .lab-home .home-resource-cover { min-height:106px; border-radius:10px; padding:12px; }
 .workspace-shell .lab-home .home-resource-body { padding:0; gap:5px; align-items:start; }
-.workspace-shell .lab-home .home-resource-body>small { font-size:10px; }
+.workspace-shell .lab-home .home-resource-body>small { font-size: 12px; }
 .workspace-shell .lab-home .home-resource-body .home-text-button { margin-top:4px; min-height:44px; }
 .workspace-shell .lab-home .home-resource-card:hover { box-shadow:none; }
 
@@ -91,6 +91,13 @@
 .home-trends-data table { width:100%; border-collapse:collapse; font-size:13px; }
 .home-trends-data :is(th,td) { text-align:left; padding:10px; border-bottom:1px solid #e6e3e9; }
 .home-trends-basis { border-top:1px solid #e6e3e9; padding-top:16px; margin-top:16px; }
+
+/* Loading skeleton mirrors the loaded block heights so data landing does not shift the page. */
+.home-trends-skeleton .home-trends-metrics span { width:96px; height:44px; border-radius:7px; background:#efeaf6; }
+.home-trends-skeleton-figure { display:block; width:190px; height:42px; border-radius:8px; background:#efeaf6; }
+.home-trends-skeleton .home-trends-column>span { background:#e9e3f3; }
+.home-trends-skeleton .home-trends-axis span { color:transparent; }
+.home-trends-skeleton .home-trends-data summary { color:transparent; }
 
 .workspace-shell .lab-home .home-resource-cover img[hidden] { display:none; }
 

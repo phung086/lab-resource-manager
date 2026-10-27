@@ -90,10 +90,6 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
       {/* HERO SECTION */}
       <section ref={heroRef} className="landing-hero" id="gioi-thieu">
         <div className="landing-hero-content">
-          <div className="landing-hero-badge">
-            <CheckCircle size={14} aria-hidden="true" />
-            {t("ui.landing.hero.badge")}
-          </div>
           <h1 className="landing-hero-title">
             {t("ui.landing.hero.spaceFor")}<br />
             <span className="landing-hero-title-accent">{t("ui.landing.hero.practice")}</span><br />
@@ -111,20 +107,7 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
               {t("ui.landing.hero.viewProcess")}
             </a>
           </div>
-          <div className="landing-hero-stats">
-            <div className="landing-hero-stat">
-              <span className="landing-hero-stat-value">{t("ui.landing.hero.stat1.value")}</span>
-              <span className="landing-hero-stat-label">{t("ui.landing.hero.stat1.label")}</span>
-            </div>
-            <div className="landing-hero-stat">
-              <span className="landing-hero-stat-value">{t("ui.landing.hero.stat2.value")}</span>
-              <span className="landing-hero-stat-label">{t("ui.landing.hero.stat2.label")}</span>
-            </div>
-            <div className="landing-hero-stat">
-              <span className="landing-hero-stat-value">{t("ui.landing.hero.stat3.value")}</span>
-              <span className="landing-hero-stat-label">{t("ui.landing.hero.stat3.label")}</span>
-            </div>
-          </div>
+
         </div>
         <div className="landing-hero-visual">
           <img src={labHero} srcSet={`${labHeroSmall} 640w, ${labHero} 1536w`} sizes="(max-width: 800px) calc(100vw - 40px), 55vw" width={1536} height={1024} fetchPriority="high" decoding="async" alt={t('ui.final.heroAlt')} className="landing-hero-image" />

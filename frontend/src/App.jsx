@@ -44,8 +44,9 @@ const StockPage = React.lazy(() => import("./pages/LabWorkspace").then(module =>
 
 const ResourceDetailPage = React.lazy(() => import("./pages/ResourceDetailPage.tsx").then(module => ({ default: module.ResourceDetailPage })));
 const SelectionPage = React.lazy(() => import("./pages/SelectionPage.tsx").then(module => ({ default: module.SelectionPage })));
+const AuditLogsPage = React.lazy(() => import("./pages/AuditLogsPage.tsx").then(module => ({ default: module.AuditLogsPage })));
 
-const STAFF_ONLY_TABS = new Set(["users", "admin_management", "dashboard", "maintenance", "monitoring"]);
+const STAFF_ONLY_TABS = new Set(["users", "admin_management", "dashboard", "maintenance", "monitoring", "logs"]);
 
 function canAccessTab(role, tabId) {
   if (tabId === 'stock') return ['ADMIN', 'LAB_STAFF'].includes(role);
@@ -219,12 +220,14 @@ function Application() {
   }, []);
 
 
-  const loadData = React.useCallback(async () => {
+  const loadData = React.useCallback(async ({ silent = false } = {}) => {
     if (!routeUserId) return;
-    appDataController.current?.abort();
+    // One in-flight load per scope: a second trigger (mount + home entry fire together)
+    // must not restart the cycle, or the mounted home unmounts and remounts (large CLS).
+    if (appDataController.current) return;
     const controller = new AbortController();
     appDataController.current = controller;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError("");
     try {
       const read = path => apiRequest(path, { signal: controller.signal });
@@ -284,8 +287,10 @@ function Application() {
   useEffect(() => {
     const wasHome = previousTab.current === "home";
     previousTab.current = activeTab;
-    if (routeUserId && activeTab === "home" && !wasHome) loadData();
-  }, [activeTab, routeUserId, loadData]);
+    // Home entry refreshes in the background: keep the mounted home stable instead of
+    // flipping the whole workspace back into its loading skeleton.
+    if (routeUserId && activeTab === "home" && !wasHome) loadData({ silent: loadedWorkspaceScope === workspaceScope });
+  }, [activeTab, routeUserId, loadData, loadedWorkspaceScope, workspaceScope]);
 
   useEffect(() => {
     if (routeUserRole && route.kind === "workspace" && !canAccessTab(routeUserRole, activeTab)) {
@@ -496,6 +501,7 @@ function Application() {
         )
       )}
       {activeTab === 'chatgpt_bridge' && !user.passwordResetRequired && <ChatgptBridgePage actorRole={user.role} />}
+      {activeTab === 'logs' && !user.passwordResetRequired && <AuditLogsPage actorRole={user.role} />}
 
       </React.Suspense>
 

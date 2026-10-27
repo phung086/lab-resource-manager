@@ -19,19 +19,9 @@ import "@fontsource/ibm-plex-mono/vietnamese-600.css";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 import App from "./App.jsx";
 // Structural styles retained for existing business screens.
-import "./styles.css";
-import "./styles/light-redesign.css";
-import "./styles/project-shell.css";
-import "./styles/final-workspace.css";
-// S1b: workspace-shell.css after light-redesign.css so violet token overrides win cascade
-import "./styles/workspace-shell.css";
-import "./styles/catalog-profile.css";
+import "./styles/global.css"; // single global layer: order of the former 10 files is preserved inside
+import "./styles/spectrum.css";
 // The shared system owns the final presentation, after structural styles.
-import "./styles/lab-design-system.css";
-import "./styles/lab-app-shell.css";
-import "./styles/lab-workspace.css";
-import "./styles/lab-landing.css";
-import "./styles/staff-workspace.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

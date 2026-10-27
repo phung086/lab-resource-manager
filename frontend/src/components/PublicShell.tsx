@@ -25,7 +25,7 @@ export function PublicShell({ children, beforeMain, onRegister, onNavigate, user
     setMenuOpen(false);
     if (onNavigate && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); onNavigate(section); }
   }
-  return <div className="public-site lab-public project-public-shell" id="dau-trang">
+  return <div className="public-site lab-public project-public-shell lab-spectrum" id="dau-trang">
     <a className="public-skip" href="#noi-dung">{t('ui.skip_to_main_content_a75d7c33')}</a>
     <header className="public-header" onKeyDown={event => {
       if (event.key === 'Escape' && menuOpen) { setMenuOpen(false); menuButton.current?.focus(); }
