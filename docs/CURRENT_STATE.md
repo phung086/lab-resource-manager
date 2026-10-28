@@ -1,5 +1,21 @@
 # Trạng thái dự án hiện tại
 
+## CTA band contrast fix — 28/10/2026 (user report "tương phản chán")
+
+Người dùng báo dải CTA "Sẵn sàng bắt đầu?" chữ tối trên nền tím đậm gần như
+vô hình. Gốc thật: spectrum.css ghim màu mực bằng
+`.project-public-shell.lab-spectrum .landing-cta :is(h2, p)` (specificity
+0,3,1) — rule của liquid-glass.css chỉ 0,2,0 nên thua bất kể thứ tự nạp; tìm
+ra bằng cách xóa rule từng lớp rồi đo computed color. Fix trong
+liquid-glass.css: 2 rule 0,4,0 outbid — tiêu đề gradient trắng→lavender→mint
+(background-clip:text), mô tả rgba(233,229,255,.86); nút chính đảo trắng/tím,
+nút phụ kính trắng viền .55 + blur, focus ring trắng; orb mint trôi 11s sau
+chữ (reduced-motion tắt). Đo được: title 14,92:1, desc 12,16:1, nút 11,70:1;
+desktop VI + mobile VI chụp tại Temp/lab-cta-fix/, không overflow, 0
+pageerror; test:required PASS. Bài học: khi override landing section, phải
+đối chiếu selector `:is()` của spectrum.css — specificity, không phải thứ tự
+file, mới là luật thắng.
+
 ## Landing liquid glass + dashboard glass — 28/10/2026
 
 Batch người dùng yêu cầu trực tiếp: (1) landing hero chuyển thành banner
