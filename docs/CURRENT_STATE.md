@@ -1929,3 +1929,12 @@ sáng spectrum + viền nét đứt + icon badge gradient (cho các nơi có ico
 Xác minh: lọc payments "zzz" → empty state nền rgb(255,253,250) —
 loop8-empty-after.png. Gates PASS. Việc tiếp: rà các trang còn dùng
 empty-state khác (schedule, materials detail).
+
+## Loop lượt 06:35 — rà soát empty-state toàn hệ thống — 29/10/2026
+
+Kiểm tra: /schedule public không render empty-state (luôn có lịch); các
+trang khác dùng class riêng đã làm trước (incidents/maintenance/users/
+operations); `.empty-state` chỉ tồn tại trong global.css với override sáng
+ở dòng cuối (11022) — thắng mọi nơi, không còn variant tối. Không cần sửa
+code. Gates không chạy (không đổi gì). Việc tiếp: widget trang khách nếu
+còn điểm nghẽn; chờ người dùng duyệt 2 lô treo.
