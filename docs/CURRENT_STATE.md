@@ -1874,3 +1874,11 @@ render 10 ảnh wikimedia — 7 loaded lúc đo (3 lazy dưới viewport), grid 
 rõ kit Arduino (KIT-01), dây jumper, robot dò line (KIT-03), camera thật
 xen minh họa — loop6-catalog.png. Gates PASS. Việc tiếp: EQ-03/10/01 ảnh
 (lọc tiêu đề: camera|oscilloscope|graphics card), widget trang khách.
+
+## Loop lượt 04:15 — ảnh EQ-10 + EQ-01, EQ-03 defer — 29/10/2026
+
+Lọc tiêu đề chặt hoạt động: gắn Máy trạm GPU (IBM VGA card, CC BY-SA 4.0),
+Máy hiện sóng số (màn Tektronix sóng tam giác/vuông, CC0) — 2 URL curl 200.
+EQ-03 Camera: ứng viên "Security Camera.JPG" blur kém chất lượng → LOẠI,
+defer sang lượt sau tìm ảnh camera IP sắc nét hơn. Gates PASS. Việc tiếp:
+EQ-03 ảnh camera tốt + EQ-09 cân điện tử; widget trang khách.
