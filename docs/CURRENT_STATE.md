@@ -1898,3 +1898,11 @@ Category "Surveillance cameras" 30 file đầu: không có jpeg ≥900px đạt 
 ràng buộc jpeg (nhận PNG webp), hoặc dùng category con
 "Closed-circuit television cameras in ...". Gates không chạy (không đổi
 code). Việc tiếp: EQ-03 hoặc chuyển hẳn sang widget trang khách.
+
+## Loop lượt 05:15 — profile audit — 29/10/2026
+
+Trang Hồ sơ cá nhân (customer): đã đầy đủ — card tài khoản + trạng thái, 4
+tab, form liên hệ, widget loyalty thật (LAB Standard, 270.000₫, tiến độ 18%
+lên LAB Plus), chrome mới áp đủ, 0 overflow. Không cần sửa. Ảnh
+loop7-profile.png. Việc tiếp: EQ-03 (nới png/webp), widget trang khách
+nếu còn mặt nào đơn giản.
