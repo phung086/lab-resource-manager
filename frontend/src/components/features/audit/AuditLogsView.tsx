@@ -6,7 +6,12 @@ import { listAuditEvents, AUDIT_ACTION_OPTIONS, AUDIT_TARGET_TYPE_OPTIONS, AUDIT
 import type { AuditEventFilters, SystemAuditEvent } from "../../../types/audit";
 import type { QueuePagination as Pagination } from "../../../types/queue";
 import { formatVietnamDateTime } from "../../../utils/timezone";
-import { auditTargetKind, auditTargetLabel, formatAuditState, vietnamDateEnd, vietnamDateStart } from "./auditPresentation";
+import { auditTargetKind, auditTargetLabel, auditActionTone, formatAuditState, vietnamDateEnd, vietnamDateStart } from "./auditPresentation";
+
+/** Vietnam-local calendar day key of an audit timestamp. */
+const auditDayKey = (iso: string) => new Date(new Date(iso).getTime() + 7 * 3600_000).toISOString().slice(0, 10);
+const auditDayLabel = (key: string) =>
+  new Intl.DateTimeFormat("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(new Date(`${key}T00:00:00Z`));
 import "../../../styles/audit-workspace.css";
 
 export interface AuditLogsViewProps {
@@ -130,11 +135,15 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ actorRole }) => {
     {!loading && !error && !events.length && <p className="empty-state" role="status">{tr("ui.audit.empty")}</p>}
 
     {!loading && !error && events.length > 0 && <div className="audit-event-list">
-      {events.map(event => {
+      {events.map((event, index) => {
         const open = expanded === event.id;
-        return <article key={event.id} className="audit-event">
+        const day = auditDayKey(event.createdAt);
+        const showDay = index === 0 || auditDayKey(events[index - 1].createdAt) !== day;
+        return <React.Fragment key={event.id}>
+          {showDay && <h3 className="audit-day-divider">{auditDayLabel(day)}</h3>}
+          <article className="audit-event">
           <div className="audit-event-summary">
-            <span className="audit-event-action">{enumLabel("ui.audit.action.", event.action)}</span>
+            <span className={`audit-event-action is-${auditActionTone(event.action)}`}>{enumLabel("ui.audit.action.", event.action)}</span>
             <span className="audit-event-target">{auditTargetKind(event, (type) => enumLabel("ui.audit.target.", type))} · {auditTargetLabel(event)}</span>
             <span className="audit-event-time">{formatVietnamDateTime(event.createdAt)}</span>
           </div>
@@ -160,7 +169,8 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ actorRole }) => {
               <pre>{formatAuditState(event.metadata)}</pre>
             </div>}
           </div>}
-        </article>;
+        </article>
+        </React.Fragment>;
       })}
     </div>}
 

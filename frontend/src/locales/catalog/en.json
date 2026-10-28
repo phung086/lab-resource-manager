@@ -4044,6 +4044,26 @@
     "ui.landing.marquee.label": "LAB features and usage process",
     "ui.landing.marquee.monitoring": "Live telemetry monitoring",
     "ui.landing.marquee.maintenance": "Scheduled maintenance and calibration",
-    "ui.landing.marquee.support": "Per-LAB online support"
+    "ui.landing.marquee.support": "Per-LAB online support",
+    "ui.payments.overview": "Cash-flow overview",
+    "ui.payments.txCount": "Transactions",
+    "ui.payments.txUnit": "transactions",
+    "ui.payments.unsuccessful": "Unsuccessful",
+    "ui.payments.flowChart": "Cash flow — last 14 days",
+    "ui.payments.vietnamTime": "Grouped by Vietnam-local day",
+    "ui.payments.gatewaysTitle": "Payment gateways",
+    "ui.payments.noGateway": "No gateway is enabled for this session yet.",
+    "ui.operations.dossierHint": "Pick a booking from the queue to review its record, handover, return or payment.",
+    "workbench.noActivityHint": "Once practice sessions occur in this period, the chart appears here.",
+    "ui.materials.overview": "Inventory status",
+    "ui.materials.totalHint": "Materials managed across your assigned labs",
+    "ui.materials.countedHint": "An opening balance has been recorded",
+    "ui.materials.uncountedHint": "No balance yet — an opening count is needed",
+    "ui.materials.depleted": "Zero balance",
+    "ui.materials.depletedHint": "Restock before issuing to a session",
+    "ui.materials.needCountTitle": "Opening count needed",
+    "ui.materials.needCountHint": "Pick a material to record its first count.",
+    "ui.payments.dayTooltip": "{date}: {count} transactions · {sum}",
+    "ui.payments.vietqrName": "VietQR"
   }
 }

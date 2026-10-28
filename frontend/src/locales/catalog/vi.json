@@ -4044,6 +4044,26 @@
     "ui.landing.marquee.label": "Đặc điểm và quy trình sử dụng LAB",
     "ui.landing.marquee.monitoring": "Giám sát telemetry trực tiếp",
     "ui.landing.marquee.maintenance": "Bảo trì và hiệu chuẩn định kỳ",
-    "ui.landing.marquee.support": "Hỗ trợ trực tuyến theo LAB"
+    "ui.landing.marquee.support": "Hỗ trợ trực tuyến theo LAB",
+    "ui.payments.overview": "Tổng quan dòng tiền",
+    "ui.payments.txCount": "Giao dịch",
+    "ui.payments.txUnit": "giao dịch",
+    "ui.payments.unsuccessful": "Không thành công",
+    "ui.payments.flowChart": "Dòng tiền 14 ngày gần nhất",
+    "ui.payments.vietnamTime": "Gộp theo ngày giờ Việt Nam",
+    "ui.payments.gatewaysTitle": "Cổng thanh toán",
+    "ui.payments.noGateway": "Chưa có cổng nào được kích hoạt cho phiên làm việc này.",
+    "ui.operations.dossierHint": "Chọn một lịch trong hàng đợi để xem hồ sơ, bàn giao, hoàn trả hoặc thanh toán.",
+    "workbench.noActivityHint": "Khi có buổi thực hành trong kỳ, biểu đồ sẽ tự hiển thị tại đây.",
+    "ui.materials.overview": "Tình trạng kho",
+    "ui.materials.totalHint": "Vật tư đang quản lý trong các LAB được phân công",
+    "ui.materials.countedHint": "Đã có số dư kiểm kê mở đầu",
+    "ui.materials.uncountedHint": "Chưa có số dư — cần nhập kiểm kê đầu tiên",
+    "ui.materials.depleted": "Tồn bằng 0",
+    "ui.materials.depletedHint": "Cần nhập bổ sung trước khi xuất cho buổi thực hành",
+    "ui.materials.needCountTitle": "Cần kiểm kê mở đầu",
+    "ui.materials.needCountHint": "Chọn một vật tư để lập phiếu kiểm kê đầu tiên.",
+    "ui.payments.dayTooltip": "{date}: {count} giao dịch · {sum}",
+    "ui.payments.vietqrName": "VietQR"
   }
 }

@@ -318,7 +318,7 @@ function Application() {
 
   useEffect(() => {
     if (routeUserRole && route.kind === "workspace" && !canAccessTab(routeUserRole, activeTab)) {
-      setActiveTab("smart_calendar");
+      setActiveTab("home");
       setError("ui.you_do_not_have_permission_e6eeee92");
     }
   }, [routeUserRole, activeTab, route.kind]);
@@ -356,7 +356,7 @@ function Application() {
     return <PublicShell {...publicShellProps}><div className="route-status-page"><p className="empty-state" role="status">{translate('ui.loading_workspace_959fb711')}</p></div></PublicShell>;
   }
   return (
-    <AppLayout
+    <DraftActorContext.Provider value={user.id} key={user.id}><AppLayout
       key={`${user.id}:${user.role}:${user.authVersion ?? 0}`}
       activeTab={activeTab}
       onSelectTab={(tabId, params) => {
@@ -508,7 +508,7 @@ function Application() {
         onViewBookings={id => setActiveTab("bookings", id ? { booking: id } : {})}
         onConfirmed={() => { setCalendarRevision(value => value + 1); refreshData(); }} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
       {!user.passwordResetRequired && activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={refreshData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
-      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage locale={locale} resources={resources} maintenance={maintenance} onChanged={refreshData} onBookings={() => setActiveTab('bookings')} />}
+      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage key={user.id} actorId={user.id} locale={locale} resources={resources} maintenance={maintenance} onChanged={refreshData} onBookings={() => setActiveTab('bookings')} />}
       {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={refreshData} />}
       {activeTab === "monitoring" && <MonitoringDashboardPage userRole={user.role} dashboard={dashboard} loading={loading} onRefresh={refreshData} />}
       {activeTab === "users" && (
@@ -542,8 +542,9 @@ function Application() {
         }}
       />
 
-    </AppLayout>
+    </AppLayout></DraftActorContext.Provider>
   );
 }
 
 export default App;
+import { DraftActorContext } from './providers/DraftActorContext';

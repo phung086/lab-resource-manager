@@ -382,7 +382,21 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
             <div className="operations-dossier-empty">
               <FileText size={40} />
               <strong>{tr(selectedLoading ? "ui.loading_data_84c68bd5" : "ui.select_a_booking_to_view_its_details_1e3b7f1a")}</strong>
-
+              {!selectedLoading && (
+                <>
+                  <p>{tr("ui.operations.dossierHint")}</p>
+                  {bookings.length > 0 && (
+                    <div className="operations-queue-snapshot" role="status">
+                      {bookings.slice(0, 4).map(row => (
+                        <button key={row.id} type="button" onClick={() => selectBooking(row)}>
+                          <BookingStatusBadge status={row.status} />
+                          <strong>{row.title}</strong>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>

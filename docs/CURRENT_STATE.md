@@ -1,5 +1,36 @@
 # Trạng thái dự án hiện tại
 
+## Detail pass — 5 mặt còn "đơn giản" — 28/10/2026 (user: "chi tiết, hợp lý như hệ thống lớn")
+
+Audit 20 màn hình 3 vai trò (Temp/lab-ui-audit/) chỉ ra 5 mặt yếu; đợt này
+nâng tất cả chỉ bằng dữ liệu thật từ API hiện có, không seed/mock:
+
+1. **Thanh toán (customer/admin)**: dải tổng hợp 4 thẻ (số giao dịch, đã xác
+ nhận + tổng tiền, chờ + tổng tiền, không thành công) + biểu đồ cột dòng tiền
+ 14 ngày gộp theo ngày giờ VN từ paidAt/createdAt; panel chi tiết khi trống
+ hiện trạng cổng thật (vnpay/vietqr từ providers); ledger customer thành
+ grid 2 cột (minmax 300px). Tooltip cột + aria-label qua catalog key.
+2. **Kho vật tư (staff/admin)**: dải 4 thẻ tình trạng kho (tổng/đã ghi
+ tồn/chưa kiểm kê/tồn 0) từ rows; badge đỏ tồn bằng 0; panel phải khi trống
+ có quick-jump "Cần kiểm kê mở đầu" (4 vật tư chưa có số dư).
+3. **Nhật ký kiểm toán (admin)**: chip tông màu theo nhóm hành động
+ (user/access/policy/payment — auditActionTone mới trong auditPresentation);
+ divider theo ngày giờ VN giữa các nhóm sự kiện.
+4. **Empty states**: dossier lịch đặt & bàn giao hiện hint + snapshot 4 lịch
+ đầu hàng đợi (BookingStatusBadge, click chọn thật); biểu đồ "Nhịp hoạt động"
+ 0 dữ liệu thành panel nét đứt có thông điệp thay vì khung xương trống.
+5. **Monitoring fallback**: khi tab bị chặn (flag TELEMETRY tắt local),
+ redirect về tổng quan thay vì trang lịch + banner quyền.
+
+i18n: +20 key VI/EN (tổng 4063, sync parity PASS). Kiểm chứng: test:required
+PASS (locale-source audit bắt 2 chỗ chữ cứng — đã chuyển sang catalog key);
+test:ui:contrast 22/22 · 0 finding; test:ui:a11y 21 trang PASS; chụp trước/
+sau tại Temp/lab-ui-audit/ (after-*.png). Giới hạn đã biết: banner "Chưa tải
+được đầy đủ dữ liệu" có thể xuất hiện tạm trong kịch bản redirect trực tiếp
+URL monitoring (lỗi tải do đổi tab nhanh, có nút Thử lại); dữ liệu demo vẫn
+còn bản ghi tên "test"/"QA…" trong thanh toán và thiếu ảnh tài nguyên — cần
+quyết định của người dùng (Lô B), không tự sửa DB.
+
 ## CTA band contrast fix — 28/10/2026 (user report "tương phản chán")
 
 Người dùng báo dải CTA "Sẵn sàng bắt đầu?" chữ tối trên nền tím đậm gần như

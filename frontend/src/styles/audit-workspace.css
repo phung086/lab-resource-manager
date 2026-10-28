@@ -135,3 +135,29 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ── Action tone chips + Vietnam day dividers (28/10 detail pass) ── */
+.audit-day-divider {
+  margin: 14px 2px 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--lrm-border, #e2e6ee);
+  color: var(--lrm-muted, #5b6472);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.audit-event-list > .audit-event:first-child { margin-top: 2px; }
+.audit-event-action {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.audit-event-action.is-user { background: #efeafd; color: #4c2fb8; border: 1px solid #d9ccf7; }
+.audit-event-action.is-access { background: #fdeee2; color: #93430e; border: 1px solid #f5d6ba; }
+.audit-event-action.is-policy { background: #e8f7f2; color: #0d6455; border: 1px solid #bfe6dc; }
+.audit-event-action.is-payment { background: #e7f0fd; color: #1d4fb8; border: 1px solid #c4d9f7; }
+.audit-event-action.is-system { background: #eef1f5; color: #45505e; border: 1px solid #d8dee7; }

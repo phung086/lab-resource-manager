@@ -841,3 +841,11 @@
 
 .operations-view .operations-dossier-field-grid .field-value { white-space: normal; }
 .operations-view .operations-dossier-col { position: static; border-radius: 12px; }
+
+/* ── Dossier empty state: guidance + live queue snapshot (28/10 detail pass) ── */
+.operations-dossier-empty p { margin: 2px 0 0; color: var(--workspace-text-muted, #625b70); font-size: .85rem; line-height: 1.6; max-width: 34ch; }
+.operations-queue-snapshot { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--workspace-border, #d8d2e1); display: grid; gap: 8px; width: 100%; }
+.operations-queue-snapshot button { display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 12px; border: 1px solid var(--workspace-border, #d8d2e1); border-radius: 10px; background: var(--workspace-surface, #fff); cursor: pointer; font: inherit; color: inherit; }
+.operations-queue-snapshot button:hover { border-color: var(--workspace-accent, #6441d9); color: var(--workspace-accent, #6441d9); }
+.operations-queue-snapshot button strong { font-size: .84rem; font-weight: 550; overflow-wrap: anywhere; }
+.operations-queue-snapshot .status-badge-inline { flex-shrink: 0; }

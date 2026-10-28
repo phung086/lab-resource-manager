@@ -210,3 +210,16 @@
 .workspace-shell .admin-console-filter-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:13px; color:var(--workspace-muted); }
 .workspace-shell .admin-console-filter-clear { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; min-height:40px; background:#fff; border:1px solid var(--workspace-border); border-radius:8px; color:var(--workspace-accent); }
 @media(max-width:760px) { .workspace-shell .admin-console-role-list { grid-template-columns:1fr; } }
+
+/* ── Trends zero-activity state: an intentional panel, not bare axes ── */
+.home-trends-chart.is-empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  border: 1.5px dashed var(--workspace-border, #d8d2e1);
+  border-radius: 12px;
+  background: repeating-linear-gradient(135deg, transparent 0 12px, rgba(96, 64, 206, 0.03) 12px 24px);
+}
+.home-trends-chart.is-empty p { margin: 0; font-size: .9rem; font-weight: 600; color: var(--workspace-text, #282338); }
+.home-trends-chart.is-empty span { font-size: .78rem; color: var(--workspace-text-muted, #625b70); }

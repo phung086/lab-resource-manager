@@ -41,6 +41,15 @@ export function auditTargetKind(event: SystemAuditEvent, translateType?: (type: 
   return translateType ? translateType(event.targetType) : event.targetType;
 }
 
+/** Visual family of an audit action; unknown actions stay neutral. */
+export function auditActionTone(action: string): "user" | "access" | "policy" | "payment" | "system" {
+  if (action.startsWith("PAYMENT")) return "payment";
+  if (action.includes("PASSWORD") || action.includes("CREDENTIAL") || action.includes("ROLE") || action.includes("ACTIVATION")) return "access";
+  if (action.includes("POLICY") || action.includes("PRICING") || action.includes("ASSIGNMENT")) return "policy";
+  if (action.startsWith("USER_") || action.startsWith("GUEST_")) return "user";
+  return "system";
+}
+
 /** A date input (yyyy-mm-dd) becomes an ISO instant in Vietnam time. */
 export function vietnamDateStart(value: string): string | undefined {
   if (!value) return undefined;
