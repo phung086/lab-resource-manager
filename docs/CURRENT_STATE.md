@@ -1792,3 +1792,14 @@ và aria-current đậm. i18n +7 key (4070, parity PASS). Kiểm chứng:
 test:required PASS, contrast 22/22 · 0 finding; ảnh trước/sau
 Temp/lab-ui-audit/ (after5/after6). Lưu ý: phiên bản Codex chạy song song đã
 đổi hero landing trong lúc làm — footer/header vẫn áp đúng trên layout mới.
+
+## Sidebar spectrum + trạng thái bàn giao — 29/10/2026 (trước khi người dùng rời máy)
+
+Sidebar (thấy ở mọi trang đăng nhập): panel nền spectrum nhạt, heading +
+group label chuyển micro-uppercase tím xám, item bo góc 11px + hover tint,
+avatar rail gradient violet→mint. Contrast 22/22 · 0 finding. Ảnh
+Temp/lab-ui-audit/after7-sidebar.png. Việc tiếp cho loop: active pill
+gradient đậm chưa thắng rule spectrum cũ — nâng specificity; maintenance
+page còn trống dữ liệu (0 công việc) — cân nhắc bề mặt chu kỳ 23 tài nguyên.
+Vòng lặp 20 phút ĐÃ BẬT (automation-af5e7b2f…, cron */20, tự chuyển hướng
+khi vướng, commit local được phép, không push/deploy/seed).

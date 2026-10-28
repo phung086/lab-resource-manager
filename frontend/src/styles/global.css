@@ -10965,3 +10965,45 @@ a:hover {
 .project-footer.project-footer--workspace summary { border-bottom-color: rgba(255, 255, 255, 0.12); }
 .project-footer.project-footer--public :is(button,a,summary):focus-visible,
 .project-footer.project-footer--workspace :is(button,a,summary):focus-visible { outline-color: #a7f2e4; }
+
+/* ── Sidebar chrome (29/10): spectrum rail + active gradient pill ── */
+.workspace-shell .workspace-nav-panel {
+  background:
+    radial-gradient(ellipse 90% 30% at 0% 0%, rgba(96, 64, 206, 0.07) 0%, transparent 60%),
+    linear-gradient(175deg, #fffdfa 0%, #faf7ff 60%, #f6f2fd 100%);
+  border-right: 1px solid rgba(96, 64, 206, 0.14);
+  box-shadow: inset -14px 0 30px -28px rgba(42, 26, 94, 0.45);
+}
+.workspace-shell .workspace-nav-heading h2 {
+  font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: #7d6fae;
+}
+.workspace-shell .workspace-group-toggle span {
+  font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: #8b7cb8;
+}
+.workspace-shell .sidebar-nav-item-2026 {
+  border-radius: 11px; margin-inline: 10px; padding-inline: 12px;
+  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.workspace-shell .sidebar-nav-item-2026:hover { background: rgba(96, 64, 206, 0.07); }
+.workspace-shell .sidebar-nav-item-2026.is-active {
+  background: linear-gradient(115deg, #6040ce 0%, #7c5cf0 100%);
+  color: #fff;
+  box-shadow: 0 10px 22px -12px rgba(96, 64, 206, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.workspace-shell .sidebar-nav-item-2026.is-active svg { color: #a7f2e4; }
+.workspace-shell .workspace-nav-count { font-variant-numeric: tabular-nums; }
+.workspace-shell .sidebar-nav-item-2026.is-active .workspace-nav-count {
+  background: rgba(255, 255, 255, 0.22); color: #fff;
+}
+.workspace-shell .rail-item.is-active {
+  background: linear-gradient(115deg, #6040ce 0%, #7c5cf0 100%);
+  color: #fff; border-radius: 12px;
+  box-shadow: 0 10px 22px -12px rgba(96, 64, 206, 0.75);
+}
+.workspace-shell .rail-item.is-active svg { color: #a7f2e4; }
+.workspace-shell .rail-avatar {
+  background: linear-gradient(135deg, #6040ce, #0f9d8f); color: #fff;
+}
+@media (prefers-reduced-motion: reduce) { .workspace-shell .sidebar-nav-item-2026 { transition: none; } }
