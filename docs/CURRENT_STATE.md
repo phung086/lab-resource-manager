@@ -1906,3 +1906,9 @@ tab, form liên hệ, widget loyalty thật (LAB Standard, 270.000₫, tiến đ
 lên LAB Plus), chrome mới áp đủ, 0 overflow. Không cần sửa. Ảnh
 loop7-profile.png. Việc tiếp: EQ-03 (nới png/webp), widget trang khách
 nếu còn mặt nào đơn giản.
+
+## Loop lượt 05:35 — EQ-03 defer lần 4 — 29/10/2026
+
+Category "Closed-circuit television cameras" 40 file: vẫn không có ứng viên
+đạt lọc. EQ-03 dừng hình ảnh (giữ category art — chấp nhận được vì các
+tài nguyên khác đã có ảnh thật). Việc tiếp ưu tiên: widget trang khách.
