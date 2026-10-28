@@ -1912,3 +1912,11 @@ nếu còn mặt nào đơn giản.
 Category "Closed-circuit television cameras" 40 file: vẫn không có ứng viên
 đạt lọc. EQ-03 dừng hình ảnh (giữ category art — chấp nhận được vì các
 tài nguyên khác đã có ảnh thật). Việc tiếp ưu tiên: widget trang khách.
+
+## Loop lượt 05:55 — điểm danh & bàn giao ngữ cảnh — 29/10/2026
+
+Ngữ cảnh phiên sắp đầy: lượt này chỉ điểm danh — repo ổn định (chỉ còn
+work 28/10 của Codex chờ duyệt + QA untracked, đúng trạng thái đã biết).
+Việc tiếp ưu tiên lượt sau: widget trang khách; EQ-03 đã đóng; khi người
+dùng quay lại: duyệt 2 lô (Codex 28/10, QA files) + xem nhật ký các lượt
+loop dưới đây. Không đổi code.
