@@ -1823,3 +1823,11 @@ viền nét đứt, căn giữa) — incidents-workspace.css append. Trước/sa
 loop2-incidents-bottom.png vs loop2-incidents-after.png. Gates: PASS
 cả hai. Việc tiếp: empty states tương tự cho maintenance (0 công việc) và
 users detail panel; mobile 390px sweep.
+
+## Loop lượt 02:35 — maintenance empty panel — 29/10/2026
+
+Panel "Không có công việc bảo trì chưa hoàn thành" nâng thành panel có chủ
+đích (icon wrench badge gradient, viền nét đứt, căn giữa) — nhất quán với
+incidents. Bằng chứng: Temp/lab-loop-shots/loop3-maintenance-after2.png.
+Gates PASS. Việc tiếp: users detail panel trống; sweep mobile 390px các
+trang chính; ảnh thiết bị nổi bật (nếu Wikimedia không 429).

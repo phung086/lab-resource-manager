@@ -115,3 +115,32 @@
   .maintenance-job { grid-template-columns:minmax(0,1fr); padding:16px; }.maintenance-job .maintenance-status { grid-row:2; }.maintenance-get-started { padding:4px 0; }
 }
 @media(prefers-reduced-motion:no-preference) { .maintenance-workspace :is(button,input,select,textarea) { transition:background-color .15s ease-out,border-color .15s ease-out,color .15s ease-out; } }
+.maintenance-resource-context { display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:20px; margin:20px 0; background:linear-gradient(110deg,#eee7fc,#e8f5ef); border-radius:12px; }
+.maintenance-resource-context>div { display:flex; align-items:center; gap:12px; flex:1; min-width:180px; }
+.maintenance-resource-context strong,.maintenance-resource-context small { display:block; line-height:1.6; }
+.maintenance-resource-context small { color:var(--workspace-text-muted,#61596c); }
+.maintenance-resource-context a { display:inline-flex; gap:8px; align-items:center; min-height:44px; color:var(--workspace-primary,#6441d9); text-underline-offset:4px; }
+.maintenance-draft-notice { display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:20px; margin:20px 0; border-radius:12px; background:#fff4dc; color:#654714; }
+.maintenance-draft-notice>div { flex:1; min-width:180px; }
+.maintenance-draft-notice p { margin:6px 0; line-height:1.5; }
+.maintenance-draft-notice small { display:block; max-width:65ch; line-height:1.6; }
+
+/* ── Maintenance empty state: intentional panel (loop 29/10) ── */
+.maintenance-empty {
+  align-items: center; justify-content: center; text-align: center; gap: 10px;
+  border: 1.5px dashed var(--maintenance-border, #d9d2e6);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(96, 64, 206, 0.05) 0%, transparent 65%),
+    #fffdfa;
+  padding: 36px 24px;
+}
+.maintenance-empty > svg {
+  width: 46px; height: 46px; padding: 12px; box-sizing: content-box;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(96, 64, 206, 0.12), rgba(15, 157, 143, 0.12));
+  color: #6040ce;
+}
+.maintenance-empty h3 { font-size: 1.02rem; font-weight: 650; color: var(--maintenance-ink, #282338); }
+.maintenance-empty p { text-align: center; }
+.maintenance-empty .secondary-button { margin-top: 6px; }
