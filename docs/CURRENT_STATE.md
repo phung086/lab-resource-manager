@@ -1890,3 +1890,11 @@ curl 200. EQ-03 camera: 'IP camera' → tòa nhà CCTV Bắc Kinh (architecture
 không phải camera), 'dome' không có kết quả — DEFER lần 2, lượt sau dùng
 Commons category "Surveillance cameras" thay vì search. Gates PASS. Việc
 tiếp: EQ-03 qua category; widget trang khách.
+
+## Loop lượt 04:55 — EQ-03 defer lần 3 — 29/10/2026
+
+Category "Surveillance cameras" 30 file đầu: không có jpeg ≥900px đạt lọc
+(map/logo/sign loại). EQ-03 giữ minh họa category art; gợi ý lượt sau: bỏ
+ràng buộc jpeg (nhận PNG webp), hoặc dùng category con
+"Closed-circuit television cameras in ...". Gates không chạy (không đổi
+code). Việc tiếp: EQ-03 hoặc chuyển hẳn sang widget trang khách.
