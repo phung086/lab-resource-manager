@@ -1831,3 +1831,14 @@ Panel "Không có công việc bảo trì chưa hoàn thành" nâng thành panel
 incidents. Bằng chứng: Temp/lab-loop-shots/loop3-maintenance-after2.png.
 Gates PASS. Việc tiếp: users detail panel trống; sweep mobile 390px các
 trang chính; ảnh thiết bị nổi bật (nếu Wikimedia không 429).
+
+## Loop lượt 02:55 — mobile 390px sweep + users empty panel — 29/10/2026
+
+Mobile 390px (isMobile+touch): overview/bookings/payments/calendar/incidents
+— 0 overflow, 0 element tràn (đo scrollWidth + quét rect), stat cards xếp 2
+cột chuẩn — ảnh loop4-m-*.png. Chuyển hướng: panel trống users (admin)
+"Chọn một tài khoản" thành panel có chủ đích (icon người tím, viền nét đứt,
+căn giữa) — users-workspace.css; bỏ thử CSS mask 2 lớp (không render
+Chrome) dùng mask đơn lớp. Ảnh loop4-users-after2.png. Gates PASS. Việc
+tiếp: ảnh thiết bị nổi bật nếu Wikimedia còn 429 thì rà detail page them
+widget; mobile admin pages.

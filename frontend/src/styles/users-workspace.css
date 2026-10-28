@@ -155,3 +155,23 @@
 
 @media(max-width:1050px) { .users-layout { grid-template-columns:1fr; } .users-dossier { max-width:none; } .users-detail-grid { grid-template-columns:1fr; } .users-permission-row { grid-template-columns:1fr; } }
 @media(max-width:600px) { .users-heading { flex-direction:column; gap:16px; } .users-heading>.users-actions { width:100%; } .users-heading>.users-actions .btn { flex:1; } .users-filters { grid-template-columns:1fr 1fr; } .users-filters label:first-child { grid-column:1/-1; } .users-table th:first-child { width:46%; } .users-table th,.users-table td { padding:12px 8px; font-size:.75rem; } .users-account { gap:4px; } .users-account svg { width:12px; } .users-account-email { font-size:.7rem; } .users-account-role,.users-status,.users-status-warning { font-size:.7rem; padding:3px 5px; } .users-dossier,.users-create { padding:20px 16px; } .users-form { grid-template-columns:1fr; } .users-confirm { padding:0 16px 20px; } .users-detail-card { padding:12px; } .users-permission-row { gap:6px; } }
+
+/* ── Users dossier empty state: intentional panel (loop 29/10) ── */
+.users-dossier-empty {
+  align-items: center; justify-content: center; text-align: center; gap: 10px;
+  border: 1.5px dashed var(--workspace-border, #d9d2e6);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(96, 64, 206, 0.05) 0%, transparent 65%),
+    #fffdfa;
+  min-height: 320px;
+  padding: 36px 24px;
+}
+.users-dossier-empty::before {
+  content: ''; width: 44px; height: 44px;
+  background: #6040ce;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M22 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M22 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/></svg>") center / contain no-repeat;
+}
+.users-dossier-empty h2 { font-size: 1.02rem; font-weight: 650; color: var(--workspace-text, #282338); margin: 0; }
+.users-dossier-empty p { text-align: center; max-width: 38ch; line-height: 1.6; color: var(--workspace-text-muted, #625b70); margin: 0; }
