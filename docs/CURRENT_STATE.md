@@ -1947,3 +1947,12 @@ heading + section header của workbench — để Codex/chờ duyệt, không t
 code người khác đang giữ). /workspace/support: form yêu cầu + robot CTA
 đầy đủ. Không cần sửa. Ảnh loop10-*.png. Việc tiếp: chờ người dùng; nếu
 vẫn loop thì audit chatgpt-bridge + register.
+
+## Loop lượt 07:15 — audit register + chatgpt-bridge — 29/10/2026
+
+/register: sạch — split form, footer tím, không cần sửa. /workspace/
+chatgpt-bridge (staff, URL trực tiếp): trang gần trống chỉ có dòng lỗi
+"Bạn không có quyền thao tác..." — bridge có vẻ ADMIN-only và tab không có
+trong sidebar staff; fallback thô. Ghi "chờ con người": nếu người dùng
+muốn, đổi sang panel giải thích quyền như monitoring fallback. Ảnh
+loop11-*.png. Việc tiếp: chờ người dùng hoặc rà soát nhóm trường.
