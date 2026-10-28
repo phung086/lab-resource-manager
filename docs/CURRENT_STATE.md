@@ -1882,3 +1882,11 @@ Máy hiện sóng số (màn Tektronix sóng tam giác/vuông, CC0) — 2 URL cu
 EQ-03 Camera: ứng viên "Security Camera.JPG" blur kém chất lượng → LOẠI,
 defer sang lượt sau tìm ảnh camera IP sắc nét hơn. Gates PASS. Việc tiếp:
 EQ-03 ảnh camera tốt + EQ-09 cân điện tử; widget trang khách.
+
+## Loop lượt 04:35 — EQ-09 gắn, EQ-03 defer lần 2 — 29/10/2026
+
+EQ-09 Cân điện tử: gắn ảnh Load Cell Sensor Module (CC BY-SA 4.0) — URL
+curl 200. EQ-03 camera: 'IP camera' → tòa nhà CCTV Bắc Kinh (architecture
+không phải camera), 'dome' không có kết quả — DEFER lần 2, lượt sau dùng
+Commons category "Surveillance cameras" thay vì search. Gates PASS. Việc
+tiếp: EQ-03 qua category; widget trang khách.
