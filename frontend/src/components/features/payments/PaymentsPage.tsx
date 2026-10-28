@@ -4,7 +4,7 @@ import { navigateApp, readRouteParams, workspacePathForTab } from "../../../work
 import { paymentSessionStatus, safeVnpayUrl, validatePaymentAction } from "../../../utils/paymentValidation";
 import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest } from "../../../api.js";
 import { BaseModal2026 } from "../../BaseModal2026";
 import { formatVietnamDateTime } from "../../../utils/timezone";
@@ -234,6 +234,26 @@ function PaymentsLedger({
     : !hasPaymentMethod ? 'ui.paymentStudio.unavailableHelp'
     : ['failed','expired'].includes(paymentSessionStatus(selected)) ? 'ui.paymentStudio.retryHelp'
     : 'ui.paymentStudio.pendingHelp';
+  // Overview is derived from the same live ledger rows — no separate source of truth.
+  const overview = useMemo(() => {
+    const counts: Record<string, number> = { pending: 0, success: 0, failed: 0, expired: 0, refunded: 0 };
+    let paidSum = 0, pendingSum = 0;
+    const vndDay = (iso: string) => new Date(new Date(iso).getTime() + 7 * 3600_000).toISOString().slice(0, 10);
+    const buckets = Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(Date.now() + 7 * 3600_000 - (13 - i) * 86400_000);
+      return { key: d.toISOString().slice(0, 10), label: `${d.getDate()}/${d.getMonth() + 1}`, sum: 0, count: 0 };
+    });
+    const byDay = new Map(buckets.map((b) => [b.key, b]));
+    for (const row of rows) {
+      const state = paymentSessionStatus(row);
+      counts[state] = (counts[state] || 0) + 1;
+      if (state === 'success') paidSum += row.amount;
+      if (state === 'pending') pendingSum += row.amount;
+      const bucket = byDay.get(vndDay(row.paidAt || row.createdAt));
+      if (bucket) { bucket.sum += row.amount; bucket.count += 1; }
+    }
+    return { counts, paidSum, pendingSum, buckets, max: Math.max(1, ...buckets.map(b => b.sum)) };
+  }, [rows]);
   return (
     <section className="content-stack payment-page payment-ledger" data-role={user.role}>
 
@@ -353,6 +373,41 @@ function PaymentsLedger({
         <button className="secondary-button" disabled={loading}>
            {translate("ui.filter_transactions_d79035fe")} </button>
       </form>
+      {!loading && rows.length > 0 && (
+        <section className="payment-overview" aria-label={tr('ui.payments.overview')}>
+          <div className="payment-stat">
+            <span className="payment-stat-label">{tr('ui.payments.txCount')}</span>
+            <strong>{rows.length}</strong>
+            <span className="payment-stat-hint">{tr('ui.showing_up_to_100_recent_6f1a8435')}</span>
+          </div>
+          <div className="payment-stat is-success">
+            <span className="payment-stat-label">{tr('ui.payment_verified_c37ae36e')}</span>
+            <strong>{money(overview.paidSum)}</strong>
+            <span className="payment-stat-hint">{overview.counts.success} {tr('ui.payments.txUnit')}</span>
+          </div>
+          <div className="payment-stat is-pending">
+            <span className="payment-stat-label">{tr('ui.awaiting_payment_dd717eb2')}</span>
+            <strong>{money(overview.pendingSum)}</strong>
+            <span className="payment-stat-hint">{overview.counts.pending} {tr('ui.payments.txUnit')}</span>
+          </div>
+          <div className="payment-stat is-failed">
+            <span className="payment-stat-label">{tr('ui.payments.unsuccessful')}</span>
+            <strong>{overview.counts.failed + overview.counts.expired}</strong>
+            <span className="payment-stat-hint">{overview.counts.refunded} {tr('ui.refunded_d0d4c45f').toLowerCase()}</span>
+          </div>
+          <figure className="payment-flow">
+            <figcaption>{tr('ui.payments.flowChart')}<span className="payment-flow-note">{tr('ui.payments.vietnamTime')}</span></figcaption>
+            <div className="payment-flow-bars" role="img" aria-label={`${tr('ui.payments.flowChart')}: ${overview.counts.success} ${tr('ui.payment_verified_c37ae36e').toLowerCase()}, ${money(overview.paidSum)}`}>
+              {overview.buckets.map(bucket => (
+                <div key={bucket.key} className="payment-flow-col" title={translate('ui.payments.dayTooltip', { date: bucket.label, count: bucket.count, sum: money(bucket.sum) })}>
+                  <span className={`payment-flow-bar${bucket.sum ? '' : ' is-empty'}`} style={{ height: bucket.sum ? `${Math.max(8, Math.round((bucket.sum / overview.max) * 100))}%` : undefined }} />
+                  <span className="payment-flow-day" aria-hidden="true">{bucket.label}</span>
+                </div>
+              ))}
+            </div>
+          </figure>
+        </section>
+      )}
       <div className="payment-ledger-layout"><div className="payment-ledger-main">
       {loading ? (
         <p role="status">{translate("ui.loading_transactions_68570a8d")}</p>
@@ -380,7 +435,16 @@ function PaymentsLedger({
       </div>
       <aside ref={dossierRef} tabIndex={-1} className="payment-dossier" aria-label={tr(selected?.status === 'success' ? 'ui.fulfillment.receipt' : 'ui.paymentJourney.viewDetails')}>
         <header><h2>{tr('ui.paymentStudio.detailTitle')}</h2>{selected && <button type="button" className="payment-status-refresh" onClick={()=>void load()} disabled={loading||!!busy} aria-label={tr('ui.refresh_status_5c5763c1')} title={tr('ui.refresh_status_5c5763c1')}><RefreshCw size={17} aria-hidden="true" /></button>}</header>
-        {!selected && <div className="payment-dossier-empty"><ReceiptText size={40} aria-hidden="true" /><p>{tr('ui.payments.selectTransaction')}</p></div>}
+        {!selected && <div className="payment-dossier-empty"><ReceiptText size={40} aria-hidden="true" /><p>{tr('ui.payments.selectTransaction')}</p>
+          <div className="payment-gateways">
+            <h3>{tr('ui.payments.gatewaysTitle')}</h3>
+            <ul>
+              <li className={providers.vnpay ? 'is-on' : 'is-off'}>{tr('ui.vnpay_sandbox_667598b8')}</li>
+              <li className={providers.vietqr ? 'is-on' : 'is-off'}>{tr('ui.payments.vietqrName')}</li>
+            </ul>
+            {!providers.vnpay && !providers.vietqr && <p className="payment-gateways-off">{tr('ui.payments.noGateway')}</p>}
+          </div>
+        </div>}
         {selected && (
           <div className="payment-detail" key={selected.id}>
             <div className={`payment-value-block is-${paymentSessionStatus(selected)}`}>
