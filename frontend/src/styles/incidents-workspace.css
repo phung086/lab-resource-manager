@@ -941,3 +941,25 @@
  .incidents-workspace[data-role="CUSTOMER"] .incident-columns { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); }
  .incidents-workspace[data-role="LAB_STAFF"] .incident-columns { grid-template-columns:minmax(300px,.8fr) minmax(0,1.2fr); }
 }
+
+/* ── Incident empty state: intentional panel (loop 29/10) ── */
+.incident-empty {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  border: 1.5px dashed var(--incident-border, #d9d2e6);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(96, 64, 206, 0.05) 0%, transparent 65%),
+    var(--incident-surface, #fffdfa);
+  padding: 36px 24px;
+}
+.incident-empty > svg {
+  width: 46px; height: 46px; padding: 12px; box-sizing: content-box;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(96, 64, 206, 0.12), rgba(15, 157, 143, 0.12));
+  color: #6040ce;
+}
+.incident-empty h3 { font-size: 1.02rem; font-weight: 650; color: var(--incident-ink, #282338); }
+.incident-empty p { text-align: center; max-width: 40ch; line-height: 1.6; }

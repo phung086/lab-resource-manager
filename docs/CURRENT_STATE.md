@@ -1812,3 +1812,14 @@ gradient violet→violet nhạt, chữ trắng, icon mint, badge trắng. Trư�
 Temp/lab-loop-shots/loop-sidebar-after.png. Gates: test:required PASS,
 contrast 22/22 · 0 finding. Việc tiếp: rà chrome (footer/header) trên
 resource detail + incidents + users; mobile 390px các trang vừa sửa.
+
+## Loop lượt 02:15 — rà chrome 3 trang + incidents empty panel — 29/10/2026
+
+Rà footer tím/header glass/active pill trên resource detail, bookings,
+incidents (customer): nhất quán, không vỡ layout — ảnh
+Temp/lab-loop-shots/loop2-*-bottom.png. Chuyển hướng: panel trống "Chưa có
+sự cố nào" nâng thành panel có chủ đích (icon tròn gradient violet→mint,
+viền nét đứt, căn giữa) — incidents-workspace.css append. Trước/sau:
+loop2-incidents-bottom.png vs loop2-incidents-after.png. Gates: PASS
+cả hai. Việc tiếp: empty states tương tự cho maintenance (0 công việc) và
+users detail panel; mobile 390px sweep.
