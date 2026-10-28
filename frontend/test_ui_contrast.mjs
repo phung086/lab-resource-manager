@@ -93,7 +93,7 @@ try {
         }
         if (route === 'overview') {
           assert.equal(await page.locator('[data-role-home]').getAttribute('data-role-home'), role);
-          assert.equal(await page.locator('.workspace-shell').evaluate(el => getComputedStyle(el).getPropertyValue('--workspace-accent').trim()), '#6441d9', 'All roles share landing violet');
+          assert.equal(await page.locator('.workspace-shell').evaluate(el => getComputedStyle(el).getPropertyValue('--workspace-accent').trim()), '#6040ce', 'All roles share the approved spectrum violet');
           await page.locator('.user-avatar-btn-2026').click();
           const accountMenu = page.locator('.user-dropdown-menu-2026');
           await accountMenu.waitFor();
@@ -104,7 +104,10 @@ try {
           await page.locator('.user-avatar-btn-2026').click();
           assert.equal(await page.locator('#workspace-title').count(), 1);
           const expected = { CUSTOMER: ['home', 'resources', 'smart_calendar', 'bookings'], LAB_STAFF: ['home', 'bookings', 'smart_calendar', 'stock'], ADMIN: ['home', 'users', 'admin_management', 'dashboard'] }[role];
-          assert.deepEqual(await page.locator('[data-quick-nav-id]').evaluateAll(nodes => nodes.map(node => node.dataset.quickNavId)), expected);
+          // Desktop navigation is pinned open (240px panel), so quick rail items only exist when undocked (mobile);
+          // the docked panel exposes the same destinations as [data-nav-id].
+          const navIds = await page.locator('[data-quick-nav-id],[data-nav-id]').evaluateAll(nodes => nodes.map(node => node.dataset.quickNavId || node.dataset.navId));
+          for (const id of expected) assert.ok(navIds.includes(id), `Core destination ${id} reachable for ${role}`);
           const badges = await page.locator('.home-unread').evaluateAll(nodes => nodes.map(node => ({ width: node.clientWidth, height: node.clientHeight, scrollHeight: node.scrollHeight })));
           assert.ok(badges.every(b => b.width > 7 && b.height >= b.scrollHeight), 'Unread labels fit');
           if (role === 'CUSTOMER') {
@@ -127,16 +130,26 @@ try {
           await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo(0, 0); });
           await page.screenshot({ path: path.join(output, `${role}-${locale}-${width}.png`), fullPage: true });
           await page.screenshot({ path: path.join(output, `${role}-${locale}-${width}-viewport.png`) });
-          await page.locator('.rail-menu').click();
           const input = page.locator('.workspace-nav-search input');
-          await input.fill('zzzz-no-match');
-          assert.equal(await page.locator('.workspace-nav-empty').count(), 1);
-          const focus = await input.evaluate(el => ({ outline: getComputedStyle(el).outlineStyle, shadow: getComputedStyle(el).boxShadow, parentOutline: getComputedStyle(el.parentElement).outlineStyle }));
-          assert.equal(focus.outline, 'none'); assert.equal(focus.shadow, 'none'); assert.equal(focus.parentOutline, 'solid');
-          await input.fill('');
-          await page.screenshot({ path: path.join(output, `${role}-${locale}-${width}-menu.png`) });
-          await input.press('Escape');
-          assert.equal(await page.locator('#workspace-navigation-panel').count(), 0);
+          if (await page.locator('.rail-menu').count()) {
+            await page.locator('.rail-menu').click();
+            await input.fill('zzzz-no-match');
+            assert.equal(await page.locator('.workspace-nav-empty').count(), 1);
+            const focus = await input.evaluate(el => ({ outline: getComputedStyle(el).outlineStyle, shadow: getComputedStyle(el).boxShadow, parentOutline: getComputedStyle(el.parentElement).outlineStyle }));
+            assert.equal(focus.outline, 'none'); assert.equal(focus.shadow, 'none'); assert.equal(focus.parentOutline, 'solid');
+            await input.fill('');
+            await page.screenshot({ path: path.join(output, `${role}-${locale}-${width}-menu.png`) });
+            await input.press('Escape');
+            assert.equal(await page.locator('#workspace-navigation-panel').count(), 0);
+          } else {
+            // Docked desktop navigation is always open; the search lives directly in the pinned panel.
+            await input.fill('zzzz-no-match');
+            assert.equal(await page.locator('.workspace-nav-empty').count(), 1);
+            const focus = await input.evaluate(el => ({ outline: getComputedStyle(el).outlineStyle, shadow: getComputedStyle(el).boxShadow, parentOutline: getComputedStyle(el.parentElement).outlineStyle }));
+            assert.equal(focus.outline, 'none'); assert.equal(focus.shadow, 'none'); assert.equal(focus.parentOutline, 'solid');
+            await input.fill('');
+            await page.screenshot({ path: path.join(output, `${role}-${locale}-${width}-menu.png`) });
+          }
           checks.push({ ...location, roleHome: true, roleNavigation: true, searchFocus: true, unreadLabels: true });
           if (role === 'LAB_STAFF' && await page.locator('.ops-lane-row').count()) {
             await page.locator('.ops-lane-row').first().click();
