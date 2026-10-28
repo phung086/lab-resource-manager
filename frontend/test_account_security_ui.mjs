@@ -78,11 +78,11 @@ try {
     await inspect(page, 'staff-directory-' + width);
   }
   await page.locator('.users-heading').getByRole('button', { name: label('ui.create_user_70f60575'), exact: true }).click();
-  const createForm = page.locator('.users-create form');
+  const createForm = page.locator('form.users-create');
   await createForm.locator('button[type=submit]').click();
   check(await createForm.locator('[name=fullName]').evaluate(node => node === document.activeElement), 'Invalid create focuses the first field');
   check(await createForm.locator('[role=alert]').count() === 1, 'Invalid create has a visible field summary');
-  check(await createForm.locator('[name=role] option').evaluateAll(nodes => nodes.map(node => node.value).join(',')) === 'CUSTOMER', 'Staff can only create CUSTOMER');
+  check(await createForm.locator('[name=role]').count() === 0, 'Staff cannot select a role or elevate a new account');
   const managedEmail = 'ui-managed-' + fixture.runId + '@security.test';
   await createForm.locator('[name=fullName]').fill('UI Managed Customer');
   await createForm.locator('[name=email]').fill(managedEmail);
@@ -90,7 +90,7 @@ try {
   await createForm.locator('[name=phone]').fill('0901234567');
   const created = await mutation(page, 'POST', '/users', () => createForm.locator('button[type=submit]').click(), 201);
   check(created.role === 'CUSTOMER' && created.email === managedEmail, 'Staff creates a persisted customer through the UI');
-  await page.locator('.users-dossier h2').filter({ hasText: 'UI Managed Customer' }).waitFor();
+  await page.locator('.users-dossier').getByRole('heading', { name: 'UI Managed Customer', exact: true }).waitFor();
   check(await page.locator('.users-permissions select').count() === 0, 'Staff dossier has no role elevation control');
   await page.locator('.users-dossier').getByRole('button', { name: label('account.users.editContact'), exact: true }).click();
   const editForm = page.locator('.users-edit-form');
@@ -102,7 +102,7 @@ try {
   await mutation(page, 'PATCH', '/users/' + created.id, () => editForm.locator('button[type=submit]').click());
   const edited = (await call('staff', 'GET', '/users/' + created.id)).body;
   check(edited.fullName === 'UI Customer Updated' && edited.phone === '0912345678' && edited.organization === 'UI verification', 'Staff contact edits persist');
-  await page.locator('.users-dossier').getByRole('button', { name: label('account.users.resetPassword'), exact: true }).click();
+  await page.locator('.users-dossier').getByRole('button', { name: label('account.users.changePassword'), exact: true }).click();
   const assisted = page.getByRole('dialog'), assistedForm = assisted.locator('form');
   await inspect(page, 'staff-password-dialog');
   check(await assistedForm.locator('[name=currentPassword]').count() === 0, 'Assisted reset uses email verification instead of knowing the customer password');
@@ -135,12 +135,14 @@ try {
   await inspect(adminPage, 'admin-initial');
   const roleSelect = adminPage.locator('.users-permissions select');
   await roleSelect.selectOption('LAB_STAFF');
-  await adminPage.getByRole('button', { name: label('ui.users.reviewRole'), exact: true }).click();
+  await adminPage.getByRole('dialog').waitFor();
+  check(await adminPage.getByRole('dialog').isVisible(), 'Role change awaits explicit confirmation');
   await mutation(adminPage, 'PATCH', '/users/' + created.id + '/role', () => adminPage.getByRole('dialog').getByRole('button', { name: label('ui.users.confirm'), exact: true }).click());
   check((await call('admin', 'GET', '/users/' + created.id)).body.role === 'LAB_STAFF', 'Admin role change persists');
   check(!(await call('staff', 'GET', '/users')).body.some(user => user.id === created.id), 'Promoted staff account disappears from staff customer scope');
   await roleSelect.selectOption('CUSTOMER');
-  await adminPage.getByRole('button', { name: label('ui.users.reviewRole'), exact: true }).click();
+  await adminPage.getByRole('dialog').waitFor();
+  check(await adminPage.getByRole('dialog').isVisible(), 'Role change awaits explicit confirmation');
   await mutation(adminPage, 'PATCH', '/users/' + created.id + '/role', () => adminPage.getByRole('dialog').getByRole('button', { name: label('ui.users.confirm'), exact: true }).click());
   const policyDetails = adminPage.locator('.loyalty-policy'); await policyDetails.locator('summary').click();
   await policyDetails.locator('form').waitFor(); previousPolicy = (await call('admin', 'GET', '/loyalty/policy')).body;
@@ -181,6 +183,14 @@ try {
   await inspect(customerPage, 'customer-renewed-session');
   check((await call('customer', 'GET', '/users')).status === 403, 'Customer cannot access managed accounts');
 
+  // Staff retains CUSTOMER activation controls under FR-AUTH-07 / ADR-034.
+  await page.reload(); await page.locator('.users-dossier-name').waitFor();
+  await page.locator('.users-dossier').getByRole('button', {name:label('account.users.deactivate'),exact:true}).click();
+  await mutation(page, 'PATCH', '/users/' + created.id + '/active', () => page.getByRole('dialog').getByRole('button', {name:label('ui.users.confirm'),exact:true}).click());
+  check((await call('staff', 'GET', '/users/' + created.id)).body.isActive === false, 'Staff deactivation persists on CUSTOMER only');
+  await page.locator('.users-dossier').getByRole('button', {name:label('account.users.reactivate'),exact:true}).click();
+  await mutation(page, 'PATCH', '/users/' + created.id + '/active', () => page.getByRole('dialog').getByRole('button', {name:label('ui.users.confirm'),exact:true}).click());
+  check((await call('staff', 'GET', '/users/' + created.id)).body.isActive === true, 'Staff reactivation persists before soft removal');
   await page.locator('.users-dossier').getByRole('button', { name: label('account.users.delete'), exact: true }).click();
   const deletion = page.getByRole('dialog'); await deletion.getByRole('button', { name: label('ui.users.confirm'), exact: true }).click();
   check(await deletion.getByRole('alert').count() === 1, 'Removing access requires a visible reason');
@@ -189,7 +199,7 @@ try {
   const removed = await fixture.prisma.user.findUniqueOrThrow({ where: { id: created.id } });
   check(!removed.isActive && removed.deletedAt !== null, 'Staff deletion removes access without erasing persisted history');
   check(await fixture.prisma.systemAuditEvent.count({ where: { targetId: created.id } }) >= 5, 'Account actions retain durable audit evidence');
-  check(await page.locator('.users-dossier').getByRole('button').count() === 0, 'Removed account dossier has no reactivation or reset actions');
+  check(await page.locator('.users-dossier .users-contact-actions button, .users-dossier .users-permissions button, .users-dossier .users-permissions select').count() === 0, 'Removed account dossier has no reactivation or reset actions');
   await inspect(page, 'staff-removed-account');
   for (const item of [staff, admin, customer]) await item.context.close();
   check(fixture.deliveredCount() === 2, 'Exactly two OTP emails were delivered through real SMTP');

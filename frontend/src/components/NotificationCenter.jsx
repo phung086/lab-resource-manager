@@ -9,7 +9,7 @@ import { formatVietnamDateTime } from '../utils/timezone.js';
 import '../styles/notifications-workspace.css';
 const typeLabels = {BOOKING_APPROVED:'ui.booking_approved_fbab3009',BOOKING_REJECTED:'ui.booking_rejected_7d50d88b',BOOKING_UPCOMING:'ui.upcoming_booking_65fe3d5f',RETURN_REMINDER:'ui.return_reminder_92b7e4bb',WAITLIST_AVAILABLE:'planning.waitlistAvailable'};
 const filterFromRoute = () => ['all','unread','read'].includes(readRouteParams().get('filter')) ? readRouteParams().get('filter') : 'all';
-export function NotificationCenter({ onChanged, onOpenBookings, actorRole = 'CUSTOMER' }) {
+export function NotificationCenter({ onChanged, onOpenBookings, actorRole = 'CUSTOMER', notifications: sharedNotifications, loading: sharedLoading = false, loadError: sharedError = '' }) {
  const { tr } = useLocale(), controllerRef=useRef(null), busyRef=useRef(false), detailRef=useRef(null);
  const [notifications,setNotifications]=useState([]), [loading,setLoading]=useState(true), [readError,setReadError]=useState('');
  const [filter,setFilter]=useState(filterFromRoute), [selected,setSelected]=useState(()=>readRouteParams().get('notification') || '');
@@ -24,7 +24,15 @@ export function NotificationCenter({ onChanged, onOpenBookings, actorRole = 'CUS
    catch(cause){if(!controller.signal.aborted)setReadError(cause?.message || 'ui.could_not_load_notifications_ba2db1e3');}
    finally{if(!controller.signal.aborted)setLoading(false);}
  },[]);
- useEffect(()=>{void load();return()=>controllerRef.current?.abort();},[load]);
+ useEffect(()=>{
+   if (sharedNotifications !== undefined) {
+     controllerRef.current?.abort();
+     setNotifications(sharedNotifications);
+     setLoading(sharedLoading);
+     setReadError(sharedError);
+   } else void load();
+   return()=>controllerRef.current?.abort();
+ },[load,sharedNotifications,sharedLoading,sharedError]);
  useEffect(()=>{const sync=()=>{setSelected(readRouteParams().get('notification') || '');setFilter(filterFromRoute());};window.addEventListener('popstate',sync);return()=>window.removeEventListener('popstate',sync);},[]);
  function choose(id){setSelected(id);setError('');const params=readRouteParams();params.set('notification',id);navigateApp(workspacePathForTab('escalations',params),{notify:false});if(window.matchMedia('(max-width:900px)').matches)requestAnimationFrame(()=>{detailRef.current?.scrollIntoView({block:'start'});detailRef.current?.focus({preventScroll:true});});}
  function chooseFilter(value){setFilter(value);const params=readRouteParams();params.set('filter',value);navigateApp(workspacePathForTab('escalations',params),{notify:false});}

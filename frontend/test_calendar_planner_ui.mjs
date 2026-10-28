@@ -51,9 +51,13 @@ try {
     try {
       await context.addInitScript(({ session, locale }) => { sessionStorage.setItem('lrm_token', session.accessToken); sessionStorage.setItem('lrm_user', JSON.stringify(session.user)); localStorage.setItem('lrm_locale', locale); }, { session: sessions[actor], locale });
       let writes = 0;
+      const writeLog = [];
       await context.route('**/api/**', async route => {
         const request = route.request(), url = new URL(request.url());
-        if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method()) && url.pathname !== '/api/booking-pricing/quote') { writes++; await route.abort(); return; }
+        // auth/activity is the SessionGuard session heartbeat (extends the auth session, no business data).
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method()) && !['/api/booking-pricing/quote', '/api/auth/activity'].includes(url.pathname)) {
+          writes++; writeLog.push(`${request.method()} ${url.pathname}`); await route.abort(); return;
+        }
         await route.fulfill({ response: await route.fetch({ url: api + url.pathname + url.search }) });
       });
       const page = await context.newPage(); page.setDefaultTimeout(15000); page.on('pageerror', error => errors.push(error.message));
@@ -87,7 +91,7 @@ try {
       await page.keyboard.press('Escape'); await page.getByRole('dialog').waitFor({ state: 'hidden' });
       record(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2), `${marker}: no horizontal overflow`);
       await page.screenshot({ path: path.join(output, `${actor}-${locale}-${width}-week.png`), fullPage: true });
-      record(writes === 0, `${marker}: no business write attempted`);
+      record(writes === 0, `${marker}: no business write attempted${writes ? ` (writes: ${writeLog.join(", ")})` : ""}`);
     } finally { await context.close(); }
   }
   record(errors.length === 0, 'No browser runtime errors');

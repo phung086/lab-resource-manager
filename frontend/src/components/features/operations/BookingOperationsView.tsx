@@ -354,10 +354,11 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
                   return <Card key={booking.id} booking={booking} busy={busyId === booking.id} isSelected={selectedBookingId === booking.id} onSelect={selectBooking} />;
                 })}
               </div>
-              {queue.pagination && (
-                <QueuePagination pagination={queue.pagination} onPage={queue.setPage} disabled={loading || Boolean(busyId)} pageSizes={[20, 50, 100]} onPageSize={setQueuePageSize} />
-              )}
             </>
+          )}
+          {/* Keep pagination mounted across page loads to preserve keyboard focus. */}
+          {queue.pagination && !loadError && (
+            <QueuePagination pagination={queue.pagination} onPage={queue.setPage} disabled={loading || Boolean(busyId)} pageSizes={[20, 50, 100]} onPageSize={setQueuePageSize} />
           )}
         </div>
 

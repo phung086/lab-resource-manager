@@ -1,5 +1,5 @@
 import { HelpDisclosure } from "../../base/HelpDisclosure";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, RefreshCw, CreditCard, Landmark, ReceiptText, CircleCheck, Clock3, CircleAlert } from "lucide-react";
 import { navigateApp, readRouteParams, workspacePathForTab } from "../../../workspaceRoutes.js";
 import { paymentSessionStatus, safeVnpayUrl, validatePaymentAction } from "../../../utils/paymentValidation";
 import { translate } from "../../../i18n.js";
@@ -225,6 +225,15 @@ function PaymentsLedger({
       );
     }
   }
+  const canPay = selected && ['pending','failed','expired'].includes(selected.status) && selected.userId === user.id && selected.booking?.status === 'CONFIRMED';
+  const hasPaymentMethod = selected && ((providers.vnpay && ['unselected','vnpay'].includes(selected.provider)) || (providers.vietqr && ['unselected','vietqr'].includes(selected.provider)));
+  const paymentHelp = selected?.status === 'success' ? 'ui.paymentStudio.paidHelp'
+    : selected?.status === 'refunded' ? 'ui.paymentStudio.refundedHelp'
+    : !canPay ? 'ui.paymentStudio.reviewHelp'
+    : selected?.provider === 'vietqr' && selected.status === 'pending' ? 'ui.paymentStudio.transferHelp'
+    : !hasPaymentMethod ? 'ui.paymentStudio.unavailableHelp'
+    : ['failed','expired'].includes(paymentSessionStatus(selected)) ? 'ui.paymentStudio.retryHelp'
+    : 'ui.paymentStudio.pendingHelp';
   return (
     <section className="content-stack payment-page payment-ledger" data-role={user.role}>
 
@@ -311,6 +320,7 @@ function PaymentsLedger({
           void load();
         }}
       >
+        <span className="payment-filter-icon" aria-hidden="true"><CreditCard size={22} /></span>
         <label>
            {translate("ui.find_transactions_dcd7a5a8")} <input
             value={search}
@@ -369,33 +379,24 @@ function PaymentsLedger({
       <HelpDisclosure>{tr('ui.showing_up_to_100_recent_6f1a8435')}</HelpDisclosure>
       </div>
       <aside ref={dossierRef} tabIndex={-1} className="payment-dossier" aria-label={tr(selected?.status === 'success' ? 'ui.fulfillment.receipt' : 'ui.paymentJourney.viewDetails')}>
-        <header><h2>{tr(selected?.status === 'success' ? 'ui.fulfillment.receipt' : 'ui.paymentJourney.viewDetails')}</h2></header>
-        {!selected && <p className="empty-state">{tr('ui.payments.selectTransaction')}</p>}
-        {selected && <button type="button" className="btn btn-secondary" onClick={()=>void load()} disabled={loading||!!busy}>{tr('ui.refresh_status_5c5763c1')}</button>}
-            {selected?.status === "success" && (
-              <button
-                className="primary-button"
-                onClick={() => {
-                  void openReceipt(selected);
-
-                }}
-              >
-                 {translate("ui.open_receipt_68f863f1")} </button>
-            )}
+        <header><h2>{tr('ui.paymentStudio.detailTitle')}</h2>{selected && <button type="button" className="payment-status-refresh" onClick={()=>void load()} disabled={loading||!!busy} aria-label={tr('ui.refresh_status_5c5763c1')} title={tr('ui.refresh_status_5c5763c1')}><RefreshCw size={17} aria-hidden="true" /></button>}</header>
+        {!selected && <div className="payment-dossier-empty"><ReceiptText size={40} aria-hidden="true" /><p>{tr('ui.payments.selectTransaction')}</p></div>}
         {selected && (
-          <div className="payment-detail">
-            <h2>{selected.booking?.title}</h2>
-            <p>{selected.booking?.resource.name}</p>
-            <p>{selected.description}</p>
-            <p>{tr("ui.payer_9f6325a0")}: {selected.user?.fullName}</p>
-            {selected.booking && <a className="table-action" href={workspacePathForTab("bookings",new URLSearchParams({booking:selected.booking.id}))}>{tr("ui.bookings_00f5b333")} <ArrowRight size={16} /></a>}
-            <strong className="payment-amount">{money(selected.amount)}</strong>
+          <div className="payment-detail" key={selected.id}>
+            <div className={`payment-value-block is-${paymentSessionStatus(selected)}`}>
+            <span className="payment-value-icon" aria-hidden="true">{selected.status === 'success' ? <CircleCheck size={28} /> : ['failed','expired'].includes(paymentSessionStatus(selected)) ? <CircleAlert size={28} /> : <Clock3 size={28} />}</span>
             <span className={`payment-state payment-${paymentSessionStatus(selected)}`}>
               {selected.provider === "vietqr" && selected.status === "pending"
                 ? translate("ui.awaiting_reconciliation_06361b86")
                 : tr(labels[paymentSessionStatus(selected)])}
             </span>
-            <p className="payment-ref">{translate("ui.transaction_reference_05a9f7a2")} {selected.txnRef}</p>
+            <strong className="payment-amount">{money(selected.amount)}</strong>
+            <p>{tr(paymentHelp)}</p>
+            </div>
+            <div className="payment-booking-context"><h3>{selected.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</h3><p>{selected.booking?.resource.name}</p><p className="payment-description">{selected.description}</p>
+            <dl><dt>{tr('ui.payer_9f6325a0')}</dt><dd>{selected.user?.fullName}</dd><dt>{tr('ui.transaction_reference_717b27eb')}</dt><dd className="payment-ref">{selected.txnRef}</dd></dl>
+            {selected.booking && <a className="payment-booking-link" href={workspacePathForTab("bookings",new URLSearchParams({booking:selected.booking.id}))}>{tr('ui.paymentStudio.viewBooking')}<ArrowRight size={16} aria-hidden="true" /></a>}</div>
+            {selected.status === 'success' && <button className="primary-button payment-open-receipt" disabled={!!busy} onClick={() => void openReceipt(selected)}><ReceiptText size={18} aria-hidden="true" />{tr('ui.open_receipt_68f863f1')}</button>}
             {selected.reconciliationStatus !== "none" && (
               <div className="alert warning" role="status">
                 <strong>{selected.reconciliationStatus === "manual_review" ? translate("ui.manual_reconciliation_required_ad0551a4") : translate("ui.reconciliation_resolved_6c18a62d")}</strong>
@@ -403,16 +404,16 @@ function PaymentsLedger({
               </div>
             )}
             <ol className="payment-timeline" aria-label={translate("ui.payment_progress_280450c6")}>
-              <li className="is-complete"><strong>{translate("ui.request_created_8af32592")}</strong><time dateTime={selected.createdAt}>{formatVietnamDateTime(selected.createdAt)}</time></li>
-              <li className={selected.provider !== "unselected" ? "is-complete" : ""}><strong>{selected.provider !== "unselected" ? translate("ui.method_selected_ef6b1341") : translate("ui.choose_method_da36b3c9")}</strong><span>{selected.provider === "vnpay" ? tr('ui.vnpay_sandbox_667598b8') : selected.provider === "vietqr" ? "VietQR" : translate("ui.not_initiated_fd25f9ff")}</span></li>
-              <li className={selected.status === "success" ? "is-complete" : ""}><strong>{tr(labels[paymentSessionStatus(selected)])}</strong>{selected.paidAt && <time dateTime={selected.paidAt}>{formatVietnamDateTime(selected.paidAt)}</time>}</li>
+              <li className="is-complete"><span className="payment-step-mark" aria-hidden="true"><ReceiptText size={15} /></span><strong>{translate("ui.request_created_8af32592")}</strong><time dateTime={selected.createdAt}>{formatVietnamDateTime(selected.createdAt)}</time></li>
+              <li className={selected.provider !== "unselected" ? "is-complete" : "is-current"}><span className="payment-step-mark" aria-hidden="true"><CreditCard size={15} /></span><strong>{selected.provider !== "unselected" ? translate("ui.method_selected_ef6b1341") : translate("ui.choose_method_da36b3c9")}</strong><span>{selected.provider === "vnpay" ? tr('ui.vnpay_sandbox_667598b8') : selected.provider === "vietqr" ? "VietQR" : translate("ui.not_initiated_fd25f9ff")}</span></li>
+              <li className={selected.status === "success" ? "is-complete" : selected.provider !== 'unselected' ? 'is-current' : ''}><span className="payment-step-mark" aria-hidden="true">{selected.status === 'success' ? <CircleCheck size={15} /> : <Clock3 size={15} />}</span><strong>{tr(labels[paymentSessionStatus(selected)])}</strong>{selected.paidAt && <time dateTime={selected.paidAt}>{formatVietnamDateTime(selected.paidAt)}</time>}</li>
             </ol>
             {error && (
               <p className="alert danger" role="alert">
                 {translate(error)}
               </p>
             )}
-            {['pending','failed','expired'].includes(selected.status) && selected.userId === user.id && selected.booking?.status === 'CONFIRMED' && (
+            {canPay && (
               <>
                 <div className="payment-provider-choices">
                   <button
@@ -424,7 +425,7 @@ function PaymentsLedger({
                     }
                     onClick={() => initiate("vnpay")}
                   >
-                     {translate("ui.vnpay_sandbox_667598b8")}
+                     <CreditCard size={20} aria-hidden="true" /><span>{translate("ui.vnpay_sandbox_667598b8")}<small>{tr('ui.paymentStudio.hostedCheckout')}</small></span><ArrowRight size={16} aria-hidden="true" />
                   </button>
                   <button
                     className="secondary-button"
@@ -435,7 +436,7 @@ function PaymentsLedger({
                     }
                     onClick={() => initiate("vietqr")}
                   >
-                     {translate("ui.vietqr_d3f03ab0")} <small>{translate("ui.bank_transfer_952fce3f")}</small>
+                     <Landmark size={20} aria-hidden="true" /><span>{translate("ui.vietqr_d3f03ab0")}<small>{translate("ui.bank_transfer_952fce3f")}</small></span><ArrowRight size={16} aria-hidden="true" />
                   </button>
                 </div>
               </>

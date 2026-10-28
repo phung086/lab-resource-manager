@@ -23,3 +23,8 @@
  .workspace-shell:has(.resource-selection-tray) .assistant-launcher:not([aria-expanded="true"]) { bottom:200px; }
 }
 @media(prefers-reduced-motion:reduce) { .assistant-launcher>.lab-robot { transition:none; }.assistant-launcher:hover>.lab-robot { transform:none; } }
+/* Dense chat/payment workspaces keep assistant access in the document flow. */
+.assistant-inline-access { display:flex; justify-content:flex-end; margin-bottom:12px; }
+.workspace-shell .assistant-launcher.is-inline { position:relative; inset:auto; display:inline-flex; gap:8px; width:auto; height:44px; padding:4px 12px 4px 4px; border:1px solid #d8cdef; border-radius:10px; background:#fff; color:#43269a; font-size:12px; }
+.assistant-launcher.is-inline>.lab-robot { width:34px; height:36px; filter:none; }
+.assistant-launcher.is-inline .assistant-launcher-label,.assistant-launcher.is-inline .assistant-launcher-close { display:none; }

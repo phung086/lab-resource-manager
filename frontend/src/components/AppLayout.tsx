@@ -214,13 +214,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         />
 
         <main id="workspace-main" tabIndex={-1} className="main-body-container-2026">
+          {AI_ASSISTANT_ENABLED && ['support','payments'].includes(activeTab) && !navigationOpen && !changePasswordOpen && <div className="assistant-inline-access"><AssistantLauncher inline open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} /></div>}
           {children}
           <MaintenanceNoticeToast role={user?.role || ''} actorId={user?.id}/>
         </main>
         <ProjectFooter variant="workspace" role={user?.role} onNavigate={navigateFromShell} />
       </div>
 
-      {AI_ASSISTANT_ENABLED && !navigationOpen && !changePasswordOpen && <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} />}
+      {AI_ASSISTANT_ENABLED && !['support','payments'].includes(activeTab) && !navigationOpen && !changePasswordOpen && <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} />}
 
       {AI_ASSISTANT_ENABLED && assistantMounted && <React.Suspense fallback={assistantOpen ? <p className="assistant-loading" role="status">{translate("ui.opening_assistant_9a8f8008")}</p> : null}>
         <LaboratoryAssistant actorRole={user?.role} isOpen={assistantOpen && !navigationOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />

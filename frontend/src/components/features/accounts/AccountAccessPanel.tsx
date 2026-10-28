@@ -23,6 +23,16 @@ export function AccountAccessPanel(props: AccountAccessPanelProps) {
           <h4 id="users-perm-title">{tr('account.users.permissionsTitle')}</h4>
         </header>
         <p className="users-permissions-empty">{tr('account.users.permissionsStaffHint')}</p>
+        {props.user.role === 'CUSTOMER' && props.user.id !== props.actorId && (
+          <div className="users-permission-row users-permission-row-actions">
+            <button type="button" className="btn btn-warning" disabled={props.busy} onClick={() => props.onPropose({ user: props.user, type: 'active' })}>
+              {props.user.isActive ? <><ShieldOff size={16} />{tr('account.users.deactivate')}</> : <><ShieldCheck size={16} />{tr('account.users.reactivate')}</>}
+            </button>
+            <button type="button" className="btn btn-danger" disabled={props.busy} onClick={() => props.onPropose({ user: props.user, type: 'delete' })}>
+              <Trash2 size={16} />{tr('account.users.delete')}
+            </button>
+          </div>
+        )}
       </section>
     );
   }

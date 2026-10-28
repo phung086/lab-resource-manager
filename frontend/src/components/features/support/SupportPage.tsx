@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { submitChatOnEnter } from '../../../utils/chatKeyboard';
-import { MessageCircle, Send, RefreshCw, CheckCircle, Circle, Headphones } from 'lucide-react';
+import { MessageCircle, Send, RefreshCw, CheckCircle, Circle, Headphones, ArrowDown, Building2, MessagesSquare, ChevronDown } from 'lucide-react';
 import { useLocale } from '../../../providers/LocaleProvider';
 import { navigateApp, workspacePathForTab } from '../../../workspaceRoutes.js';
 import { supportApi, type SupportDetail, type SupportList, type SupportMetadata, type SupportSession } from '../../../services/support';
@@ -34,6 +34,7 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
   const cursorRef = useRef(0), mounted = useRef(true), transcript = useRef<HTMLDivElement>(null);
   const requestAttempt = useRef<{ signature: string; id: string } | null>(null), sendAttempt = useRef<{ signature: string; id: string } | null>(null);
   const nearBottom = useRef(true);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
   const presenceEpoch = useRef(0), changingPresence = useRef(false);
   const time = (value: string) => new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'vi-VN', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(value));
   const draft = drafts[selected] || '';
@@ -89,7 +90,7 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
     void refresh(); return () => { controller.abort(); clearTimeout(timer); };
   }, [user.id, staff, customer, page, status, labFilter, revision]);
   useEffect(() => {
-    setDetail(null); cursorRef.current = 0; setReason(''); nearBottom.current = true; setConnectionError('detail', '');
+    setDetail(null); cursorRef.current = 0; setReason(''); nearBottom.current = true; setHasNewMessages(false); setConnectionError('detail', '');
     if (!selected) return;
     const controller = new AbortController(); let timer: ReturnType<typeof setTimeout>;
     async function refresh() {
@@ -111,7 +112,10 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
     }
     void refresh(); return () => { controller.abort(); clearTimeout(timer); };
   }, [selected, staff]);
-  useEffect(() => { if (nearBottom.current && transcript.current) transcript.current.scrollTop = transcript.current.scrollHeight; }, [detail?.messages.length]);
+  useEffect(() => {
+    if (nearBottom.current && transcript.current) transcript.current.scrollTop = transcript.current.scrollHeight;
+    else if (detail?.messages.length) setHasNewMessages(true);
+  }, [detail?.messages.length]);
 
   async function mutate(work: () => Promise<void>) {
     if (busyRef.current) return; busyRef.current = true; setBusy(true); setError('');
@@ -162,7 +166,7 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
     finally { changingPresence.current = false; }
   }
   const labelSession = (row: SupportSession) => row.status === 'WAITING' ? tr('support.position', { position: row.queuePosition }) : tr(`support.status.${row.status}`);
-  return <section className="support-page" data-role={user.role} aria-labelledby="support-heading">
+  return <section className="support-page" data-role={user.role} data-has-session={Boolean(current && customerTab === 'history')} aria-labelledby="support-heading">
     <header className="page-section-header"><div><h1 id="support-heading">{tr('support.title')}</h1><p>{tr(admin ? 'support.adminHelp' : staff ? 'support.staffHelp' : 'support.customerHelp')}</p></div><button type="button" className="secondary-button" onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />{tr('support.refresh')}</button></header>
     {error && <p className="alert danger" role="alert">{tr(error)}</p>}
     <p className={`support-connection${connectionError ? ' is-error' : ''}`} role="status">{connectionError ? tr(connectionError) : tr('support.liveHelp')}</p>
@@ -183,28 +187,29 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
       <aside hidden={customer && customerTab !== 'history'} className="support-queue" aria-label={tr('support.queue')}><div className="support-queue-heading"><h2>{tr(admin ? 'support.history' : customer ? 'support.redesign.mySessions' : 'support.queue')}</h2><span>{list?.pagination.total ?? '—'}</span></div>
         <div className="support-filters"><label>{tr('support.status')}<select value={status} onChange={event => { setStatus(event.target.value); setPage(1); }}><option value="">{tr('support.all')}</option>{statuses.map(value => <option key={value} value={value}>{tr(`support.status.${value}`)}</option>)}</select></label><label>{tr('support.lab')}<select value={labFilter} onChange={event => { setLabFilter(event.target.value); setPage(1); }}><option value="">{tr('support.all')}</option>{metadata?.laboratories.map(lab => <option key={lab.id} value={lab.id}>{lab.code}</option>)}</select></label></div>
         {loading && !list && <p role="status">{tr('support.loading')}</p>}
-        {list?.items.map(row => <button type="button" className={`support-queue-row${selected === row.id ? ' is-selected' : ''}`} key={row.id} disabled={staff && row.assignedStaffId !== user.id} onClick={() => choose(row.id)}><span className="support-queue-row-top"><strong>{customer ? row.subject : row.requester.fullName}</strong><span>{labelSession(row)}</span></span><span>{customer ? tr(`support.category.${row.category}`) : row.subject}</span><small>{row.laboratory.code}{row.assignedStaff && ` · ${row.assignedStaff.fullName}`} · {time(row.createdAt)}</small></button>)}
+        {list?.items.map(row => <button type="button" className={`support-queue-row${selected === row.id ? ' is-selected' : ''}`} key={row.id} aria-pressed={selected === row.id} disabled={staff && row.assignedStaffId !== user.id} onClick={() => choose(row.id)}><span className="support-queue-row-top"><MessagesSquare size={18} aria-hidden="true" /><strong>{customer ? row.subject : row.requester.fullName}</strong></span><span className={`support-state status-${row.status.toLowerCase()}`}>{labelSession(row)}</span><span>{customer ? tr(`support.category.${row.category}`) : row.subject}</span><small>{row.laboratory.code}{row.assignedStaff && ` · ${row.assignedStaff.fullName}`}<time dateTime={row.createdAt}>{time(row.createdAt)}</time></small></button>)}
         {!loading && list && !list.items.length && <p className="support-empty">{tr('support.emptyQueue')}</p>}
         {!!list && <nav className="support-pagination" aria-label={tr('support.pages')}><button type="button" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>{tr('support.previous')}</button><span>{tr('support.page', { page, pages: Math.max(1, list.pagination.totalPages) })}</span><button type="button" disabled={page >= list.pagination.totalPages} onClick={() => setPage(value => value + 1)}>{tr('support.next')}</button></nav>}
       </aside>
       </div>
       <section ref={chatPanel} tabIndex={-1} className="support-chat" aria-label={tr('support.conversation')}>
         {!current || (customer && customerTab === 'request') ? <div className="support-chat-empty">{customer ? <RobotMascot /> : <MessageCircle size={35} />}<h2>{tr(customer && customerTab === 'request' ? 'support.redesign.startTitle' : 'support.selectSession')}</h2><p>{tr(customer && customerTab === 'request' && AI_ASSISTANT_ENABLED ? 'support.redesign.startHelp' : staff ? 'support.autoAssignHelp' : 'support.selectHelp')}</p>{customer && AI_ASSISTANT_ENABLED && <button type="button" className="primary-button" onClick={() => window.dispatchEvent(new CustomEvent('lrm:open-assistant'))}>{tr('support.redesign.askRobot')}</button>}</div> : <>
-          <header className="support-chat-header"><div><h2>{current.subject}</h2><p>{current.laboratory.name} · {tr(`support.category.${current.category}`)}</p></div><span className={`support-state status-${current.status.toLowerCase()}`}>{labelSession(current)}</span></header>
+          <header className="support-chat-header"><span className="support-person-avatar" aria-hidden="true"><Headphones size={24} /></span><div><h2>{current.subject}</h2><p>{customer ? current.assignedStaff?.fullName || tr('support.status.WAITING') : current.requester.fullName}</p></div><span className={`support-state status-${current.status.toLowerCase()}`}>{labelSession(current)}</span></header>
+          <div className="support-context"><span><Building2 size={15} aria-hidden="true" />{current.laboratory.code}</span><span>{tr(`support.category.${current.category}`)}</span><span className="support-context-lab">{current.laboratory.name}</span></div>
           {current.status === 'WAITING' && <p className="support-waiting" role="status">{tr('support.waitingHelp', { position: current.queuePosition })}</p>}
           {current.status === 'ACTIVE' && <p className="support-assignee" role="status"><Circle size={10} fill={current.staffConnected ? 'currentColor' : 'none'} />{tr('support.assignedTo', { name: current.assignedStaff?.fullName || '' })} · {tr(current.staffConnected ? 'support.connected' : 'support.disconnected')}</p>}
-          <div className="support-transcript" ref={transcript} role="log" aria-live="polite" aria-relevant="additions" onScroll={() => { if (transcript.current) nearBottom.current = transcript.current.scrollHeight - transcript.current.scrollTop - transcript.current.clientHeight < 80; }}>
+          <div className="support-transcript-wrap"><div className="support-transcript" ref={transcript} role="log" aria-label={tr('support.conversation')} aria-live="polite" aria-relevant="additions" onScroll={() => { if (transcript.current) { nearBottom.current = transcript.current.scrollHeight - transcript.current.scrollTop - transcript.current.clientHeight < 80; if (nearBottom.current) setHasNewMessages(false); } }}>
             {detail?.messages.map(message => <article key={message.id} className={`support-message kind-${message.kind.toLowerCase()}${message.sender?.id === user.id ? ' is-own' : ''}`}>
               {message.kind === 'SYSTEM' ? <><p>{tr(`support.event.${message.eventType}`, { name: message.sender?.fullName || '' })}</p>{message.body && <p>{message.body}</p>}<time dateTime={message.createdAt}>{time(message.createdAt)}</time></> : <><div className="support-message-author"><strong>{message.kind === 'ASSISTANT' ? tr('support.assistant') : message.sender?.fullName}</strong><time dateTime={message.createdAt}>{time(message.createdAt)}</time></div><p>{message.body}</p>{message.source === 'AI_HANDOFF' && <small>{tr('support.priorContext')}</small>}</>}
             </article>)}
             {detail?.hasMore && <p role="status">{tr('support.moreMessages')}</p>}
-          </div>
+          </div>{hasNewMessages && <button type="button" className="support-new-messages" onClick={() => { if (transcript.current) transcript.current.scrollTo({ top: transcript.current.scrollHeight, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }); nearBottom.current = true; setHasNewMessages(false); }}><ArrowDown size={16} aria-hidden="true" />{tr('support.studio.newMessages')}</button>}</div>
           {staff && canSend && <details className="support-quick-replies"><summary>{tr('support.quickReplies')}</summary><p>{tr('support.quickHelp')}</p><div>{metadata?.quickReplies.map(reply => <button type="button" key={reply.id} onClick={() => setDraft(draft ? `${draft}\n${tr(reply.bodyKey)}` : tr(reply.bodyKey))}>{tr(reply.titleKey)}</button>)}</div></details>}
-          {canSend && <form className="support-compose" onSubmit={event => { event.preventDefault(); void mutate(send); }}><label className="sr-only" htmlFor="support-message">{tr('support.message')}</label><textarea id="support-message" rows={2} required maxLength={2000} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={submitChatOnEnter} /><button type="submit" className="primary-button" disabled={busy || !draft.trim()}><Send size={17} />{tr('support.send')}</button></form>}
-          {((admin && current.status === 'ACTIVE') || (staff && canSend) || (customer && ['WAITING', 'ACTIVE'].includes(current.status))) && <form className="support-close" onSubmit={event => { event.preventDefault(); void mutate(() => transition(admin ? 'requeue' : staff ? 'finish' : 'cancel')); }}>
+          {canSend && <form className="support-compose" onSubmit={event => { event.preventDefault(); void mutate(send); }}><label className="sr-only" htmlFor="support-message">{tr('support.message')}</label><div className="support-compose-field"><textarea id="support-message" placeholder={tr('support.studio.composePlaceholder')} rows={2} required maxLength={2000} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={submitChatOnEnter} /><small>{tr('support.studio.keyboardHint')}</small></div><button type="submit" className="primary-button" disabled={busy || !draft.trim()}><Send size={17} aria-hidden="true" />{tr('support.send')}</button></form>}
+          {((admin && current.status === 'ACTIVE') || (staff && canSend) || (customer && ['WAITING', 'ACTIVE'].includes(current.status))) && <details className="support-session-actions"><summary>{tr(admin ? 'support.requeue' : staff ? 'support.finish' : 'support.cancel')}<ChevronDown size={16} aria-hidden="true" /></summary><form className="support-close" onSubmit={event => { event.preventDefault(); void mutate(() => transition(admin ? 'requeue' : staff ? 'finish' : 'cancel')); }}>
             <label>{tr(admin ? 'support.requeueReason' : staff ? 'support.resolution' : 'support.cancelReason')}<input required minLength={3} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} /></label>
             {(!admin || current.status === 'ACTIVE') && <button type="submit" className="secondary-button" disabled={busy || reason.trim().length < 3}><CheckCircle size={17} />{tr(admin ? 'support.requeue' : staff ? 'support.finish' : 'support.cancel')}</button>}
-          </form>}
+          </form></details>}
           {!!current.closedAt && <p className="support-closed">{tr('support.closedAt', { time: time(current.closedAt) })}</p>}
         </>}
       </section>

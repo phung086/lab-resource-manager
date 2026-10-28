@@ -48,7 +48,10 @@ try {
   await call('admin',`/resources/${room.id}/fulfillment`,{expectedVersion:0,roomPassword:'UITestRoom2026',deliveryAllowed:false,pickupInstructions:'LAB reception A'},'PUT');
   await call('admin',`/resources/${equipment.id}/fulfillment`,{expectedVersion:0,deliveryAllowed:true,pickupInstructions:'LAB reception A'},'PUT');
   const start=new Date(Math.ceil((Date.now()+10*60000)/60000)*60000),end=new Date(+start+3600000);
-  const booking=await call('owner','/bookings',{resourceId:room.id,title:'Self-service UI workflow',purpose:'Test',startAt:start.toISOString(),endAt:end.toISOString(),contact:{fullName:'UI owner',phone:'0900000001'}});
+  const booking=await call('owner','/bookings',{resourceId:room.id,title:'Self-service UI workflow',purpose:'Test',startAt:new Date(+start+3600000).toISOString(),endAt:new Date(+end+3600000).toISOString(),contact:{fullName:'UI owner',phone:'0900000001'}});
+  // Model elapsed time only in this guarded QA database. Creation must still
+  // satisfy the real minimum-notice rule before testing the handover window.
+  await prisma.booking.update({where:{id:booking.id},data:{startAt:start,endAt:end}});
   const owner=await open('owner',`/workspace/bookings?booking=${booking.id}`);
   await owner.getByRole('button',{name:'Vào phòng',exact:true}).waitFor();
   check(await owner.locator('.room-access-password').innerText()==='0900000001','Owner receives booking contact phone as room access code');
@@ -94,6 +97,10 @@ try {
   const tomorrow = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(Date.now()+86400000));
   await owner.locator('#booking-date').fill(tomorrow);await owner.locator('#booking-start-time').fill('09:00');await owner.locator('#booking-end-time').fill('10:00');await owner.locator('#booking-title').fill('Giao thiết bị kiểm thử');
   await owner.screenshot({path:output+'/delivery-desktop.png',fullPage:true});
+  const beforeReview = await prisma.booking.count();
+  await owner.locator('button[form="quick-booking-form"]').click();
+  await owner.locator('#booking-review-heading').waitFor();
+  check(await prisma.booking.count() === beforeReview, 'Delivery preflight review does not create a booking');
   await owner.getByRole('button',{name:'Xác nhận đặt lịch',exact:true}).click();
   await owner.locator('#booking-success-close-btn').waitFor();
   const delivered = (await call('owner','/bookings')).find(row=>row.title==='Giao thiết bị kiểm thử');

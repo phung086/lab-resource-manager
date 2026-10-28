@@ -64,7 +64,7 @@ try {
   await student.locator('#assistant-question').press('Enter');
   await student.locator('.assistant-answer').first().waitFor();
   check(true, 'Enter sends the AI question through the actual request form');
-  await student.getByRole('button', { name: text('handoff'), exact: true }).click();
+  await student.getByRole('button', { name: catalogs.vi['assistant.contactStaff'], exact: true }).click();
   await student.locator('.assistant-human-share input').waitFor();
   check(!await student.locator('.assistant-human-share input').isChecked(), 'Sharing context is opt-in inside the same chat');
   check(await student.locator('.assistant-answer').count() > 0, 'Handoff retains the prior assistant answer in the same panel');
@@ -102,6 +102,7 @@ try {
   await chatText(student, 'Nhân viên đã nhận thông tin và đang kiểm tra'); check(true, 'Customer and staff exchange real persisted messages in separate browser sessions');
   await admin.goto(`${base}/workspace/support?session=${a.id}`); await chatText(admin, 'Nhân viên đã nhận thông tin và đang kiểm tra');
   check(await admin.locator('.support-compose').count() === 0, 'Admin reviews conversation without impersonating its agent');
+  await handling.locator('.support-session-actions summary').click();
   await handling.locator('.support-close input').fill('Đã hướng dẫn đặt lịch và kiểm tra điều kiện'); await handling.getByRole('button', { name: text('finish'), exact: true }).click();
   await chatText(handling, 'Khách C chờ đến lượt'); await third.locator('.support-assignee').waitFor(); await fourth.locator('.support-waiting').getByText(/#1/).waitFor();
   check(true, 'Completing chat assigns oldest waiting customer and updates the remaining position automatically');
@@ -127,7 +128,7 @@ try {
   }
   await admin.screenshot({ path: `${output}/admin-history.png`, fullPage: true });
   const c = (await call('third', '/support/sessions')).activeSession;
-  await admin.goto(`${base}/workspace/support?session=${c.id}`); await admin.locator('.support-close input').fill('Chuyển người xử lý theo yêu cầu khách hàng');
+  await admin.goto(`${base}/workspace/support?session=${c.id}`); await admin.locator('.support-session-actions summary').click(); await admin.locator('.support-close input').fill('Chuyển người xử lý theo yêu cầu khách hàng');
   await admin.getByRole('button', { name: text('requeue'), exact: true }).click();
   await third.locator('.support-waiting').getByText(/#1/).waitFor();
   await handling.locator('.support-chat-empty').waitFor({ timeout: 12_000 });

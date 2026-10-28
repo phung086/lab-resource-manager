@@ -4,6 +4,7 @@ import "../../../styles/incidents-workspace.css";
 import { useLocale } from "../../../providers/LocaleProvider";
 import { useQueuePage } from "../../../hooks/useQueuePage";
 import { QueuePagination } from "../../base/QueuePagination";
+import { WorkbenchPath } from "../../base/WorkbenchPath";
 import { BaseModal2026 } from "../../BaseModal2026";
 import { translate } from "../../../i18n.js";
 import { apiRequest } from "../../../api.js";
@@ -18,6 +19,8 @@ import {
   Search,
   ShieldAlert,
   Wrench,
+  UserRound,
+  ArrowRight,
 } from "lucide-react";
 import { formatVietnamDateTime } from "../../../utils/timezone";
 import {
@@ -122,10 +125,11 @@ const IncidentDossier: React.FC<{
   const open = isOpen(incident.status);
 
   return (
-    <div className="incident-detail" tabIndex={-1}>
+    <div className="incident-detail workbench-record" tabIndex={-1} key={incident.id}>
       <div className="incident-detail-heading">
+        <span className={`workbench-record-icon severity-${incident.severity}`} aria-hidden="true"><ShieldAlert size={25} /></span>
         <div>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
+          <div className="workbench-badges">
             <SeverityBadge
               severity={incident.severity}
               label={tr(severityI18n[incident.severity])}
@@ -144,13 +148,12 @@ const IncidentDossier: React.FC<{
             {incident.resource?.name ?? tr("ui.resource_9a35ef53")}
           </p>
         </div>
-        <time
-          dateTime={incident.detectedAt}
-          style={{ color: "var(--incident-muted)", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}
-        >
+        <time dateTime={incident.detectedAt}>
           {formatVietnamDateTime(incident.detectedAt)}
         </time>
       </div>
+
+      <WorkbenchPath label={tr('ui.workbench.currentStage')} steps={[tr('ui.reported_977c15d8'),tr('ui.workbench.handling'),tr('ui.workbench.outcome')]} current={incident.status === 'reported' ? 0 : open ? 1 : 2} />
 
       <div className="incident-resource">
         <Wrench size={16} />
@@ -201,7 +204,7 @@ const IncidentDossier: React.FC<{
       )}
 
       {isStaff && open && (
-        <div className="incident-detail-actions">
+        <section className="workbench-next-action"><div><span className="workbench-action-icon" aria-hidden="true"><ArrowRight size={20} /></span><h3>{tr('ui.workbench.nextAction')}</h3></div><p>{tr(incident.status === 'reported' ? 'ui.workbench.triageHint' : 'ui.workbench.investigateHint')}</p><div className="incident-detail-actions">
           {incident.status === "reported" && (
             <button
               className="secondary-button"
@@ -230,8 +233,9 @@ const IncidentDossier: React.FC<{
           >
             {tr("ui.confirm_resolution_df20cec5")}
           </button>
-        </div>
+        </div></section>
       )}
+      {!isStaff && <p className="workbench-context-note">{tr(open ? 'ui.workbench.customerTracking' : 'ui.workbench.recordedOutcome')}</p>}
     </div>
   );
 };
@@ -462,12 +466,12 @@ export const IncidentManagementView: React.FC<Props> = ({
   const queueCount = filtered.length;
 
   return (
-    <div className="incidents-workspace" data-role={user?.role}>
+    <div className="incidents-workspace operations-workbench" data-role={user?.role} data-has-selection={Boolean(selectedId)}>
       {/* ── Page header ── */}
       <div className="incident-heading">
         <div className="incident-heading-text">
           <h1>{tr("ui.roleIncident."+(user?.role || "CUSTOMER")+".title")}</h1>
-          <HelpDisclosure>{tr("ui.roleIncident."+(user?.role || "CUSTOMER")+".hint")}</HelpDisclosure>
+          <HelpDisclosure><p>{tr('ui.workbench.incidentIntro')}</p>{tr("ui.roleIncident."+(user?.role || "CUSTOMER")+".hint")}</HelpDisclosure>
         </div>
         <button
           className="primary-button"
@@ -613,10 +617,10 @@ export const IncidentManagementView: React.FC<Props> = ({
                     disabled={busyId !== null}
                     onClick={() => setSelection(incident.id)}
                   >
-                    <SeverityBadge
+                    <span className="workbench-badges"><SeverityBadge
                       severity={incident.severity}
                       label={tr(severityI18n[incident.severity])}
-                    />
+                    /><StatusPill status={incident.status} label={tr(statusI18n[incident.status] ?? incident.status)} /></span>
                     <span className="incident-job-title">{incident.title}{incident.origin === "SIMULATED" && <small> · {tr("ui.telemetryDetail.simulated")}</small>}</span>
                     <span className="incident-job-resource">
                       {incident.resource?.code
@@ -629,6 +633,7 @@ export const IncidentManagementView: React.FC<Props> = ({
                         {formatVietnamDateTime(incident.detectedAt)}
                       </time>
                     </span>
+                    <span className="workbench-assignee"><UserRound size={14} aria-hidden="true" />{incident.assignedTo?.fullName || tr('ui.unassigned_1f379993')}</span>
                   </button>
                 </li>
               ))}

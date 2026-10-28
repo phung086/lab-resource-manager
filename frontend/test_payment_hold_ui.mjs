@@ -48,6 +48,10 @@ try {
       await page.locator('#booking-date').fill(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(Date.now()+86400000)));
       await page.locator('#booking-start-time').fill('09:00');await page.locator('#booking-end-time').fill('10:00');
       await page.locator('#booking-title').fill('Payment hold browser regression');
+      const beforeReview = await prisma.booking.count();
+      await page.locator('button[form="quick-booking-form"]').click();
+      await page.locator('#booking-review-heading').waitFor();
+      check(await prisma.booking.count() === beforeReview, `${category}: preflight review does not create a reservation`);
       await page.locator('button[form="quick-booking-form"]').filter({hasText:locale==='vi'?'Giữ chỗ và thanh toán':'Reserve and pay'}).click();
       await page.waitForURL(/\/workspace\/payments\?booking=/);
       await page.locator('.payment-hold-notice').waitFor();
