@@ -1864,3 +1864,13 @@ CC BY-SA 3.0 — đúng chủ đề robot). Cả 3 URL curl xác minh 200 image/
 trước khi gắn đã xem preview từng ảnh. Gates PASS. Việc tiếp: catalog
 workspace hiển thị ảnh kit; cân nhắc ảnh EQ (camera, GPU) lượt sau; widget
 trang khách.
+
+## Loop lượt 03:55 — xác minh catalog render — 29/10/2026
+
+Lượt ảnh EQ (camera/GPU/oscilloscope): ứng viên đầu đều sai chủ đề
+(archway, Nevada test site) → ĐỔI HƯỚNG, dồn sang lượt sau với chiến lược
+lọc theo từ khóa tiêu đề. Kết quả lượt: catalog workspace (customer)
+render 10 ảnh wikimedia — 7 loaded lúc đo (3 lazy dưới viewport), grid thấy
+rõ kit Arduino (KIT-01), dây jumper, robot dò line (KIT-03), camera thật
+xen minh họa — loop6-catalog.png. Gates PASS. Việc tiếp: EQ-03/10/01 ảnh
+(lọc tiêu đề: camera|oscilloscope|graphics card), widget trang khách.
