@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CalendarDays, ShieldCheck, Wrench, GraduationCap, Search, Microscope, DoorOpen, CheckCircle } from 'lucide-react';
+import { ArrowRight, CalendarDays, ShieldCheck, Wrench, GraduationCap, Search, Microscope, DoorOpen, CheckCircle, Activity, LifeBuoy, Undo2, CreditCard } from 'lucide-react';
 import labHero from '../assets/lab-workbench-hero-optimized.webp';
 import labHeroSmall from '../assets/lab-workbench-hero-small.webp';
 import { PublicResourceCatalog } from './PublicResourceCatalog';
@@ -78,6 +78,7 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
       beforeMain={page === "home" && <AnnouncementStrip motionPaused={motionPaused} documentHidden={documentHidden} onToggleMotion={() => setMotionPaused(value => !value)} />}>
       <style>{effectiveMotionPaused ? `
         .project-public-shell .landing-hero-floating-card,
+        .project-public-shell .landing-hero-marquee-track,
         .project-public-shell .landing-ambient-orbit,
         .project-public-shell .landing-ambient-pulse,
         .project-public-shell .landing-hero::after {
@@ -87,47 +88,73 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
 
       {page !== "home" && <header className="public-page-heading"><a href="/">{t("route.page.home")}</a><h1>{t("route.page." + page)}</h1><p>{t("route.description." + page)}</p></header>}
       {page === "home" && <>
-      {/* HERO SECTION */}
+      {/* HERO BANNER — full-bleed image under a liquid glass panel, process marquee */}
       <section ref={heroRef} className="landing-hero" id="gioi-thieu">
-        <div className="landing-hero-content">
-          <h1 className="landing-hero-title">
-            {t("ui.landing.hero.spaceFor")}<br />
-            <span className="landing-hero-title-accent">{t("ui.landing.hero.practice")}</span><br />
-            {t("ui.landing.hero.professional")}
-          </h1>
-          <p className="landing-hero-subtitle">
-            {t("ui.landing.hero.subtitle")}
-          </p>
-          <div className="landing-hero-actions">
-            <a className="landing-hero-cta landing-hero-cta-primary" href="/resources">
-              {t("ui.landing.hero.explore")}
-              <ArrowRight size={20} aria-hidden="true" />
-            </a>
-            <a className="landing-hero-cta landing-hero-cta-secondary" href="/how-it-works">
-              {t("ui.landing.hero.viewProcess")}
-            </a>
-          </div>
-
+        <div className="landing-hero-media" aria-hidden="true">
+          <img src={labHero} srcSet={`${labHeroSmall} 640w, ${labHero} 1536w`} sizes="100vw" width={1536} height={1024} fetchPriority="high" decoding="async" alt="" className="landing-hero-image" />
+          <div className="landing-hero-veil" />
         </div>
-        <div className="landing-hero-visual">
-          <img src={labHero} srcSet={`${labHeroSmall} 640w, ${labHero} 1536w`} sizes="(max-width: 800px) calc(100vw - 40px), 55vw" width={1536} height={1024} fetchPriority="high" decoding="async" alt={t('ui.final.heroAlt')} className="landing-hero-image" />
-          <div className="landing-hero-floating-card landing-hero-floating-card-1">
-            <div className="landing-hero-floating-icon landing-hero-floating-icon-violet">
-              <CalendarDays size={24} aria-hidden="true" />
-            </div>
-            <div className="landing-hero-floating-content">
-              <span className="landing-hero-floating-title">{t("ui.landing.hero.schedule.title")}</span>
-              <span className="landing-hero-floating-subtitle">{t("ui.landing.hero.schedule.subtitle")}</span>
+        <div className="landing-hero-content">
+          <div className="landing-hero-glass">
+            <h1 className="landing-hero-title">
+              {t("ui.landing.hero.spaceFor")}<br />
+              <span className="landing-hero-title-accent">{t("ui.landing.hero.practice")}</span><br />
+              {t("ui.landing.hero.professional")}
+            </h1>
+            <p className="landing-hero-subtitle">
+              {t("ui.landing.hero.subtitle")}
+            </p>
+            <div className="landing-hero-actions">
+              <a className="landing-hero-cta landing-hero-cta-primary" href="/resources">
+                {t("ui.landing.hero.explore")}
+                <ArrowRight size={20} aria-hidden="true" />
+              </a>
+              <a className="landing-hero-cta landing-hero-cta-secondary" href="/how-it-works">
+                {t("ui.landing.hero.viewProcess")}
+              </a>
             </div>
           </div>
-          <div className="landing-hero-floating-card landing-hero-floating-card-2">
-            <div className="landing-hero-floating-icon landing-hero-floating-icon-mint">
-              <ShieldCheck size={24} aria-hidden="true" />
-            </div>
-            <div className="landing-hero-floating-content">
-              <span className="landing-hero-floating-title">{t("ui.landing.hero.safety.title")}</span>
-              <span className="landing-hero-floating-subtitle">{t("ui.landing.hero.safety.subtitle")}</span>
-            </div>
+        </div>
+        <div className="landing-hero-floating-card landing-hero-floating-card-1">
+          <div className="landing-hero-floating-icon landing-hero-floating-icon-violet">
+            <CalendarDays size={24} aria-hidden="true" />
+          </div>
+          <div className="landing-hero-floating-content">
+            <span className="landing-hero-floating-title">{t("ui.landing.hero.schedule.title")}</span>
+            <span className="landing-hero-floating-subtitle">{t("ui.landing.hero.schedule.subtitle")}</span>
+          </div>
+        </div>
+        <div className="landing-hero-floating-card landing-hero-floating-card-2">
+          <div className="landing-hero-floating-icon landing-hero-floating-icon-mint">
+            <ShieldCheck size={24} aria-hidden="true" />
+          </div>
+          <div className="landing-hero-floating-content">
+            <span className="landing-hero-floating-title">{t("ui.landing.hero.safety.title")}</span>
+            <span className="landing-hero-floating-subtitle">{t("ui.landing.hero.safety.subtitle")}</span>
+          </div>
+        </div>
+        <div className="landing-hero-marquee" aria-label={t("ui.landing.marquee.label")}>
+          <div className="landing-hero-marquee-track">
+            {[0, 1].map(copy => (
+              <ul className="landing-hero-marquee-group" key={copy} aria-hidden={copy === 1}>
+                {([
+                  [DoorOpen, "ui.landing.features.rooms.title"],
+                  [Microscope, "ui.landing.features.equipment.title"],
+                  [CalendarDays, "ui.landing.features.booking.title"],
+                  [CreditCard, "ui.landing.steps.book.title"],
+                  [ShieldCheck, "ui.landing.steps.handover.title"],
+                  [Undo2, "ui.landing.steps.return.title"],
+                  [Activity, "ui.landing.marquee.monitoring"],
+                  [Wrench, "ui.landing.marquee.maintenance"],
+                  [LifeBuoy, "ui.landing.marquee.support"]
+                ] as const).map(([Icon, key], index) => (
+                  <li className="landing-hero-marquee-chip" key={index}>
+                    <Icon size={16} aria-hidden="true" />
+                    <span>{t(key)}</span>
+                  </li>
+                ))}
+              </ul>
+            ))}
           </div>
         </div>
       </section>

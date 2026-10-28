@@ -1,5 +1,141 @@
 # Trạng thái dự án hiện tại
 
+## Landing liquid glass + dashboard glass — 28/10/2026
+
+Batch người dùng yêu cầu trực tiếp: (1) landing hero chuyển thành banner
+full-bleed lớn — ảnh LAB thật phủ toàn banner (zoom-in chậm 18s), veil spectrum
+đa lớp (mint/violet/peach radial + fade trái), tiêu đề/subtitle/CTA nằm trong
+liquid glass panel (blur 22px + saturate 155%, backing ≥.62 trắng, AA giữ cho
+chữ ink); (2) dải chữ chạy (marquee) dưới mép banner: 9 chip đặc điểm + quy
+trình thật (phòng, thiết bị, đặt lịch, giữ chỗ, bàn giao, hoàn trả, telemetry,
+bảo trì, hỗ trợ) ×2 track lặp seamless, chạy 44s, hover dừng, tab ẩn/ra khỏi
+viewport dừng theo effectiveMotionPaused, reduced-motion thành danh sách tĩnh
+(aria-hidden bản copy); (3) các section landing trên canvas wash aurora +
+card glass (features/workflow/roles/schedule), CTA band tím sâu glass; (4)
+dashboard 3 vai trò: masthead + notices + trends chuyển glass (blur 14–18px),
+panel dữ liệu giữ solid. File: liquid-glass.css mới (import cuối main.jsx,
+ PublicLanding.tsx hero restructure, spectrum.css masthead append, 4 key
+marquee VI/EN (tổng 4043), 2 icon import mới. DESIGN.md ghi amendment.
+
+Kiểm chứng: headless 4 cấu hình (desktop VI/EN, mobile VI, reduced-motion) —
+hero 868/727px, glass blur render, 18 chip, marquee chạy thật (transform đổi),
+reduced-motion animation:none + danh sách tĩnh, không overflow, 0 pageerror;
+staff dashboard masthead/notices/trends blur render; screenshots
+Temp/lab-liquid-glass/. test:required PASS (91 tests, i18n 4043 keys, lint 2
+warning cũ, typecheck, build). test:ui:contrast PASS 22/22 · 0 finding (lượt
+đầu FAIL flaky "Live home data unavailable" staff mobile — race dữ liệu đã
+biết, rerun sạch; glass không đụng data). Hero img alt="" + wrapper
+aria-hidden (ảnh nền trang trí, nội dung nằm trong glass panel). git diff
+--check PASS. Đã commit trong lô landing này. Automation đã TẠM DỪNG theo
+yêu cầu người dùng (cron chuyển 9h thứ 2, prompt chỉ xác nhận).
+
+Giới hạn: backdrop-filter nặng GPU trên landing (chỉ hero + section cards,
+fallback @supports tăng backing); chưa test Safari thực (backdrop-filter -webkit
+đã có); marquee 44s có thể nhanh với một số người dùng — hover dừng +
+reduced-motion tĩnh; chưa có screenshot review của người dùng. Bước tiếp theo
+đề xuất: người dùng xem landing trực tiếp (5173) và phản hồi hướng glass; có
+thể tinh chỉnh veil/độ đậm panel, mở rộng glass cho trang how-it-works/resources,
+và commit phần 28/10 của Codex (drafts system, accessibility) khi được duyệt.
+
+## Xác minh bàn giao 28/10 — 28/10/2026 (không đụng code)
+
+ZCode chạy lại toàn bộ test mà bàn giao chỉ định trên đúng checkout hiện tại:
+test:required PASS (91 tests, i18n, lint 2 warning cũ, typecheck, build),
+test:maintenance-drafts PASS 3/3, test:ui:customer-accessibility PASS,
+test:ui:shared-form-drafts PASS, test:ui:resource-profile-journey PASS
+(desktop/mobile, reduced motion, EN). Runtime 5173 đã được khởi động lại bằng
+node scripts/dev-local.mjs sau khi bị tắt. 10 commit kế hoạch 7 lô đã được
+người dùng duyệt và thực hiện trước đó (249f30b…6be59ff, gồm chore local) —
+công việc 28/10 của Codex (bản nháp dùng chung, workbench, accessibility,
+hồ sơ tài nguyên) vẫn UNCOMMITTED theo đúng bàn giao; đề xuất khi người dùng
+sẵn sàng: commit thành 3 lô (drafts system, accessibility+focus, workbench/
+care/monitoring) — chờ duyệt, chưa thực hiện. Kế hoạch 7 lô cũ tại
+docs/COMMIT_PLAN_20261027.md đã hoàn tất.
+
+Đánh giá "còn cần tinh chỉnh theo ý người dùng": (1) commit lô 28/10 khi
+duyệt; (2) các màn mới (drafts notice, resource dossier timeline) đã theo
+spectrum + reduced-motion qua test journey — chưa có screenshot review toàn
+màn cho người dùng duyệt thị giác; (3) NVDA/VoiceOver thủ công và contrast
+gradient còn bỏ ngỏ theo bàn giao; (4) automation 5 phút vẫn đang bật.
+
+## Bàn giao UI cho AI tiếp theo — 28/10/2026
+
+Checkout C:/Projects/lab-resource-manager; branch codex/claude-qa-20261021; HEAD 6be59ff. Còn nhiều modified/untracked, gồm mã cần thiết cho các chức năng mới; giữ toàn bộ công việc có trước, không restore/reset. Chưa commit/push/deploy. Đọc AGENTS và tài liệu canonical theo thứ tự; các checkpoint bên dưới chứa phạm vi và giới hạn từng đợt.
+
+Ý người dùng: UI thay đổi rõ rệt, sáng đa sắc tinh tế tím/mint/peach, nền đẹp, nội dung gọn, chuyển động có mục đích và reduced-motion; tránh chỉ sửa border/font hoặc làm báo cáo. Ưu tiên luồng khách hàng mạch lạc, mobile và bàn phím. Không mở rộng thêm hạ tầng bản nháp; luôn gợi ý bước kế tiếp sau mỗi đợt.
+
+Đã làm: workbench sự cố/bảo trì; giám sát chu kỳ chăm sóc bằng dữ liệu ghi nhận; hồ sơ tài nguyên có lịch sử và liên kết công việc; giữ resource/job/bộ lọc qua URL và Back; bản nháp dùng chung theo tài khoản/7 ngày cho bảo trì, đặt lịch đăng nhập, báo sự cố và yêu cầu hỗ trợ; sửa focus/Tab/Escape/inert của BaseModal và focus lỗi hỗ trợ. File trọng tâm: BaseModal2026.tsx, QuickBookingModal.tsx, ResourceDetailPage.tsx, MaintenancePage.tsx, các feature incidents/monitoring/support, utils/localDraftStore.ts, hooks/useLocalFormDraft.ts và locale VI/EN.
+
+Kiểm thử nhanh từ frontend/: npm run test:required; npm run test:maintenance-drafts; npm run test:ui:customer-accessibility; npm run test:ui:shared-form-drafts; npm run test:ui:resource-profile-journey. Các UI test này dùng fixture API cô lập. Dùng UI_SCREENSHOT_DIR trỏ thư mục Temp để tránh sinh ảnh trong repo. Runtime recipe: node scripts/dev-local.mjs --monitoring; kiểm tra/reuse dịch vụ đang chạy trước, không seed/reset.
+
+Bằng chứng cũ: required91, storage3, customer accessibility24 trạng thái VI/EN desktop/mobile, support/payment14 regression PASS; lint 2 warning cũ, typecheck/build PASS. 5173 là ứng dụng; 5193/5194/5195 là trang đối chiếu ảnh fixture tĩnh, không phải UI nghiệp vụ live. Ảnh/log mới ở Temp/lab-customer-accessibility-20261028 và lab-shared-form-drafts-20261028.
+
+Giới hạn: chưa thử NVDA/VoiceOver thực tế, contrast gradient bị bỏ qua, không chứng nhận WCAG toàn diện; UI fixture không thay PostgreSQL integration. Bản nháp không phủ guest/contact/address/chat replies và không tự gửi lại nghiệp vụ. Bước đề xuất: xác minh runtime và diff, chạy các gate trên rồi thử luồng đặt lịch bằng bàn phím/trình đọc màn hình với dữ liệu QA riêng; không ghi/reset DB demo. Bàn giao này không tự cấp quyền mở batch mới cho AI khác.
+
+## Luồng CUSTOMER và truy cập bằng bàn phím — 28/10/2026
+
+Batch kiểm tra/sửa accessibility, không mở rộng hạ tầng bản nháp; giữ các diff/checkpoint cũ, không commit/push/deploy. BaseModal2026 bỏ phần tử ẩn hoặc :disabled (kể cả fieldset) khỏi vòng Tab, giữ focus trong modal, inert nền rồi khôi phục, xử lý Escape cho modal lồng và trả focus/fallback khi đóng. SupportPage đưa focus tới lỗi khi mutation thất bại bằng errorRef/tabIndex; polling không giành focus, hành vi Enter có trước giữ nguyên.
+Thêm test_customer_accessibility_ui.mjs và script test:ui:customer-accessibility. Gate test:required PASS 91, lint 2 warning cũ, typecheck/build PASS. Browser PASS 24 trạng thái (catalogue/detail/support/report/booking/review × 1440/390 × VI/EN): nhãn control đang hiện, không overflow/page error; quét contrast nền đặc trong phạm vi hỗ trợ không có finding.
+Kiểm tra PASS focus trường lỗi đầu khi báo sự cố, lỗi hỗ trợ 503 đưa focus đúng và giữ nội dung, đặt lịch đến review/preflight bằng bàn phím không gửi booking POST; Tab/Shift+Tab/Escape, dọn inert và trả focus. Regression hỗ trợ/thanh toán PASS 14 kịch bản. Reviewer customer_a11y_finish: SHIP qua đọc code/tests.
+Baseline phát hiện nền chưa inert; assertion focus sự cố ban đầu chờ sai thời điểm đã sửa harness chờ RAF, không phải lỗi production. Bằng chứng: C:/Users/Admin/AppData/Local/Temp/lab-customer-accessibility-20261028; kết quả lab-customer-a11y-final.json và required log tại Temp.
+Giới hạn: fixture cô lập, không ghi DB nghiệp vụ; bỏ qua contrast gradient, chưa thử thủ công NVDA/VoiceOver và không chứng nhận toàn bộ WCAG.
+Bước đề xuất tiếp theo: kiểm tra thủ công luồng đặt lịch bằng NVDA/bàn phím với dữ liệu QA trước khi mở rộng UI; chỉ bắt đầu khi người dùng yêu cầu.
+
+## Bản nháp đặt lịch, báo sự cố và yêu cầu hỗ trợ — 28/10/2026
+
+Batch do người dùng yêu cầu; giữ các checkpoint/diff có trước, không commit/push/deploy. Tách localDraftStore dùng chung từ bảo trì (adapter giữ key cũ), thêm useLocalFormDraft, DraftActorContext trong App.jsx và LocalDraftNotice/CSS dùng chung; không thêm dependency, schema hoặc API nghiệp vụ.
+Phạm vi: QuickBooking cho CUSTOMER đã đăng nhập (không guest), biểu mẫu báo sự cố (không xử lý sự cố), yêu cầu hỗ trợ mới (không lưu conversationId, cờ shareContext hoặc transcript chat). requestMessage có thể được điền sẵn từ AI handoff và vẫn là văn bản yêu cầu được lưu nếu người dùng chỉnh sửa. Đặt lịch chỉ lưu các trường lịch/nội dung/mục đích trong whitelist, không lưu liên hệ/địa chỉ/thanh toán/báo giá. Ghi trạng thái chưa rõ kết quả trước POST; khôi phục trạng thái này chặn gửi lại và hướng kiểm tra lịch sử, không tự gửi.
+Giữ tách tài khoản, hạn 7 ngày, khôi phục chủ động và xóa khi thành công đã xác nhận. Thông báo trong cùng document đồng bộ các instance đang mounted; khóa khôi phục/bỏ nháp khi busy. VI/EN thêm 1 khóa, tổng 4039 và manifest đồng bộ.
+Gates: test:required PASS 91, lint 2 warning cũ, typecheck/build PASS; storage unit PASS 3 nhóm; regression hành trình bảo trì PASS sau tách store. Browser shared draft PASS ba luồng reload/khôi phục/lỗi 503, whitelist, không tự gửi, kết quả chưa rõ, desktop/mobile; assertion đồng bộ instance mounted PASS, exit 0 (store đổi khi modal đang mở→khôi phục tiêu đề mới nhất).
+Bundle index cuối 481.25 kB, gzip 138.98 kB; trước batch 477.72/137.88 kB, tăng khoảng 1.1 kB gzip. Không tạo ba bộ lưu trữ riêng hoặc mở rộng hạ tầng ngoài các biểu mẫu đã yêu cầu.
+Reviewer phát hiện 2 vấn đề đã sửa, chưa có SHIP mới. Bằng chứng/ảnh: C:/Users/Admin/AppData/Local/Temp/lab-shared-form-drafts-20261028; kiểm thử dùng fixture cô lập, không ghi DB nghiệp vụ. Lưu cục bộ không bảo đảm phục hồi khi storage bị xóa hoặc đổi trình duyệt/thiết bị.
+Bước đề xuất tiếp theo: dừng mở rộng tính năng bản nháp, kiểm tra luồng người dùng và accessibility thực tế; chỉ bắt đầu batch tiếp khi người dùng yêu cầu.
+
+## Khôi phục bản nháp lập kế hoạch bảo trì — 28/10/2026
+
+Batch người dùng yêu cầu giữ bản nháp khi reload/sự cố trình duyệt; phạm vi chỉ biểu mẫu lập kế hoạch bảo trì, không phải mọi biểu mẫu hay luồng CUSTOMER. Giữ các diff và checkpoint có trước, không commit/push/deploy.
+maintenanceDraftStorage.ts và MaintenancePage lưu từng thay đổi vào localStorage theo tài khoản, hạn 7 ngày; thông báo bản nháp có lựa chọn khôi phục hoặc bỏ. App.jsx truyền actorId và key để tách phiên tài khoản. Giữ snapshot trạng thái/updatedAt, tài nguyên và thời gian gốc (gồm giây) để kiểm tra stale và kiểm tra lại ảnh hưởng khi khôi phục.
+Khi storage lỗi: giữ bản nháp trong bộ nhớ cho điều hướng SPA và cảnh báo beforeunload; tombstone trong phiên ngăn bản nháp cũ hiện lại nếu xóa storage thất bại sau lưu server thành công. Đây không phải autosave nghiệp vụ lên backend; không bảo đảm phục hồi khi người dùng xóa storage, đổi trình duyệt hoặc thiết bị.
+VI/EN thêm 6 khóa, tổng 4038 và manifest đồng bộ. Thêm test_maintenance_draft_storage.mjs/package script, mở rộng test_resource_profile_journey_ui.mjs.
+Gates: test:required PASS 91, lint 2 warning cũ, typecheck/build PASS. Storage unit PASS 3 nhóm: hạn/schema/tài khoản, quota và memory fallback, lỗi xóa và session tombstone. Browser mở rộng PASS: reload khôi phục đúng ghi chú, lưu lỗi 503 giữ nháp, lưu thành công xóa nháp, cách ly tài khoản, bỏ nháp có hiệu lực sau reload, kiểm tra lại ảnh hưởng; desktop/mobile và EN.
+Reviewer phát hiện 2 vấn đề đã sửa; chưa có kết luận SHIP mới. Browser dùng fixture cô lập, không ghi dữ liệu nghiệp vụ và không chạy lại backend integration.
+Ảnh khôi phục draft-recovery1440/390 và bằng chứng: C:/Users/Admin/AppData/Local/Temp/lab-maintenance-draft-20261028.
+Bước đề xuất tiếp theo: mở rộng bảo vệ bản nháp cho đặt lịch CUSTOMER và hỗ trợ; chưa triển khai trong batch này, chỉ bắt đầu khi người dùng yêu cầu.
+
+## Bảo trì theo ngữ cảnh tài nguyên — 28/10/2026
+
+Batch do người dùng yêu cầu; giữ các checkpoint và diff có trước, không commit/push/deploy.
+MaintenancePage lọc danh sách theo tài nguyên, hiển thị ngữ cảnh và liên kết về hồ sơ giữ tham số URL của catalogue. maintenanceStatus, maintenanceSearch và job lưu trong URL, phục hồi khi reload hoặc Back; tái sử dụng cơ chế điền sẵn tài nguyên cho biểu mẫu.
+ResourceDetailPage và ResourceCareView truyền ngữ cảnh qua liên kết; AppLayout đưa trợ lý maintenance vào trang để không che nội dung mobile. VI/EN thêm 4 khóa, tổng 4032 và manifest đồng bộ.
+Gates: test:required PASS 91; lint 2 warning cũ, typecheck/build PASS. test_resource_profile_journey_ui.mjs mở rộng PASS hai lần: tài nguyên→bảo trì→điền sẵn→trở về→Back; bộ lọc/reload giữ công việc đã chọn, xóa lọc tài nguyên rồi Back, desktop/mobile và EN.
+Reviewer phát hiện vòng trở về hồ sơ→bấm mở bảo trì làm mất bộ lọc/công việc. Đã giữ maintenanceStatus, maintenanceSearch và job qua returnParams, chỉ bỏ resource vì ID nằm trong path; thêm test vòng UI này và rerun PASS. Hồ sơ công việc đã chọn phải khớp resourceScope để không hiện việc của tài nguyên khác. Build cuối PASS; chưa có kết luận SHIP từ review lại.
+Ảnh và bằng chứng: C:/Users/Admin/AppData/Local/Temp/lab-maintenance-context-20261028.
+Giới hạn: browser dùng fixture cô lập, không ghi DB và không chạy lại backend integration; không chứng nhận dữ liệu vận hành thật.
+Bước đề xuất tiếp theo: cảnh báo bản nháp bảo trì chưa lưu khi rời trang qua liên kết trở về mới; chưa triển khai trong batch này, chỉ bắt đầu khi người dùng yêu cầu.
+
+## Hồ sơ tài nguyên và lịch sử — 28/10/2026
+
+Batch tiếp theo do người dùng yêu cầu; giữ diff và bằng chứng care/workbench phía dưới, không commit/push/deploy.
+ResourceDetailPage.tsx: header toàn chiều rộng, lịch sử tải khi mở tab và trình bày theo dòng thời gian với tham chiếu; liên kết chăm sóc/bảo trì chỉ hiện cho nhân viên, giữ feature flag. resource-dossier.css bổ sung bố cục mobile, motion và reduced-motion; AppLayout đưa trợ lý resources vào trang.
+VI/EN thêm 4 khóa, tổng 4028 và manifest đồng bộ. Bổ sung test_resource_profile_journey_ui.mjs với script test:ui:resource-profile-journey, điều chỉnh selector test_resource_catalogue_ui.mjs; test_resource_dossier_ui.mjs cũ giữ nguyên HEAD.
+Gates: test:required PASS 91; lint 2 warning cũ, typecheck/build PASS. Catalogue PASS 34 checks. Dossier fixture PASS desktop/mobile, CUSTOMER/nhân viên, tải lịch sử theo yêu cầu, 403/503 và retry, liên kết đúng đích, reduced-motion và EN.
+Reviewer dossier_finish: SHIP, không vấn đề trọng yếu. Backend/API không đổi, không ghi DB và không chạy lại backend integration; fixture không thay thế bằng chứng dữ liệu vận hành thật.
+Đối chiếu trước/sau: http://127.0.0.1:5195/; ảnh và bằng chứng tại C:/Users/Admin/AppData/Local/Temp/lab-resource-dossier-20261028.
+Bước đề xuất tiếp theo: giữ ngữ cảnh lọc tài nguyên khi sang bảo trì và kiểm thử toàn luồng liên kết; chỉ bắt đầu khi người dùng yêu cầu batch tiếp.
+
+## Giám sát và chăm sóc tài nguyên — 28/10/2026
+
+Checkout C:/Projects/lab-resource-manager, branch codex/claude-qa-20261021, HEAD 6be59ff từ luồng khác; giữ thay đổi có trước, không commit/push/deploy.
+ResourceCareView và resource-care-experience.css: danh sách chọn tài nguyên, hồ sơ chu kỳ chăm sóc, công việc liên quan; bố cục mobile đưa hồ sơ đã chọn lên trước. Nền tím/mint/peach, focus rõ và chuyển động mở thao tác có reduced-motion.
+Phân biệt operationalStatus với hạn chăm sóc; chưa cấu hình không hiển thị tiến độ giả. Phòng đang dùng hiển thị số người/capacity; ghi rõ số liệu do nhân viên ghi nhận, không gọi là cảm biến trực tiếp.
+MaintenancePage nhận liên kết đúng job; AppLayout đưa trợ lý monitoring vào trang để không che bộ lọc. Lỗi tải giữ bản nháp và khóa lệnh; hover/focus danh sách không đổi lựa chọn.
+VI/EN thêm 8 khóa, tổng 4024 và manifest đồng bộ; package thêm test:ui:resource-care-experience dùng test_resource_care_experience_ui.mjs hiện có.
+Frontend test:required PASS 91; lint 2 warning cũ, typecheck/build PASS. Browser fixture PASS 5 kịch bản: desktop 1440, mobile 390, EN, chưa cấu hình, phòng 3/10; kiểm tra lỗi/phục hồi giữ bản nháp, liên kết đúng công việc, không overflow/page error.
+Reviewer phát hiện polling vô hiệu fieldset khi đang nhập; đã bỏ loading khỏi điều kiện khóa, chỉ khóa khi lỗi hoặc đang lưu. Rerun sau sửa PASS 5 fixture, exit 0; diff check PASS. Build cuối PASS trước thay đổi điều kiện boolean này.
+Ảnh trước/sau và after-results.json: C:/Users/Admin/AppData/Local/Temp/lab-resource-care-20261028; đối chiếu http://127.0.0.1:5194/, ứng dụng source http://127.0.0.1:5173/ đang chạy.
+Giới hạn: kiểm thử trình duyệt dùng API intercept cô lập, không ghi DB; chưa chạy lại backend integration trong batch này, không chứng nhận toàn hệ thống. Không thay đổi quyền hooks.
+Bước đề xuất tiếp theo: nối trang chi tiết tài nguyên tới hồ sơ chăm sóc và bộ lọc liên quan; chỉ bắt đầu khi người dùng yêu cầu batch tiếp.
+
 ## Workbench sự cố và bảo trì — 28/10/2026
 
 Checkout C:/Projects/lab-resource-manager, branch codex/claude-qa-20261021, HEAD f494790; không tự commit/push/deploy. Commit Audit từ luồng khác xuất hiện khi làm việc; diff workbench còn nguyên, chưa stage.

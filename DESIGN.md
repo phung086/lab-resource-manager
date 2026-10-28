@@ -1,10 +1,27 @@
 # Design System: LAB Resource Manager
 
-## Direction — approved 25/10/2026
+## Direction — approved 25/10/2026; liquid-glass amendment 28/10/2026
 
 Light, subtly multicolored, with violet, mint and peach. This replaces the earlier
 single-violet, flat cream-paper direction at the user's request. Preserve IBM Plex
 Sans/Mono, the LAB identity, real resource images and all business contracts.
+
+### Liquid glass amendment (28/10, user request)
+
+The landing page leads with a full-bleed hero banner: the real LAB photograph
+fills the banner, a translucent spectrum veil sits over it, and the headline,
+subtitle and CTAs live inside a large liquid-glass panel (backdrop blur 22px +
+saturation, ≥.66 white backing so ink text keeps AA). A process marquee runs
+along the banner's bottom edge — real capabilities only (rooms, equipment,
+booking, hold, handover, return, telemetry, maintenance, support); it pauses on
+hover, when the tab is hidden, and renders as a static wrapped list under
+reduced motion. Landing sections sit on aurora washes (violet/mint/peach
+radials) with translucent glass cards; the CTA band is deep violet glass.
+Signed-in dashboards adopt glass mastheads, notices and trends panels; queues,
+tickets and data tables stay solid for legibility. `styles/liquid-glass.css`
+(loaded last) owns this layer; `@supports` fallbacks raise backing opacity
+where backdrop-filter is unavailable. The flat-paper rule now applies to
+business surfaces only, not to the landing and dashboard mastheads.
 
 The public entrance invites discovery. Signed-in workspaces prioritize the next
 real task. Decoration belongs to the surrounding canvas and page headings; data,

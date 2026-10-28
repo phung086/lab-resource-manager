@@ -1,10 +1,10 @@
 export default {
   "vi": {
-    "sha256": "cec1961041e598bb5777dfc97af310c2bc5a20c823ea167a1dc405f6e9bdaa51",
-    "bytes": 322158
+    "sha256": "dd427505b466c704b3c47bb08ba7498b52519711d4758f6585857796bfc316e0",
+    "bytes": 324801
   },
   "en": {
-    "sha256": "e680cd5af32f3340dbb611b23d7a8bd0d6fd9f87153a91a500b079bc48edb36b",
-    "bytes": 280641
+    "sha256": "77519bcdf350e99938e3860d7b8ee5e13727820ca12b8d30723749d426824d0b",
+    "bytes": 282761
   }
 };
