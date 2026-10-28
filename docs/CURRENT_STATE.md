@@ -1842,3 +1842,15 @@ căn giữa) — users-workspace.css; bỏ thử CSS mask 2 lớp (không render
 Chrome) dùng mask đơn lớp. Ảnh loop4-users-after2.png. Gates PASS. Việc
 tiếp: ảnh thiết bị nổi bật nếu Wikimedia còn 429 thì rà detail page them
 widget; mobile admin pages.
+
+## Loop lượt 03:15 — ảnh thật cho 3 máy — 29/10/2026
+
+Wikimedia đã hết 429. Gắn qua nghiệp vụ external media cho: Máy CNC tạo mẫu
+(spindle gia công kim loại, CC BY-SA 4.0), Máy in 3D thực hành (Felix 3D
+printer + laptop, CC BY-SA 3.0), Trạm hàn điện tử (người thợ hàn, Public
+domain) — đủ credit/license, tải preview xem trước. Sự cố xử lý trong lượt:
+tên file Navy đoán sai (404) → xóa bản ghi, tra đúng tên qua Commons API
+("...electrical equipment.jpg"), gắn lại, curl xác minh 200 image/jpeg.
+Kiểm chứng: detail page máy in 3D render 3/3 ảnh wikimedia (naturalWidth
+đo được) — loop5-mc01-detail.png. Gates PASS. Việc tiếp: rà catalog "Máy
+móc" render; widget trang khách; dồn ảnh cho bộ kit khi còn dư lượt.
