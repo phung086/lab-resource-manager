@@ -1,5 +1,24 @@
 # Trạng thái dự án hiện tại
 
+## Lô B — ảnh tài nguyên qua nghiệp vụ external media — 29/10/2026
+
+Người dùng duyệt tiếp Lô B. Đã gắn ảnh thật cho 4 phòng còn thiếu
+(LOCAL-ROOM-03→06) qua đúng luồng nghiệp vụ `POST /api/resources/:id/media/
+external` (vai trò ADMIN, không seed/reset DB): URL
+`commons.wikimedia.org/wiki/Special:FilePath/<file>` + sourceUrl trang File:,
+đủ credit ("tác giả / Wikimedia Commons") + license (CC BY-SA 3.0 / CC BY-SA
+2.0 / CC BY 2.0), title/altText tiếng VI theo pattern media sẵn có của
+ROOM-01/02. Ảnh chọn bằng Commons API (mime jpeg, ≥1000px), tải preview xem
+trực quan trước khi gắn: Network Laboratory (phòng máy tính), ARDX Arduino
+kit (IoT), Testing Kinect — camera độ sâu + bản đồ chiều sâu (thị giác máy
+tính), Printrbot 3D printer workshop (lắp ráp & tạo mẫu). Kiểm chứng: GET
+media trả đủ 4 bản ghi; catalog public render 6/6 phòng có ảnh (img.complete
++ naturalWidth đo được). Kết quả trước/sau: Temp/lab-ui-audit/pub-resources.png
+(4/6 "Chưa có ảnh minh họa") vs after4-pub-resources*.png (6/6 ảnh thật).
+Lưu ý vận hành: Wikimedia 429 rate-limit theo IP khi fetch dồn dập — tạm thời
+làm cả ảnh cũ không render; tự hồi phục sau vài phút, không phải lỗi hệ
+thống. Không commit code trong lô này (chỉ dữ liệu qua API + tài liệu).
+
 ## Detail pass — 5 mặt còn "đơn giản" — 28/10/2026 (user: "chi tiết, hợp lý như hệ thống lớn")
 
 Audit 20 màn hình 3 vai trò (Temp/lab-ui-audit/) chỉ ra 5 mặt yếu; đợt này
