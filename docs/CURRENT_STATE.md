@@ -1938,3 +1938,12 @@ operations); `.empty-state` chỉ tồn tại trong global.css với override s�
 ở dòng cuối (11022) — thắng mọi nơi, không còn variant tối. Không cần sửa
 code. Gates không chạy (không đổi gì). Việc tiếp: widget trang khách nếu
 còn điểm nghẽn; chờ người dùng duyệt 2 lô treo.
+
+## Loop lượt 06:55 — audit schedule + support — 29/10/2026
+
+/schedule public: sạch — heading, card glass CTA đăng nhập, footer tím áp
+đủ, 0 overflow. Nit ghi nhận: tiêu đề "Kiểm tra lịch" lặp 2 lần (page
+heading + section header của workbench — để Codex/chờ duyệt, không tự sửa
+code người khác đang giữ). /workspace/support: form yêu cầu + robot CTA
+đầy đủ. Không cần sửa. Ảnh loop10-*.png. Việc tiếp: chờ người dùng; nếu
+vẫn loop thì audit chatgpt-bridge + register.
