@@ -175,6 +175,7 @@ function Application() {
   const workspaceScope = workspaceActorScope(user);
   useEffect(() => { setActiveGlobalModal(null); }, [workspaceScope]);
   const appDataController = React.useRef(null);
+  const pendingWorkspaceRefresh = React.useRef(false);
   const previousTab = React.useRef(activeTab);
   const isPasswordResetRequired = Boolean(user?.passwordResetRequired);
   useEffect(() => {
@@ -220,11 +221,11 @@ function Application() {
   }, []);
 
 
-  const loadData = React.useCallback(async ({ silent = false } = {}) => {
+  const loadData = React.useCallback(async function loadWorkspaceData({ silent = false } = {}) {
     if (!routeUserId) return;
     // One in-flight load per scope: a second trigger (mount + home entry fire together)
     // must not restart the cycle, or the mounted home unmounts and remounts (large CLS).
-    if (appDataController.current) return;
+    if (appDataController.current && !appDataController.current.signal.aborted) return;
     const controller = new AbortController();
     appDataController.current = controller;
     if (!silent) setLoading(true);
@@ -271,17 +272,40 @@ function Application() {
         setError(requestError?.message || "ui.unable_to_load_system_data_e9df8dd1");
       }
     } finally {
-      if (!controller.signal.aborted && appDataController.current === controller) {
+      // Only the request that owns the slot may release it. Cancelled requests
+      // must never block a new actor/session or clear a newer request's slot.
+      if (appDataController.current === controller) {
         appDataController.current = null;
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          if (pendingWorkspaceRefresh.current) {
+            pendingWorkspaceRefresh.current = false;
+            void loadWorkspaceData({ silent: true });
+          }
+        }
       }
     }
   }, [routeUserId, routeUserRole, workspaceScope]);
 
+  const refreshData = React.useCallback(() => {
+    if (appDataController.current && !appDataController.current.signal.aborted) {
+      // A mutation may finish while shared reads are pending. Refresh once more
+      // afterwards so an earlier snapshot cannot overwrite the mutation result.
+      pendingWorkspaceRefresh.current = true;
+      return;
+    }
+    void loadData();
+  }, [loadData]);
+
   useEffect(() => {
     if (!routeUserId) return;
     loadData();
-    return () => appDataController.current?.abort();
+    return () => {
+      const controller = appDataController.current;
+      appDataController.current = null;
+      pendingWorkspaceRefresh.current = false;
+      controller?.abort();
+    };
   }, [routeUserId, loadData]);
 
   useEffect(() => {
@@ -352,7 +376,7 @@ function Application() {
       incidentOpenCount={loading || error ? undefined : incidentSummary?.open}
       conflictsCount={0}
       loading={loading}
-      onRefresh={loadData}
+      onRefresh={refreshData}
       onAssistantPrefill={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
       onLogout={async () => {
         try {
@@ -417,7 +441,7 @@ function Application() {
           dashboard={dashboard}
           loading={loading}
           error={translate(error)}
-          onRetry={loadData}
+          onRetry={refreshData}
           onNavigate={setActiveTab}
           onSearch={(search, category) => setActiveTab("resources", { search, category })}
           onCalendar={openCalendar}
@@ -460,8 +484,8 @@ function Application() {
           <AdminResourceManagementView key={routeHash} user={user} initialClassification={routeParams.get("classification") || "ALL"} />
         )
       )}
-      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter actorRole={user.role} notifications={notifications} loading={loading} loadError={translate(error)} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
-      {!user.passwordResetRequired && activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={loadData} />}
+      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter actorRole={user.role} notifications={notifications} loading={loading} loadError={translate(error)} onOpenBookings={() => setActiveTab("bookings")} onChanged={refreshData} />}
+      {!user.passwordResetRequired && activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={refreshData} />}
       {!user.passwordResetRequired && route.screen === "resource-detail" && (
         <ResourceDetailPage
           key={route.resourceId}
@@ -482,11 +506,11 @@ function Application() {
       {!user.passwordResetRequired && route.screen === "resource-selection" && <SelectionPage key={user.id} userId={user.id} items={resourceSelection.items} onRemove={resourceSelection.remove}
         onBrowse={() => setActiveTab("resources", Object.fromEntries(routeParams))} onDetails={id => navigateApp(resourceDetailPath(id, routeParams))}
         onViewBookings={id => setActiveTab("bookings", id ? { booking: id } : {})}
-        onConfirmed={() => { setCalendarRevision(value => value + 1); loadData(); }} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
-      {!user.passwordResetRequired && activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={loadData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
-      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage locale={locale} resources={resources} maintenance={maintenance} onChanged={loadData} onBookings={() => setActiveTab('bookings')} />}
-      {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
-      {activeTab === "monitoring" && <MonitoringDashboardPage userRole={user.role} dashboard={dashboard} loading={loading} onRefresh={loadData} />}
+        onConfirmed={() => { setCalendarRevision(value => value + 1); refreshData(); }} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
+      {!user.passwordResetRequired && activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={refreshData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
+      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage locale={locale} resources={resources} maintenance={maintenance} onChanged={refreshData} onBookings={() => setActiveTab('bookings')} />}
+      {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={refreshData} />}
+      {activeTab === "monitoring" && <MonitoringDashboardPage userRole={user.role} dashboard={dashboard} loading={loading} onRefresh={refreshData} />}
       {activeTab === "users" && (
         user.role === "ADMIN" ? (
           <AdminUserConsole
@@ -514,7 +538,7 @@ function Application() {
         onViewBookings={() => { setActiveGlobalModal(null); setActiveTab("bookings"); }}
         onConfirmBooking={() => {
           setCalendarRevision(value => value + 1);
-          loadData();
+          refreshData();
         }}
       />
 
