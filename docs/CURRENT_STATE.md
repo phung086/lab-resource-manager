@@ -1920,3 +1920,12 @@ work 28/10 của Codex chờ duyệt + QA untracked, đúng trạng thái đã b
 Việc tiếp ưu tiên lượt sau: widget trang khách; EQ-03 đã đóng; khi người
 dùng quay lại: duyệt 2 lô (Codex 28/10, QA files) + xem nhật ký các lượt
 loop dưới đây. Không đổi code.
+
+## Loop lượt 06:15 — sửa nền tối tàn dư của .empty-state — 29/10/2026
+
+.global.css:1639 đặt nền rgba(14,19,31,.5) — tàn dư theme tối, làm MỌI
+empty state trên trang sáng thành hộp đen xám. Fix 1 lần cho toàn hệ: nền
+sáng spectrum + viền nét đứt + icon badge gradient (cho các nơi có icon).
+Xác minh: lọc payments "zzz" → empty state nền rgb(255,253,250) —
+loop8-empty-after.png. Gates PASS. Việc tiếp: rà các trang còn dùng
+empty-state khác (schedule, materials detail).

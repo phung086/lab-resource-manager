@@ -11016,3 +11016,21 @@ a:hover {
 }
 .workspace-shell .workspace-menu-group .sidebar-nav-item-2026.is-active.is-active svg { color: #a7f2e4 !important; }
 .workspace-shell .workspace-menu-group .sidebar-nav-item-2026.is-active.is-active .workspace-nav-count { background: rgba(255, 255, 255, 0.22); color: #fff; }
+
+/* ── Empty-state panel: light spectrum surface (loop 29/10) — the 1639 dark
+   translucent backing is a legacy-theme leftover that reads as a black box. ── */
+.empty-state {
+  border: 1.5px dashed var(--workspace-border, #d9d2e6);
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(96, 64, 206, 0.05) 0%, transparent 65%),
+    #fffdfa;
+  color: var(--workspace-text-muted, #625b70);
+  border-radius: 14px;
+  padding: 34px 24px;
+}
+.empty-state-icon {
+  width: 46px; height: 46px; padding: 12px; box-sizing: content-box;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(96, 64, 206, 0.12), rgba(15, 157, 143, 0.12));
+  color: #6040ce;
+}
