@@ -10827,3 +10827,141 @@ a:hover {
 /* Queue pagination: optional page-size selector */
 .queue-pagination .queue-page-size { display: inline-flex; align-items: center; margin-left: 8px; }
 .queue-pagination .queue-page-size select { min-height: 36px; padding: 4px 8px; border: 1px solid var(--workspace-border, #ded7e8); border-radius: 8px; background: #fff; color: var(--workspace-ink, #292636); font-size: 12px; }
+
+/* ── Footer rebuild (29/10): deep spectrum ink, role-aware sitemap, status line ── */
+.project-footer {
+  --footer-ink: #f2effc; --footer-muted: #b3abd8;
+  position: relative; color: var(--footer-ink);
+  background:
+    radial-gradient(ellipse 55% 70% at 88% 0%, rgba(110, 231, 210, 0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 65% at 8% 100%, rgba(196, 148, 244, 0.12) 0%, transparent 55%),
+    linear-gradient(160deg, #251753 0%, #1c1140 55%, #171036 100%);
+  padding: clamp(36px, 4vw, 56px) clamp(20px, 3vw, 44px) 0;
+  margin-top: auto; border-top: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.project-footer::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: linear-gradient(90deg, #6040ce 0%, #0f9d8f 48%, #e8874f 100%);
+  opacity: 0.85;
+}
+.project-footer-content {
+  display: grid; grid-template-columns: 1.5fr 1fr 1.15fr 1.15fr; gap: clamp(24px, 3.5vw, 56px);
+  max-width: 1280px; margin-inline: auto; align-items: start;
+  padding-bottom: clamp(28px, 3vw, 44px);
+}
+.project-footer .project-brand { display: inline-flex; color: var(--footer-ink); }
+.project-footer .project-brand svg { color: #a7f2e4; }
+.project-footer-identity > p { margin: 12px 0 0; max-width: 34ch; font-size: 0.86rem; line-height: 1.65; color: var(--footer-muted); }
+.project-footer-status { list-style: none; margin: 18px 0 0; padding: 14px 0 0; border-top: 1px dashed rgba(255, 255, 255, 0.18); display: grid; gap: 8px; }
+.project-footer-status li { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--footer-muted); font-variant-numeric: tabular-nums; }
+.project-footer-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.22); flex-shrink: 0; }
+.project-footer h2 {
+  margin: 0 0 14px; font-size: 0.78rem; font-weight: 650; line-height: 1.4;
+  letter-spacing: 0.09em; text-transform: uppercase; color: #cfc4f6;
+}
+.project-footer-links, .project-footer-help { display: flex; flex-direction: column; align-items: flex-start; }
+.project-footer-links a, .project-footer-help > a {
+  color: var(--footer-ink); text-decoration: none; font-size: 0.875rem; line-height: 1.5;
+  padding: 4px 0; opacity: 0.88; transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.project-footer-links a:hover, .project-footer-help > a:hover { opacity: 1; transform: translateX(2px); text-decoration: underline; text-underline-offset: 3px; }
+.project-footer-links a:focus-visible, .project-footer-help > a:focus-visible, .project-footer-status li:focus-visible { outline: 2px solid #a7f2e4; outline-offset: 3px; border-radius: 4px; }
+.project-footer .project-footer-account { display: flex; gap: 14px; flex-wrap: wrap; }
+.project-footer-help details { width: 100%; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.project-footer-help summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer;
+  color: var(--footer-ink); font-size: 0.875rem; padding: 9px 0; list-style: none; opacity: 0.9;
+}
+.project-footer-help summary::-webkit-details-marker { display: none; }
+.project-footer-help summary svg { transition: transform 0.18s ease; opacity: 0.7; }
+.project-footer-help details[open] summary svg { transform: rotate(180deg); }
+.project-footer-help details p { margin: 0 0 10px; font-size: 0.8rem; line-height: 1.6; color: var(--footer-muted); }
+.project-footer-baseline {
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  max-width: 1280px; margin-inline: auto; padding: 16px 0 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 0.78rem; color: var(--footer-muted); font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1080px) { .project-footer-content { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .project-footer-content { grid-template-columns: 1fr; gap: 22px; } .project-footer-baseline { flex-direction: column; gap: 6px; } }
+@media (prefers-reduced-motion: reduce) { .project-footer-links a, .project-footer-help summary svg { transition: none; transform: none; } }
+
+/* ── Chrome rebuild (29/10): sticky glass headers, spectrum hairline ── */
+.project-public-shell .public-header {
+  position: sticky; top: 0; z-index: 80;
+  min-height: 76px;
+  background:
+    linear-gradient(105deg, rgba(255, 252, 247, 0.92) 0%, rgba(255, 250, 244, 0.82) 55%, rgba(248, 245, 255, 0.88) 100%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%);
+  border-bottom: 1px solid rgba(96, 64, 206, 0.14);
+  box-shadow: 0 12px 32px -24px rgba(42, 26, 94, 0.45);
+  padding-inline: clamp(18px, 3vw, 40px);
+}
+.project-public-shell .public-header::after {
+  content: ''; position: absolute; inset: auto 0 0 0; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, #6040ce 0%, #0f9d8f 52%, #e8874f 100%);
+  opacity: 0.55;
+}
+.project-public-shell .public-header nav { gap: clamp(14px, 2vw, 28px); }
+.project-public-shell .public-header nav a {
+  position: relative; padding: 6px 2px; font-size: 0.95rem; font-weight: 550;
+  color: var(--public-ink, #202138); text-decoration: none; opacity: 0.85;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.project-public-shell .public-header nav a::after {
+  content: ''; position: absolute; left: 0; right: 100%; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, #6040ce, #0f9d8f); border-radius: 2px;
+  transition: right 0.22s ease;
+}
+.project-public-shell .public-header nav a:hover { opacity: 1; }
+.project-public-shell .public-header nav a:hover::after,
+.project-public-shell .public-header nav a[aria-current="page"]::after { right: 0; }
+.project-public-shell .public-header nav a[aria-current="page"] { opacity: 1; color: #4c2fb8; font-weight: 600; }
+.project-public-shell .public-header .public-login {
+  box-shadow: 0 10px 22px -12px rgba(96, 64, 206, 0.55);
+}
+@supports not ((backdrop-filter: blur(18px)) or (-webkit-backdrop-filter: blur(18px))) {
+  .project-public-shell .public-header { background: #fffcf7; }
+}
+.workspace-shell .header-2026 {
+  position: sticky; top: 0; z-index: 70;
+  -webkit-backdrop-filter: blur(16px) saturate(150%); backdrop-filter: blur(16px) saturate(150%);
+  background:
+    linear-gradient(105deg, rgba(255, 253, 249, 0.94) 0%, rgba(255, 251, 246, 0.88) 60%, rgba(247, 244, 255, 0.94) 100%);
+  border-bottom: 1px solid rgba(96, 64, 206, 0.12);
+  box-shadow: 0 14px 34px -26px rgba(42, 26, 94, 0.5);
+}
+.workspace-shell .header-2026::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(96, 64, 206, 0.55) 0%, rgba(15, 157, 143, 0.45) 55%, rgba(232, 135, 79, 0.4) 100%);
+}
+@supports not ((backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px))) {
+  .workspace-shell .header-2026 { background: #fffdf9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .project-public-shell .public-header nav a::after { transition: none; }
+}
+
+/* ── Footer ink assertion (29/10): deep spectrum footer wins both variants ── */
+.project-footer.project-footer--public,
+.project-footer.project-footer--workspace {
+  --footer-ink: #f2effc; --footer-muted: #b6aede;
+  color: var(--footer-ink);
+  background:
+    radial-gradient(ellipse 55% 70% at 88% 0%, rgba(110, 231, 210, 0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 65% at 8% 100%, rgba(196, 148, 244, 0.12) 0%, transparent 55%),
+    linear-gradient(160deg, #251753 0%, #1c1140 55%, #171036 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.project-footer.project-footer--public .project-brand svg,
+.project-footer.project-footer--workspace .project-brand svg { color: #a7f2e4; }
+.project-footer.project-footer--public :is(a,button):hover,
+.project-footer.project-footer--workspace :is(a,button):hover { color: #ffffff; text-decoration: underline; text-underline-offset: 3px; }
+.project-footer.project-footer--public .project-footer-baseline,
+.project-footer.project-footer--workspace .project-footer-baseline { border-top-color: rgba(255, 255, 255, 0.14); }
+.project-footer.project-footer--public summary,
+.project-footer.project-footer--workspace summary { border-bottom-color: rgba(255, 255, 255, 0.12); }
+.project-footer.project-footer--public :is(button,a,summary):focus-visible,
+.project-footer.project-footer--workspace :is(button,a,summary):focus-visible { outline-color: #a7f2e4; }

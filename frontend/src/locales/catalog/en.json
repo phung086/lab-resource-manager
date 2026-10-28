@@ -4064,6 +4064,13 @@
     "ui.materials.needCountTitle": "Opening count needed",
     "ui.materials.needCountHint": "Pick a material to record its first count.",
     "ui.payments.dayTooltip": "{date}: {count} transactions · {sum}",
-    "ui.payments.vietqrName": "VietQR"
+    "ui.payments.vietqrName": "VietQR",
+    "ui.footer.explore": "Explore",
+    "ui.footer.operations": "LAB operations",
+    "ui.footer.support": "Support",
+    "ui.footer.getStarted": "Get started",
+    "ui.footer.version": "Version",
+    "ui.footer.demoNote": "Graduation demo with sample data",
+    "ui.footer.baselineMeta": "Version v{version} · {time}"
   }
 }

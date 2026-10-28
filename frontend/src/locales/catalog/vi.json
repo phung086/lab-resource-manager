@@ -4064,6 +4064,13 @@
     "ui.materials.needCountTitle": "Cần kiểm kê mở đầu",
     "ui.materials.needCountHint": "Chọn một vật tư để lập phiếu kiểm kê đầu tiên.",
     "ui.payments.dayTooltip": "{date}: {count} giao dịch · {sum}",
-    "ui.payments.vietqrName": "VietQR"
+    "ui.payments.vietqrName": "VietQR",
+    "ui.footer.explore": "Khám phá",
+    "ui.footer.operations": "Vận hành LAB",
+    "ui.footer.support": "Hỗ trợ",
+    "ui.footer.getStarted": "Bắt đầu",
+    "ui.footer.version": "Phiên bản",
+    "ui.footer.demoNote": "Bản demo đồ án với dữ liệu mẫu",
+    "ui.footer.baselineMeta": "Phiên bản v{version} · {time}"
   }
 }

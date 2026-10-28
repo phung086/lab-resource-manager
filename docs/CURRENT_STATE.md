@@ -1776,3 +1776,19 @@ và detector cục bộ; không đụng backend/business logic.
   StaffHome/AdminHome + queue-panel để đưa CLS authed < 0.1. Công thức đo:
   inject sessionStorage token qua addInitScript, observer layout-shift có
   sources, throttle CDP 10Mbps, chạy trên vite preview.
+
+## Chrome rebuild — footer hệ thống lớn — 29/10/2026
+
+Người dùng yêu cầu đầu trang/chân trang "chuyên nghiệp như hệ thống lớn,
+khác biệt thật". ProjectFooter viết lại: 4 cột theo vai trò (thương hiệu +
+trạng thái: giờ VN, note demo; Khám phá; Vận hành LAB cho staff / Hỗ trợ cho
+customer / Bắt đầu cho public; Hỗ trợ & tài khoản với accordion giữ nguyên),
+baseline thêm phiên bản v{pkg.version}. Toàn bộ liên kết là tab/nghiệp vụ
+thật, không có link chết. Footer nền tím spectrum sâu (radial mint/violet +
+hairline gradient 3px trên đầu) — phải dùng specificity (0,3,0) đè variant
+light (0,2,0) có sẵn ở global.css:7897. Header: public + workspace sticky
+glass (blur 16–18px) + hairline spectrum, nav public có underline animation
+và aria-current đậm. i18n +7 key (4070, parity PASS). Kiểm chứng:
+test:required PASS, contrast 22/22 · 0 finding; ảnh trước/sau
+Temp/lab-ui-audit/ (after5/after6). Lưu ý: phiên bản Codex chạy song song đã
+đổi hero landing trong lúc làm — footer/header vẫn áp đúng trên layout mới.
