@@ -1803,3 +1803,12 @@ gradient đậm chưa thắng rule spectrum cũ — nâng specificity; maintenan
 page còn trống dữ liệu (0 công việc) — cân nhắc bề mặt chu kỳ 23 tài nguyên.
 Vòng lặp 20 phút ĐÃ BẬT (automation-af5e7b2f…, cron */20, tự chuyển hướng
 khi vướng, commit local được phép, không push/deploy/seed).
+
+## Loop lượt 01:35 — sidebar active pill thắng — 29/10/2026
+
+Task: pill "đang mở" trên sidebar trước đây nền lavender nhạt (bị rule
+global.css:8191 (0,4,0)+!important đè). Fix: khối (0,5,0)+!important —
+gradient violet→violet nhạt, chữ trắng, icon mint, badge trắng. Trước/sau:
+Temp/lab-loop-shots/loop-sidebar-after.png. Gates: test:required PASS,
+contrast 22/22 · 0 finding. Việc tiếp: rà chrome (footer/header) trên
+resource detail + incidents + users; mobile 390px các trang vừa sửa.

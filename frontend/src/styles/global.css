@@ -11007,3 +11007,12 @@ a:hover {
   background: linear-gradient(135deg, #6040ce, #0f9d8f); color: #fff;
 }
 @media (prefers-reduced-motion: reduce) { .workspace-shell .sidebar-nav-item-2026 { transition: none; } }
+
+/* ── Sidebar active pill assertion (loop 29/10): outbid the soft-accent rule ── */
+.workspace-shell .workspace-menu-group .sidebar-nav-item-2026.is-active.is-active {
+  background: linear-gradient(115deg, #6040ce 0%, #7c5cf0 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 22px -12px rgba(96, 64, 206, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+.workspace-shell .workspace-menu-group .sidebar-nav-item-2026.is-active.is-active svg { color: #a7f2e4 !important; }
+.workspace-shell .workspace-menu-group .sidebar-nav-item-2026.is-active.is-active .workspace-nav-count { background: rgba(255, 255, 255, 0.22); color: #fff; }
