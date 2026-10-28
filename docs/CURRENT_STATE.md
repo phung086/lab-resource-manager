@@ -1854,3 +1854,13 @@ tên file Navy đoán sai (404) → xóa bản ghi, tra đúng tên qua Commons 
 Kiểm chứng: detail page máy in 3D render 3/3 ảnh wikimedia (naturalWidth
 đo được) — loop5-mc01-detail.png. Gates PASS. Việc tiếp: rà catalog "Máy
 móc" render; widget trang khách; dồn ảnh cho bộ kit khi còn dư lượt.
+
+## Loop lượt 03:35 — ảnh thật cho 3 bộ kit — 29/10/2026
+
+Gắn qua external media: Bộ thí nghiệm mạch điện (Electronic Prototyping,
+CC BY-SA 2.0 — loại ứng viên "Huge circuit" dây rối), Bộ thực hành cảm biến
+(HC-SR04 PCB, CC BY-SA 4.0), Bộ thực hành robot di động (Line follower robot,
+CC BY-SA 3.0 — đúng chủ đề robot). Cả 3 URL curl xác minh 200 image/jpeg;
+trước khi gắn đã xem preview từng ảnh. Gates PASS. Việc tiếp: catalog
+workspace hiển thị ảnh kit; cân nhắc ảnh EQ (camera, GPU) lượt sau; widget
+trang khách.
