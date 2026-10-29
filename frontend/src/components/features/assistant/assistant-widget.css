@@ -3,7 +3,7 @@
   position:fixed; z-index:920; right:20px; bottom:max(16px,env(safe-area-inset-bottom));
   display:grid; place-items:center; width:100px; height:116px; min-height:44px;
   padding:0; border:0; border-radius:24px; background:transparent; color:#302155;
-  cursor:pointer; font:600 14px/1.4 var(--font-body,'IBM Plex Sans',sans-serif);
+  cursor:pointer; font:600 14px/1.4 var(--font-body,'Onest',sans-serif);
   box-shadow:none; -webkit-tap-highlight-color:transparent;
 }
 .assistant-launcher>.lab-robot { filter:drop-shadow(0 6px 8px #39235b20); transition:transform 180ms ease-out; }

@@ -1,3 +1,4 @@
+import { LocalDraftNotice } from '../../base/LocalDraftNotice';
 import { HelpDisclosure } from "../../base/HelpDisclosure";
 import React, { useState, useId, useEffect, useRef } from "react";
 import "../../../styles/incidents-workspace.css";
@@ -285,7 +286,8 @@ export const IncidentManagementView: React.FC<Props> = ({
   const [formError, setFormError] = useState("");
 
   // Preserve draft form across show/hide and locale switch
-  const [formDraft, setFormDraft] = useState({
+  const reportBackup = useLocalFormDraft('incident-report',['resourceId','severity','category','title','description']);
+  const [formDraft, setFormDraftState] = useState({
     resourceId: "",
     severity: "medium" as IncidentSeverity,
     category: "",
@@ -294,6 +296,10 @@ export const IncidentManagementView: React.FC<Props> = ({
   });
 
   const [resolutionDraft, setResolutionDraft] = useState("");
+  function setFormDraft(update: React.SetStateAction<typeof formDraft>) {
+    const next=typeof update==='function'?update(formDraft):update;
+    setFormDraftState(next); reportBackup.save(next);
+  }
 
   const queue = useQueuePage<IncidentRecord, IncidentQueueSummary>(
     "/incidents",
@@ -415,8 +421,9 @@ export const IncidentManagementView: React.FC<Props> = ({
     try {
       setBusyId("create");
       await reportIncident(result.data);
+      reportBackup.clear();
       setShowReport(false);
-      setFormDraft((prev) => ({ ...prev, title: "", description: "" }));
+      setFormDraftState((prev) => ({ ...prev, title: "", description: "" }));
       await refresh();
     } catch (e: unknown) {
       setFormError(
@@ -467,6 +474,7 @@ export const IncidentManagementView: React.FC<Props> = ({
 
   return (
     <div className="incidents-workspace operations-workbench" data-role={user?.role} data-has-selection={Boolean(selectedId)}>
+      <LocalDraftNotice disabled={busyId !== null} store={reportBackup} onRestore={value=>{setFormDraftState({resourceId:value.resourceId,severity:value.severity as IncidentSeverity,category:value.category,title:value.title,description:value.description});setShowReport(true);}}/>
       {/* ── Page header ── */}
       <div className="incident-heading">
         <div className="incident-heading-text">
@@ -912,3 +920,4 @@ export const IncidentManagementView: React.FC<Props> = ({
     </div>
   );
 };
+import { useLocalFormDraft } from '../../../hooks/useLocalFormDraft';

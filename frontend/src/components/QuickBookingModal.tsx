@@ -1,3 +1,4 @@
+import { LocalDraftNotice } from './base/LocalDraftNotice';
 import { ResourceCategoryArt } from "./ResourceCategoryArt";
 import "../styles/booking-studio.css";
 import '../styles/calendar-workspace.css';
@@ -141,6 +142,14 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<LocaleMessage>("");
   const [pricingRules, setPricingRules] = useState<any[]>([]);
   const [purposeCode, setPurposeCode] = useState("");
+  const durableDraft=useLocalFormDraft('customer-booking',['resourceId','selectedDate','startTime','endTime','title','purpose','purposeCode','uncertain']);
+  const durableRef=useRef(durableDraft);durableRef.current=durableDraft;
+  const restoredPurpose=useRef('');
+  const draftDirty=useRef(false);
+  useEffect(()=>{if(!isOpen){draftDirty.current=false;restoredPurpose.current="";}},[isOpen]);
+  useEffect(()=>{
+    if(isOpen&&draftDirty.current&&!showSuccess)durableRef.current.save({resourceId,selectedDate,startTime,endTime,title,purpose,purposeCode,uncertain:String(isSubmitting||submissionUncertain)});
+  },[isOpen,resourceId,selectedDate,startTime,endTime,title,purpose,purposeCode,isSubmitting,submissionUncertain,showSuccess]);
   const [quote, setQuote] = useState<any>(null);
   const [quoteError, setQuoteError] = useState("");
   const [pricingLoaded, setPricingLoaded] = useState(false);
@@ -164,7 +173,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     setPricingRules([]); setPurposeCode(""); setQuote(null); setPricingLoaded(false); setQuoteError("");
     if (isOpen && resourceId) apiRequest(`/booking-pricing/${encodeURIComponent(resourceId)}`)
       .then(rows => { if (active) {
-        const desired = initialDraft?.purposeCode || initialSlot?.purposeCode;
+        const desired = restoredPurpose.current || initialDraft?.purposeCode || initialSlot?.purposeCode;
         setPricingRules(rows);
         setPurposeCode(desired && rows.some((row: any) => row.purposeCode === desired) ? desired : initialSlot?.purposeCode ? "" : rows[0]?.purposeCode || "");
         setPricingLoaded(true);
@@ -384,6 +393,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
       onAttempt?.();
       requestStarted = true;
+      durableRef.current.save({resourceId,selectedDate,startTime,endTime,title,purpose,purposeCode,uncertain:'true'});
       const booking = await apiRequest("/bookings", {
         method: "POST",
         body: JSON.stringify(payload)
@@ -394,6 +404,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
       }
 
       setCreatedBooking(booking);
+      draftDirty.current=false;durableRef.current.clear();
       setShowSuccess(true);
 
       if (onConfirmBooking) {
@@ -532,7 +543,8 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>{tr('ui.agreed_fee_e147e0c0')}{createdBooking.feeAmountVnd.toLocaleString('vi-VN')} {tr('ui.vnd_789721c8')}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>{tr('ui.view_booking_payment_3a007567')}</button>}</div>}
         </div>
       ) : (
-        <form ref={formRef} id="quick-booking-form" onSubmit={handleSubmit} className="booking-form booking-workspace booking-compose" noValidate>
+        <form onChangeCapture={()=>{draftDirty.current=true;}} ref={formRef} id="quick-booking-form" onSubmit={handleSubmit} className="booking-form booking-workspace booking-compose" noValidate>
+          <LocalDraftNotice disabled={isSubmitting} store={durableDraft} onRestore={value=>{restoredPurpose.current=value.purposeCode;setResourceId(value.resourceId);setSelectedDate(value.selectedDate);setStartTime(value.startTime);setEndTime(value.endTime);setTitle(value.title);setPurpose(value.purpose);setPurposeCode(value.purposeCode);setReview(null);if(value.uncertain==='true'){setSubmissionUncertain(true);setErrorMessage('ui.resourceSelection.uncertain');}}}/>
           <ol className="booking-compose-steps" aria-label={tr('ui.bookingStudio.steps')}><li aria-current={!reviewing ? 'step' : undefined}><span>1</span>{tr('ui.bookingStudio.details')}</li><li aria-current={reviewing ? 'step' : undefined}><span>2</span>{tr('ui.bookingReview.title')}</li></ol>
           {reviewing && <section className="booking-review" aria-labelledby="booking-review-heading">
             <h3 id="booking-review-heading" tabIndex={-1} ref={reviewHeading}>{tr('ui.bookingReview.title')}</h3>
@@ -732,3 +744,4 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
     </BaseModal2026>
   );
 };
+import { useLocalFormDraft } from '../hooks/useLocalFormDraft';

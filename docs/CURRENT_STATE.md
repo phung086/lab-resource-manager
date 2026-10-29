@@ -1,5 +1,102 @@
 # Trạng thái dự án hiện tại
 
+## Đồng nhất màu landing — 29/10/2026
+
+Người dùng chọn giữ giao diện landing hiện tại, chỉ sửa lặt vặt; phát hiện màu
+tím rối (~4 biến thể violet + điểm nhấn teal/cam/hồng) nên rút gọn về một
+accent chuẩn `#6040ce` (hover `#4d33b8`). Không đổi layout/cấu trúc.
+
+Files: `styles/public-landing.css` (--public-accent + hover + shadow + fallback
+--lab-primary), `styles/service-landing.css` (service-hero-label,
+service-button-primary/hover, service-step-number), `styles/global.css`
+(--lab-primary/--lab-primary-hover trong .project-public-shell, footer public
+brand svg/focus, benefits-video-container), `styles/liquid-glass.css` (gradient
+hero title bỏ teal, marquee chip về một màu tím, xóa 3 rule nth-child step
+number màu trang trí — global.css:10351 đã thắng runtime nên không regression).
+
+Kiểm chứng: computed style live toàn bộ `rgb(96,64,206)` tím đơn; screenshot
+full-page landing; `npm run test:ui:contrast` 22 checks / 0 finding;
+`npm run test:required` PASS (build, i18n, lint 2 warning cũ, typecheck).
+Chưa commit. Blocker: không. Bước tiếp: chờ người dùng duyệt màu, có thể cân
+đồng bộ token workspace (#6441d9) về #6040ce nếu được yêu cầu.
+
+## Hướng landing được người dùng chọn lại — 29/10/2026
+
+Người dùng bác hướng landing tối giản và yêu cầu quay lại hướng trước.
+Đã khôi phục PublicLanding với ảnh full-width, glass hero, thẻ nổi,
+announcement/marquee, video và các section trước đó; giữ các sửa câu chữ
+nghiệp vụ về xác nhận/thanh toán. Footer sáng dịu và catalogue explorer
+được giữ. Không tiếp tục áp hướng tối giản lên landing nếu chưa được yêu cầu.
+Build + locale sync + diff-check PASS; browser desktop 1280/mobile 390 không
+tràn ngang, reduced-motion tắt hero animation; /resources vẫn có sidebar.
+Các thay đổi motion/font/assistant đang có của tác giả khác được giữ nguyên.
+Bước đề xuất: tinh chỉnh độ tương phản và nhịp chuyển động trong chính hướng
+landing đa sắc/glass này, không đổi lại cấu trúc tối giản.
+
+## Redesign batch 1: nền tảng font + motion — 29/10/2026
+
+Redesign UI (người dùng giao ngày 29/10, giữ hướng hiện đại/SaaS-ops, i18n VI/EN,
+chuyển động mượt). Batch 1 hoàn tất trong cây chưa commit (không commit).
+Font: Onest 400–700 + JetBrains Mono 400–700 (@fontsource, có subset tiếng Việt)
+thay thế IBM Plex Sans/Mono; Manrope bị loại (không có subset tiếng Việt).
+Đã gỡ keyframe trang trí chết (ledPulseWave, scanMove, bouncePop, bell-shake,
+conic-rotate, typing-bounce, data-stream-wave, radar-pulse, laser-scan,
+landing-ambient-pulse/float) và các animation line treo; giữ scaleIn (live qua
+.notification-counter-pill trong Header.tsx) và lab-guidance-scroll,
+landing-hero-zoom, landing-marquee-slide, landing-cta-orb. Tạo
+styles/lab-motion.css (token --lab-motion-* và primitives .lab-reveal-mask,
+.lab-rise, .lab-fade, .lab-pressable, .lab-ticker; reduced-motion static),
+import sau liquid-glass.css trong main.jsx. Verification: test:required PASS;
+UI gate catalogue/contrast/a11y/customer-accessibility PASS; browser live:
+Onest + JetBrains Mono load thật, landing render đúng, 0 console error.
+Chưa áp primitives mới vào component (batch 2+). Chưa commit.
+
+## Public catalogue explorer — 29/10/2026
+
+Người dùng yêu cầu UI thay đổi lớn. PublicResourceCatalog: sidebar nhóm và
+số lượng theo danh mục đã tải; toolbar tìm kiếm/refresh; thẻ ảnh lớn 2 cột,
+giá/CTA rõ; mobile một cột, nhóm lọc wrap. Chọn tài nguyên mở dossier thay
+list (không modal), trở lại giữ search/category và trả focus đúng opener.
+Tab chi tiết chỉ đổi khi click/Enter, không đổi khi hover/focus. Khu thông tin
+và điều kiện/đặt lịch tách hai vùng. CSS scoped catalog-explorer.css; VI/EN
+thêm 3 keys. Không sửa booking API, guest form, database hay workspace.
+Verification: test:required PASS (2 lint warnings cũ); mở rộng test catalogue
+thêm 12 assertions public, tổng 46/46 fixture / 0 page errors; final build và
+diff-check PASS. Browser live đọc được 25 tài nguyên (timeout lượt trước đã
+hết trong lần này), xem profile thật; VI/EN, 1280px 2 cột / 390px 1 cột,
+không tràn ngang. Không thực hiện đặt lịch hay ghi dữ liệu.
+Tiếp theo: nâng UI chọn khung giờ và bước xem lại đặt lịch cho khách hàng,
+giữ kiểm tra điều kiện/giá và bảo vệ gửi trùng. Chưa thực hiện trong lượt này.
+
+## Trang công khai theo tác vụ — 29/10/2026
+
+Yêu cầu: giao diện/text chuyên nghiệp, giảm cảm giác mẫu AI. PublicLanding
+đổi hero sang bố cục chữ + ảnh tách biệt, bỏ announcement/marquee/thẻ nổi và
+video quảng bá khỏi home, đưa danh mục lên sớm, rút quy trình thành 4 bước,
+CTA đăng nhập nền sáng. Phần vai trò vẫn ở /how-it-works, lịch ở /schedule.
+Giữ API/callback catalog/guest booking, VI/EN và ghi chú dữ liệu minh họa.
+Files: PublicLanding.tsx, styles/service-landing.css, catalogs VI/EN và manifest.
+Không thêm dependency/backend/schema. Styles footer từ lượt trước được giữ.
+Verification: test:required PASS (2 lint warnings cũ), catalog UI fixture
+34 checks / 0 errors; build cuối PASS; browser 4 public routes × 1280/390px
+không tràn ngang, home VI/EN và keyboard CTA → /resources PASS.
+Giới hạn: GET localhost:8000/api/resources timeout sau 8 giây; browser thấy
+catalog loading/request aborted, chưa xác minh dữ liệu live. Không ghi DB.
+Bước tiếp: kiểm tra API timeout, sau đó áp cùng cách phân cấp/câu chữ cho
+catalog chi tiết và luồng đặt lịch. Chưa refactor workspace trong lượt này.
+
+## Footer dịu màu — 29/10/2026
+
+Theo phản hồi người dùng, chỉnh hai block footer hiện có trong
+`frontend/src/styles/global.css`: nền ngà/tím/mint nhạt thay tím sâu,
+chữ tím xám, tiêu đề sentence case, hairline giảm độ nổi và focus tím.
+Giữ nguyên sitemap theo vai trò, nội dung, accordion và logic điều hướng.
+Đã xem trình duyệt public localhost:5173 trước/sau ở 1280px và 390px,
+không tràn ngang; `npm run build` và `git diff --check` PASS.
+Palette áp chung public/workspace; chưa kiểm tra lại màn đăng nhập theo từng
+vai trò trong đợt này. Bước đề xuất tiếp: cân chỉnh khối CTA cuối landing
+đang đậm hơn footer; chưa triển khai ngoài phạm vi.
+
 ## Lô B — ảnh tài nguyên qua nghiệp vụ external media — 29/10/2026
 
 Người dùng duyệt tiếp Lô B. Đã gắn ảnh thật cho 4 phòng còn thiếu

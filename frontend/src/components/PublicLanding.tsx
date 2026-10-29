@@ -6,6 +6,7 @@ import { PublicResourceCatalog } from './PublicResourceCatalog';
 import { useLocale } from '../providers/LocaleProvider';
 import { PublicShell } from './PublicShell';
 import { BenefitsVideo, AnnouncementStrip } from './features/LandingMedia';
+import '../styles/service-landing.css';
 
 type Props = {
   children?: React.ReactNode; scheduleContent?: React.ReactNode; userName?: string;
@@ -86,6 +87,7 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
         }
       ` : ''}</style>
 
+      <div className={page === "home" ? "landing-experience" : `service-landing service-landing--${page}`}>
       {page !== "home" && <header className="public-page-heading"><a href="/">{t("route.page.home")}</a><h1>{t("route.page." + page)}</h1><p>{t("route.description." + page)}</p></header>}
       {page === "home" && <>
       {/* HERO BANNER — full-bleed image under a liquid glass panel, process marquee */}
@@ -225,7 +227,7 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
       </>}
       {(page === "home" || page === "resources") && <>
       {/* RESOURCES CATALOG */}
-      <section className="public-section" style={{ background: 'var(--lab-surface-primary)', padding: page === 'home' ? 'var(--lab-space-16) var(--lab-space-8)' : '24px var(--lab-space-8)' }} id="tai-nguyen" tabIndex={-1}>
+      <section className="public-section service-landing" style={{ background: 'var(--lab-surface-primary)', padding: page === 'home' ? 'var(--lab-space-16) var(--lab-space-8)' : '24px var(--lab-space-8)' }} id="tai-nguyen" tabIndex={-1}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <PublicResourceCatalog onViewSchedule={onViewSchedule} onGuestBookingComplete={onGuestBookingComplete} onReady={handleCatalogReady} />
         </div>
@@ -432,6 +434,7 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
           </div>
         </section>
       )}
+      </div>
     </PublicShell>
   );
 }

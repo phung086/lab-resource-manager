@@ -1,3 +1,4 @@
+import { LocalDraftNotice } from '../../base/LocalDraftNotice';
 import { useEffect, useRef, useState } from 'react';
 import { submitChatOnEnter } from '../../../utils/chatKeyboard';
 import { MessageCircle, Send, RefreshCw, CheckCircle, Circle, Headphones, ArrowDown, Building2, MessagesSquare, ChevronDown } from 'lucide-react';
@@ -22,10 +23,14 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
   const [selected, setSelected] = useState(sessionId || ''), selectedRef = useRef(selected); selectedRef.current = selected;
   const [page, setPage] = useState(1), [status, setStatus] = useState(''), [labFilter, setLabFilter] = useState('');
   const [laboratoryId, setLaboratoryId] = useState(''), [category, setCategory] = useState('OTHER'), [requestMessage, setRequestMessage] = useState('');
+  const requestBackup=useLocalFormDraft('support-request',['laboratoryId','category','requestMessage']);
+  const requestDirty=useRef(false), backupRef=useRef(requestBackup); backupRef.current=requestBackup;
+  useEffect(()=>{if(customer&&requestDirty.current)backupRef.current.save({laboratoryId,category,requestMessage});},[customer,laboratoryId,category,requestMessage]);
   const [shareContext, setShareContext] = useState(Boolean(conversationId)), [contextCount, setContextCount] = useState(0);
   const [drafts, setDrafts] = useState<Record<string, string>>({}), [reason, setReason] = useState('');
   const [accepting, setAccepting] = useState(false), [busy, setBusy] = useState(false), busyRef = useRef(false);
   const [error, setError] = useState(''), [connectionErrors, setConnectionErrors] = useState<Record<string, string>>({}), [revision, setRevision] = useState(0);
+  const errorRef=useRef<HTMLParagraphElement>(null);
   const connectionError = Object.values(connectionErrors).find(Boolean);
   const setConnectionError = (area: string, value: string) => setConnectionErrors(current => ({ ...current, [area]: value }));
   const [loading, setLoading] = useState(true);
@@ -120,7 +125,7 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
   async function mutate(work: () => Promise<void>) {
     if (busyRef.current) return; busyRef.current = true; setBusy(true); setError('');
     try { await work(); if (mounted.current) setRevision(value => value + 1); }
-    catch (cause) { if (mounted.current) { setError(errorKey(cause)); const session = (cause as { details?: { sessionId?: string } }).details?.sessionId; if (session) choose(session); } }
+    catch (cause) { if (mounted.current) { setError(errorKey(cause)); requestAnimationFrame(()=>errorRef.current?.focus()); const session = (cause as { details?: { sessionId?: string } }).details?.sessionId; if (session) choose(session); } }
     finally { busyRef.current = false; if (mounted.current) setBusy(false); }
   }
   const openRequest = Boolean(list?.summary.WAITING || list?.summary.ACTIVE);
@@ -148,6 +153,7 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
     const signature = JSON.stringify(data);
     if (requestAttempt.current?.signature !== signature) requestAttempt.current = { signature, id: crypto.randomUUID() };
     const result = await supportApi.request({ ...data, requestId: requestAttempt.current.id });
+    backupRef.current.clear(); requestDirty.current=false;
     if (!mounted.current) return; requestAttempt.current = null; setRequestMessage(''); choose(result.id);
   }
   async function send() {
@@ -167,8 +173,9 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
   }
   const labelSession = (row: SupportSession) => row.status === 'WAITING' ? tr('support.position', { position: row.queuePosition }) : tr(`support.status.${row.status}`);
   return <section className="support-page" data-role={user.role} data-has-session={Boolean(current && customerTab === 'history')} aria-labelledby="support-heading">
+    {customer && <LocalDraftNotice disabled={busy} store={requestBackup} onRestore={value=>{setLaboratoryId(value.laboratoryId);setCategory(value.category);setRequestMessage(value.requestMessage);setShareContext(false);setCustomerTab('request');}}/>}
     <header className="page-section-header"><div><h1 id="support-heading">{tr('support.title')}</h1><p>{tr(admin ? 'support.adminHelp' : staff ? 'support.staffHelp' : 'support.customerHelp')}</p></div><button type="button" className="secondary-button" onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />{tr('support.refresh')}</button></header>
-    {error && <p className="alert danger" role="alert">{tr(error)}</p>}
+    {error && <p ref={errorRef} tabIndex={-1} className="alert danger" role="alert">{tr(error)}</p>}
     <p className={`support-connection${connectionError ? ' is-error' : ''}`} role="status">{connectionError ? tr(connectionError) : tr('support.liveHelp')}</p>
     {staff && <div className="support-availability"><Headphones size={20} /><div><strong>{tr(accepting ? 'support.accepting' : 'support.paused')}</strong><p>{tr('support.availabilityHelp')}</p></div><button type="button" className="primary-button" disabled={busy || !metadata?.laboratories.length} onClick={() => void mutate(availability)}>{tr(accepting ? 'support.pause' : 'support.goReady')}</button></div>}
     <div className="support-layout">
@@ -177,7 +184,7 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
           <button type="button" aria-pressed={customerTab === 'request'} disabled={openRequest} onClick={() => setCustomerTab('request')}>{tr('support.redesign.newRequest')}</button>
           <button type="button" aria-pressed={customerTab === 'history'} onClick={() => setCustomerTab('history')}>{tr('support.redesign.mySessions')} <span>{list?.pagination.total ?? '—'}</span></button>
         </nav>}
-    {customer && !openRequest && customerTab === 'request' && <form className="support-request" onSubmit={event => { event.preventDefault(); void mutate(request); }}>
+    {customer && !openRequest && customerTab === 'request' && <form onChangeCapture={()=>{requestDirty.current=true;}} className="support-request" onSubmit={event => { event.preventDefault(); void mutate(request); }}>
       <h2>{tr('support.requestTitle')}</h2><div className="support-request-fields"><label>{tr('support.lab')}<select required value={laboratoryId} onChange={event => setLaboratoryId(event.target.value)}><option value="">{tr('support.chooseLab')}</option>{metadata?.laboratories.map(lab => <option key={lab.id} value={lab.id}>{lab.code} · {lab.name}</option>)}</select></label><label>{tr('support.category')}<select value={category} onChange={event => setCategory(event.target.value)}>{categories.map(value => <option key={value} value={value}>{tr(`support.category.${value}`)}</option>)}</select></label></div>
       <label>{tr('support.describe')}<textarea onKeyDown={submitChatOnEnter} required minLength={3} maxLength={2000} rows={3} value={requestMessage} onChange={event => setRequestMessage(event.target.value)} /></label>
       {!!conversationId && !!contextCount && <label className="support-share"><input type="checkbox" checked={shareContext} onChange={event => setShareContext(event.target.checked)} />{tr('support.shareContext', { count: contextCount })}</label>}
@@ -216,3 +223,4 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
     </div>
   </section>;
 }
+import { useLocalFormDraft } from '../../../hooks/useLocalFormDraft';

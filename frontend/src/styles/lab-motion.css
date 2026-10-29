@@ -1,0 +1,90 @@
+/* ═══════════════════════════════════════════════════════════════════
+   LAB MOTION — shared kinetic vocabulary (batch 1, 29/10/2026)
+   One easing set + reusable reveal primitives. Every consumer stays
+   opt-in via class; nothing animates without a class in this file.
+   Reduced motion: all primitives collapse to their final state.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Easing + timing tokens (fallback if --lab-ease-out is undefined) */
+:root {
+  --lab-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --lab-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --lab-motion-fast: 180ms;
+  --lab-motion-base: 320ms;
+  --lab-motion-slow: 520ms;
+  --lab-stagger-step: 60ms;
+}
+
+/* ── Heading line-mask reveal ──
+   Wrap a heading: .lab-reveal-mask > .lab-reveal-mask-line.
+   Lines rise out of a clipped mask, staggered. */
+.lab-reveal-mask { overflow: hidden; }
+.lab-reveal-mask-line {
+  display: block;
+  transform: translateY(110%);
+  animation: lab-mask-rise var(--lab-motion-slow) var(--lab-ease-out) both;
+  animation-delay: calc(var(--lab-stagger-step) * var(--lab-stagger-i, 0));
+}
+@keyframes lab-mask-rise {
+  to { transform: translateY(0); }
+}
+
+/* ── Staggered card / content fade-up ──
+   .lab-rise with --lab-stagger-i set inline (0, 1, 2...). */
+.lab-rise {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: lab-rise-in var(--lab-motion-base) var(--lab-ease-out) both;
+  animation-delay: calc(var(--lab-stagger-step) * var(--lab-stagger-i, 0));
+}
+@keyframes lab-rise-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Single-element fade (no translate, for modals/dropdowns) ── */
+.lab-fade {
+  opacity: 0;
+  animation: lab-fade-in var(--lab-motion-fast) var(--lab-ease-out) both;
+}
+@keyframes lab-fade-in {
+  to { opacity: 1; }
+}
+
+/* ── Micro motion: soft press feedback shared by buttons/cards ── */
+.lab-pressable {
+  transition: transform var(--lab-motion-fast) var(--lab-ease-out);
+}
+@media (hover: hover) {
+  .lab-pressable:active { transform: translateY(1px); }
+}
+
+/* ── Kinetic type strip (marquee-style, paused on hover) ──
+   .lab-ticker > .lab-ticker-track (two identical groups, second aria-hidden). */
+.lab-ticker {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+}
+.lab-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: lab-ticker-slide 38s linear infinite;
+}
+.lab-ticker:hover .lab-ticker-track { animation-play-state: paused; }
+@keyframes lab-ticker-slide {
+  to { transform: translateX(-50%); }
+}
+
+/* ── Reduced motion: everything lands instantly, static ── */
+@media (prefers-reduced-motion: reduce) {
+  .lab-reveal-mask-line,
+  .lab-rise,
+  .lab-fade {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .lab-ticker-track { animation: none; width: 100%; flex-wrap: wrap; }
+  .lab-ticker-track > [aria-hidden="true"] { display: none; }
+  .lab-ticker { mask-image: none; -webkit-mask-image: none; }
+}

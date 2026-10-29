@@ -1,0 +1,68 @@
+/* Resource discovery and dossier share a restrained, task-first surface. */
+.project-public-shell .service-landing .catalog-browser { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 36px; align-items: start; }
+.project-public-shell .service-landing .catalog-browser[hidden], .project-public-shell .service-landing .catalog-grid[hidden] { display: none; }
+.project-public-shell .service-landing .catalog-sidebar { position: sticky; top: 110px; padding: 22px 16px; background: #f5f6f9; border: 1px solid #e5e6ed; border-radius: 14px; }
+.project-public-shell .service-landing .catalog-sidebar h3 { display: flex; align-items: center; gap: 10px; margin: 0 8px 20px; font-size: 14px; font-weight: 600; }
+.project-public-shell .service-landing .catalog-filters { display: grid; gap: 6px; margin: 0; overflow: visible; }
+.project-public-shell .service-landing .catalog-filters button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; border: 1px solid transparent; border-radius: 8px; text-align: left; padding: 10px; color: #535768; background: transparent; box-shadow: none; }
+.project-public-shell .service-landing .catalog-filters button span { flex: 1; }
+.project-public-shell .service-landing .catalog-filters button svg { flex: 0 0 auto; }
+.project-public-shell .service-landing .catalog-filters button small { font-size: 12px; font-variant-numeric: tabular-nums; }
+.project-public-shell .service-landing .catalog-filters button:hover { background: #eae7f2; }
+.project-public-shell .service-landing .catalog-filters button[aria-pressed=true] { color: #49338d; background: #fff; border-color: #d8d0e9; box-shadow: 0 2px 5px #292d3c08; font-weight: 600; }
+.project-public-shell .service-landing .catalog-sidebar-note { font-size: 12px; line-height: 1.7; color: #656878; padding: 18px 8px 0; margin: 20px 0 0; border-top: 1px solid #dfe1e8; }
+.catalog-results { min-width: 0; }
+.catalog-toolbar { display: flex; align-items: end; gap: 12px; }
+.project-public-shell .service-landing .catalog-search-label { flex: 1; max-width: none; margin: 0; }
+.catalog-search-input { position: relative; display: flex; align-items: center; }
+.catalog-search-input > svg { position: absolute; left: 16px; color: #6a637c; pointer-events: none; }
+.project-public-shell .service-landing .catalog-search-input input { padding-left: 46px; min-height: 50px; background: #fff; border-color: #d5d8e2; border-radius: 10px; font-size: 14px; }
+.catalog-refresh { display: grid; place-items: center; width: 50px; min-height: 50px; border: 1px solid #d5d8e2; border-radius: 10px; background: #fff; color: #57516b; cursor: pointer; }
+.project-public-shell .service-landing .catalog-result-count { margin: 18px 0 0; font-size: 13px; color: #656878; }
+.project-public-shell .service-landing .rental-view-switch { margin: 18px 0 24px; border-bottom: 1px solid #e2e5e9; }
+.project-public-shell .service-landing .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.project-public-shell .service-landing .catalog-card { display: flex; flex-direction: column; border: 1px solid #dfe3e9; border-radius: 14px; background: #fff; box-shadow: 0 3px 12px #292d3c05; cursor: default; }
+.project-public-shell .service-landing .catalog-card:hover { transform: none; border-color: #b6aacd; box-shadow: 0 8px 22px #292d3c0c; }
+.project-public-shell .service-landing .catalog-cover { height: 240px; background: #edf1f2; overflow: hidden; border-radius: 0; }
+.project-public-shell .service-landing .catalog-cover img { transition: transform 220ms ease; }
+.project-public-shell .service-landing .catalog-cover:hover img { transform: scale(1.025); }
+.project-public-shell .service-landing .catalog-card-body { padding: 22px; display: flex; flex: 1; flex-direction: column; align-items: stretch; }
+.project-public-shell .service-landing .catalog-card-badges { gap: 6px; margin-bottom: 16px; }
+.project-public-shell .service-landing .card-badge { font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: 0; border-radius: 5px; padding: 4px 7px; }
+.project-public-shell .service-landing .catalog-card-meta { font-size: 11px; font-weight: 500; letter-spacing: .03em; color: #6c647a; }
+.project-public-shell .service-landing .catalog-card-body h3 { font-size: 21px; font-weight: 600; line-height: 1.4; margin: 8px 0 10px; }
+.project-public-shell .service-landing .catalog-card-loc { display: flex; gap: 6px; align-items: center; color: #666b79; font-size: 13px; margin: 0 0 22px; }
+.catalog-card-loc svg { flex-shrink: 0; }
+.catalog-card-bottom { display: flex; flex-direction: column; gap: 12px; margin-top: auto; padding-top: 16px; border-top: 1px solid #edf0f3; }
+.project-public-shell .service-landing .rental-card-price { color: #2d3444; font-size: 19px; font-weight: 600; }
+.project-public-shell .service-landing .catalog-card-cta { justify-content: space-between; width: 100%; min-height: 44px; padding: 8px 0; color: #5940a6; font-size: 14px; font-weight: 600; }
+.project-public-shell .service-landing .catalog-detail { margin-top: 0; border: 0; padding: 0; background: #fff; }
+.project-public-shell .service-landing .catalog-detail-heading { padding: 26px 30px; background: #f3f4f8; border: 1px solid #e3e4ec; border-radius: 14px; align-items: center; }
+.project-public-shell .service-landing .catalog-detail-heading h2 { font-size: clamp(26px, 3vw, 36px); font-weight: 600; line-height: 1.2; margin: 10px 0; }
+.project-public-shell .service-landing .catalog-detail-heading > button { flex-shrink: 0; min-height: 44px; color: #51418a; border-color: #d2cadd; }
+.project-public-shell .service-landing .catalog-detail-layout { grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr); gap: 36px; margin-top: 28px; }
+.project-public-shell .service-landing .catalog-facts { padding: 24px; background: #f8f9fb; border: 1px solid #e3e6eb; border-radius: 14px; }
+.project-public-shell .service-landing .catalog-facts > .public-primary { display: flex; width: 100%; justify-content: center; border-radius: 8px; box-shadow: none; }
+.project-public-shell .service-landing .catalog-schedule { background: #fff; border-color: #e0e4e9; border-radius: 10px; }
+.project-public-shell .service-landing .catalog-eligibility-verdict { border-radius: 8px; }
+.project-public-shell .service-landing .catalog-facts > details > summary { min-height: 44px; padding-block: 10px; cursor: pointer; }
+.project-public-shell .service-landing .catalog-detail .resource-profile-nav { margin-top: 22px; }
+.project-public-shell .service-landing--resources .public-page-heading { max-width: none; padding: 36px max(40px, calc((100vw - 1240px)/2)) 40px; background: linear-gradient(110deg, #f4f1fb, #f3f8f7); border-bottom: 1px solid #e3e5ec; }
+.project-public-shell .service-landing--resources .public-page-heading h1 { font-size: clamp(32px, 3.5vw, 46px); font-weight: 600; }
+.project-public-shell .service-landing--resources .service-catalog { border-top: 0; padding-top: 32px; }
+@media(max-width:1000px) { .project-public-shell .service-landing .catalog-browser { grid-template-columns: 180px minmax(0,1fr); gap: 22px; }.project-public-shell .service-landing .catalog-sidebar { padding-inline: 8px; }.project-public-shell .service-landing .catalog-cover { height: 190px; }.project-public-shell .service-landing .catalog-card-body { padding: 16px; } }
+@media(max-width:800px) {
+  .project-public-shell .service-landing .catalog-browser { grid-template-columns: 1fr; gap: 24px; }
+  .project-public-shell .service-landing .catalog-sidebar { position: static; padding: 16px; }
+  .project-public-shell .service-landing .catalog-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+  .project-public-shell .service-landing .catalog-filters button { width: auto; flex: 1 1 140px; }
+  .project-public-shell .service-landing .catalog-sidebar h3 { margin-bottom: 12px; }
+  .project-public-shell .service-landing .catalog-sidebar-note { margin-top: 12px; padding-top: 12px; }
+  .project-public-shell .service-landing .catalog-detail-layout { grid-template-columns: 1fr; gap: 24px; }
+  .project-public-shell .service-landing .catalog-detail { scroll-margin-top: 155px; }
+  .project-public-shell .service-landing .catalog-detail-heading { padding: 20px; align-items: start; flex-direction: column; }
+  .project-public-shell .service-landing .catalog-facts { padding: 18px; }
+  .project-public-shell .service-landing--resources .public-page-heading { padding: 24px 20px 28px; }
+}
+@media(max-width:540px) { .project-public-shell .service-landing .catalog-grid { grid-template-columns: 1fr; }.project-public-shell .service-landing .catalog-cover { height: 230px; }.project-public-shell .service-landing .catalog-card-body { padding: 20px; } }
+@media(prefers-reduced-motion:reduce) { .project-public-shell .service-landing .catalog-cover img { transition: none; }.project-public-shell .service-landing .catalog-cover:hover img { transform: none; } }

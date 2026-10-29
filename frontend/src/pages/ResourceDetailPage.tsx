@@ -7,7 +7,10 @@ import "../styles/resource-experience.css";
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowLeft, CalendarClock, History, DoorOpen, Microscope, MapPin, Users, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Activity, Wrench, CalendarClock, History, DoorOpen, Microscope, MapPin, Users, ShieldCheck } from "lucide-react";
+import { readRouteParams, workspacePathForTab } from "../workspaceRoutes.js";
+import { TELEMETRY_FEATURES_ENABLED } from "../config/featureFlags";
+
 import { apiRequest } from "../api.js";
 import { useLocale } from "../providers/LocaleProvider";
 import { translate } from "../i18n.js";
@@ -21,6 +24,7 @@ import { formatVietnamDateTime } from "../utils/timezone.js";
 import "../styles/resource-workspace.css";
 import "../styles/resource-discovery.css";
 import "../styles/resource-catalogue.css";
+import "../styles/resource-dossier.css";
 
 export interface ResourceDetailPageProps {
   user?: { id: string; role: string };
@@ -66,6 +70,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   onViewSelection
 }) => {
   const { tr } = useLocale();
+  const isOperator = user?.role === 'ADMIN' || user?.role === 'LAB_STAFF';
 
   // Separate resource state
   const [resource, setResource] = useState<any>(null);
@@ -194,7 +199,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   // Loading state
   if (resourceLoading) {
     return (
-      <div className="workspace-container resource-detail-page">
+      <div className="workspace-container resource-detail-page resource-dossier-studio">
         <div className="resource-detail-loading" role="status" aria-live="polite">
           <p>{tr("ui.loading_148ded83")}</p>
         </div>
@@ -205,7 +210,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   // Resource error state
   if (resourceError || !resource) {
     return (
-      <div className="workspace-container resource-detail-page">
+      <div className="workspace-container resource-detail-page resource-dossier-studio">
         <div className="alert danger" role="alert">
           <p>{tr(resourceError || "ui.resourceDiscovery.notFound")}</p>
           <button type="button" className="btn btn-secondary" onClick={() => setResourceRevision(value => value + 1)}>
@@ -223,7 +228,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   const maintenance = schedule?.maintenanceWindows || [];
 
   return (
-    <div className="workspace-container resource-detail-page">
+    <div className="workspace-container resource-detail-page resource-dossier-studio">
       {/* Breadcrumb / Back */}
       <nav className="resource-detail-breadcrumb" aria-label={tr("ui.resourceDiscovery.navigation")}>
         <button
@@ -237,7 +242,24 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
         </button>
       </nav>
 
+      <header className="resource-profile-hero">
+        <div className="resource-profile-symbol" aria-hidden="true">{resource.category === "ROOM" ? <DoorOpen size={42} strokeWidth={1.4} /> : <Microscope size={42} strokeWidth={1.4} />}</div>
+        <div className="resource-profile-identity">
+          <div className="resource-profile-meta"><span className="resource-detail-code">{resource.code}</span><span>{resource.category ? tr(categoryLabels[resource.category]) : tr("ui.unclassified_10fe63fa")}</span></div>
+          <h1>{resource.name}</h1>
+          <p><MapPin size={16} aria-hidden="true" />{resource.laboratory?.name || resource.location || tr("ui.not_assigned_ebe3cb5d")}</p>
+        </div>
+        <dl className="resource-profile-facts">
+          <div><dt><Users size={16} aria-hidden="true" />{tr(resource.category === "ROOM" ? "ui.catalogue.seats" : "ui.catalogue.quantity")}</dt><dd>{resource.capacity}</dd></div>
+          <div><dt><ShieldCheck size={16} aria-hidden="true" />{tr("ui.approval_required_cc220dc0")}</dt><dd>{tr(resource.effectiveRequiresApproval ? "ui.approval_required_dc95ee8f" : "ui.confirm_automatically_when_eligible_e47b0eb4")}</dd></div>
+        </dl>
+      </header>
       {/* Main Content Grid */}
+      {isOperator && <nav className="resource-operations-strip" aria-label={tr('ui.dossier.operations')}>
+        <div><Wrench size={22} aria-hidden="true"/><span><strong>{tr('ui.dossier.operations')}</strong><small>{tr('ui.dossier.operationsHint')}</small></span></div>
+        {TELEMETRY_FEATURES_ENABLED && <a href={workspacePathForTab('monitoring',{...Object.fromEntries(readRouteParams()),resource:resource.id})}><Activity size={17} aria-hidden="true"/>{tr('ui.care.title')}<ArrowRight size={16} aria-hidden="true"/></a>}
+        <a href={workspacePathForTab('maintenance',{...Object.fromEntries(readRouteParams()),resource:resource.id})}>{tr('ui.rental.scheduleService')}<ArrowRight size={16} aria-hidden="true"/></a>
+      </nav>}
       <div className="resource-detail-layout">
         {/* Left Column: Gallery + Details */}
         <div className="resource-detail-main" data-section={section}>
@@ -248,7 +270,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
           </section>
 
       <nav className="resource-profile-nav" aria-label={tr("ui.catalogue.detailNavigation")}>
-        {[ ["overview", "ui.resourceDiscovery.overview"], ["specs", "ui.catalogue.specifications"], ["usage", "ui.usage_guide_28e5af8d"], ["pricing", "ui.rental.pricing"], ["schedule", "ui.resourceDiscovery.schedule"] ].map(([value,label]) => <button key={value} type="button" aria-pressed={section === value} aria-controls={`${value}-heading`} onClick={() => setSection(value)}>{tr(label)}</button>)}
+        {[ ["overview", "ui.resourceDiscovery.overview"], ["specs", "ui.catalogue.specifications"], ["usage", "ui.usage_guide_28e5af8d"], ["pricing", "ui.rental.pricing"], ["schedule", "ui.resourceDiscovery.schedule"], ...(user ? [["history", "refine.history"]] : []) ].map(([value,label]) => <button key={value} type="button" aria-pressed={section === value} aria-controls={`${value}-heading`} onClick={() => { setSection(value); if (value === 'history') loadHistory(); }}>{tr(label)}</button>)}
       </nav>
 
           {/* Overview */}
@@ -347,11 +369,12 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
           </section>
 
           {/* History — loads on demand */}
-          <section className="resource-detail-section" aria-labelledby="history-heading" hidden={!user || section !== "schedule"}>
+          <section className="resource-detail-section resource-history-panel" aria-labelledby="history-heading" hidden={!user || section !== "history"}>
             <h3 id="history-heading" className="resource-section-title">
               <History size={18} aria-hidden="true" />
               {tr("ui.recorded_resource_history_e8b75ec5")}
             </h3>
+            <p className="resource-history-intro">{tr('ui.dossier.historyHint')}</p>
             {!historyLoaded && (
               <button
                 type="button"
@@ -380,15 +403,17 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
               <p className="resource-detail-empty">{tr("ui.no_history_events_recorded_8a049a1a")}</p>
             )}
             {history.length > 0 && (
-              <div className="resource-event-list resource-history-list">
+              <div className="resource-event-list resource-history-list" role="list">
                 {history.slice(0, 20).map((event: any) => (
-                  <div key={`${event.source}-${event.id}`} className="resource-event-item">
+                  <div key={`${event.source}-${event.id}`} className="resource-event-item" role="listitem" data-source={event.source}>
+                    <span className="resource-history-kind">{tr(['booking','usage_log','booking_activity'].includes(event.source) ? 'ui.booking_b2e1971c' : event.source === 'maintenance_window' ? 'ui.maintenance_8ad424bd' : event.source === 'incident' ? 'ui.incident_36824380' : 'ui.physical_state_c30af32d')}</span>
                     <strong>{historyLabel(event)}</strong>
                     <span className="resource-event-meta">
                       {formatDate(event.timestamp)}
-                      {" · "}{tr("ui.source_7a7af506")}{event.source}
                       {event.actor?.fullName ? ` · ${event.actor.fullName}` : ""}
                     </span>
+                    {isOperator && event.reference?.maintenanceWindowId && <a href={workspacePathForTab('maintenance',{...Object.fromEntries(readRouteParams()),resource:resource.id,job:event.reference.maintenanceWindowId})}>{tr('ui.dossier.openRecord')}<ArrowRight size={15} aria-hidden="true"/></a>}
+                    {isOperator && event.reference?.incidentId && <a href={workspacePathForTab('incidents',{incident:event.reference.incidentId})}>{tr('ui.dossier.openRecord')}<ArrowRight size={15} aria-hidden="true"/></a>}
                   </div>
                 ))}
               </div>
@@ -404,18 +429,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
 
         {/* Right Column: Actions Sidebar */}
         <aside className="resource-detail-sidebar">
-      <header className="resource-profile-hero">
-        <div className="resource-profile-symbol" aria-hidden="true">{resource.category === "ROOM" ? <DoorOpen size={42} strokeWidth={1.4} /> : <Microscope size={42} strokeWidth={1.4} />}</div>
-        <div className="resource-profile-identity">
-          <div className="resource-profile-meta"><span className="resource-detail-code">{resource.code}</span><span>{resource.category ? tr(categoryLabels[resource.category]) : tr("ui.unclassified_10fe63fa")}</span></div>
-          <h1>{resource.name}</h1>
-          <p><MapPin size={16} aria-hidden="true" />{resource.laboratory?.name || resource.location || tr("ui.not_assigned_ebe3cb5d")}</p>
-        </div>
-        <dl className="resource-profile-facts">
-          <div><dt><Users size={16} aria-hidden="true" />{tr(resource.category === "ROOM" ? "ui.catalogue.seats" : "ui.catalogue.quantity")}</dt><dd>{resource.capacity}</dd></div>
-          <div><dt><ShieldCheck size={16} aria-hidden="true" />{tr("ui.approval_required_cc220dc0")}</dt><dd>{tr(resource.effectiveRequiresApproval ? "ui.approval_required_dc95ee8f" : "ui.confirm_automatically_when_eligible_e47b0eb4")}</dd></div>
-        </dl>
-      </header>
+
 
           <div className="resource-sidebar-card">
             {/* Header */}

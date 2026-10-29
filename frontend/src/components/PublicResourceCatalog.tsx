@@ -10,6 +10,10 @@ import {
   Info,
   Microscope,
   RefreshCw,
+  Search,
+  SlidersHorizontal,
+  MapPin,
+  Layers,
   ShieldAlert,
   ShieldCheck,
   XCircle
@@ -25,6 +29,7 @@ import { ResourcePricingSummary } from "./ResourcePricingSummary";
 import { ResourceMediaPreview } from "./ResourceMediaPreview";
 import { formatVietnamDateTime } from "../utils/timezone";
 import "../styles/public-catalog.css";
+import "../styles/catalog-explorer.css";
 
 type Media = {
   id: string;
@@ -227,7 +232,7 @@ export function PublicResourceCatalog({
   function closeDetails() {
     detailRequest.current += 1;
     setSelected(null);
-    detailOpener.current?.focus();
+    requestAnimationFrame(() => detailOpener.current?.focus());
   }
 
   const busyBookings = (schedule?.bookings || [])
@@ -295,7 +300,9 @@ export function PublicResourceCatalog({
         </button>
       </div>
 
-      <label className="catalog-search-label">{t("ui.find_a_room_or_equipment_818cf711")}<input type="search" value={search} maxLength={120} onChange={event => { setSearch(event.target.value); setLimit(6); }} placeholder={t("ui.name_resource_code_or_location_9c88af3a")} /></label>
+      <div className="catalog-browser" hidden={Boolean(selected)}>
+      <aside className="catalog-sidebar">
+        <h3><SlidersHorizontal size={17} aria-hidden="true" />{t('ui.filter_resources_011c6ead')}</h3>
       <div className="catalog-filters" role="group" aria-label={tr("ui.filter_resources_011c6ead")}>
         {[
           ["ALL", tr("ui.all_49c73a31")],
@@ -311,11 +318,21 @@ export function PublicResourceCatalog({
             aria-pressed={filter === code}
             onClick={() => { setFilter(code); setLimit(6); }}
           >
-            {tr(label)}
+            {code === "ROOM" ? <DoorOpen size={18} aria-hidden="true" /> : code === "EQUIPMENT" ? <Microscope size={18} aria-hidden="true" /> : <Layers size={18} aria-hidden="true" />}
+            <span>{tr(label)}</span>
+            {!loading && !error && <small>{code === "ALL" ? resources.length : resources.filter(row => row.category === code).length}</small>}
           </button>
         ))}
       </div>
 
+      <p className="catalog-sidebar-note">{t('ui.catalogue.explorer.scope')}</p>
+      </aside>
+      <div className="catalog-results">
+      <div className="catalog-toolbar">
+      <label className="catalog-search-label">{t("ui.find_a_room_or_equipment_818cf711")}<span className="catalog-search-input"><Search size={19} aria-hidden="true" /><input type="search" value={search} maxLength={120} onChange={event => { setSearch(event.target.value); setLimit(6); }} placeholder={t("ui.name_resource_code_or_location_9c88af3a")} /></span></label>
+      <button className="catalog-refresh" type="button" onClick={() => setRevision(value => value + 1)} aria-label={t('ui.refresh_catalogue_31811f79')}><RefreshCw size={18} aria-hidden="true" /></button>
+      </div>
+      {!loading && !error && <p className="catalog-result-count" role="status">{t('ui.catalogue.explorer.results', { count: matches.length })}</p>}
       {loading && <p role="status">{tr("ui.loading_rooms_and_equipment_e2ad6ba4")}</p>}
       {error && (
         <div className="catalog-message" role="alert">
@@ -339,7 +356,7 @@ export function PublicResourceCatalog({
             class: "badge-op-other"
           };
           return (
-            <article key={row.id} className="catalog-card">
+            <article key={row.id} className="catalog-card" data-category={row.category}>
               <button
                 type="button"
                 className="catalog-cover"
@@ -372,7 +389,8 @@ export function PublicResourceCatalog({
                   {tr(categoryLabels[row.category || ""] || row.category || "")} · {row.code}
                 </span>
                 <h3>{row.name}</h3>
-                <p className="catalog-card-loc">{row.location}</p>
+                <p className="catalog-card-loc"><MapPin size={14} aria-hidden="true" />{row.location}</p>
+                <div className="catalog-card-bottom">
                 <strong className="rental-card-price">{row.rental ? new Intl.NumberFormat("vi-VN").format(row.rental.hourlyRateVnd) + " ₫ / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</strong>
 
                 {/* Primary CTA */}
@@ -383,6 +401,7 @@ export function PublicResourceCatalog({
                 >
                   {tr("ui.view_schedule_book_8ca5d3f1")}<ArrowRight size={16} aria-hidden="true" />
                 </button>
+                </div>
               </div>
             </article>
           );
@@ -390,6 +409,8 @@ export function PublicResourceCatalog({
       </div>
 
       {!priceView && !loading && !error && matches.length > limit && <button type="button" className="public-secondary catalog-show-more" onClick={() => setLimit(value => value + 6)}>{t("ui.show_more_resources_8cf8a7b8")} ({matches.length - limit})</button>}
+      </div>
+      </div>
       {/* Resource Detail Section */}
       {selected && (
         <section className="catalog-detail" id="chi-tiet-tai-nguyen" aria-labelledby="catalog-detail-title">
@@ -402,7 +423,7 @@ export function PublicResourceCatalog({
               <p>{selected.laboratory?.name || selected.location}</p>
             </div>
             <button type="button" onClick={closeDetails} aria-label={tr("ui.close_details_f6d87bfc")}>
-              {tr("ui.close_5d54c2a1")}</button>
+              {tr("ui.catalogue.explorer.back")}</button>
           </div>
 
           {detailLoading ? (
@@ -414,7 +435,7 @@ export function PublicResourceCatalog({
             </div>
           ) : null}
 
-          <nav className="resource-profile-nav" aria-label={tr('ui.catalogue.detailNavigation')}>{[['overview','ui.resourceDiscovery.overview'],['specs','ui.catalogue.specifications'],['usage','ui.usage_guide_28e5af8d']].map(([value,key]) => <button key={value} type="button" aria-pressed={detailSection===value} onPointerEnter={()=>setDetailSection(value)} onFocus={()=>setDetailSection(value)} onClick={()=>setDetailSection(value)}>{tr(key)}</button>)}</nav>
+          <nav className="resource-profile-nav" aria-label={tr('ui.catalogue.detailNavigation')}>{[['overview','ui.resourceDiscovery.overview'],['specs','ui.catalogue.specifications'],['usage','ui.usage_guide_28e5af8d']].map(([value,key]) => <button key={value} type="button" aria-pressed={detailSection===value} onClick={()=>setDetailSection(value)}>{tr(key)}</button>)}</nav>
           <div className="catalog-detail-layout">
             <div className="catalog-media-gallery">
               <div hidden={detailSection!=="overview"}><ResourceGallery key={selected.id} resourceId={selected.id} initialItems={selected.media}/></div>

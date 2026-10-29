@@ -1,0 +1,30 @@
+.workspace-shell.lab-spectrum .resource-dossier-studio>.resource-profile-hero { flex-direction:row; align-items:center; flex-wrap:wrap; border-radius:16px; padding:28px; gap:24px; background:linear-gradient(115deg,#eee7fc,#f3f7fc 60%,#e3f3ed); }
+.workspace-shell.lab-spectrum .resource-dossier-studio>.resource-profile-hero .resource-profile-identity { flex:1; min-width:180px; }
+.workspace-shell.lab-spectrum .resource-dossier-studio>.resource-profile-hero .resource-profile-facts { border-top:0; padding:0; max-width:320px; }
+.workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-sidebar { border-radius:16px; box-shadow:none; }
+.workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-layout { grid-template-columns:minmax(0,1fr) 320px; }
+.workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-main { gap:20px; }
+.workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-gallery { order:2; }
+.workspace-shell.lab-spectrum .resource-dossier-studio .resource-profile-nav { order:0; margin:0; border-radius:12px; }
+.workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-section { order:1; margin:0; border-radius:12px; }
+.workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-timestamps { order:3; }
+.workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-section:not([hidden]) { animation:dossier-panel-reveal 260ms cubic-bezier(.16,1,.3,1); }
+.workspace-shell.lab-spectrum .resource-dossier-studio .lab-resource-gallery figure img,.workspace-shell.lab-spectrum .resource-dossier-studio .lab-resource-gallery figure video { max-height:320px; }
+.resource-operations-strip { display:flex; align-items:center; flex-wrap:wrap; gap:16px 24px; padding:20px 0; border-bottom:1px solid var(--workspace-border,#ded7e8); }
+.resource-operations-strip>div { display:flex; align-items:center; gap:12px; flex:1; min-width:220px; }
+.resource-operations-strip strong,.resource-operations-strip small { display:block; }
+.resource-operations-strip small { margin-top:4px; font-size:.8rem; line-height:1.5; color:var(--workspace-text-muted,#61596c); }
+.resource-operations-strip a { display:flex; align-items:center; gap:8px; min-height:44px; color:var(--workspace-primary,#6441d9); text-underline-offset:4px; font-size:.85rem; }
+.resource-history-intro { max-width:65ch; line-height:1.6; color:var(--workspace-text-muted,#61596c); }
+.resource-dossier-studio .resource-history-list { position:relative; gap:0; margin-top:24px; }
+.resource-dossier-studio .resource-history-list .resource-event-item { position:relative; display:grid; gap:8px; padding:0 0 28px 28px; margin:0; border:0; border-left:1px solid var(--workspace-border,#ded7e8); border-radius:0; background:none; }
+.resource-dossier-studio .resource-history-list .resource-event-item::before { content:''; position:absolute; left:-5px; top:4px; width:9px; height:9px; border-radius:50%; background:var(--workspace-primary,#6441d9); }
+.resource-dossier-studio .resource-history-list .resource-event-item[data-source=maintenance_window]::before { background:#18735e; }
+.resource-dossier-studio .resource-history-list .resource-event-item[data-source=incident]::before { background:#ac3c4b; }
+.resource-history-kind { font-size:.75rem; color:var(--workspace-text-muted,#61596c); }
+.resource-dossier-studio .resource-history-list a { display:inline-flex; align-items:center; gap:8px; min-height:44px; color:var(--workspace-primary,#6441d9); text-underline-offset:4px; }
+.resource-dossier-studio :is(a,button):focus-visible { outline:3px solid var(--workspace-primary,#6441d9); outline-offset:3px; }
+@keyframes dossier-panel-reveal { from { transform:translateY(7px); } to { transform:translateY(0); } }
+@media(max-width:1050px) { .workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-layout { display:flex; flex-direction:column; } .workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-main { display:flex; width:100%; } .workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-sidebar { display:block; width:100%; order:-1; position:static; } .workspace-shell.lab-spectrum .resource-dossier-studio>.resource-profile-hero .resource-profile-facts { max-width:none; flex-basis:100%; } }
+@media(max-width:520px) { .workspace-shell.lab-spectrum .resource-dossier-studio>.resource-profile-hero { padding:20px; gap:16px; } .resource-operations-strip { gap:12px; } }
+@media(prefers-reduced-motion:reduce) { .workspace-shell.lab-spectrum .resource-dossier-studio .resource-detail-section:not([hidden]) { animation:none; } }

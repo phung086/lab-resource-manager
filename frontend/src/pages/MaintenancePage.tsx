@@ -3,15 +3,21 @@ import { ArrowUpRight, ArrowRight, CalendarCheck2, CheckCircle2, Clock3, Search,
 import { WorkbenchPath } from '../components/base/WorkbenchPath';
 import { translate } from '../i18n.js';
 import { apiRequest } from '../api.js';
+import { navigateApp, readRouteParams, resourceDetailPath, workspacePathForTab } from '../workspaceRoutes.js';
 import { formatVietnamDateTime } from '../utils/timezone';
 import { maintenanceLocalTime, validateMaintenanceDraft, validateMaintenanceProgress } from '../utils/maintenanceValidation';
 import type { MaintenanceDraft, MaintenanceErrors, MaintenanceField } from '../utils/maintenanceValidation';
+import { readMaintenanceDraft, writeMaintenanceDraft, clearMaintenanceDraft, maintenanceDraftPending, type StoredMaintenanceDraft } from '../utils/maintenanceDraftStorage';
 import '../styles/maintenance-workspace.css';
 import { MaintenanceCyclePanel } from '../components/features/monitoring/MaintenanceCyclePanel';
 
 type Row = Record<string, any>;
 type ImpactReview = { key: string; conflicts: Row[] };
 const openStatuses = ['scheduled', 'in_progress'];
+const readMaintenanceFilter = () => {
+  const value = readRouteParams().get('maintenanceStatus') || 'open';
+  return ['open', 'all', 'scheduled', 'in_progress', 'completed', 'cancelled'].includes(value) ? value : 'open';
+};
 const blankDraft = (): MaintenanceDraft => ({ resourceId: '', title: '', kind: 'maintenance', startAt: '', endAt: '', notes: '', changeReason: '' });
 const labelKeys: Record<MaintenanceField, string> = {
   resourceId: 'ui.resource_9a35ef53', title: 'ui.job_title_2dbcad3d', kind: 'ui.job_type_173c2afd',
@@ -67,7 +73,7 @@ function ProgressForm({ row, busy, onTransition }: { row: Row; busy: boolean; on
   </details>;
 }
 
-export function MaintenancePage({ locale, resources, maintenance, onChanged, onBookings }: { locale: string; resources: Row[]; maintenance: Row[]; onChanged: () => void; onBookings: () => void }) {
+export function MaintenancePage({ actorId, locale, resources, maintenance, onChanged, onBookings }: { actorId: string; locale: string; resources: Row[]; maintenance: Row[]; onChanged: () => void; onBookings: () => void }) {
   const t = translate;
   const [editing, setEditing] = useState<Row | null>(null);
   const [draft, setDraft] = useState<MaintenanceDraft>(blankDraft);
@@ -76,9 +82,30 @@ export function MaintenancePage({ locale, resources, maintenance, onChanged, onB
   const [operation, setOperation] = useState<'checking' | 'saving' | 'updating' | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [filter, setFilter] = useState('open');
-  const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState('');
+  const [storageError, setStorageError] = useState(() => maintenanceDraftPending(actorId));
+  const [backup, setBackup] = useState<StoredMaintenanceDraft | null>(() => {
+    try { return readMaintenanceDraft(actorId); } catch { return null; }
+  });
+  useEffect(() => {
+    if (!editing || !storageError) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload',warn);
+    return () => window.removeEventListener('beforeunload',warn);
+  },[editing,storageError]);
+  const [filter, setFilter] = useState(readMaintenanceFilter);
+  const [query, setQuery] = useState(() => readRouteParams().get('maintenanceSearch') || '');
+  const [resourceScope, setResourceScope] = useState(() => readRouteParams().get('resource') || '');
+  const [selectedId, setSelectedId] = useState(() => readRouteParams().get('job') || '');
+  useEffect(() => {
+    const sync = () => {
+      const params = readRouteParams();
+      setSelectedId(params.get('job') || ''); setResourceScope(params.get('resource') || '');
+      setFilter(readMaintenanceFilter()); setQuery(params.get('maintenanceSearch') || '');
+    };
+    window.addEventListener('popstate', sync);
+    window.addEventListener('lrm:route-change', sync);
+    return () => { window.removeEventListener('popstate', sync); window.removeEventListener('lrm:route-change', sync); };
+  }, []);
   const formRef = useRef<HTMLFormElement>(null);
   const detailRef = useRef<HTMLDivElement>(null);
   const newButtonRef = useRef<HTMLButtonElement>(null);
@@ -88,9 +115,20 @@ export function MaintenancePage({ locale, resources, maintenance, onChanged, onB
   useEffect(() => () => impactAbort.current?.abort(), []);
   const busy = operation !== null;
   const searchText = query.trim().toLocaleLowerCase(locale);
-  const visibleJobs = maintenance.filter(row => (filter === 'all' || (filter === 'open' ? openStatuses.includes(row.status) : row.status === filter)) && (!searchText || [row.title, row.resource?.code, row.resource?.name].some(value => String(value || '').toLocaleLowerCase(locale).includes(searchText))));
+  const visibleJobs = maintenance.filter(row => (!resourceScope || (row.resourceId || row.resource?.id) === resourceScope) && (filter === 'all' || (filter === 'open' ? openStatuses.includes(row.status) : row.status === filter)) && (!searchText || [row.title, row.resource?.code, row.resource?.name].some(value => String(value || '').toLocaleLowerCase(locale).includes(searchText))));
+  const scopedResource = resources.find(row => row.id === resourceScope);
+  const returnParams = readRouteParams();
+  returnParams.delete('resource');
+  const returnPath = /^[a-zA-Z0-9_-]{1,128}$/.test(resourceScope) ? resourceDetailPath(resourceScope, returnParams) : '';
+  function updateRoute(values: Record<string,string>, replace = false) {
+    const params = readRouteParams();
+    for (const [key,value] of Object.entries(values)) { if (value) params.set(key,value); else params.delete(key); }
+    navigateApp(workspacePathForTab('maintenance',params), {replace,notify:false});
+    setFilter(readMaintenanceFilter()); setQuery(params.get('maintenanceSearch') || '');
+    setResourceScope(params.get('resource') || ''); setSelectedId(params.get('job') || '');
+  }
   // Keep the selected outcome readable when completion removes it from the open queue.
-  const selected = maintenance.find(row => row.id === selectedId) || null;
+  const selected = maintenance.find(row => row.id === selectedId && (!resourceScope || (row.resourceId || row.resource?.id) === resourceScope)) || null;
   const original = editing?.id ? editing : null;
   const currentJob = original ? maintenance.find(row => row.id === original.id) : null;
   const staleJob = Boolean(original && (!currentJob || currentJob.status !== original.status || currentJob.updatedAt !== original.updatedAt));
@@ -105,7 +143,7 @@ export function MaintenancePage({ locale, resources, maintenance, onChanged, onB
     });
   }
   function openPlanner(row?: Row) {
-    if (busy || editing) return;
+    if (busy || editing || backup) return;
     setEditing(row || {});
     const requestedResource = new URLSearchParams(window.location.search).get('resource');
     setDraft(row ? { resourceId: row.resource?.id || row.resourceId || '', title: row.title || '', kind: row.kind || 'maintenance', startAt: maintenanceLocalTime(row.startAt), endAt: maintenanceLocalTime(row.endAt), notes: row.notes || '', changeReason: '' } : { ...blankDraft(), resourceId: resources.some(item => item.id === requestedResource) ? requestedResource! : '' });
@@ -113,11 +151,15 @@ export function MaintenancePage({ locale, resources, maintenance, onChanged, onB
   }
   function closePlanner() {
     if (busy) return;
+    if (storageError) return;
     setEditing(null); setReview(null); setFieldErrors({}); setError('');
     requestAnimationFrame(() => newButtonRef.current?.focus());
   }
   function updateDraft(field: MaintenanceField, value: string) {
     const next = { ...draft, [field]: value };
+    const record: StoredMaintenanceDraft = { version:1, savedAt:Date.now(), draft:next, original:original ? {id:original.id,status:original.status,updatedAt:original.updatedAt,resourceId:original.resourceId || original.resource?.id,startAt:original.startAt,endAt:original.endAt} : null };
+    setBackup(record);
+    try { writeMaintenanceDraft(actorId,record); setStorageError(false); } catch { setStorageError(true); }
     setDraft(previous => ({ ...previous, [field]: value }));
     if (['resourceId', 'startAt', 'endAt'].includes(field)) setReview(null);
     if (fieldErrors[field]) {
@@ -125,6 +167,15 @@ export function MaintenancePage({ locale, resources, maintenance, onChanged, onB
       setFieldErrors(previous => ({ ...previous, [field]: nextErrors[field] }));
     }
     setError('');
+  }
+  function restoreDraft() {
+    if (!backup) return;
+    setEditing(backup.original || {}); setDraft(backup.draft);
+    setReview(null); setFieldErrors({}); setError(''); focusDetail();
+  }
+  function discardDraft() {
+    try { clearMaintenanceDraft(actorId); setBackup(null); setStorageError(false); setEditing(null); setReview(null); setError(''); }
+    catch { setStorageError(true); }
   }
   function showServerError(caught: unknown) {
     setError(caught instanceof Error ? caught.message : 'api.API_REQUEST_FAILED');
@@ -161,6 +212,8 @@ export function MaintenancePage({ locale, resources, maintenance, onChanged, onB
     setOperation('saving'); setError(''); setNotice('');
     try {
       await apiRequest(original ? '/maintenance/' + original.id : '/maintenance', { method: original ? 'PATCH' : 'POST', body: JSON.stringify(result.data) });
+      setBackup(null); setStorageError(false);
+      try { clearMaintenanceDraft(actorId); } catch { /* Confirmed server save must never remain restorable in this session. */ }
       setEditing(null); setReview(null); setFieldErrors({}); onChanged(); setNotice('ui.maintenance_saved_after_rechecking_conflicts_e1c210d1');
       requestAnimationFrame(() => newButtonRef.current?.focus());
     } catch (caught: any) {
@@ -190,18 +243,28 @@ export function MaintenancePage({ locale, resources, maintenance, onChanged, onB
   return <section className="maintenance-workspace operations-workbench" data-has-selection={Boolean(selected || editing)}>
     <header className="maintenance-heading">
       <div><h1>{t('ui.maintenance_and_calibration_fa8ebcfe')}</h1><p className="workbench-heading-help">{t('ui.workbench.maintenanceIntro')}</p></div>
-      <button ref={newButtonRef} className="primary-button" disabled={busy || Boolean(editing)} onClick={() => openPlanner()}><Wrench size={18} aria-hidden="true" />{t('ui.schedule_maintenance_c16a1e26')}</button>
+      <button ref={newButtonRef} className="primary-button" disabled={busy || Boolean(editing) || Boolean(backup)} onClick={() => openPlanner()}><Wrench size={18} aria-hidden="true" />{t('ui.schedule_maintenance_c16a1e26')}</button>
     </header>
+    {backup && <section className="maintenance-draft-notice" aria-label={t('ui.maintenanceDraft.title')}>
+      <div><strong>{t('ui.maintenanceDraft.title')}</strong><p role="status">{t(storageError ? 'ui.maintenanceDraft.unavailable' : 'ui.maintenanceDraft.saved')} {!storageError && formatVietnamDateTime(new Date(backup.savedAt).toISOString())}</p><small>{t('ui.maintenanceDraft.local')}</small></div>
+      {!editing && <button className="primary-button" onClick={restoreDraft}>{t('ui.maintenanceDraft.restore')}</button>}
+      <button className="secondary-button" disabled={busy} onClick={discardDraft}>{t('ui.maintenanceDraft.discard')}</button>
+    </section>}
+    {resourceScope && <nav className="maintenance-resource-context" aria-label={t('ui.maintenanceContext.title')}>
+      <div><Wrench size={21} aria-hidden="true"/><span><small>{t('ui.maintenanceContext.title')}</small><strong>{scopedResource ? `${scopedResource.code} · ${scopedResource.name}` : t('ui.maintenanceContext.unavailable')}</strong></span></div>
+      {returnPath && <a href={returnPath}>{t('ui.maintenanceContext.back')}<ArrowUpRight size={16} aria-hidden="true"/></a>}
+      <button className="secondary-button" disabled={busy || Boolean(editing) || Boolean(backup)} onClick={() => updateRoute({resource:'',job:''})}>{t('ui.maintenanceContext.clear')}</button>
+    </nav>}
     <MaintenanceCyclePanel/>
     {notice && <p className="maintenance-notice" role="status"><CheckCircle2 size={18} aria-hidden="true" />{t(notice)}</p>}
     <div className="maintenance-toolbar">
-      <div className="maintenance-search"><Search size={18} aria-hidden="true" /><label className="maintenance-sr-only" htmlFor="maintenance-search">{t('ui.maintenance.search')}</label><input id="maintenance-search" type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={t('ui.maintenance.search')} disabled={busy} /></div>
-      <div className="maintenance-filter"><label htmlFor="maintenance-status">{t('ui.maintenance.stateFilter')}</label><select id="maintenance-status" value={filter} onChange={e => setFilter(e.target.value)} disabled={busy}><option value="open">{t('ui.maintenance.openJobs')}</option><option value="all">{t('ui.maintenance.allJobs')}</option>{['scheduled','in_progress','completed','cancelled'].map(value => <option key={value} value={value}>{t(({ scheduled: 'ui.scheduled_2cf00513', in_progress: 'ui.in_progress_50e04c04', completed: 'ui.completed_5eb36f8c', cancelled: 'ui.cancelled_2f777a90' } as Record<string,string>)[value])}</option>)}</select></div>
+      <div className="maintenance-search"><Search size={18} aria-hidden="true" /><label className="maintenance-sr-only" htmlFor="maintenance-search">{t('ui.maintenance.search')}</label><input id="maintenance-search" type="search" value={query} onChange={e => updateRoute({maintenanceSearch:e.target.value},true)} placeholder={t('ui.maintenance.search')} disabled={busy} /></div>
+      <div className="maintenance-filter"><label htmlFor="maintenance-status">{t('ui.maintenance.stateFilter')}</label><select id="maintenance-status" value={filter} onChange={e => updateRoute({maintenanceStatus:e.target.value})} disabled={busy}><option value="open">{t('ui.maintenance.openJobs')}</option><option value="all">{t('ui.maintenance.allJobs')}</option>{['scheduled','in_progress','completed','cancelled'].map(value => <option key={value} value={value}>{t(({ scheduled: 'ui.scheduled_2cf00513', in_progress: 'ui.in_progress_50e04c04', completed: 'ui.completed_5eb36f8c', cancelled: 'ui.cancelled_2f777a90' } as Record<string,string>)[value])}</option>)}</select></div>
     </div>
     <div className="maintenance-columns">
       <section className="maintenance-queue" aria-labelledby="maintenance-queue-title">
         <div className="maintenance-queue-heading"><h2 id="maintenance-queue-title">{t('ui.maintenance.queueTitle')}</h2><p role="status">{t('ui.maintenance.filteredCount', { count: visibleJobs.length })}</p></div>
-        {visibleJobs.length > 0 ? <ul className="maintenance-job-list">{visibleJobs.map(row => <li key={row.id}><button className="maintenance-job" type="button" disabled={busy || Boolean(editing)} aria-pressed={selected?.id === row.id} onClick={() => { setSelectedId(row.id); setError(''); focusDetail(); }}><span className="workbench-kind"><Wrench size={15} aria-hidden="true" />{t(row.kind === 'calibration' ? 'ui.calibration_a71e17c8' : 'ui.maintenance_8ad424bd')}</span><Status value={row.status} /><span className="maintenance-job-title">{row.title}</span><span className="maintenance-job-resource">{row.resource?.code} · {row.resource?.name}</span><span className="maintenance-job-time"><Clock3 size={15} aria-hidden="true" />{formatVietnamDateTime(row.startAt)}<ArrowRight size={13} aria-hidden="true" />{formatVietnamDateTime(row.endAt)}</span></button></li>)}</ul> : <div className="maintenance-empty"><Wrench size={24} aria-hidden="true" /><h3>{t(hasFilters ? 'ui.maintenance.noMatches' : 'ui.no_open_maintenance_jobs_2ab3ecb0')}</h3>{hasFilters && <button className="secondary-button" onClick={() => { setQuery(''); setFilter('open'); }}>{t('ui.maintenance.clearFilters')}</button>}{filter === 'open' && !query.trim() && maintenance.length > 0 && <button className="secondary-button" onClick={() => setFilter('all')}>{t('ui.view_all_jobs_91067a97')}</button>}</div>}
+        {visibleJobs.length > 0 ? <ul className="maintenance-job-list">{visibleJobs.map(row => <li key={row.id}><button className="maintenance-job" type="button" disabled={busy || Boolean(editing) || Boolean(backup)} aria-pressed={selected?.id === row.id} onClick={() => { updateRoute({job:row.id}); setError(''); focusDetail(); }}><span className="workbench-kind"><Wrench size={15} aria-hidden="true" />{t(row.kind === 'calibration' ? 'ui.calibration_a71e17c8' : 'ui.maintenance_8ad424bd')}</span><Status value={row.status} /><span className="maintenance-job-title">{row.title}</span><span className="maintenance-job-resource">{row.resource?.code} · {row.resource?.name}</span><span className="maintenance-job-time"><Clock3 size={15} aria-hidden="true" />{formatVietnamDateTime(row.startAt)}<ArrowRight size={13} aria-hidden="true" />{formatVietnamDateTime(row.endAt)}</span></button></li>)}</ul> : <div className="maintenance-empty"><Wrench size={24} aria-hidden="true" /><h3>{t(hasFilters ? 'ui.maintenance.noMatches' : 'ui.no_open_maintenance_jobs_2ab3ecb0')}</h3>{hasFilters && <button className="secondary-button" onClick={() => { updateRoute({maintenanceSearch:'',maintenanceStatus:''}); }}>{t('ui.maintenance.clearFilters')}</button>}{filter === 'open' && !query.trim() && maintenance.length > 0 && <button className="secondary-button" onClick={() => updateRoute({maintenanceStatus:'all'})}>{t('ui.view_all_jobs_91067a97')}</button>}</div>}
       </section>
       <div ref={detailRef} className="maintenance-detail" tabIndex={-1}>
         {error && <div ref={errorRef} className="maintenance-error" tabIndex={-1} role="alert">{t(error)}</div>}
