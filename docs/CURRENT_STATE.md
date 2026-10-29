@@ -1963,3 +1963,11 @@ loop11-*.png. Việc tiếp: chờ người dùng hoặc rà soát nhóm trườ
 (operations có 2 element tràn nhẹ nhưng nằm trong container overflow:hidden,
 scrollWidth == clientWidth — vô hại). Không cần sửa. Việc tiếp: sweep EN
 locale spot-check; chờ người dùng duyệt bridge fallback + 2 lô treo.
+
+## Loop lượt 07:55 — EN locale spot-check — 29/10/2026
+
+EN (en-GB): landing ("Your ideas. Room to make them real." + nav + quick
+guide marquee) và staff overview — 0 raw key rò rỉ (regex quét ui./workbench/
+shell./landing. trên innerText). Ảnh loop13-en-*.png. Không cần sửa. Việc
+tiếp: vòng lặp đã phủ rộng — chuyển sang chế độ "điểm danh nhẹ" trừ khi có
+ Regression; chờ người dùng duyệt bridge fallback + 2 lô treo.
