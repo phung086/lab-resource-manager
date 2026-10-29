@@ -1956,3 +1956,10 @@ chatgpt-bridge (staff, URL trực tiếp): trang gần trống chỉ có dòng l
 trong sidebar staff; fallback thô. Ghi "chờ con người": nếu người dùng
 muốn, đổi sang panel giải thích quyền như monitoring fallback. Ảnh
 loop11-*.png. Việc tiếp: chờ người dùng hoặc rà soát nhóm trường.
+
+## Loop lượt 07:35 — mobile sweep staff/admin — 29/10/2026
+
+390px: materials, operations, incidents, audit-logs — 0 overflow thực tế
+(operations có 2 element tràn nhẹ nhưng nằm trong container overflow:hidden,
+scrollWidth == clientWidth — vô hại). Không cần sửa. Việc tiếp: sweep EN
+locale spot-check; chờ người dùng duyệt bridge fallback + 2 lô treo.
