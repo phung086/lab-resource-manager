@@ -1971,3 +1971,9 @@ guide marquee) và staff overview — 0 raw key rò rỉ (regex quét ui./workbe
 shell./landing. trên innerText). Ảnh loop13-en-*.png. Không cần sửa. Việc
 tiếp: vòng lặp đã phủ rộng — chuyển sang chế độ "điểm danh nhẹ" trừ khi có
  Regression; chờ người dùng duyệt bridge fallback + 2 lô treo.
+
+## Loop lượt 08:15 — điểm danh hạ tầng — 29/10/2026
+
+Vite 200, API 200, 2 trang chính load không pageerror. Hạ tầng khỏe, không
+cần hành động. Việc tiếp: tiếp tục điểm danh nhẹ mỗi lượt; 2 quyết định
+chờ người dùng (bridge fallback, 2 lô treo) nguyên vị trí.
