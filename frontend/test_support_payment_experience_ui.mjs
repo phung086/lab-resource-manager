@@ -27,7 +27,7 @@ const initialMessages = [
 const charge = { id: 'visual-payment', txnRef: 'LAB2710GPU001', amount: 240000, currency: 'VND', status: 'pending', provider: 'unselected', userId: user.id,
   description: 'Thuê máy trạm GPU phục vụ nghiên cứu', createdAt: '2026-10-27T02:00:00Z', paidAt: null, paymentUrlExpiresAt: null,
   reconciliationStatus: 'none', reconciliationReason: null, reconciledAt: null, user,
-  booking: { id: 'visual-booking', title: 'Nghiên cứu thị giác máy tính', status: 'CONFIRMED', resource: { code: 'AI-GPU-01', name: 'Máy trạm GPU · AI LAB' } } };
+  booking: { requestedById:user.id, id: 'visual-booking', title: 'Nghiên cứu thị giác máy tính', status: 'CONFIRMED', resource: { code: 'AI-GPU-01', name: 'Máy trạm GPU · AI LAB' } } };
 const results = [];
 async function open(view, width, locale = 'vi', role = 'CUSTOMER', overrides = {}) {
   const actor = role === 'LAB_STAFF' ? staff : { ...user, ...(role === 'ADMIN' ? { id: 'visual-admin' } : {}), role };
@@ -126,6 +126,9 @@ try {
     for (const [name, role, overrides, expected] of [
       ['admin-read-only','ADMIN',{},'reviewHelp'],
       ['cancelled-booking','CUSTOMER',{ transaction: { booking: { ...charge.booking, status:'CANCELLED' } } },'reviewHelp'],
+      ['payment-hold','CUSTOMER',{ transaction: { booking: { ...charge.booking, status:'PENDING_APPROVAL',startAt:new Date(Date.now()+86400000).toISOString(),paymentDueAt:new Date(Date.now()+90000).toISOString() } } },'pendingHelp'],
+      ['expired-hold','CUSTOMER',{ transaction: { booking: { ...charge.booking, status:'PENDING_APPROVAL',paymentDueAt:new Date(Date.now()-1000).toISOString() } } },'reviewHelp'],
+      ['foreign-booking-owner','CUSTOMER',{transaction:{booking:{...charge.booking,requestedById:'other-user'}}},'reviewHelp'],
       ['no-provider','CUSTOMER',{ providers: { vnpay:false, vietqr:false } },'unavailableHelp'],
       ['transfer-pending','CUSTOMER',{ transaction: { provider:'vietqr' } },'transferHelp'],
       ['expired-session','CUSTOMER',{ transaction: { status:'expired' } },'retryHelp'],
@@ -133,6 +136,7 @@ try {
     ]) {
       const state = await open('payments', 390, 'vi', role, overrides);
       assert.ok((await state.page.locator('.payment-value-block').innerText()).includes(catalogs.vi[`ui.paymentStudio.${expected}`]));
+      if(name === 'payment-hold') assert.equal(await state.page.locator('.payment-provider-choices button:enabled').count(),1);
       if (expected === 'reviewHelp') assert.equal(await state.page.locator('.payment-provider-choices').count(), 0);
       if (expected === 'unavailableHelp') assert.equal(await state.page.locator('.payment-provider-choices button:enabled').count(), 0);
       assert.deepEqual(state.errors, []); results.push({ scenario:name, passed:true }); await state.context.close();

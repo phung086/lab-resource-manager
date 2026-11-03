@@ -3,7 +3,7 @@
   --home-ink: #26243A;
   --home-muted: #625D72;
   --home-line: #E1DAEB;
-  --home-accent: var(--workspace-accent, #6441D9);
+  --home-accent: var(--workspace-accent, #6040ce);
   --home-tint: var(--workspace-accent-tint, #F5F2FF);
   display: grid; gap: 24px; min-width: 0; color: var(--home-ink);
 }

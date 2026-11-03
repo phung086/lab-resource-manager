@@ -95,7 +95,7 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
         <p>{resource.description || tr("ui.no_description_provided_7ca49080")}</p>
         <dl className="resource-overview-facts">
           <Detail label={tr("ui.laboratory_eb85976f")} value={resource.laboratory?.name || resource.location || tr("ui.not_assigned_ebe3cb5d")} />
-          <Detail label={tr("ui.approval_required_cc220dc0")} value={resource.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : tr("ui.confirm_automatically_when_eligible_e47b0eb4")} />
+          <Detail label={tr("ui.approval_required_cc220dc0")} value={resource.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : Number(resource.rental?.hourlyRateVnd) > 0 ? tr("ui.confirmed_after_payment_2c477063") : tr("ui.confirm_automatically_when_eligible_e47b0eb4")} />
           <Detail label={tr("ui.safety_training_d48b0cef")} value={resource.trainingRequirements?.length ? resource.trainingRequirements.map((course: any) => course.name || course.code).join(", ") : tr("ui.not_required_ae94c3a4")} />
         </dl>
       </section>
@@ -109,7 +109,7 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
         <Detail label={tr("ui.laboratory_eb85976f")} value={resource.laboratory ? `${resource.laboratory.code} - ${resource.laboratory.name}` : tr("ui.no_laboratory_assigned_a03dd58a")} />
         <Detail label={tr("ui.booking_policy_5636b6c2")} value={resource.bookingState === "bookable" ? tr("ui.bookable_f7ce3273") : resource.bookingState === "restricted" ? tr("ui.restricted_booking_1e5b50c0") : tr("ui.not_bookable_fd9badec")} />
         <Detail label={tr("ui.capacity_quantity_1e2e42b3")} value={String(resource.capacity)} />
-        <Detail label={tr("ui.approval_required_cc220dc0")} value={resource.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : tr("ui.confirm_automatically_when_eligible_e47b0eb4")} />
+        <Detail label={tr("ui.approval_required_cc220dc0")} value={resource.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : Number(resource.rental?.hourlyRateVnd) > 0 ? tr("ui.confirmed_after_payment_2c477063") : tr("ui.confirm_automatically_when_eligible_e47b0eb4")} />
         <Detail label={tr("ui.manufacturer_ceeb2ab5")} value={resource.manufacturer || tr("ui.not_updated_ebc5a4d4")} />
         <Detail label={tr("ui.model_5e2c614c")} value={resource.model || tr("ui.not_updated_ebc5a4d4")} />
       </dl>

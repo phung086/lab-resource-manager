@@ -2,7 +2,7 @@
   position: fixed;
   right: 24px;
   bottom: 24px;
-  z-index: 910;
+  z-index: 930;
   width: min(432px, calc(100vw - 48px));
   height: min(640px, calc(100dvh - 112px));
   display: flex;
@@ -118,12 +118,12 @@
 @media (prefers-reduced-motion: reduce) { .lab-assistant, .assistant-thinking i { animation: none; } }
 /* The nonmodal chat sits above its floating mascot, outside the app header. */
 .lab-assistant,.lab-assistant.has-conversation { right:24px; bottom:144px; height:min(620px,calc(100dvh - 176px)); border:1px solid #dcd2f1; box-shadow:0 16px 56px #39235b26; }
-.lab-assistant .assistant-avatar { flex:0 0 44px; height:48px; background:transparent; border-radius:0; color:#6441d9; }
+.lab-assistant .assistant-avatar { flex:0 0 44px; height:48px; background:transparent; border-radius:0; color:#6040ce; }
 .lab-assistant .assistant-avatar .lab-robot { width:44px; height:48px; }
 .lab-assistant > header { background:#fbf9ff; border-bottom-color:#e7def4; }
 .lab-assistant .assistant-language { background:#eee8fa; }
-.lab-assistant .assistant-language button[aria-pressed='true'] { color:#6441d9; }
-.lab-assistant .assistant-compose button { background:#6441d9; }
+.lab-assistant .assistant-language button[aria-pressed='true'] { color:#6040ce; }
+.lab-assistant .assistant-compose button { background:#6040ce; }
 .lab-assistant .assistant-compose button:hover:not(:disabled) { background:#5031b7; }
 .lab-assistant .assistant-compose button:disabled { background:#eee8fa; color:#766a8d; }
 .lab-assistant .assistant-compose:focus-within { border-color:#9479df; box-shadow:none; }

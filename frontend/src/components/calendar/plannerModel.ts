@@ -2,6 +2,7 @@ import { getVietnamTodayDateString, parseVietnamParts, vietnamTimeToIso } from '
 import { minimumBookingNotice } from '../../utils/bookingNotice.ts';
 
 export type PlannerResource = {
+  media?: import('../ResourceGallery').ResourceMedia[]; description?: string; specs?: Record<string, unknown>; location?: string;
   id: string; name: string; code: string; category?: string; operationalStatus?: string;
   bookingState?: string; laboratoryId?: string; maxBookingMinutes?: number;
   availability?: { source?: string };
@@ -64,4 +65,24 @@ export function upcomingFreeDays(resource: PlannerResource, date: string, durati
     if(results.length===3)break;
   }
   return results;
+}
+
+// Client guidance only; availability and final submission still recheck server policy.
+export function slotIssue(resource: PlannerResource | undefined, date: string, start: string, end: string, now = Date.now()): { key: string; params?: Record<string, string | number> } | null {
+  if (!resource || !start || !end) return { key: 'ui.enter_start_and_end_times_dd573c8f' };
+  if (end <= start) return { key: 'ui.start_time_must_be_before_fe9fe060' };
+  const interval = intervalFor(date, start, end);
+  if (!interval) return { key: 'ui.calendarWorkspace.futureTime' };
+  if (resourceBlocked(resource)) return { key: 'ui.this_resource_is_not_accepting_7365dfdb' };
+  const policy = policyFor(resource), minutes = (Date.parse(interval.endAt) - Date.parse(interval.startAt)) / 60000;
+  const notice = minimumBookingNotice(policy);
+  if (Date.parse(interval.startAt) < now + notice * 60000) return { key: 'ui.planner.validation.notice', params: { minutes: notice } };
+  if (policy?.allowWeekend === false && [0,6].includes(new Date(date+'T00:00:00Z').getUTCDay())) return { key: 'ui.planner.weekdaysOnly' };
+  const hours = serviceWindow(resource), from = Number(start.slice(0,2))*60+Number(start.slice(3)), to = Number(end.slice(0,2))*60+Number(end.slice(3));
+  if (hours && (from < hours.from || to > hours.to)) return { key: 'ui.planner.validation.hours', params: { from: timeLabel(hours.from), to: timeLabel(hours.to) } };
+  if (policy?.minBookingMinutes && minutes < policy.minBookingMinutes) return { key: 'ui.planner.validation.minimum', params: { minutes: policy.minBookingMinutes } };
+  const maximum = resource.maxBookingMinutes ?? policy?.maxBookingMinutes;
+  if (maximum && minutes > maximum) return { key: 'ui.planner.validation.maximum', params: { minutes: maximum } };
+  if (policy?.maxAdvanceBookingDays && Date.parse(interval.startAt) > now + policy.maxAdvanceBookingDays*86400000) return { key: 'ui.planner.validation.advance', params: { days: policy.maxAdvanceBookingDays } };
+  return null;
 }

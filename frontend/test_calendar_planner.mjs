@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { intervalFor, resourceBlocked, serviceWindow, shiftDate, freeWindows, upcomingFreeDays } from './src/components/calendar/plannerModel.ts';
+import { slotIssue, intervalFor, resourceBlocked, serviceWindow, shiftDate, freeWindows, upcomingFreeDays } from './src/components/calendar/plannerModel.ts';
 import { checkSelectedDrafts, timeDraftKey } from './src/components/calendar/selectionPrecheck.ts';
 
 const resource = { id:'room',name:'Room',code:'R1',category:'ROOM',operationalStatus:'AVAILABLE',bookingState:'bookable',labPolicy:{workDayStartHour:8,workDayEndHour:18,minBookingMinutes:30,maxBookingMinutes:240,allowWeekend:true} };
@@ -116,4 +116,13 @@ test('changed or expired checks re-run; invalid drafts report per-row error with
   const checks={a:{key:timeDraftKey(draft),at:Date.now()-61000,status:'ready'},b:{key:'old-time',at:Date.now(),status:'ready'}},calls=[];
   await checkSelectedDrafts({ids:['a','b','c'],signal:new AbortController().signal,draftFor:id=>id==='c'?{...draft,end:'08:00'}:draft,previousFor:id=>checks[id],onResult:(id,result)=>{checks[id]=result;},request:async id=>{calls.push(id);return {available:id==='a'};}});
   assert.deepEqual(calls,['a','b']);assert.equal(checks.a.status,'ready');assert.equal(checks.b.status,'unavailable');assert.equal(checks.c.status,'error');
+});
+
+test('slot guidance blocks policy violations and accepts an in-policy interval', () => {
+  assert.equal(slotIssue(resource,date,'07:00','08:00',now).key,'ui.planner.validation.hours');
+  assert.equal(slotIssue(resource,date,'09:00','09:10',now).key,'ui.planner.validation.minimum');
+  assert.equal(slotIssue(resource,date,'09:00','14:00',now).key,'ui.planner.validation.maximum');
+  assert.equal(slotIssue(resource,date,'10:00','09:00',now).key,'ui.start_time_must_be_before_fe9fe060');
+  assert.equal(slotIssue(resource,date,'09:00','10:00',Date.parse(date+'T08:45:00+07:00')).key,'ui.planner.validation.notice');
+  assert.equal(slotIssue(resource,date,'09:00','10:00',now),null);
 });

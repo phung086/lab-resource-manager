@@ -1,4 +1,4 @@
-.care-studio { --care-accent:var(--workspace-primary,#6441d9); --care-ink:var(--workspace-text,#211b30); color:var(--care-ink); }
+.care-studio { --care-accent:var(--workspace-primary,#6040ce); --care-ink:var(--workspace-text,#211b30); color:var(--care-ink); }
 .care-studio .monitor-heading { padding:24px; background:linear-gradient(110deg,#f0eaff,#eefaf7 72%,#fff3e9); border-radius:16px; }
 .care-studio .monitor-heading p { max-width:65ch; line-height:1.6; }
 .care-studio .care-tabs button { display:flex; align-items:center; gap:8px; }

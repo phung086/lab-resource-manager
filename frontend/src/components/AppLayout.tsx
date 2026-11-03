@@ -175,7 +175,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const unreadCount = notificationUnreadCount === null ? null : notificationUnreadCount ?? notifications.filter((n) => !n.readAt).length;
 
   return (
-    <div className="app-shell-2026 workspace-shell lab-spectrum" data-workspace-role={user?.role}>
+    <div className="app-shell-2026 workspace-shell lab-spectrum" data-workspace-role={user?.role} data-workspace-view={activeTab}>
       <a className="skip-link" href="#workspace-main">{translate("ui.skip_to_main_content_a75d7c33")}</a>
       {/* Primary navigation */}
       <Sidebar

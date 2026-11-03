@@ -1,6 +1,4 @@
-import labImage from "../../../assets/lab-workbench-hero-small.webp";
-import "../../../styles/discovery-home.css";
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -10,200 +8,495 @@ import {
   Cpu,
   DoorOpen,
   FlaskConical,
+  Headphones,
   Layers3,
   MapPin,
   Microscope,
   PackageOpen,
   Search,
-  Wallet
+  Wallet,
+  CircleAlert,
 } from "lucide-react";
-import { translate as t } from "../../../i18n.js";
+import { useLocale } from "../../../providers/LocaleProvider";
 import { BookingStatusBadge } from "../../BookingStatusBadge";
 import { formatVietnamDateTime } from "../../../utils/timezone";
-import { EmptyState, SectionTitle } from "./HomeComponents";
-import { resourceImageProps } from '../../../utils/resourceImage';
+import { EmptyState, Notices, SectionTitle } from "./HomeComponents";
+import { PaymentHoldNotice } from "../payments/PaymentHoldNotice";
+import { resourceImageProps } from "../../../utils/resourceImage";
 import { ownBookings, upcomingBookings } from "./homeSelectors";
-import type { BookingRecord } from "../../../types/booking";
-import type { HomeResource, RoleHomeProps } from "./homeTypes";
+import type { RoleHomeProps } from "./homeTypes";
 
 const CATEGORY_LABELS: Record<string, string> = {
   ROOM: "ui.home.category.rooms",
   EQUIPMENT: "ui.home.category.equipment",
   EXPERIMENT_KIT: "ui.home.category.kits",
   MACHINE: "enum.category.MACHINE",
-  MATERIAL: "enum.category.MATERIAL"
+  MATERIAL: "enum.category.MATERIAL",
 };
-
-const categoryIcon = (category?: string) => {
-  if (category === "ROOM") return DoorOpen;
-  if (category === "EXPERIMENT_KIT") return FlaskConical;
-  if (category === "MACHINE") return Cpu;
-  if (category === "MATERIAL") return PackageOpen;
-  if (category === "EQUIPMENT") return Microscope;
-  return Layers3;
-};
-
-const MS_HOUR = 60 * 60 * 1000;
-
-function sessionBadge(booking: BookingRecord): { key: string; tone: "soon" | "now" | "later" } {
-  const start = new Date(booking.startAt).getTime();
-  const now = Date.now();
-  if (booking.status === "CHECKED_OUT") return { key: "ui.home.session.now", tone: "now" };
-  if (start - now < 24 * MS_HOUR) return { key: "ui.home.session.soon", tone: "soon" };
-  return { key: "ui.home.session.later", tone: "later" };
-}
-
-function sessionActions(booking: BookingRecord, onNavigate: (tab: string, params?: Record<string, string>) => void) {
-  if (booking.status === "CHECKED_OUT") {
-    return [
-      { key: "ui.home.session.viewHandover", onClick: () => onNavigate("bookings", { booking: booking.id }) },
-      { key: "ui.home.session.openCalendar", onClick: () => onNavigate("smart_calendar", { resource: booking.resourceId }) }
-    ];
-  }
-  if (booking.status === "PENDING_APPROVAL" && booking.paymentDueAt) {
-    return [{ key: "ui.home.session.pay", onClick: () => onNavigate("bookings", { booking: booking.id, filter: "PENDING_PAYMENT" }) }];
-  }
-  if (booking.status === "CONFIRMED") {
-    return [
-      { key: "ui.home.session.prepare", onClick: () => onNavigate("bookings", { booking: booking.id }) }
-    ];
-  }
-  return [{ key: "ui.home.session.viewRecord", onClick: () => onNavigate("bookings", { booking: booking.id }) }];
-}
-
-function pickFeatured(resources: HomeResource[]): HomeResource[] {
-  const bookable = resources.filter(row => row.bookingState === "bookable" && row.category && CATEGORY_LABELS[row.category]);
-  if (!bookable.length) return [];
-  const [hero, ...rest] = bookable;
-  const different = rest.filter(item => item.category !== hero.category);
-  const secondary = different[0] ?? rest[0];
-  const tertiary = different[1] ?? rest.find(item => item.id !== secondary?.id);
-  return [hero, secondary, tertiary, rest.find(row => row.id !== secondary?.id && row.id !== tertiary?.id)].filter((row): row is HomeResource => Boolean(row));
-}
+const categoryIcon = (category?: string) =>
+  category === "ROOM"
+    ? DoorOpen
+    : category === "MACHINE"
+      ? Cpu
+      : category === "EXPERIMENT_KIT"
+        ? FlaskConical
+        : category === "MATERIAL"
+          ? PackageOpen
+          : category === "EQUIPMENT"
+            ? Microscope
+            : Layers3;
 
 export function CustomerHome(props: RoleHomeProps) {
-  const { onNavigate, onSearch, onCalendar, resources, bookingSummary, notifications, incidents, user } = props;
+  const { tr: t, locale } = useLocale();
+  const {
+    user,
+    resources,
+    bookingSummary: summary,
+    onSearch,
+    onNavigate,
+    onCalendar,
+  } = props;
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
-
   const rows = ownBookings(props);
+  const overdue = rows.filter(
+    (row) => row.status === "CHECKED_OUT" && Date.parse(row.endAt) < Date.now(),
+  );
+  const holds = rows.filter(
+    (row) => row.status === "PENDING_APPROVAL" && row.paymentDueAt,
+  );
+  const legacy = rows.filter(
+    (row) => row.status === "PENDING_APPROVAL" && !row.paymentDueAt,
+  );
   const upcoming = upcomingBookings(rows);
-  const overdue = rows.filter(row => row.status === "CHECKED_OUT" && new Date(row.endAt).getTime() < Date.now());
-  const pendingApproval = rows.filter(row => row.status === "PENDING_APPROVAL" && !row.paymentDueAt);
-  const awaitingPayment = rows.filter(row => row.status === "PENDING_APPROVAL" && row.paymentDueAt);
-  const rejected = rows.filter(row => row.status === "REJECTED" || row.status === "CANCELLED");
-
-  // Single anchor: the soonest thing on the customer's calendar. Overdue wins
-  // (urgency), then in-use, then earliest confirmed session. The home is
-  // organised around what the customer must do next, not around count tiles.
-  const anchor = overdue[0] ?? awaitingPayment[0] ?? upcoming[0] ?? pendingApproval[0] ?? null;
-  const recentIncidents = incidents.filter(item => item.status === "OPEN").slice(0, 2);
-
-  const featured = useMemo(() => pickFeatured(resources), [resources]);
-  const availableCategories = useMemo(() => {
-    const seen = new Set<string>();
-    resources.forEach(row => row.category && CATEGORY_LABELS[row.category] && seen.add(row.category));
-    return Object.keys(CATEGORY_LABELS).filter(category => seen.has(category));
-  }, [resources]);
-
-  const hasSomething = Boolean(anchor) || pendingApproval.length > 0 || rejected.length > 0;
-  const reminderCount = bookingSummary?.pendingPayment ?? 0;
-
+  const agenda = [...overdue, ...holds, ...upcoming, ...legacy]
+    .filter(
+      (row, index, all) =>
+        all.findIndex((other) => other.id === row.id) === index,
+    )
+    .slice(0, 5);
+  const anchor = agenda[0];
+  const state = overdue.length
+    ? "overdue"
+    : holds.length
+      ? "payment"
+      : anchor?.status === "CHECKED_OUT"
+        ? "in-use"
+        : anchor?.status === "PENDING_APPROVAL"
+          ? "review"
+          : anchor
+            ? "upcoming"
+            : "empty";
+  const featured = useMemo(
+    () =>
+      resources
+        .filter(
+          (row) =>
+            row.bookingState === "bookable" &&
+            row.category &&
+            CATEGORY_LABELS[row.category],
+        )
+        .slice(0, 3),
+    [resources],
+  );
+  const categories = Object.keys(CATEGORY_LABELS).filter((value) =>
+    resources.some((row) => row.category === value),
+  );
+  const time = (value: string) =>
+    new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en-GB", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date(value));
+  const date = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en-GB", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
+  const metrics = [
+    {
+      key: "ui.hub.confirmed",
+      count: summary?.byStatus.CONFIRMED,
+      icon: CalendarDays,
+      tone: "violet",
+      filter: "CONFIRMED",
+    },
+    {
+      key: "ui.home.customer.inUse",
+      count: summary?.byStatus.CHECKED_OUT ?? (summary ? 0 : undefined),
+      icon: Clock3,
+      tone: "teal",
+      filter: "CHECKED_OUT",
+    },
+    {
+      key: "ui.paymentHold.pending",
+      count: summary?.pendingPayment,
+      icon: Wallet,
+      tone: "peach",
+      filter: "PENDING_PAYMENT",
+    },
+    {
+      key: "ui.home.session.overdue",
+      count: summary?.overdue,
+      icon: CircleAlert,
+      tone: "rose",
+      filter: "CHECKED_OUT",
+    },
+  ];
+  const openAnchor = () =>
+    anchor &&
+    onNavigate("bookings", {
+      booking: anchor.id,
+      ...(state === "payment" ? { filter: "PENDING_PAYMENT" } : {}),
+    });
   return (
-    <div className="workspace-container discovery-home">
-      <section className="customer-journey" aria-label={t("ui.home.customer.title")}>
-        {!hasSomething && reminderCount > 0 ? (
-          <p className="journey-reminder" role="status">
-            <Wallet size={16} aria-hidden="true" />
-            {t("ui.home.session.paymentReminder", { value0: reminderCount })}
-          </p>
-        ) : null}
-
-<div className="discovery-studio">            <section className="journey-discovery-bar" aria-labelledby="workspace-title">
-              <span className="discovery-eyebrow">{t("ui.studio.eyebrow")}</span><h1 id="workspace-title">{t("ui.studio.title")}</h1>
-              <p>{t("ui.studio.intro")}</p>
-              <form className="journey-finder" onSubmit={event => { event.preventDefault(); onSearch(query.trim(), category); }}>
-                <label className="journey-finder-field">
-                  <Search size={16} aria-hidden="true" />
-                  <input
-                    type="search"
-                    value={query}
-                    onChange={event => setQuery(event.target.value)}
-                    placeholder={t("ui.home.customer.searchPlaceholder")}
-                    aria-label={t("ui.home.customer.searchPlaceholder")}
-                    maxLength={120}
-                  />
-                </label>
-                <label className="journey-finder-select">
-                  <span className="visually-hidden">{t("ui.home.category.all")}</span>
-                  <select value={category} onChange={event => setCategory(event.target.value)}>
-                    <option value="">{t("ui.home.category.all")}</option>
-                    {availableCategories.map(value => (
-                      <option key={value} value={value}>{t(CATEGORY_LABELS[value])}</option>
-                    ))}
-                  </select>
-                </label>
-                <button type="submit" className="journey-cta journey-cta-primary">
-                  {t("ui.home.customer.search")}<ArrowRight size={14} aria-hidden="true" />
-                </button>
-              </form>
-            </section>
-
-<div className="discovery-art" aria-hidden="true"><img src={labImage} alt="" /><span>{t("ui.studio.brand")}</span></div></div>              {availableCategories.length > 0 ? (
-                <div className="journey-finder-shortcuts">
-                  {availableCategories.slice(0, 5).map(value => {
-                    const Icon = categoryIcon(value);
-                    return (
-                      <button key={value} type="button" onClick={() => onSearch("", value)}>
-                        <Icon size={14} aria-hidden="true" />{t(CATEGORY_LABELS[value])}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-
-        <div className="journey-grid">
-          <div className="journey-column journey-column-main">
-            <SectionTitle
-              titleKey="ui.home.customer.catalogTitle"
-              action="ui.home.customer.browseAll"
-              onAction={() => onSearch("")}
+    <div className="customer-hub discovery-studio">
+      <header className="hub-welcome">
+        <div className="discovery-personal-heading">
+          <span>{t("ui.hub.greeting", { name: user.fullName })}</span>
+          <h1 id="workspace-title">{t("ui.hub.title")}</h1>
+          <strong className="sr-only">{user.fullName}</strong>
+        </div>
+        <time>{date}</time>
+      </header>
+      <div className="hub-top-grid">
+        <section
+          className="hub-focus"
+          data-state={state}
+          aria-labelledby="hub-focus-title"
+        >
+          <div className="hub-orbit" aria-hidden="true">
+            <FlaskConical strokeWidth={1} size={92} />
+          </div>
+          <div className="hub-focus-status">
+            <span className="hub-status-light" aria-hidden="true" />
+            {t(
+              state === "overdue"
+                ? "ui.home.session.overdue"
+                : state === "payment"
+                  ? "ui.paymentHold.pending"
+                  : state === "in-use"
+                    ? "ui.home.session.now"
+                    : state === "review"
+                      ? "ui.home.session.pending"
+                      : "ui.hub.nextSession",
+            )}
+          </div>
+          <h2 id="hub-focus-title">
+            {anchor
+              ? anchor.resource?.name || anchor.title
+              : t("ui.hub.emptyTitle")}
+          </h2>
+          {anchor ? (
+            <>
+              <div className="hub-session-time">
+                <time dateTime={anchor.startAt}>{time(anchor.startAt)}</time>
+                <span>–</span>
+                <time dateTime={anchor.endAt}>{time(anchor.endAt)}</time>
+              </div>
+              <p className="hub-session-date">
+                {formatVietnamDateTime(anchor.startAt)}
+              </p>
+              <p className="hub-session-location">
+                <MapPin size={14} aria-hidden="true" />
+                {anchor.resource?.laboratory?.name ||
+                  t("ui.home.resource.noLab")}
+                <span>{anchor.bookingCode || anchor.id}</span>
+              </p>
+            </>
+          ) : (
+            <p className="hub-empty-copy">{t("ui.home.session.emptyLede")}</p>
+          )}
+          {state === "overdue" && (
+            <p className="hub-focus-warning">
+              <CircleAlert size={17} aria-hidden="true" />
+              {t("ui.home.session.overdueLede")}
+            </p>
+          )}
+          {state === "payment" && anchor?.paymentDueAt && (
+            <PaymentHoldNotice
+              paymentDueAt={anchor.paymentDueAt}
+              startAt={anchor.startAt}
             />
-            <p className="journey-section-note">{t("ui.home.customer.description")}</p>
+          )}
+          <div className="hub-focus-actions">
+            <button
+              type="button"
+              className="hub-button hub-button-primary"
+              onClick={anchor ? openAnchor : () => onSearch("")}
+            >
+              {t(
+                anchor
+                  ? state === "payment"
+                    ? "ui.home.session.pay"
+                    : state === "overdue" || state === "in-use"
+                      ? "ui.home.session.viewHandover"
+                      : state === "review"
+                        ? "ui.home.session.viewRecord"
+                        : "ui.home.session.prepare"
+                  : "ui.home.customer.search",
+              )}
+              <ArrowRight size={16} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="hub-button hub-button-glass"
+              onClick={() => onCalendar()}
+            >
+              <CalendarPlus size={17} aria-hidden="true" />
+              {t("ui.home.findSlot")}
+            </button>
+          </div>
+        </section>
+        <section className="hub-search" aria-labelledby="hub-search-title">
+          <div className="hub-search-heading">
+            <Search size={21} aria-hidden="true" />
+            <h2 id="hub-search-title">{t("ui.hub.findResource")}</h2>
+          </div>
+          <p>{t("ui.home.customer.description")}</p>
+          <form
+            className="home-finder"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSearch(query.trim(), category);
+            }}
+          >
+            <label className="hub-search-input journey-finder-field">
+              <span className="sr-only">
+                {t("ui.home.customer.searchPlaceholder")}
+              </span>
+              <Search size={16} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t("ui.home.customer.searchPlaceholder")}
+                maxLength={120}
+              />
+            </label>
+            <label>
+              <span className="sr-only">{t("ui.home.category.all")}</span>
+              <select
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+              >
+                <option value="">{t("ui.home.category.all")}</option>
+                {categories.map((value) => (
+                  <option key={value} value={value}>
+                    {t(CATEGORY_LABELS[value])}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="hub-button hub-button-search">
+              {t("ui.home.customer.search")}
+              <ArrowRight size={16} aria-hidden="true" />
+            </button>
+          </form>
+        </section>
+      </div>
+      <section
+        className="hub-metrics"
+        aria-label={t("ui.home.customer.myBookings")}
+      >
+        {metrics.map(({ key, count, icon: Icon, tone, filter }) => (
+          <button
+            type="button"
+            className={`hub-metric tone-${tone}${count && tone === "rose" ? " is-urgent" : ""}`}
+            key={key}
+            onClick={() => onNavigate("bookings", { filter })}
+          >
+            <span className="hub-metric-label">{t(key)}</span>
+            <span className="hub-metric-icon">
+              <Icon size={19} aria-hidden="true" />
+            </span>
+            <strong>{count ?? (summary ? 0 : "—")}</strong>
+            <span className="hub-metric-link">
+              {t("ui.hub.viewBookings")}
+              <ArrowRight size={13} aria-hidden="true" />
+            </span>
+          </button>
+        ))}
+      </section>
+      <div className="hub-body-grid">
+        <div className="hub-main">
+          <section
+            className="hub-panel hub-agenda"
+            aria-labelledby="hub-agenda-title"
+          >
+            <header className="hub-panel-heading">
+              <h2 id="hub-agenda-title">{t("ui.hub.agenda")}</h2>
+              <button type="button" onClick={() => onNavigate("bookings")}>
+                {t("ui.view_all_44aeb8cb")}
+                <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            </header>
+            {agenda.length ? (
+              <div className="hub-agenda-scroll">
+                <table>
+                  <caption className="sr-only">
+                    {t("ui.hub.agendaScope")}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("ui.resource_9a35ef53")}</th>
+                      <th scope="col">{t("ui.time_b295fd62")}</th>
+                      <th scope="col">{t("ui.hub.status")}</th>
+                      <th scope="col">
+                        <span className="sr-only">
+                          {t("ui.home.session.viewRecord")}
+                        </span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {agenda.map((row) => {
+                      const Icon = categoryIcon(
+                        row.resource?.category || undefined,
+                      );
+                      return (
+                        <tr key={row.id}>
+                          <td>
+                            <div className="hub-agenda-resource">
+                              <span>
+                                <Icon size={19} aria-hidden="true" />
+                              </span>
+                              <div>
+                                <strong>
+                                  {row.resource?.name || row.title}
+                                </strong>
+                                <small>{row.bookingCode || row.id}</small>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <time dateTime={row.startAt}>
+                              {formatVietnamDateTime(row.startAt)}
+                            </time>
+                            <small>
+                              {time(row.startAt)} – {time(row.endAt)}
+                            </small>
+                          </td>
+                          <td>
+                            <BookingStatusBadge
+                              status={row.status}
+                              paymentDueAt={row.paymentDueAt}
+                            />
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="hub-row-action"
+                              aria-label={t("ui.hub.openBooking", {
+                                name: row.resource?.name || row.title,
+                              })}
+                              onClick={() =>
+                                onNavigate("bookings", { booking: row.id })
+                              }
+                            >
+                              <ArrowRight size={16} aria-hidden="true" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState
+                titleKey="ui.home.next.empty"
+                detail="ui.home.next.emptyHint"
+                action="ui.home.findSlot"
+                onAction={() => onCalendar()}
+              />
+            )}
+            {agenda.length > 0 && (
+              <p className="hub-scope-note">{t("ui.hub.agendaScope")}</p>
+            )}
+          </section>
+          <section
+            className="hub-panel hub-catalog"
+            aria-labelledby="hub-catalog-title"
+          >
+            <header className="hub-panel-heading">
+              <h2 id="hub-catalog-title">
+                {t("ui.home.customer.catalogTitle")}
+              </h2>
+              <button type="button" onClick={() => onSearch("")}>
+                {t("ui.home.customer.browseAll")}
+                <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            </header>
+            <div className="hub-category-shortcuts">
+              {categories.map((value) => {
+                const Icon = categoryIcon(value);
+                return (
+                  <button
+                    type="button"
+                    key={value}
+                    onClick={() => onSearch("", value)}
+                  >
+                    <Icon size={15} aria-hidden="true" />
+                    {t(CATEGORY_LABELS[value])}
+                  </button>
+                );
+              })}
+            </div>
             {featured.length ? (
-              <div className="journey-catalog">
-                {featured.map((row, index) => {
-                  const photo = row.media?.find(item => item.kind === "IMAGE");
+              <div className="hub-resource-grid">
+                {featured.map((row) => {
                   const Icon = categoryIcon(row.category);
-                  const isHero = index === 0;
+                  const photo = row.media?.find(
+                    (item) => item.kind === "IMAGE",
+                  );
                   return (
-                    <article key={row.id} className={`journey-catalog-card${isHero ? " is-hero" : ""}`}>
-                      <div className="journey-catalog-cover">
-                        <Icon size={36} strokeWidth={1.4} aria-hidden="true" />
-                        {photo ? (
+                    <article
+                      className="hub-resource"
+                      key={row.id}
+                      data-category={row.category}
+                    >
+                      <div className="hub-resource-image">
+                        <Icon size={44} strokeWidth={1.3} aria-hidden="true" />
+                        {photo && (
                           <img
-                            key={photo.url}
                             {...resourceImageProps(photo.url)}
                             alt=""
-                            onError={event => { event.currentTarget.hidden = true; }}
+                            onError={(event) => {
+                              event.currentTarget.hidden = true;
+                            }}
                           />
-                        ) : null}
-                        <span className="journey-catalog-code">{row.code}</span>
-                      </div>
-                      <div className="journey-catalog-body">
-                        <small>{t(`enum.category.${row.category}`)}</small>
-                        <h3>{row.name}</h3>
-                        <p>{row.laboratory?.name || t("ui.home.resource.noLab")}</p>
-                        <span className="journey-catalog-state">{t(`enum.operational.${row.operationalStatus}`)}</span>
-                        {row.rental && (
-                          <strong>
-                            {row.rental.hourlyRateVnd.toLocaleString("vi-VN")} {t("ui.rental.perHour")}
-                          </strong>
                         )}
-                        <button type="button" className="journey-catalog-cta" onClick={() => onCalendar(row.id)}>
-                          {t("ui.home.openCalendar")}
-                          <ArrowRight size={14} aria-hidden="true" />
-                        </button>
+                        <span>{t(`enum.category.${row.category}`)}</span>
+                      </div>
+                      <div className="hub-resource-copy">
+                        <h3>{row.name}</h3>
+                        <p>
+                          {row.laboratory?.name || t("ui.home.resource.noLab")}
+                        </p>
+                        <small>
+                          {t(`enum.operational.${row.operationalStatus}`)}
+                        </small>
+                        <footer>
+                          {row.rental && (
+                            <strong>
+                              {row.rental.hourlyRateVnd.toLocaleString("vi-VN")}{" "}
+                              {t("ui.rental.perHour")}
+                            </strong>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onCalendar(row.id)}
+                            aria-label={t("ui.hub.resourceCalendar", {
+                              name: row.name,
+                            })}
+                          >
+                            <CalendarPlus size={17} aria-hidden="true" />
+                            {t("ui.hub.book")}
+                          </button>
+                        </footer>
                       </div>
                     </article>
                   );
@@ -217,236 +510,62 @@ export function CustomerHome(props: RoleHomeProps) {
                 onAction={() => onSearch("")}
               />
             )}
-
-            <SectionTitle
-              titleKey="ui.home.session.timelineTitle"
-              action="ui.view_all_44aeb8cb"
-              onAction={() => onNavigate("bookings", { filter: "CONFIRMED" })}
-            />
-            {upcoming.length || overdue.length || pendingApproval.length || awaitingPayment.length ? (
-              <ol className="journey-timeline" aria-label={t("ui.home.session.timelineTitle")}>
-                {[...overdue, ...awaitingPayment, ...pendingApproval, ...upcoming].slice(0, 5).map((booking, index) => {
-                  const badge = sessionBadge(booking);
-                  const isLast = index === Math.min(4, overdue.length + awaitingPayment.length + pendingApproval.length + upcoming.length - 1);
-                  return (
-                    <li key={booking.id} className="journey-timeline-item" data-tone={badge.tone}>
-                      <span className="journey-timeline-rail" aria-hidden="true">
-                        <span className="journey-timeline-dot" />
-                        {!isLast && <span className="journey-timeline-line" />}
-                      </span>
-                      <article className="journey-timeline-card">
-                        <header>
-                          <time dateTime={booking.startAt}>{formatVietnamDateTime(booking.startAt)}</time>
-                          <span className="journey-timeline-badge" data-tone={badge.tone}>{t(badge.key)}</span>
-                        </header>
-                        <h3>{booking.resource?.name || booking.title}</h3>
-                        <p>
-                          {booking.resource?.laboratory ? `${booking.resource.laboratory.name} · ` : ""}
-                          {booking.title}
-                        </p>
-                        <footer>
-                          <BookingStatusBadge status={booking.status} paymentDueAt={booking.paymentDueAt} />
-                          <button type="button" onClick={() => onNavigate("bookings", { booking: booking.id })}>
-                            {t("ui.home.session.viewRecord")}<ArrowRight size={14} aria-hidden="true" />
-                          </button>
-                        </footer>
-                      </article>
-                    </li>
-                  );
-                })}
-              </ol>
-            ) : (
-              <EmptyState
-                titleKey="ui.home.next.empty"
-                detail="ui.home.next.emptyHint"
-                action="ui.home.findSlot"
-                onAction={() => onCalendar()}
-              />
-            )}
-
-<details className="discovery-guide"><summary>{t("ui.home.customer.stepsTitle")}</summary>            <SectionTitle
-              titleKey="ui.home.customer.stepsTitle"
-              action="ui.home.findSlot"
-              onAction={() => onCalendar()}
-            />
-            <ol className="journey-steps" aria-label={t("ui.home.customer.stepsTitle")}>
-              <li>
-                <span className="journey-step-num">01</span>
-                <div>
-                  <strong>{t("ui.home.steps.find")}</strong>
-                  <small>{t("ui.home.steps.findHint")}</small>
-                </div>
-                <button type="button" onClick={() => onSearch(query.trim(), category)}>
-                  {t("ui.home.customer.search")}<ArrowRight size={14} aria-hidden="true" />
-                </button>
-              </li>
-              <li>
-                <span className="journey-step-num">02</span>
-                <div>
-                  <strong>{t("ui.home.steps.request")}</strong>
-                  <small>{t("ui.home.steps.requestHint")}</small>
-                </div>
-                <button type="button" onClick={() => onCalendar()}>
-                  {t("ui.home.findSlot")}<ArrowRight size={14} aria-hidden="true" />
-                </button>
-              </li>
-              <li>
-                <span className="journey-step-num">03</span>
-                <div>
-                  <strong>{t("ui.home.steps.receive")}</strong>
-                  <small>{t("ui.home.steps.receiveHint")}</small>
-                </div>
-                <button type="button" onClick={() => onNavigate("bookings", { filter: "ACTIVE" })}>
-                  {t("ui.home.customer.myBookings")}<ArrowRight size={14} aria-hidden="true" />
-                </button>
-              </li>
-            </ol>
-
-</details>
-          </div>
-
-          <aside className="journey-column journey-column-side" aria-label={t("ui.home.customer.myBookings")}>
-
-
-<div className="discovery-personal-heading"><span className="discovery-avatar">{user.fullName?.slice(0, 1)}</span><div><small>{t("ui.studio.yourSpace")}</small><strong>{user.fullName}</strong></div></div>        <div className="journey-hero" data-state={anchor ? (overdue[0] ? "overdue" : anchor.status === "CHECKED_OUT" ? "inUse" : "upcoming") : "empty"}>
-          <div className="journey-hero-art" aria-hidden="true">
-            <span className="journey-hero-art-mark">
-              <FlaskConical size={36} strokeWidth={1.4} />
-            </span>
-          </div>
-          <div className="journey-hero-copy">
-            <h2 id="personal-session-title" className="journey-hero-title">
-              {anchor
-                ? overdue[0]
-                  ? t("ui.home.session.overdueTitle", { value0: anchor.resource?.name || anchor.title })
-                  : anchor.status === "PENDING_APPROVAL" && anchor.paymentDueAt
-                    ? t("ui.home.session.paymentTitle", { value0: anchor.resource?.name || anchor.title })
-                  : anchor.status === "CHECKED_OUT"
-                    ? t("ui.home.session.inUseTitle", { value0: anchor.resource?.name || anchor.title })
-                    : t("ui.home.session.upcomingTitle", { value0: anchor.resource?.name || anchor.title })
-                : t("ui.home.next.empty")}
-            </h2>
-            <p className="journey-hero-lede">
-              {anchor
-                ? t(overdue[0] ? "ui.home.session.overdueLede" : anchor.status === "PENDING_APPROVAL" && anchor.paymentDueAt ? "ui.paymentHold.rule" : anchor.status === "CHECKED_OUT" ? "ui.home.session.inUseLede" : "ui.home.session.upcomingLede")
-                : t("ui.home.next.emptyHint")}
-            </p>
-            {anchor ? (
-              <dl className="journey-hero-facts">
-                <div>
-                  <dt><Clock3 size={14} aria-hidden="true" />{t("ui.home.next.start")}</dt>
-                  <dd><time dateTime={anchor.startAt}>{formatVietnamDateTime(anchor.startAt)}</time></dd>
-                </div>
-                <div>
-                  <dt><Clock3 size={14} aria-hidden="true" />{t("ui.home.next.end")}</dt>
-                  <dd><time dateTime={anchor.endAt}>{formatVietnamDateTime(anchor.endAt)}</time></dd>
-                </div>
-                {anchor.resource?.laboratory && (
-                  <div>
-                    <dt><MapPin size={14} aria-hidden="true" />{t("ui.home.next.location")}</dt>
-                    <dd>{anchor.resource.laboratory.name}</dd>
-                  </div>
-                )}
-                <div>
-                  <dt><CalendarDays size={14} aria-hidden="true" />{t("ui.home.session.reference")}</dt>
-                  <dd>{anchor.bookingCode || anchor.id.slice(0, 8).toUpperCase()}</dd>
-                </div>
-              </dl>
-            ) : null}
-            <div className="journey-hero-actions">
-              {anchor
-                ? sessionActions(anchor, onNavigate).map(action => (
-                    <button key={action.key} type="button" className="journey-cta journey-cta-primary" onClick={action.onClick}>
-                      {t(action.key)}<ArrowRight size={16} aria-hidden="true" />
-                    </button>
-                  ))
-                : (
-                    <button type="button" className="journey-cta journey-cta-primary" onClick={() => onSearch("")}>
-                      {t("ui.home.customer.search")}<ArrowRight size={16} aria-hidden="true" />
-                    </button>
-                  )}
-              <button type="button" className="journey-cta journey-cta-ghost" onClick={() => onCalendar()}>
-                <CalendarPlus size={16} aria-hidden="true" />{t("ui.home.findSlot")}
-              </button>
-            </div>
-            {anchor ? (
-              <div className="journey-hero-status">
-                <BookingStatusBadge status={anchor.status} paymentDueAt={anchor.paymentDueAt} />
-                <span className="journey-hero-badge" data-tone={sessionBadge(anchor).tone}>
-                  {t(sessionBadge(anchor).key)}
-                </span>
-              </div>
-            ) : null}
-          </div>
+          </section>
         </div>
-
-            <section className="journey-side-card" aria-labelledby="journey-side-status">
-              <h3 id="journey-side-status">{t("ui.home.customer.myBookings")}</h3>
-              <ul className="journey-status-list">
-                <li>
-                  <span className="journey-status-dot" data-tone="upcoming" aria-hidden="true" />
-                  <span>
-                    <strong>{upcoming.length}</strong>
-                    <small>{t("ui.home.session.upcoming")}</small>
-                  </span>
-                  <button type="button" onClick={() => onNavigate("bookings", { filter: "CONFIRMED" })}>
-                    {t("ui.view_all_44aeb8cb")}
+        <aside className="hub-aside" aria-label={t("ui.hub.updates")}>
+          <Notices rows={props.notifications} onNavigate={onNavigate} />
+          {props.incidents.some((row) => row.status === "OPEN") && (
+            <section className="hub-incident-panel">
+              <SectionTitle titleKey="ui.home.session.incidentTitle" />
+              {props.incidents
+                .filter((row) => row.status === "OPEN")
+                .slice(0, 2)
+                .map((row) => (
+                  <button
+                    type="button"
+                    key={row.id}
+                    onClick={() =>
+                      onNavigate("incidents", { incident: row.id })
+                    }
+                  >
+                    <CircleAlert size={18} aria-hidden="true" />
+                    <span>{row.title}</span>
+                    <ArrowRight size={15} aria-hidden="true" />
                   </button>
-                </li>
-                <li>
-                  <span className="journey-status-dot" data-tone="overdue" aria-hidden="true" />
-                  <span>
-                    <strong>{overdue.length}</strong>
-                    <small>{t("ui.home.session.overdue")}</small>
-                  </span>
-                  <button type="button" onClick={() => onNavigate("bookings", { filter: "CHECKED_OUT" })}>
-                    {t("ui.view_all_44aeb8cb")}
-                  </button>
-                </li>
-                {pendingApproval.length > 0 && <li>
-                  <span className="journey-status-dot" data-tone="pending" aria-hidden="true" />
-                  <span>
-                    <strong>{pendingApproval.length}</strong>
-                    <small>{t("ui.home.session.pending")}</small>
-                  </span>
-                  <button type="button" onClick={() => onNavigate("bookings", { filter: "PENDING_APPROVAL" })}>
-                    {t("ui.view_all_44aeb8cb")}
-                  </button>
-                </li>}
-                {(bookingSummary?.pendingPayment || 0) > 0 && <li>
-                  <span className="journey-status-dot" data-tone="pending" aria-hidden="true" />
-                  <span><strong>{bookingSummary?.pendingPayment}</strong><small>{t("ui.paymentHold.pending")}</small></span>
-                  <button type="button" onClick={() => onNavigate("bookings", { filter: "PENDING_PAYMENT" })}>{t("ui.view_all_44aeb8cb")}</button>
-                </li>}
-              </ul>
+                ))}
             </section>
-
-            {recentIncidents.length > 0 ? (
-              <section className="journey-side-card journey-side-card-warn" aria-labelledby="journey-side-incident">
-                <h3 id="journey-side-incident">{t("ui.home.session.incidentTitle")}</h3>
-                <ul className="journey-incident-list">
-                  {recentIncidents.map(item => (
-                    <li key={item.id}>
-                      <strong>{item.title}</strong>
-                      {item.resource?.name ? <small>{item.resource.name}</small> : null}
-                      <button type="button" onClick={() => onNavigate("incidents", { incident: String(item.id) })}>
-                        {t("ui.home.session.viewRecord")}<ArrowRight size={14} aria-hidden="true" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-
-            {notifications.length ? (
-              <p className="journey-side-note">
-                <CheckCircle2 size={14} aria-hidden="true" />
-                {t("ui.home.session.helpHint")}
-              </p>
-            ) : null}
-          </aside>
-        </div>
-      </section>
+          )}
+          <section className="hub-help">
+            <span className="hub-help-icon">
+              <Headphones size={27} aria-hidden="true" />
+            </span>
+            <h2>{t("ui.hub.helpTitle")}</h2>
+            <p>{t("ui.hub.helpCopy")}</p>
+            <button type="button" onClick={() => onNavigate("support")}>
+              {t("ui.hub.openSupport")}
+              <ArrowRight size={16} aria-hidden="true" />
+            </button>
+          </section>
+          <details className="hub-guide">
+            <summary>{t("ui.home.customer.stepsTitle")}</summary>
+            <ol>
+              {[
+                ["ui.home.steps.find", "ui.home.steps.findHint"],
+                ["ui.home.steps.request", "ui.home.steps.requestHint"],
+                ["ui.home.steps.receive", "ui.home.steps.receiveHint"],
+              ].map(([title, hint]) => (
+                <li key={title}>
+                  <CheckCircle2 size={17} aria-hidden="true" />
+                  <div>
+                    <strong>{t(title)}</strong>
+                    <p>{t(hint)}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </details>
+        </aside>
+      </div>
     </div>
   );
 }

@@ -37,7 +37,7 @@
 .care-cycle>div { display:flex; flex-wrap:wrap; gap:8px 20px; margin-top:10px; font-size:.85rem; }
 .care-workspace progress { appearance:none; height:7px; width:100%; border:0; border-radius:4px; overflow:hidden; accent-color:var(--workspace-primary); }
 .care-workspace progress::-webkit-progress-bar { background:#eeeaf4; }
-.care-workspace progress::-webkit-progress-value { background:var(--workspace-primary,#6441d9); }
+.care-workspace progress::-webkit-progress-value { background:var(--workspace-primary,#6040ce); }
 .care-cycle.is-near progress::-webkit-progress-value { background:#b77817; }
 .care-cycle.is-due progress::-webkit-progress-value { background:#b23c4b; }
 .care-list td:last-child { width:110px; }
@@ -57,7 +57,7 @@
 .maintenance-cycle-row strong,.maintenance-cycle-row span { font-size:.85rem; }
 .maintenance-cycle-row progress { appearance:none; width:100%; height:7px; border:0; }
 .maintenance-cycle-row progress::-webkit-progress-bar { background:#eeeaf4; }
-.maintenance-cycle-row progress::-webkit-progress-value { background:var(--workspace-primary,#6441d9); }
+.maintenance-cycle-row progress::-webkit-progress-value { background:var(--workspace-primary,#6040ce); }
 .maintenance-cycle-row.is-near { border-color:#d6a354; }
 .maintenance-cycle-row.is-due { border-color:#b23c4b; }
 @media(max-width:800px){.maintenance-cycle-grid{grid-template-columns:1fr;}}

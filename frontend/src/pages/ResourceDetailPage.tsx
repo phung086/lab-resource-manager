@@ -251,7 +251,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
         </div>
         <dl className="resource-profile-facts">
           <div><dt><Users size={16} aria-hidden="true" />{tr(resource.category === "ROOM" ? "ui.catalogue.seats" : "ui.catalogue.quantity")}</dt><dd>{resource.capacity}</dd></div>
-          <div><dt><ShieldCheck size={16} aria-hidden="true" />{tr("ui.approval_required_cc220dc0")}</dt><dd>{tr(resource.effectiveRequiresApproval ? "ui.approval_required_dc95ee8f" : "ui.confirm_automatically_when_eligible_e47b0eb4")}</dd></div>
+          <div><dt><ShieldCheck size={16} aria-hidden="true" />{tr("ui.approval_required_cc220dc0")}</dt><dd>{tr(resource.effectiveRequiresApproval ? "ui.approval_required_dc95ee8f" : Number(resource.rental?.hourlyRateVnd) > 0 ? "ui.confirmed_after_payment_2c477063" : "ui.confirm_automatically_when_eligible_e47b0eb4")}</dd></div>
         </dl>
       </header>
       {/* Main Content Grid */}
@@ -290,7 +290,9 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
                 label={tr("ui.approval_required_cc220dc0")}
                 value={resource.effectiveRequiresApproval
                   ? tr("ui.approval_required_dc95ee8f")
-                  : tr("ui.confirm_automatically_when_eligible_e47b0eb4")}
+                  : Number(resource.rental?.hourlyRateVnd) > 0
+                    ? tr("ui.confirmed_after_payment_2c477063")
+                    : tr("ui.confirm_automatically_when_eligible_e47b0eb4")}
               />
               {resource.trainingRequirements?.length > 0 && (
                 <DetailFact

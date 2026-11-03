@@ -73,6 +73,7 @@ export default function CustomerSupportChat({ visible, initialDraft, initialMess
     const transcript = bottom.current?.parentElement;
     if (visible && nearBottom.current && transcript) transcript.scrollTop = transcript.scrollHeight;
   }, [detail?.messages.length, visible]);
+  const actionErrorRef = useRef<HTMLParagraphElement>(null);
   async function mutate(work: () => Promise<void>) {
     if (writing.current) return;
     writing.current = true; setBusy(true); setError('');
@@ -80,6 +81,7 @@ export default function CustomerSupportChat({ visible, initialDraft, initialMess
     catch (cause) {
       if (mounted.current) {
         setError(errorKey(cause));
+        requestAnimationFrame(()=>actionErrorRef.current?.focus());
         const existing = (cause as { details?: { sessionId?: string } }).details?.sessionId;
         if (existing) { cursor.current = 0; setDetail(null); setSelected(existing); }
       }
@@ -115,7 +117,7 @@ export default function CustomerSupportChat({ visible, initialDraft, initialMess
     </header>
     {loading && <p role="status">{tr('support.loading')}</p>}
     {connectionError && <div role="alert"><p>{tr(connectionError)}</p><button type="button" disabled={busy} onClick={() => setRevision(value => value + 1)}>{tr('support.refresh')}</button></div>}
-    {error && <p role="alert">{tr(error)}</p>}
+    {error && <p ref={actionErrorRef} tabIndex={-1} role="alert">{tr(error)}</p>}
     {!selected && !loading && <form className="assistant-human-request" onSubmit={event => { event.preventDefault(); void mutate(request); }}>
       <label>{tr('support.lab')}<select required value={laboratoryId} onChange={event => setLaboratoryId(event.target.value)}><option value="">{tr('support.chooseLab')}</option>{metadata?.laboratories.map(lab => <option key={lab.id} value={lab.id}>{lab.code} · {lab.name}</option>)}</select></label>
       <label>{tr('support.category')}<select value={category} onChange={event => setCategory(event.target.value)}>{categories.map(value => <option key={value} value={value}>{tr(`support.category.${value}`)}</option>)}</select></label>

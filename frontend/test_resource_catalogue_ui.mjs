@@ -17,6 +17,10 @@ const resources = [
   ["qa-9", null, "ROOM", "Tài nguyên chưa phân loại"],
 ].map(([id, category, subtype, name]) => ({ id, code: id.toUpperCase(), category, subtype, name, description: "Hồ sơ kiểm thử giao diện, không phải tài sản thực tế.", laboratoryId: lab.id, laboratory: lab, labPolicy: lab.labPolicy, location: lab.name, capacity: category === "ROOM" ? 24 : 1, operationalStatus: id === "qa-4" ? "MAINTENANCE" : "AVAILABLE", availability: { state: id === "qa-4" ? "UNAVAILABLE" : "AVAILABLE" }, bookingState: "bookable", effectiveRequiresApproval: true, media: [], trainingRequirements: [], specs: { environment: "LOCAL_DEMO", technical: { resolution: "24 MP", includedAccessories: ["Cáp kiểm thử", "Giá đỡ kiểm thử"], sensor: { format: "APS-C", stabilisation: false } }, usageGuide: { beforeUse: ["Kiểm tra cùng cán bộ."], steps: ["Theo tài liệu đúng model."], afterUse: ["Kiểm tra khi trả."], safetyNotes: "Hướng dẫn kiểm thử." } } }));
 
+// A price configuration can also contain a zero rate; it must not imply payment.
+Object.assign(resources.find(row=>row.id==='qa-1'),{effectiveRequiresApproval:false,rental:{hourlyRateVnd:75000}});
+Object.assign(resources.find(row=>row.id==='qa-2'),{effectiveRequiresApproval:false,rental:{hourlyRateVnd:0}});
+
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined, headless: true, args: ["--no-sandbox"] });
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
@@ -32,6 +36,7 @@ try {
     let data = [];
     if (path === "/auth/login") data = { accessToken: "catalogue-ui-fixture", user: student };
     else if (path === "/auth/me") data = student;
+    else if (["/auth/session", "/auth/activity"].includes(path)) data = { createdAt: new Date().toISOString(), idleExpiresAt: new Date(Date.now()+3600000).toISOString(), expiresAt: new Date(Date.now()+7200000).toISOString(), idleTimeoutSeconds: 3600 };
     else if (path === "/laboratories") data = [lab];
     else if (path === "/resources") data = resources.filter(row => (!url.searchParams.get("category") || row.category === url.searchParams.get("category")) && (url.searchParams.get("classification") !== "UNRESOLVED" || row.category == null) && (!url.searchParams.get("search") || row.name.toLowerCase().includes(url.searchParams.get("search").toLowerCase())));
     else if (/^\/resources\/qa-\d+$/.test(path)) data = resources.find(row => row.id === path.split("/").at(-1));
@@ -47,6 +52,11 @@ try {
   const check = (condition, message) => { assert.ok(condition, message); checks++; };
   // Public explorer: no authentication or business writes.
   await page.goto(`${base}/resources`);
+  await page.locator('.catalog-card').first().waitFor();
+  const paidCard=page.locator('.catalog-card').filter({hasText:'Phòng kiểm thử A'});
+  const zeroRateCard=page.locator('.catalog-card').filter({hasText:'Phòng kiểm thử B'});
+  check((await paidCard.innerText()).includes(vi['ui.confirmed_after_payment_2c477063']),'Paid catalogue resource explains payment before confirmation');
+  check(!(await zeroRateCard.innerText()).includes(vi['ui.confirmed_after_payment_2c477063']),'Zero-rate catalogue resource does not claim payment is required');
   await page.locator('.catalog-card').first().waitFor();
   check(await page.locator('.catalog-card').count() === 6, 'Public catalogue initially limits visible records');
   await page.locator('.catalog-filters button').nth(1).click();
@@ -79,6 +89,18 @@ try {
   await page.goto(`${base}/workspace/resources`);
   const cards = page.locator(".resource-catalogue-card"), groups = page.locator(".resource-catalogue-groups");
   await cards.first().waitFor();
+  const filterContrast = await page.locator('.catalogue-quick-filters').evaluate(group => {
+    const rgb = value => value.match(/[\d.]+/g).map(Number);
+    const luminance = color => color.slice(0,3).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+    const backing=rgb(getComputedStyle(group).backgroundColor);
+    return [...group.querySelectorAll('button')].map(button=>{
+      const style=getComputedStyle(button),overlay=rgb(style.backgroundColor),fg=luminance(rgb(style.color));
+      const bg=luminance(overlay.slice(0,3).map((v,i)=>v*(overlay[3]??1)+backing[i]*(1-(overlay[3]??1))));
+      return (Math.max(fg,bg)+.05)/(Math.min(fg,bg)+.05);
+    });
+  });
+  check(filterContrast.every(ratio=>ratio>=4.5), 'Quick filter labels remain legible on the catalogue masthead');
+  await page.screenshot({ path: `${screenshots}/catalogue-desktop.png`, animations: "disabled" });
   check(await cards.count() === 5, "Equipment group includes machines and experiment kits");
   for (const [width, columns] of [[1440, 3], [1108, 3], [768, 2], [375, 1]]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -100,6 +122,11 @@ try {
   await page.locator(".back-button").click();
   await cards.first().waitFor();
   check(await cards.count() === 2 && await groups.locator("button[aria-pressed=true]").innerText().then(value => value.startsWith("Phòng")), "Back retains room group");
+  await cards.nth(1).locator('.resource-catalogue-name').click();
+  await page.locator('.resource-profile-hero').waitFor();
+  check(!(await page.locator('.resource-profile-hero').innerText()).includes(vi['ui.confirmed_after_payment_2c477063']), 'Zero-rate profile header does not imply a payment requirement');
+  await page.locator('.back-button').click();
+  await cards.nth(1).waitFor();
   await groups.getByRole("button", { name: /^Vật tư/ }).click();
   check(await cards.count() === 2, "Unresolved resources remain discoverable");
   check((await cards.allTextContents()).some(value => value.includes("Chưa phân loại")), "Unresolved category never inferred from ROOM subtype");

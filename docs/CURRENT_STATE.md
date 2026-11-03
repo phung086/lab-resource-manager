@@ -1,5 +1,434 @@
 # Trạng thái dự án hiện tại
 
+## Hoàn thành lượt Claude đang dở — 31/10/2026
+
+Theo yêu cầu tiếp quản, giữ diff Claude trên codex/claude-qa-20261021 @0de99b6;
+không mở hướng UI mới. Hoàn thiện5 điểm từ live review: nhãn có phí, phạm vi
+staff, encoding slot picker, CTA danh mục công khai và nhãn chọn tài nguyên.
+Claude đã thêm2 key và sửa các surface; Codex sửa thêm trường hợp rental có
+rate0 và báo giá miễn phí/giảm giá: QuickBookingModal/GuestQuickBookingPanel
+ưu tiên quote đúng key hiện tại, không dùng sự tồn tại của rental để suy ra
+phải trả tiền. Badge/dropdown đổi cùng quote; chưa có quote không hứa tức thì.
+Public catalogue/detail/modal kiểm rate>0; không đổi tạo lịch/hold/IPN/RBAC.
+Staff dùng Công việc cần xử lý, mô tả sắp theo giờ bàn giao, giữ hồ sơ cũ trong
+hàng đợi; CTA/benefits ngắn hơn, không bắt đăng ký để xem danh mục. Slot picker
+UTF-8 hợp lệ, card/preview live không còn U+FFFD. Không thêm CSS/layout/library.
+
+Kiểm chứng cuối: test:required exit0 (2 lint warnings có trước); locale4121
+VI/EN parity/integrity; customer-a11y24 states + chuyển quote0↔75000 trên
+VI/EN×1440/390 PASS, guest quote0 thắng catalogue rate dương; catalogue50 checks
+PASS, gồm rate0 không gán yêu cầu thanh toán ở card và profile hero. Những
+suite này intercept API và không phải DB E2E. Diff-check PASS, JS entry488.57kB/
+141.12kB gzip. Logs OS Temp/lab-claude-resume-{required-verified,a11y-verified,
+catalogue-final}.log, exit files cùng tên; backup trước sửa trong
+OS Temp/lab-claude-resume-20261031/before-source. Không commit/push.
+
+Live UI5173/API8000: đăng nhập STAFF/CUSTOMER đúng accounts local hiện có;
+staff hiển thị heading mới cùng5 hồ sơ, preview LOCAL-MAT-01 có dấu ·; form
+quote2.000đ ghi Xác nhận sau thanh toán, đúng dropdown và note giữ chỗ15 phút.
+Không tạo lịch/account/payment hoặc gửi mail/support. Staff screenshot đã xem:
+OS Temp/lab-claude-resume-20261031/staff-overview-live.png. Phiên idle hết hạn
+được đăng nhập lại bằng credential local, không đoán mật khẩu seed @lab.local.
+Giới hạn: miễn phí/đổi quote kiểm bằng fixture, chưa tạo giao dịch ngân hàng
+mới hoặc nghiệm thu inbox; guest default time quá gần/đã qua vẫn có thể báo lỗi
+quote và cần người dùng chọn giờ hợp lệ (không đổi logic default trong lượt này).
+Bước tiếp: chờ nguồn UI người dùng chọn, dựng một màn mẫu trước khi áp rộng.
+
+## Kiểm tra trực tiếp runtime sau lượt câu chữ — 31/10/2026
+
+Read-only review theo yêu cầu người dùng, cùng checkout/branch hiện có, giữ
+diff Claude và bố cục. UI5173 + API8000 healthy; tự đăng nhập bằng các account
+demo local hiện có: CUSTOMER (hai account), LAB_STAFF và ADMIN đều thành công.
+Không còn blocker thiếu credentials cho các role này trong runtime hiện tại.
+Không tạo account/booking/payment, không gửi support/email, không seed/reset.
+Skill preflight trỏ WORKFLOW.md/.Codex/scripts/preflight.mjs đã mất; thay bằng
+README, governance, HTTP checks và nội dung UI thật, không gọi script là PASS.
+
+Đã thao tác live: public catalogue25 resources/detail; CUSTOMER overview,
+search GPU, calendar, đổi tài nguyên có ảnh/specs + Escape, availability thật,
+form validation (thiếu phone/title: aria-invalid/describedby + focus phone),
+payments empty và owner ledger17 giao dịch; ADMIN ledger20 giao dịch/receipt;
+STAFF overview/queue. Chọn giờ bắt đầu sau kết thúc/đã qua/dưới notice30 phút
+đều có alert và nút đặt bị disabled. Receipt90.000đ có reference/time/resource/
+booking status và disclaimer, mở từ CUSTOMER/ADMIN; thử VI/EN, DOM390 và1440
+không overflow ở các view đã kiểm. Bốn tab authenticated không có console
+errors/warnings khi đọc log cuối lượt. Không chứng minh toàn bộ route/RBAC hay
+giao dịch VNPAY mới; không chạy lại các fixture suite/gate trong lượt đọc này.
+
+Lỗi thấy trực tiếp: (1) tài nguyên GPU180.000đ trong QuickBookingModal vẫn
+ghi Xác nhận tức thì/(Tức thì), trái với phần giữ chỗ/chờ thanh toán phía dưới;
+(2) STAFF ghi Công việc hôm nay/xếp theo giờ trong ngày nhưng hàng đợi có lịch
+12–15/10; (3) thẻ/preview đổi tài nguyên hiển thị ký tự thay thế U+FFFD giữa
+code và category/LAB; (4) CTA bảo tạo account để xem danh mục dù đã xem được
+công khai; (5) nhãn Chọn tài nguyên lịch và Quản lý phòng thí nghiệm một nơi
+chưa tự nhiên. Chưa sửa ứng dụng để giữ biên kiểm tra theo yêu cầu.
+
+Email runtime: worker enabled, SMTP fields configured (chỉ kiểm boolean),
+Prisma read-only aggregate13 bản ghi SENT:6 PAYMENT_RECEIPT/7 ACCOUNT_REGISTERED.
+SENT chưa là xác nhận inbox. Dựng lại HTML từ một receipt SENT bằng renderer
+trong container, không dispatch; browser policy chặn mở file local nên chưa
+nghiệm thu visual HTML email. Evidence OS Temp/lab-live-review-20261031;
+receipt-live-verified.png đã xem ảnh và đúng trạng thái receipt. Một số ảnh
+chụp ngay sau tương tác là frame cũ, không dùng chúng để khẳng định visual PASS.
+Bước tiếp đề xuất: sửa5 điểm câu chữ/encoding trên, giữ layout và nghiệp vụ;
+chưa bắt đầu batch sửa. Cần inbox thật để nghiệm thu email đầu cuối.
+
+## Rà câu chữ từng màn (không đổi bố cục/CSS) — 31/10/2026
+
+Scope theo yêu cầu: chỉ câu chữ — tiêu đề ngắn, nút gọi đúng hành động, mô tả
+một câu; giữ nguyên bố cục, màu, mascot, các khối; lỗi/cảnh báo/điều kiện
+nghiệp vụ giữ nguyên và nổi bật. Không mở đợt dọn CSS hay thay bố cục.
+
+Sửa trong `frontend/src/locales/catalog/vi.json` (+`en.json`):
+- A: 19 key VI "booking" → "lịch đặt" (thuật ngữ đã dùng sẵn 103 key; EN giữ
+  "booking"), gồm ui.active_bookings_1a5f8201 "Lịch đặt đang hoạt động",
+  ui.approve_booking_99c61da3 "Duyệt lịch đặt",
+  ui.booking_history_6b4d7e1c "Lịch sử đặt lịch",
+  ui.booking_rejected_b6508764 "Từ chối lịch đặt",
+  ui.bookings_resource_handover_824d4680 "Vận hành lịch đặt & bàn giao
+  tài nguyên", ui.complete_booking_record_2b8ff0eb,
+  ui.confirm_the_booking_after_checking_59798436,
+  ui.could_not_load_bookings_60c9a71f, ui.jobs_and_affected_bookings_1a3c11ef,
+  ui.no_active_bookings_in_the_2faaa45b,
+  ui.payment_does_not_approve_or_5e1b6b4b "Thanh toán không tự động duyệt
+  hoặc hoàn tất lịch đặt",
+  ui.pricing_saved_existing_booking_fee_977d17c3,
+  ui.queue.countScope, ui.source_saved_bookings_handover_return_5d03d25a,
+  ui.the_amount_always_comes_from_cde307a2,
+  ui.the_resource_is_retained_with_860d628b, ui.upcoming_bookings_f78bd751
+  "Lịch đặt sắp tới",
+  ui.vnpay_verified_this_payment_after_b54cfde0 (fragment nối câu, call site
+  BookingCheckout.tsx:116), profile.loyaltyBasis.
+- B: 5 key landing vi+en — ui.landing.cta.desc "Tạo tài khoản để xem danh
+  mục, đặt lịch và theo dõi sử dụng tài nguyên.",
+  ui.landing.hero.badge "Quản lý phòng và thiết bị",
+  ui.landing.features.booking.title "Đặt lịch",
+  ui.landing.benefits.title "Quản lý phòng thí nghiệm một nơi",
+  ui.landing.hero.subtitle "Tìm phòng, thiết bị và giờ trống, rồi đặt lịch
+  buổi thực hành của bạn."
+- C: ui.cancel_96732485 "Huỷ" → "Hủy" (đồng nhất chính tả với
+  ui.cancel_74fcd352).
+
+Giữ nguyên (điều kiện nghiệp vụ, không là surface copy):
+ui.pay_after_confirmation_and_before_2effbba2,
+ui.this_transaction_uses_vietqr_and_0585cf77,
+ui.this_action_does_not_call_1935b651,
+ui.confirm_you_have_left_the_f20d8d44,
+ui.your_account_must_hold_valid_064ccae3,
+ui.charges_use_the_confirmed_booking_d4c0b90a, ui.rental.quickConfirm,
+ui.payment.conditions (assistant), ui.home.route.actionUnavailable,
+assistant.data.report (tham số {bookings}).
+
+Đồng bộ assertion E2E (không thuộc gate test:required):
+frontend/test_batch5_operations_e2e.mjs:51,92 ("Duyệt lịch đặt") và
+frontend/test_open_lab_operations.mjs:88.
+
+i18n:sync: 4119 VI/EN keys parity/parameters/integrity verified; regenerated
+manifest.js + backend projection. Lưu ý: backend projection diff còn mang
+2 thay đổi có sẵn từ batch trước (reword email.auto.bookingNotice, thêm
+email.auto.welcomeTitle/paymentTitle/reconciliationTitle) — không do đợt này,
+để bàn giao chung.
+
+Findings: `ui.landing.hero.badge` là key chết — không component nào render
+(rg "hero.badge" chỉ ra 2 dòng catalog); chỉ còn `.landing-hero-badge` ở
+global.css:9341,9358. Không xóa (ngoài scope đợt này).
+
+Kiểm chứng: `npm run test:required` PASS (exit 0, build ✓ 3.76s). Browser
+5173 (dev server bg b55mvoynv, API 8000 Docker lrm-local-review): landing
+render copy mới, 0 lỗi console. Giới hạn: màn live LAB_STAFF/ADMIN vẫn chặn
+(seeded password 401, không có credentials hợp lệ trên shared DB) — chỉ xác
+minh qua fixture intercept. Chưa commit; diff có sẵn của batch trước giữ
+nguyên. Bước tiếp: chỉ khi người dùng yêu cầu.
+
+## Điều chỉnh lại phạm vi rút gọn — 30/10/2026
+
+Người dùng yêu cầu trả về trước lượt rút gọn: chỉ ít chữ hơn, không thay bố
+cục/ẩn khối. Đã khôi phục header/footer, search/refresh, hero/metrics/agenda,
+notices, trợ giúp, checkout và mô tả support/profile/account. Giữ toàn bộ cải
+thiện trước lượt đó, bao gồm palette, mascot/z-index, validation/payment guards.
+Header/Footer đối chiếu snapshot trước lượt sửa; CustomerHome khôi phục từ bản
+write gốc cộng các fix đã có (review state, sr-only). Chỉ giữ nhãn ngắn hơn
+trong locale; agenda gọi Lịch sử dụng vì đã hiển thị lại toàn bộ danh sách.
+Master prompt mục0 đã sửa để không lặp cách hiểu sai. Backup bản bị từ chối
+ở OS Temp/lab-ui-restore-20261030/rejected-version. Kiểm chứng khôi phục: typecheck/locale audit PASS; browser fixtures
+confirmed/empty/payment-hold ×1440/1024/390 PASS, checkout7 states PASS;
+đã xem ảnh desktop tổng quan sau khôi phục. Evidence OS Temp/lab-ui-restore-
+20261030/verified, logs lab-ui-restore-{home,checkout}.log. Không thay backend/DB
+và không tuyên bố giao dịch/email live. Bước tiếp chỉ đề xuất: biên tập câu chữ
+trên từng màn với bố cục hiện có, không tự bỏ/ẩn panel.
+
+## UI polish pass theo UI_REFINEMENT_PROMPT — 30/10/2026
+
+Scope: CSS/motion + dead code, giữ nghiệp vụ/API/RBAC/schema nguyên vẹn.
+Sửa: spectrum.css (landing-cta đổi gradient 3 màu → wash tĩnh #f6f2fd, giữ
+glass band của liquid-glass.css); workspace-command.css (hub-focus 450→320ms,
+ảnh hover 400→300ms, trong khối guarded); global.css xóa mục STEP-3 đã nghỉ
+(Digital Twin/Benchmark, 631 dòng, không consumer); AdminUserConsole.tsx dọn
+ternary thừa; auth de-cap 3 keys i18n + i18n:sync (backend projection sạch);
+footer public-landing.css dead CSS (lúc trước). Kiểm chứng live: Vite 5173 +
+API 8000 (Docker lrm-local-review), QA CUSTOMER polishqa-after, 0 lỗi console;
+after-shots Temp/lab-ui-polish-20261030/after (landing CTA, footer,
+overview/resources/selection 1440/390, landing 1024 VI+EN, EN zoom 200%;
+Tab focus bắt đầu bằng skip-link). Gate: test:required PASS (exit 0);
+9/9 suite UI bắt buộc theo brief PASS (system-presentation, workspace-command,
+catalogue, customer-accessibility, shared-form-drafts, payment-checkout,
+support-payment-experience, operations-workbench, resource-care-experience) —
+đều intercept API trong browser, không chạm DB. Bundle: JS giữ 487.63 kB/
+140.88 kB gzip; CSS 561,928 B → 551.30 kB raw (106,621 → 105.86 kB gzip).
+Giới hạn: baseline live LAB_STAFF/ADMIN vẫn chặn (seeded password 401, không
+có credentials hợp lệ trên shared DB) — các screen staff/admin chỉ xác minh
+qua fixture intercept, không phải live; suite DB-gated chưa chạy (không chạy
+trên shared DB). Chưa xem trên điện thoại thật, chưa có external merchant/
+inbox. Không phải production certification. Bước tiếp: có credentials
+LAB_STAFF/ADMIN thật thì chụp baseline live hai role này; khi cần, chạy suite
+DB-gated trên PostgreSQL QA riêng.
+
+## Khôi phục mascot chatbot — 30/10/2026
+
+Người dùng báo mascot mất. Xác minh module Vite đang phục vụ thiếu
+VITE_ENABLE_AI_ASSISTANT, trong khi launcher dev-local chuẩn đã đặt true.
+Nguyên nhân phiên Vite QA mở trực tiếp thiếu env, không phải xóa RobotMascot.
+Dừng đúng frontend session và mở lại5173 với AI=true, giữ payment=true,
+không bật telemetry/backend hay đổi RBAC. Nút hiện floating ở overview,
+inline gọn tại resources/payments/support/maintenance/monitoring theo layout
+hiện có. Giữ cơ chế lazy mount; không tự gửi câu hỏi hoặc fake câu trả lời.
+Thêm nhắc giữ mascot/cờ runtime vào UI_REFINEMENT_PROMPT. Backend8000 vẫn tắt.
+Sửa thêm assistant.css: dock z930 cao hơn launcher920, tránh nút inline đè
+nút đóng trên mobile. Browser6 cases overview/resources/payments×1440/390 PASS:
+mascot visible, open/close bằng click, lỗi503 hiện rõ, không request trợ lý
+trước mở và không chat POST. Build PASS. Sửa CustomerHome dùng utility sr-only chuẩn sau khi bỏ stylesheet
+legacy, tránh nhãn screen-reader hiện thành chữ trên UI. Evidence Temp/lab-mascot-restore-20261030
+(results.json + screenshots), Temp/lab-mascot-build.log. Chỉ HTTP fixture,
+không phải AI/DB end-to-end. Bước tiếp: chỉ báo kết nối ngay trên nút trợ lý.
+
+## Hoàn thiện UI và bàn giao Claude — 30/10/2026
+
+Checkout C:/Projects/lab-resource-manager, codex/claude-qa-20261021 @0de99b6;
+giữ diff trước đó. User muốn hoàn thiện mọi màn, sau đó master prompt để Claude
+polish màu/background/motion, tham khảo ảnh nhưng không sao chép, tránh overload.
+AppLayout data-workspace-view + spectrum thống nhất các header/surfaces cho
+resource/planner/bookings/payments/support/profile/incidents/maintenance và nay
+cả users/materials/operations/audit/bridge/monitoring; accent theo tác vụ,
+data panels đặc, shadow nông, cảnh báo nổi rõ. Public giữ landing glass, blur
+hero16 desktop/8 mobile, bỏ blur card lặp/orb vô hạn. Gỡ import CSS journey cũ.
+AdminUserConsole dùng heading/directory thật của AccessUserManagement; thống kê
+role chuyển disclosure phía sau, bỏ route debug lộ trên UI. Form tạo user gom
+fieldset hai cột desktop/một cột mobile, sửa hint12 ký tự dùng key đúng thay
+hint8 của đổi mật khẩu. Không đổi API/RBAC, business/schema, flags runtime,
+thư viện, polling; không gửi mail/payment/live mutations.
+Gates: test:required PASS, 2 lint warnings cũ; build PASS, diff-check PASS.
+Browser finish: system-presentation30 cases PASS (profile/inbox3 roles,
+selection, users/create/material dossier/resource admin/operations/audit/bridge,
+6 ADMIN read503 states, public register/resources/schedule/process/404 và
+landing/login); VI/EN 1440/390, no overflow/pageerrors, workspace idle infinite
+animations0. Care5 cases PASS, chỉ browser fixture bật UI flag Vite + intercept
+API; runtime telemetry vẫn tắt, không chứng minh cảm biến/Express/Prisma thật.
+Shared drafts PASS support/incident/booking restore, no auto-submit. Trước đó
+cùng lượt UI: catalogue47, a11y24 states, workspace8×3 viewports, service17,
+checkout7, workbench7, planner PASS; retained evidence Temp/lab-system-refinement-
+20261030 và các log lab-system-*. Suite mới không thay thế auth/RBAC/DB E2E.
+Evidence cuối Temp/lab-ui-finish-20261030 (screenshots + build-final.json),
+Temp/lab-ui-finish-{surfaces,care,drafts,required}.log. Xem ảnh desktop/mobile
+thật từ browser fixture; không gắn nhãn live data. Baseline trước lượt systemic:
+entryJS gzip140064/CSS164332 bytes; giữa lượt140076/163049. Số cuối trong
+build-final.json; không suy luận throughput backend từ số read StrictMode.
+Prompt người dùng yêu cầu: docs/UI_REFINEMENT_PROMPT.md, đủ hướng mỹ thuật,
+phạm vi route, source/token owners, bảo vệ hợp đồng, gates và giới hạn kiểm chứng.
+UI5173 chạy; API8000/Docker chưa chạy. Chưa có điện thoại/screen reader thật,
+external merchant/inbox hoặc AI integration DB. Không gọi đây là production
+certification. Bước tiếp: Claude polish theo prompt trên mã hiện tại, nghiệm thu
+trực tiếp các viewport/contrast/motion và kiểm tra tải trên thiết bị thật khi có.
+
+## Tổng quan đa sắc theo ảnh tham chiếu — 30/10/2026
+
+User yêu cầu UI nổi bật như ảnh dashboard tím–hồng, thay đổi bố cục thực tế.
+Checkout codex/claude-qa-20261021 @0de99b6, giữ toàn bộ diff trước đó.
+CustomerHome viết lại: lời chào + ngày VN; khối phiên ưu tiên gradient đậm,
+giờ sử dụng lớn, trạng thái quá hạn/payment/legacy rõ; tìm tài nguyên bên cạnh;
+4 chỉ số từ bookingSummary server; agenda tối đa5 phiên trong records đã tải,
+không coi là tổng toàn bộ; notices một lần ở cột phải + support, catalog3 thẻ
+với ảnh API/category art và đủ5 shortcut category. Mobile agenda chuyển thành
+hàng thẻ, không che status/action. Giữ handlers navigation/ownership, API,
+settlement và payment deadline; không thêm dữ liệu/hạ tầng. Staff/Admin dùng
+masthead cùng palette; admin gom nhóm compact, giữ workflow và queue hiện có.
+Files: features/workspace/CustomerHome.tsx, pages/WorkspaceHome.tsx,
+styles/workspace-command.css, catalogs+manifest; test_workspace_command_ui.mjs.
+Kiểm chứng: browser8 scenarios (confirmed/hold/overdue/legacy/empty/read503+
+retry/staff/admin), VI/EN, 1440/1024/390, reduced-motion + authored animation,
+4 metric colors, search category/context và hồ sơ đúng ID, zero mutations,
+pageerrors=[]; workspace-refresh3 scenarios PASS; frontend test:required PASS
+(2 lint warnings cũ), diff-check PASS. Đã xem ảnh desktop/mobile và sửa CSS
+specificity masthead/metric, bỏ backdrop blur gây capture trắng notices mobile.
+Evidence Temp/lab-workspace-command-20261030/{before-*,after-*}, logs Temp/
+lab-workspace-command-{ui,required}-20261030.log. UI capture dùng HTTP fixture
+QA; backend8000/Docker vẫn không chạy, chưa nghiệm thu dữ liệu live hay authE2E.
+Đề xuất tiếp: đồng bộ danh mục/hồ sơ tài nguyên và planner theo visual system
+mới, giữ landing glass và validation/cảnh báo đã triển khai.
+
+## Biên nhận và trạng thái checkout — 30/10/2026
+
+Checkout C:/Projects/lab-resource-manager, codex/claude-qa-20261021 @0de99b6;
+giữ các diff đã có. Hợp nhất hai mẫu receipt thành features/payments/
+PaymentReceipt.tsx + payment-receipt.css, dùng tại ReceiptButton và ledger.
+Số tiền/nhà cung cấp, thông tin giao dịch/lịch, generatedAt và disclaimer hiện
+rõ; manual_review có cảnh báo amber, trạng thái lịch hiện tại tách khỏi settlement.
+Checkout banner không còn ghi chờ thanh toán cho lịch đã hủy; manual_review ưu
+tiên nhãn cần đối soát. Receipt read failure nhận focus, thử lại bằng nút mở;
+giữ focus trigger khi busy để Escape trả đúng vị trí. Không đổi API/schema,
+quyền trả phí, email/outbox hay settlement. Thêm 3 key VI/EN và sync manifest.
+Kiểm chứng: frontend test:required PASS (2 lint warnings cũ), build cuối PASS;
+checkout7 fixture scenarios PASS, bổ sung receipt503/retry/focus, VI/EN,
+1440/390, print chỉ biên nhận; support/payment17 scenarios PASS. Hai PDF
+paid/reconciliation mỗi bản1 trang A4, đủ fields/title/disclaimer/booking state;
+đã xem ảnh browser và bản in. Evidence Temp/lab-receipt-review-20261030/{before,
+after,ledger}, logs Temp/lab-receipt-{required,checkout,ledger,final-build}-20261030.log.
+Runtime: frontend5173 đã bật; API8000 không chạy và Docker engine chưa khả dụng.
+Không chạy lại PostgreSQL/SMTP integration hoặc gửi hộp thư/ngân hàng thật.
+Bước đề xuất: bật lại stack backend đã có, rà email OTP và lỗi xác minh/đặt
+lịch trên QA; nghiệm thu inbox Gmail/Outlook khi có hộp thư QA được chỉ định.
+
+## Nghiệm thu thanh toán–email trên PostgreSQL/SMTP QA — 29/10/2026
+
+Tiếp tục theo yêu cầu người dùng. Tạo riêng container PostgreSQL16
+lrm-paymail-qa-20261029, localhost25439; không chạm stack8000/DB5433.
+Dùng runner migration canonical cho lab_resources_{payment_hold,email}_test.
+Kết quả: payment-hold integration17 PASS; email integration11 PASS; browser
+payment-hold với API+PostgreSQL QA23 checks PASS (ROOM VI desktop / EQUIPMENT
+EN mobile). Backend lint và diff-check PASS. Không phát hiện lỗi runtime mới
+trong phạm vi này; thay đổi source chỉ tăng kiểm thử emailAutomation.integration.
+Thêm assertions thư thật do SMTP loopback nhận: text/plain + text/html,
+escaping, link đúng /login hoặc /workspace/payments?booking=..., paid hold
+IPN → CONFIRMED → 1 receipt → SENT, duplicate callback không thêm thư;
+late settlement giữ CANCELLED/reconciliation. Bao phủ SMTP missing/reject/
+backoff5 lần, lease recovery, rollback outbox, invalid signatures/amounts,
+OTP guest + welcome. Không gửi thư ra hộp thư thật hay tới ngân hàng.
+Browser xác minh preflight không tạo lịch, deadline giữ nguyên sau reload,
+chỉ mở URL VNPAY đã ký (destination intercept), truy cập trang provider không
+xác nhận thanh toán, hết hạn được server hủy và lịch trống lại.
+Evidence Temp/lab-paymail-integration-20261029/{results.json,payment-hold.log,
+email-final.log,payment-hold-browser.log,mail-previews/*.html|png}; capture UI
+Temp/lab-payment-hold-{vi,en}.png. Preview từ snapshot đã gửi SMTP QA, chỉ dữ
+liệu test; không lưu OTP. QA container đã STOP, giữ dữ liệu kiểm tra phục hồi.
+Giới hạn: SMTP acceptance nội bộ chưa chứng minh Gmail/Outlook inbox; callback
+chữ ký test chưa chứng minh merchant/bank sandbox bên ngoài. Bước đề xuất:
+kiểm tra client email Gmail/Outlook trên hộp thư QA được chỉ định, rồi nghiệm
+thu merchant sandbox có IPN public. Không tự gửi mail ngoài khi thiếu đích QA.
+
+## Thanh toán và email hoàn thiện trình bày — 29/10/2026
+
+UI: BookingCheckout thêm banner amount/status/context, hai vùng tóm tắt và
+bước tiếp theo, hướng dẫn biên nhận/email, responsive; ledger nhấn dossier và
+selected card theo palette violet/mint/peach. Fix ledger chỉ cho CONFIRMED trả
+phí: dùng canInitiateBookingPayment chung cho owner + PENDING_APPROVAL có hạn;
+hiển thị PaymentHoldNotice, đọc lại deadline khi bấm; không mở quyền người khác.
+Sửa focus sau render khi lỗi initiation (checkout/ledger).
+Email: renderEmailDocument mới dùng table/inline styles, header LAB, preheader,
+amount hoặc OTP nổi rõ, bảng snapshot, CTA + link text; escape text và lọc link.
+Áp cho welcome, receipt, guest OTP và password OTP. Welcome → /login; receipt →
+/workspace/payments?booking=<id>. Receipt đối soát dùng amber và giữ status lịch;
+copy bỏ ngụ ý phê duyệt lịch mới. Giữ outbox/SMTP/retry/OTP/security contracts.
+Files: backend/services/{emailTemplate,emailAutomationService,guestBookingService,
+passwordSecurityService}; frontend/features/payments/{BookingCheckout,PaymentsPage,
+payment-experience.css}; catalogs+projections; test emailTemplate/checkout và
+support_payment (bổ sung owner projection thật + hold/expired/foreign owner).
+Kiểm chứng: frontend test:required PASS (2 warnings cũ), backend test:required
+PASS; release-security 8/8 (gồm 2 template), backend lint PASS. Checkout 7 fixture
+scenarios × desktop/mobile (paid thêm EN); support/payment17 scenarios PASS;
+6 email preview renders desktop/mobile không tràn; diff-check PASS. SMTP
+read-only verify=true, không chủ động gửi mail/ngân hàng/ghi business data.
+Nguồn backend bind-mounted + nodemon; không restart/deploy riêng.
+Evidence: Temp/lab-payment-email-polish (before/after + email HTML/PNG),
+Temp/lab-paymail-{fe,be,release,lint,templates,checkout,smtp}.log.
+Giới hạn: preview Chromium chưa chứng minh Outlook/Gmail rendering/inbox;
+không chạy bank/IPN/email-outbox end-to-end trên DB hoặc mailbox thật đợt này.
+Bước đề xuất: nghiệm thu email trên hộp thư QA và thanh toán sandbox có IPN
+trên dữ liệu QA riêng; chưa gửi/giao dịch thật tự động.
+
+## Rà thông báo/validation luồng khách hàng — 29/10/2026
+
+Phạm vi người dùng yêu cầu rà toàn bộ sau ảnh lỗi chọn giờ: rà source và
+luồng khách từ public resource → planner → booking/review/guest → payments,
+profile/password, selection, notifications, incidents và support. Không đổi
+backend/schema/luật booking hay thanh toán; không ghi business data để test.
+Sửa: lỗi QuickBooking ra ngoài fieldset ẩn, nhận focus sau render; quote lỗi
+có nền rõ. Guest có summary + aria-invalid + nút focus đúng field, email check,
+retry quote/pricing giữ tiêu đề, resolve category/status locale keys; form guest
+chuyển xuống toàn bề rộng hồ sơ. PaymentHold phân cấp dưới 2 phút/hết hạn,
+live-region chỉ đọc khi đổi mức (không đọc countdown mỗi giây). Checkout/payments,
+password/chat focus lỗi thao tác; support fix race focus-before-render. Styles
+feedback chung bao phủ lỗi selection/profile/inbox/chat, field error và connection.
+Files chính: QuickBookingModal, GuestQuickBookingPanel, PublicResourceCatalog,
+features/payments/{BookingCheckout,PaymentHoldNotice,PaymentsPage},
+features/accounts/PasswordChangeForm, support/{CustomerSupportChat,SupportPage},
+feedback-visibility.css, catalogs VI/EN+manifest, test_customer_accessibility_ui.
+Verification: test:required PASS (2 lint warnings cũ); customer-accessibility
+24 states VI/EN×desktop/mobile PASS + thêm conflict/preserve/error-focus và
+public guest title/email/quote-retry; shared-form-drafts PASS; catalogue46 PASS;
+support/payment14 scenarios PASS. Diff-check PASS. Evidence Temp/
+lab-customer-feedback-{a11y,drafts,catalogue,payments}, logs required cùng prefix.
+Đã xem live guest desktop trước/sau và screenshot guest mobile fixture.
+Giới hạn: không E2E tạo booking/thanh toán provider thật, không chứng nhận WCAG
+hay kiểm tra screen reader thực tế; chưa mô phỏng mọi exception của staff/admin.
+Tiếp theo đề xuất: test bàn phím/screen reader và thiết bị mobile thật cho hành
+trình hoàn chỉnh trên dữ liệu QA riêng; giữ hướng landing glass đã chọn.
+
+## Chọn tài nguyên và validation khung giờ — 29/10/2026
+
+Theo ảnh phản hồi người dùng: BookingSlotPicker đổi danh sách text sang thẻ
+ảnh/mô tả, có Xem chi tiết (BaseModal + ResourceGallery/specs từ API thật).
+Đổi tài nguyên quay bước 1, focus heading; giờ đang nhập giữ khi quay lại
+cùng tài nguyên. Ảnh không có dùng category art, không bịa ảnh thiết bị.
+slotIssue hướng dẫn client kiểm tra min notice/giờ phục vụ/thời lượng/
+weekend/horizon; cảnh báo amber có icon, lý do+giới hạn, nút sửa focus input,
+aria-invalid/describedby và khóa tiếp tục. Kiểm tra lại ngay trước availability;
+server/final booking vẫn authoritative. Phân biệt maintenance conflict.
+Files: calendar/BookingSlotPicker.tsx, plannerModel.ts, planner-validation.css,
+VI/EN+manifest, test_calendar_planner.mjs, test_planner_guidance_ui.mjs.
+Verification: test:required PASS (2 lint warnings cũ), final build PASS;
+fixture browser planner PASS: ngoài giờ/quá ngắn, khóa/mở CTA, focus sửa,
+ảnh + detail specs, Escape, giữ giờ, mobile overflow, không booking POST,
+page errors=[]. Có unit kiểm tra notice/duration/hours/order/valid.
+Evidence Temp/lab-planner-guidance. Chưa E2E tạo lịch dữ liệu thật, chưa rà
+hết form toàn hệ thống. Bước tiếp: rà form xác nhận/guest booking với lỗi
+máy chủ và hạn thanh toán, cùng chuẩn lý do + hành động sửa.
+
+## Thông báo dễ nhận biết — 29/10/2026
+
+Yêu cầu khách phải thấy thông báo/cảnh báo. Thêm feedback-visibility.css
+(import sau motion): nền đặc, chữ tối, viền nhấn cho lỗi chung/guest/auth/
+booking/catalog; amber cho warning, xanh cho success; nút retry 44px.
+LocalDraftNotice gắn is-warning khi lưu thất bại. Thanh hướng dẫn landing
+đậm chữ/nhãn và tăng tương phản; giữ chuyển động/pause/reduced-motion.
+Không đổi logic gửi, dữ liệu, mức độ hay thời gian tự ẩn thông báo.
+Build PASS; customer-accessibility fixture PASS (24 trạng thái VI/EN,
+không có unnamed/contrast findings trong scanner giới hạn, page errors=[]).
+Browser fixture catalog503: tương phản 8.95:1, retry44px, không overflow
+1280/390. Đã gỡ route fixture và trả browser về landing live. Diff-check PASS.
+Chưa rà mọi notification/toast của staff/admin. Bước tiếp: rà cảnh báo hạn
+thanh toán và xung đột lịch, đảm bảo hiện đúng nơi cần xử lý, không auto-hide
+nội dung khách cần đọc. Giữ các diff font/motion của tác giả khác.
+
+## Đồng nhất màu toàn dự án — 29/10/2026
+
+Người dùng yêu cầu mở rộng đồng nhất violet từ landing sang mọi màn hình còn lại.
+Quyết định: anchor là token `.workspace-shell` trong `styles/global.css`
+(--workspace-accent `#6441d9`→`#6040ce`, --workspace-accent-hover
+`#5030b6`→`#4d33b8`, khớp test contrast đã assert `#6040ce`); sweep 23 file
+CSS/TSX (global, home-structure, calendar-planner, resource-*, operations,
+incidents, maintenance, auth-feedback, payments, assistant, RobotMascot.tsx,
+telemetry-history, workspace-home…) thay literal `#6441d9`/`#5030b6`
+(để ý cả dạng upper-case) về `#6040ce`/`#4d33b8`, shadow
+`rgba(100,65,217,…)`→`rgba(96,64,206,…)` (diff 134 dòng). Giữ nguyên: màu
+status semantic (#6d28d9 calibration, #4338ca approval, teal dot), tint
+#eee8fc/#f3f0ff, khối dark-theme legacy trong global.css, gradient trang trí
+teal/cam của footer/marquee.
+
+Kiểm chứng: token computed live `#6040ce/#4d33b8` (staff workspace overview +
+calendar); console 0 error; `test:ui:contrast` 22 checks / 0 finding (lần đầu
+flake timeout hover, chạy lại pass); `test:required` PASS (build, i18n, lint 2
+warning cũ, typecheck, SEO). Chưa commit. Blocker: không. Bước tiếp: chờ
+người dùng xem/duyệt, có thể commit nếu được yêu cầu.
+
 ## Đồng nhất màu landing — 29/10/2026
 
 Người dùng chọn giữ giao diện landing hiện tại, chỉ sửa lặt vặt; phát hiện màu
@@ -2074,3 +2503,36 @@ tiếp: vòng lặp đã phủ rộng — chuyển sang chế độ "điểm dan
 Vite 200, API 200, 2 trang chính load không pageerror. Hạ tầng khỏe, không
 cần hành động. Việc tiếp: tiếp tục điểm danh nhẹ mỗi lượt; 2 quyết định
 chờ người dùng (bridge fallback, 2 lô treo) nguyên vị trí.
+
+## Loop lượt 08:40 — sửa 5 lỗi runtime ưu tiên + sweep VI/EN desktop/mobile — 29/10/2026
+
+Phạm vi: 5 lỗi người dùng nêu (copy xác nhận vs thanh toán; staff home
+"hôm nay" chứa lịch 12–15/10; ký tự lỗi U+FFFD ở thẻ tài nguyên; landing
+đòi tạo tài khoản để xem danh mục; nhãn thiếu tự nhiên). Sửa tại:
+- `frontend/src/components/QuickBookingModal.tsx`, `ResourceDetailsModal.tsx`
+  (dòng ~98/~112): copy "Xác nhận tức thì" → "Xác nhận sau thanh toán" cho
+  booking có phí; badge `ui.confirmed_after_payment_suffix_ac8e62f6`.
+- `frontend/src/components/features/workspace/StaffHome.tsx` (~52/193/272):
+  đổi khung "Công việc hôm nay" → theo ca/lô hàng đợi; `WorkspaceHome.tsx`
+  tách masthead operator vs customer.
+- `frontend/src/components/calendar/BookingSlotPicker.tsx`: thay ký tự lỗi
+  U+FFFD bằng "·".
+- `frontend/src/components/PublicResourceCatalog.tsx` + landing: danh mục
+  công khai xem được không cần tài khoản (nhãn yêu cầu đăng nhập đã bỏ).
+
+Kiểm chứng trực tiếp (Vite 5173 + API 8000, sessionStorage token):
+- VI/EN, desktop 1440 và mobile 390: staff home, calendar, danh mục công
+  khai, danh sách workspace + overlay đặt lịch, picker lịch staff.
+- Kết quả: FFFD_COUNT 0, OVERFLOWX 0, ERRORS [] ở mọi lượt chạy; EN hiển
+  thị "Confirmation after payment", "Paid bookings are reserved for 15
+  minutes…"; staff home EN có "Work queue"/"Work through each step"/"Work
+  for this shift" (không còn khung "hôm nay").
+- Ảnh: `frontend/screenshots/qa-*.png` (picken4, home4/home5, caten,
+  catmob, calmob, pickmob, calpicker).
+- Gate: `npm run test:required` EXIT:0 (locale/API tests + lint + typecheck +
+  build) ở lượt trước; lượt này chỉ đổi harness QA, không đổi source.
+
+Giới hạn còn lại: danh mục EN vẫn hiện tên tài nguyên tiếng Việt (dữ liệu
+seed, không phải nhãn UI); chưa kiểm chứng email thật vào inbox (outbox chỉ
+ghi SENT); scratch `frontend/.tmp-qa/*.mjs` + ảnh QA còn trong working tree,
+chưa commit (nhánh `codex/claude-qa-20261021`).

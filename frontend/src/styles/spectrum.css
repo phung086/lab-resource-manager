@@ -164,7 +164,7 @@
 .project-public-shell.lab-spectrum .landing-section-eyebrow { display: none; }
 .project-public-shell.lab-spectrum .landing-features { background: #eef7f4; }
 .project-public-shell.lab-spectrum .landing-process { background: #f4f0fc; }
-.project-public-shell.lab-spectrum .landing-cta { background: linear-gradient(115deg,#ece5ff,#e3f4ed 70%,#fff0e2); color: var(--spectrum-ink); }
+.project-public-shell.lab-spectrum .landing-cta { background: #f6f2fd; }
 .project-public-shell.lab-spectrum .landing-cta :is(h2,p) { color: var(--spectrum-ink); }
 
 /* One short arrival moment; interaction motion is limited to actionable items. */
@@ -229,31 +229,140 @@
  .workspace-shell.lab-spectrum .workspace-nav-desktop .sidebar-nav-item-2026 { border-radius:12px; min-height:46px; }
 }
 
-/* Liquid glass mastheads — 28/10/2026 (user direction): translucent depth over
-   the shell canvas while data panels stay solid for legibility. */
-.workspace-shell.lab-spectrum .lab-home .home-masthead,
-.workspace-shell.lab-spectrum .workspace-home.role-customer .journey-hero {
-  background: linear-gradient(115deg, rgba(232, 224, 255, 0.62) 0%, rgba(241, 239, 255, 0.5) 44%, rgba(223, 243, 236, 0.55) 78%, rgba(255, 240, 223, 0.6) 100%);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 26px 54px -30px rgba(42, 26, 94, 0.42);
+/* Shared workspace composition. Opaque data surfaces avoid stacked GPU blur;
+   route accents identify the task without changing semantic status colours. */
+.workspace-shell.lab-spectrum[data-workspace-view] {
+  --view-accent:#6040ce; --view-tint:#f0ebfc; --view-line:#ddd2f0;
+  --surface-shadow:0 5px 18px -14px #42325e30;
 }
-.workspace-shell.lab-spectrum .lab-home .home-panel.home-notices {
-  background: linear-gradient(155deg, rgba(255, 253, 249, 0.74) 0%, rgba(248, 246, 255, 0.62) 100%);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 24px 48px -28px rgba(42, 26, 94, 0.35);
+.workspace-shell.lab-spectrum[data-workspace-view=resources],
+.workspace-shell.lab-spectrum[data-workspace-view=admin_management],
+.workspace-shell.lab-spectrum[data-workspace-view=stock] {
+  --view-accent:#216f67; --view-tint:#e8f4ef; --view-line:#c5e1d5;
 }
-.workspace-shell.lab-spectrum .lab-home .home-trends {
-  background: linear-gradient(155deg, rgba(255, 253, 249, 0.8) 0%, rgba(248, 246, 255, 0.68) 100%);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 24px 48px -28px rgba(42, 26, 94, 0.32);
+.workspace-shell.lab-spectrum[data-workspace-view=maintenance] {
+  --view-accent:#92531c; --view-tint:#fff2e1; --view-line:#ead4b5;
 }
-@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
-  .workspace-shell.lab-spectrum .lab-home .home-masthead,
-  .workspace-shell.lab-spectrum .workspace-home.role-customer .journey-hero { background: linear-gradient(115deg, #e8e0ff 0%, #f1efff 44%, #dff3ec 78%, #fff0df 100%); }
+.workspace-shell.lab-spectrum[data-workspace-view=incidents] {
+  --view-accent:#a03256; --view-tint:#fceef2; --view-line:#edc8d2;
+}
+.workspace-shell.lab-spectrum[data-workspace-view=support],
+.workspace-shell.lab-spectrum[data-workspace-view=profile],
+.workspace-shell.lab-spectrum[data-workspace-view=monitoring] {
+  --view-accent:#346b98; --view-tint:#eaf2fb; --view-line:#cddfee;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .main-content-column-2026 {
+  background:radial-gradient(ellipse 65% 420px at 0% 0%,#ece7fa,transparent 85%),
+    radial-gradient(ellipse 50% 360px at 100% 0%,#e6f3ef,transparent 85%),#f6f5fb;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .header-2026 {
+  background:#fff; backdrop-filter:none; -webkit-backdrop-filter:none;
+  box-shadow:0 3px 14px -10px #49366555;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.workspace-header,.planner-heading,.page-section-header,.operations-header,.incident-heading,.maintenance-heading,.account-heading,.inbox-heading,.selection-heading,.users-heading,.materials-heading,.monitor-heading,.audit-workspace-heading,.chatgpt-connection-heading) {
+  position:relative; padding:22px 24px; border:1px solid var(--view-line);
+  border-inline-start:4px solid var(--view-accent); border-radius:16px;
+  background:linear-gradient(115deg,#fff 35%,var(--view-tint));
+  box-shadow:none; gap:18px; margin-top:0;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.workspace-header,.planner-heading,.page-section-header,.operations-header,.incident-heading,.maintenance-heading,.account-heading,.inbox-heading,.selection-heading,.users-heading,.materials-heading,.monitor-heading,.audit-workspace-heading,.chatgpt-connection-heading) h1 {
+  font-size:clamp(24px,2.3vw,31px); font-weight:700; line-height:1.3;
+  letter-spacing:-.03em; margin:0; color:#30283f;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.workspace-header,.planner-heading,.page-section-header,.operations-header,.incident-heading,.maintenance-heading,.account-heading,.inbox-heading,.selection-heading,.users-heading,.materials-heading,.monitor-heading,.audit-workspace-heading,.chatgpt-connection-heading) p {
+  font-size:13px; line-height:1.7; max-width:68ch; margin-top:7px; color:#62566f;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.home-panel,.home-trends,.home-masthead,.home-notice-chip,.queue-panel,.operation-card,.resource-profile-hero,.slot-ticket,.support-chat,.payment-dossier) {
+  backdrop-filter:none; -webkit-backdrop-filter:none;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .lab-home :is(.home-panel.home-notices,.home-trends) {
+  background:#fff; border:1px solid #e5deee; box-shadow:var(--surface-shadow);
+}
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.resource-catalogue-card,.operation-card,.incident-queue,.maintenance-queue,.support-queue,.account-card) {
+  border-color:#e5deee; box-shadow:var(--surface-shadow);
+}
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.resource-catalogue-card,.planner-resource-card) {
+  border-radius:15px; transform:none;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.resource-catalogue-actions,.planner-resource-card-actions) {
+  background:#fbfafd; border-top:1px solid #eee8f5; padding:13px 16px;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-management-view.resource-browse-studio .workspace-header {
+  background:radial-gradient(ellipse at 100% 0%,#408f8560,transparent 65%),linear-gradient(115deg,#193e4b,#285e63 70%,#397975);
+  border:0; border-radius:20px; padding:28px;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-browse-studio .workspace-header :is(h1,.catalogue-studio-intro) { color:#fff; }
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-browse-studio .workspace-header .catalogue-quick-search {
+  flex-basis:100%; max-width:660px;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-browse-studio .catalogue-quick-search .search-box { color:#5e506f; }
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-browse-studio .workspace-header .catalogue-quick-filters {
+  background:#163e4a; border:1px solid #ffffff40; padding:4px; border-radius:10px;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-browse-studio .workspace-header .catalogue-quick-filters button {
+  background:#ffffff16; border:1px solid #ffffff45; color:#fff; min-height:40px;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-browse-studio .workspace-header .catalogue-quick-filters button[aria-pressed=true] {
+  background:#e2f5ec; color:#20584b; border-color:#e2f5ec; font-weight:650;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-browse-studio .workspace-header .btn-secondary { background:#fff; color:#355260; }
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-profile-hero {
+  background:linear-gradient(120deg,#e8f4ef,#fff 75%); border-color:#c5e1d5; border-radius:18px;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .planner-step-context { background:#f5f1fd; border-color:#dbceef; }
+.workspace-shell.lab-spectrum[data-workspace-view] .calendar-planner .slot-ticket { border-radius:18px; box-shadow:var(--surface-shadow); }
+.workspace-shell.lab-spectrum[data-workspace-view] .calendar-planner .slot-ticket-art { height:132px; background:linear-gradient(125deg,#e8e1f7,#ebf5f0); }
+.workspace-shell.lab-spectrum[data-workspace-view] .calendar-planner .slot-ticket .planner-choice {
+  background:linear-gradient(115deg,#ede5fa,#f6f0ff); border-block-style:solid; border-color:#dfd2ef;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .calendar-planner .slot-ticket .planner-choice strong { font-size:32px; color:#513780; }
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.incident-detail-heading,.maintenance-dossier>.maintenance-detail-heading,.support-chat-header) {
+  background:var(--view-tint); border-bottom:1px solid var(--view-line);
+}
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.incident-job,.maintenance-job,.support-queue-row)[aria-pressed=true],
+.workspace-shell.lab-spectrum[data-workspace-view] .support-queue-row.is-selected {
+  background:var(--view-tint); box-shadow:inset 3px 0 var(--view-accent);
+}
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.incident-toolbar,.maintenance-toolbar,.payment-filters,.inbox-filters,.filters-panel) {
+  background:#fff; border:1px solid #e5deee; border-radius:12px; box-shadow:none;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.btn,.primary-button,.secondary-button,.table-action,.resource-catalogue-card,.planner-resource-option) {
+  transition:background-color 160ms ease,border-color 160ms ease,box-shadow 160ms ease,transform 160ms ease;
+}
+@media(hover:hover) {
+  .workspace-shell.lab-spectrum[data-workspace-view] .resource-catalogue-card:hover { transform:translateY(-2px); border-color:#bba8d7; box-shadow:0 9px 22px -16px #62488960; }
+}
+@media(max-width:760px) {
+  .workspace-shell.lab-spectrum[data-workspace-view] :is(.workspace-header,.planner-heading,.page-section-header,.operations-header,.incident-heading,.maintenance-heading,.account-heading,.inbox-heading,.selection-heading,.users-heading,.materials-heading,.monitor-heading,.audit-workspace-heading,.chatgpt-connection-heading) { padding:19px 17px; border-radius:12px; }
+  .workspace-shell.lab-spectrum[data-workspace-view] .resource-management-view.resource-browse-studio .workspace-header { padding:22px 18px; }
+  .workspace-shell.lab-spectrum[data-workspace-view] .calendar-planner .slot-ticket-art { height:110px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .workspace-shell.lab-spectrum[data-workspace-view] :is(.btn,.primary-button,.secondary-button,.table-action,.resource-catalogue-card,.planner-resource-option) { transition:none; transform:none; }
+}
+
+/* Supporting operator screens use the same surfaces and compact hierarchy. */
+.workspace-shell.lab-spectrum[data-workspace-view=dashboard],
+.workspace-shell.lab-spectrum[data-workspace-view=logs] { --view-accent:#466d89; --view-tint:#edf3f8; --view-line:#d1dfe9; }
+.workspace-shell.lab-spectrum[data-workspace-view] .admin-directory-overview {
+  margin-top:20px; padding:18px 22px; background:#fff; border:1px solid #e5deee; border-radius:14px;
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .admin-directory-overview>summary {
+  display:list-item; min-height:28px; cursor:pointer; color:#58456f; font-size:14px; font-weight:600;
+}
+.admin-directory-overview>summary>span { display:inline-block; padding:3px 8px; margin-left:10px; background:#eee7fa; color:#6040ce; border-radius:6px; font-variant-numeric:tabular-nums; }
+.admin-directory-overview[open]>summary { margin-bottom:20px; }
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.materials-register,.materials-dossier,.users-directory,.users-dossier,.audit-list,.audit-table-wrap,.monitor-queue,.chatgpt-connection-row) {
+  background:#fff; border-color:#e5deee; border-radius:14px; box-shadow:var(--surface-shadow);
+}
+.workspace-shell.lab-spectrum[data-workspace-view] .materials-stat { background:#fff; border-color:#e5deee; }
+.workspace-shell.lab-spectrum[data-workspace-view] .materials-stat span { text-transform:none; letter-spacing:0; }
+.workspace-shell.lab-spectrum[data-workspace-view] .materials-balance-card { background:var(--view-tint); border:1px solid var(--view-line); border-radius:10px; }
+.workspace-shell.lab-spectrum[data-workspace-view] :is(.users-toolbar,.audit-filters) { background:#fff; border:1px solid #e5deee; border-radius:12px; padding:18px; }
+.workspace-shell.lab-spectrum[data-workspace-view] .audit-workspace { background:transparent; padding:0; border:0; box-shadow:none; }
+.workspace-shell.lab-spectrum[data-workspace-view] .chatgpt-connection-status { border-radius:12px; background:#f0ebfc; color:#513880; border:1px solid #ddd2f0; }
+.workspace-shell.lab-spectrum[data-workspace-view] .chatgpt-connection>p { line-height:1.7; }
+@media(max-width:600px) {
+  .workspace-shell.lab-spectrum[data-workspace-view] .admin-directory-overview { padding:16px; }
+  .workspace-shell.lab-spectrum[data-workspace-view] :is(.users-actions,.chatgpt-connection-heading) { flex-wrap:wrap; }
 }

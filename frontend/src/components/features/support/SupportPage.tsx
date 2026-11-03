@@ -122,10 +122,17 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
     else if (detail?.messages.length) setHasNewMessages(true);
   }, [detail?.messages.length]);
 
+  const focusErrorRequested = useRef(false);
+  useEffect(()=>{
+    if (error && !busy && focusErrorRequested.current && errorRef.current) {
+      focusErrorRequested.current=false;
+      errorRef.current.focus();
+    }
+  },[error,busy]);
   async function mutate(work: () => Promise<void>) {
     if (busyRef.current) return; busyRef.current = true; setBusy(true); setError('');
     try { await work(); if (mounted.current) setRevision(value => value + 1); }
-    catch (cause) { if (mounted.current) { setError(errorKey(cause)); requestAnimationFrame(()=>errorRef.current?.focus()); const session = (cause as { details?: { sessionId?: string } }).details?.sessionId; if (session) choose(session); } }
+    catch (cause) { if (mounted.current) { focusErrorRequested.current=true; setError(errorKey(cause)); const session = (cause as { details?: { sessionId?: string } }).details?.sessionId; if (session) choose(session); } }
     finally { busyRef.current = false; if (mounted.current) setBusy(false); }
   }
   const openRequest = Boolean(list?.summary.WAITING || list?.summary.ACTIVE);

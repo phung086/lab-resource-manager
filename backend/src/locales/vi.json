@@ -286,7 +286,7 @@
     "calendar.offlineDetails": "Thiết bị không khả dụng",
     "email.auto.account": "Email đăng nhập",
     "email.auto.amount": "Số tiền đã thanh toán",
-    "email.auto.bookingNotice": "Thanh toán không thay thế quy trình phê duyệt hoặc bàn giao thiết bị. Hãy kiểm tra trạng thái lịch hiện tại trong ứng dụng và đến đúng giờ.",
+    "email.auto.bookingNotice": "Thanh toán đã được ghi nhận. Hãy kiểm tra trạng thái lịch hiện tại và hướng dẫn nhận, bàn giao tài nguyên trong ứng dụng trước khi sử dụng.",
     "email.auto.bookingReference": "Mã đặt lịch",
     "email.auto.bookingStatus": "Trạng thái lịch tại thời điểm thanh toán",
     "email.auto.bookingTitle": "Nội dung đặt lịch",
@@ -378,7 +378,7 @@
     "notification.incident.reported.title": "Có báo cáo sự cố mới",
     "notification.return.reminder.message": "{title} · {resourceCode} · {endAt}",
     "notification.return.reminder.title": "Nhắc hoàn trả tài nguyên",
-    "profile.loyaltyBasis": "Tính từ thanh toán thành công và booking hoàn tất trong database",
+    "profile.loyaltyBasis": "Tính từ thanh toán thành công và lịch đặt hoàn tất trong hệ thống",
     "api.RESOURCE_MAINTENANCE_DUE": "Tài nguyên đã đến hạn bảo trì. Hoàn tất bảo trì và kiểm tra đạt trước khi sử dụng tiếp.",
     "api.RESOURCE_COMPONENT_BROKEN": "Tài nguyên có linh kiện hỏng cần sửa chữa.",
     "api.RESOURCE_CARE_REQUIRED": "Cần cấu hình chu kỳ bảo trì trước khi vận hành.",
@@ -487,6 +487,9 @@
     "assistant.connectionNeeded": "Câu hỏi này cần trợ lý AI để giải thích. Kết nối hiện chưa trả được câu trả lời; bạn có thể dùng các nút tra cứu tài nguyên, lịch hoặc liên hệ nhân viên LAB.",
     "api.BOOKING_NOTICE_REQUIRED": "Khung giờ quá sát thời điểm đặt lịch. Vui lòng chọn giờ bắt đầu đáp ứng thời gian đặt trước tối thiểu của LAB.",
     "api.LAB_POLICY_CHANGED": "Quy định LAB vừa thay đổi. Vui lòng tải lại trước khi lưu.",
-    "calendar.noticeRequired": "Chưa đủ thời gian đặt trước tối thiểu của LAB."
+    "calendar.noticeRequired": "Chưa đủ thời gian đặt trước tối thiểu của LAB.",
+    "email.auto.welcomeTitle": "Thông tin tài khoản LAB",
+    "email.auto.paymentTitle": "Xác nhận thanh toán",
+    "email.auto.reconciliationTitle": "Thanh toán cần đối soát"
   }
 }

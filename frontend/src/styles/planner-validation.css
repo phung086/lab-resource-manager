@@ -1,0 +1,24 @@
+.workspace-shell .calendar-planner .planner-resource-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; max-height:none; overflow:visible; }
+.planner-resource-card { min-width:0; overflow:hidden; border:1px solid #d9d2e7; border-radius:16px; background:#fff; display:flex; flex-direction:column; }
+.planner-resource-photo { height:190px; background:#f0edf7; overflow:hidden; }
+.planner-resource-photo img { width:100%; height:100%; object-fit:cover; }
+.planner-resource-photo .resource-category-art { width:100%; height:100%; }
+.planner-resource-card-copy { padding:18px 20px; flex:1; }
+.planner-resource-card-copy small { color:#60576f; font-size:12px; }
+.planner-resource-card-copy h3 { margin:8px 0; font-size:19px; line-height:1.4; }
+.planner-resource-card-copy p { color:#60576f; font-size:14px; line-height:1.6; }
+.planner-resource-description { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.planner-resource-card-actions { display:flex; gap:10px; padding:0 20px 20px; }
+.workspace-shell .calendar-planner .planner-resource-card-actions .planner-resource-option { width:auto; min-height:44px; padding:10px 14px; background:#6040ce; color:#fff; border:1px solid #6040ce; }
+.workspace-shell .calendar-planner .planner-resource-card-actions .planner-resource-option:hover { background:#4b2eac; color:#fff; }
+.workspace-shell .calendar-planner .slot-ticket .planner-validation { display:flex; align-items:flex-start; gap:10px; margin:18px 0; padding:16px; border:1px solid #c88550; border-inline-start:5px solid #a95b06; border-radius:10px; background:#fff1d6; color:#713c07; }
+.planner-validation > svg { flex-shrink:0; margin-top:3px; }
+.workspace-shell .calendar-planner .planner-validation strong { font-size:15px; color:#713c07; }
+.workspace-shell .calendar-planner .planner-validation p { font-size:14px; font-weight:500; color:#713c07; line-height:1.7; margin:8px 0; }
+.planner-validation button { min-height:44px; background:#fff; border:1px solid #a95b06; border-radius:7px; padding:8px 12px; color:#713c07; font-weight:600; cursor:pointer; }
+.calendar-planner input[aria-invalid=true] { border:2px solid #ac5d09; background:#fff8e9; }
+.calendar-planner :is(.slot-editor,.planner-time-search) [role=alert] { background:#fff1d6; color:#713c07; border:1px solid #c88550; border-inline-start:5px solid #a95b06; padding:14px; border-radius:8px; font-size:15px; font-weight:600; line-height:1.65; }
+.workspace-shell.lab-spectrum .calendar-planner .slot-ticket .planner-booking-actions button:disabled { opacity:1; color:#625970; background:#e5e0ec; border-color:#c9c0d5; box-shadow:none; cursor:not-allowed; transform:none; }
+.planner-resource-blocked { color:#8c2939!important; font-weight:600; }
+.planner-resource-preview { display:grid; gap:18px; }
+@media(max-width:700px) { .workspace-shell .calendar-planner .planner-resource-options { grid-template-columns:1fr; }.planner-resource-card-actions { flex-wrap:wrap; }.planner-resource-card-actions button { flex:1; } }

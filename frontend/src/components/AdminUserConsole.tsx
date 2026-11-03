@@ -1,20 +1,10 @@
-/* Admin user console — admin shell that composes the directory work.
-   We do not fork AccessUserManagement: it already enforces RBAC (admin can
-   manage everyone, staff sees CUSTOMER only) and exposes create/edit/active
-   transitions through /users, /users/:id, /users/:id/active, /users/:id/role.
-   The console composes around the core with:
-     - a single header (eyebrow + title + scope line + provenance note)
-     - a directory cluster whose role-count buttons navigate the same tab
-       with the role filter set as a URL param (AccessUserManagement reads
-       `role` from readRouteParams()), with a Clear filter escape hatch
-     - the underlying AccessUserManagement component (form + table + edit
-       modal + loyalty policy for admin) renders the actual list/detail/form
-   Backend contract is `User.isActive` (boolean) — never "locked". */
+/* AccessUserManagement owns the heading, directory and account actions.
+   Optional role statistics stay in a disclosure below the working area. */
 
 import React, { useMemo } from "react";
 import { ChevronRight, FilterX, ShieldCheck, Users } from "lucide-react";
 import { translate as t } from "../i18n.js";
-import { readRouteParams, workspacePathForTab } from "../workspaceRoutes.js";
+import { readRouteParams } from "../workspaceRoutes.js";
 import { AccessUserManagement } from "./AccessUserManagement.tsx";
 
 interface AdminUserConsoleProps {
@@ -66,18 +56,11 @@ export const AdminUserConsole: React.FC<AdminUserConsoleProps> = (props) => {
 
   return (
     <div className="admin-console admin-users-console" data-scope="admin">
-      <header className="admin-console-head">
-        <p className="admin-console-eyebrow">
-          {t(isAdmin ? "ui.admin.console.registerEyebrow" : "ui.admin.console.staffEyebrowDir")}
-        </p>
-        <h2 className="admin-console-title">
-          {t(isAdmin ? "ui.admin.console.systemUsers" : "ui.admin.console.staffTitleDir")}
-        </h2>
-        <p className="admin-console-sub">{t("ui.admin.console.scope")}</p>
-      </header>
+      <AccessUserManagement actorRole={props.actorRole} actorId={props.actorId} />
 
       {isAdmin ? (
-        <section className="admin-console-cluster" aria-labelledby="admin-users-directory">
+        <details className="admin-console-cluster admin-directory-overview" aria-labelledby="admin-users-directory">
+          <summary>{t("ui.admin.console.overview")}<span>{summary.total}</span></summary>
           <header className="admin-console-cluster-head">
             <p className="admin-console-eyebrow">{t("ui.admin.console.directory")}</p>
             <h3 id="admin-users-directory">{t("ui.admin.console.directoryHint")}</h3>
@@ -141,9 +124,7 @@ export const AdminUserConsole: React.FC<AdminUserConsoleProps> = (props) => {
               </ul>
               <div className="admin-console-filter-bar">
                 <span className="admin-console-filter-bar-label">
-                  {roleFilterActive
-                    ? t("ui.admin.console.filterListHint")
-                    : t("ui.admin.console.filterListHint")}
+                  {t("ui.admin.console.filterListHint")}
                 </span>
                 {roleFilterActive && (
                   <button type="button" className="admin-console-filter-clear" onClick={clearRoleFilter}>
@@ -154,14 +135,10 @@ export const AdminUserConsole: React.FC<AdminUserConsoleProps> = (props) => {
               </div>
             </>
           )}
-        </section>
+        </details>
       ) : null}
 
-      <AccessUserManagement actorRole={props.actorRole} actorId={props.actorId} />
 
-      <p className="admin-console-route-key" aria-hidden="true" data-tab="users">
-        {workspacePathForTab("users", roleFilterActive ? { role: activeRole } : {})}
-      </p>
     </div>
   );
 };

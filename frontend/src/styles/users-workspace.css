@@ -175,3 +175,13 @@
 }
 .users-dossier-empty h2 { font-size: 1.02rem; font-weight: 650; color: var(--workspace-text, #282338); margin: 0; }
 .users-dossier-empty p { text-align: center; max-width: 38ch; line-height: 1.6; color: var(--workspace-text-muted, #625b70); margin: 0; }
+
+/* The outer fieldset controls busy state; field groups own the visual layout. */
+.users-create>fieldset { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; min-width:0; padding:0; margin:0; border:0; }
+.users-create .users-field-group { min-width:0; padding:17px; margin:0; border:1px solid #e9e2f1; border-radius:10px; align-content:start; background:#fdfbff; }
+.users-create .users-field-group:first-child { grid-column:1/-1; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.users-create .users-field-group:first-child>label:last-child { grid-column:1/-1; }
+.users-create .users-field-group:nth-of-type(4) { grid-column:1/-1; }
+.users-create .users-field-group-title { text-transform:none; letter-spacing:0; font-size:13px; padding:0 4px; }
+.users-create>fieldset>.users-actions { grid-column:1/-1; justify-content:flex-end; padding-top:4px; }
+@media(max-width:650px) { .users-create>fieldset,.users-create .users-field-group:first-child { grid-template-columns:1fr; }.users-create .users-field-group { padding:14px; }.users-create>fieldset>.users-actions { justify-content:stretch; }.users-create>fieldset>.users-actions>button { flex:1; } }

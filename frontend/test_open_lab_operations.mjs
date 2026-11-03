@@ -85,7 +85,7 @@ try {
   await page.getByLabel("Tài nguyên tính phí", { exact: true }).selectOption("ui-priced");
   await page.getByLabel("Đơn giá VND / giờ").fill("60000");
   await page.getByRole("button", { name: "Lưu mức phí", exact: true }).click();
-  await page.getByText("Đã lưu bảng giá. Mức phí của booking đã tạo được giữ nguyên.").waitFor();
+  await page.getByText("Đã lưu bảng giá. Mức phí của lịch đặt đã tạo được giữ nguyên.").waitFor();
   const freeBooking = await prisma.booking.findFirstOrThrow({ where: { requestedById: "owner", resourceId: "room", feeAmountVnd: 0 } });
   await signIn("owner", "CUSTOMER", `#/workspace/thanh-toan?booking=${freeBooking.id}`);
   await page.getByText(/Lịch đặt này không có phí sử dụng/).waitFor();

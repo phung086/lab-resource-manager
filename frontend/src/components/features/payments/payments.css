@@ -243,12 +243,12 @@
 .resource-fulfillment-editor small { color:var(--workspace-text-muted); }
 .customer-payment-list { list-style:none; padding:0; margin:0; display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); align-items:start; }
 .customer-payment-list button { display:grid; width:100%; text-align:left; gap:10px; padding:22px; border:1px solid var(--workspace-border,#d8d2e1); border-radius:16px; background:var(--workspace-surface,#fff); color:var(--workspace-text,#282338); font:inherit; cursor:pointer; }
-.customer-payment-list button[aria-pressed="true"] { border-color:var(--workspace-accent,#6441d9); background:var(--workspace-surface-muted,#f2edf8); }
+.customer-payment-list button[aria-pressed="true"] { border-color:var(--workspace-accent,#6040ce); background:var(--workspace-surface-muted,#f2edf8); }
 .customer-payment-list strong { font-size:1.1rem; }
 .customer-payment-list time { font-size:.85rem; color:var(--workspace-text-muted,#625b70); }
 .customer-payment-list .payment-state { justify-self:start; }
 .customer-payment-amount { font-size:1.35rem; font-weight:650; }
-.customer-payment-action { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--workspace-accent,#6441d9); }
+.customer-payment-action { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--workspace-accent,#6040ce); }
 /* Keep paid records and their receipt visible together while browsing. */
 .customer-payment-list > li { min-width:0; }
 .customer-payment-list button { grid-template-columns:minmax(0,1fr) auto; gap:8px 18px; padding:18px 20px; }

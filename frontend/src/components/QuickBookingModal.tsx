@@ -158,6 +158,12 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   const [review, setReview] = useState<{ key: string; checkedAt: number; refreshed: boolean } | null>(null);
   const reviewHeading = useRef<HTMLHeadingElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isOpen || !errorMessage) return;
+    const frame = requestAnimationFrame(() => errorRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen, errorMessage]);
   const bookingField = (id: string) => formRef.current?.querySelector<HTMLElement>('[id="' + id + '"]');
   const reviewKey = JSON.stringify([resourceId, selectedDate, startTime, endTime, title, purpose, purposeCode, contact, deliveryMode, deliveryAddress, quote?.version, quote?.amountVnd, quote?.loyaltyPolicyVersion]);
   const reviewing = review?.key === reviewKey;
@@ -297,6 +303,9 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
 
   const effectiveRequiresApproval = false;
+  // A fresh server quote includes purpose and discounts; a catalogue rate does not.
+  const quotedAmount = quote?.key === quoteKey && Number.isFinite(quote.amountVnd) ? quote.amountVnd : null;
+  const confirmationNeedsPayment = quotedAmount !== null ? quotedAmount > 0 : Number(currentResource?.rental?.hourlyRateVnd) > 0;
 
   const validateFields = (): Record<string, string> => {
     const errors = bookingTimeErrors(selectedDate, startTime, endTime, currentPolicy);
@@ -561,6 +570,14 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             <p>{tr('ui.bookingReview.next')}</p>
             <button type="button" className="btn btn-secondary" disabled={isSubmitting} onClick={() => { setReview(null); requestAnimationFrame(() => bookingField('booking-contact-name')?.focus()); }}>{tr('ui.bookingReview.edit')}</button>
           </section>}
+          {errorMessage && (
+            <div ref={errorRef} tabIndex={-1} className="alert danger booking-submit-error" role="alert">
+              <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
+              <div><strong>{tr("ui.feedback.bookingFailed")}</strong><p>{translate(errorMessage)}</p></div>
+            </div>
+          )}
+
+          {errorMessage && timeIsValid && resourceId && !submissionUncertain && <BookingAvailabilityHelp key={quoteKey} resourceId={resourceId} startAt={vietnamTimeToIso(selectedDate, startTime)} endAt={vietnamTimeToIso(selectedDate, endTime)} purposeCode={purposeCode} onChoose={(date, start, end) => { setSelectedDate(date); setStartTime(start); setEndTime(end); setReview(null); setErrorMessage(''); }}/>}
           <fieldset className="booking-edit-fields" hidden={reviewing} disabled={isSubmitting} aria-label={tr('ui.bookingReview.edit')}>
           <fieldset className="booking-contact" disabled={isSubmitting || contactLoading}><legend>{tr('ui.customer.contactTitle')}</legend>
             {contactLoading && <p role="status">{tr('ui.loading_42d77f3a')}</p>}
@@ -568,14 +585,6 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             <div className="booking-contact-grid">{[{field:'fullName',id:'booking-contact-name',label:'ui.full_name_03de764f',type:'text',auto:'name',max:255},{field:'phone',id:'booking-contact-phone',label:'ui.customer.phoneLabel',type:'tel',auto:'tel',max:20}].map(item=><div key={item.id} className="booking-field"><label htmlFor={item.id} className="booking-label">{tr(item.label)}</label><input id={item.id} className="booking-input" type={item.type} autoComplete={item.auto} required maxLength={item.max} value={contact[item.field as keyof typeof contact]} aria-invalid={!!fieldErrors[item.id]} aria-describedby={fieldErrors[item.id]?item.id+'-error':undefined} onBlur={()=>validateField(item.id)} onChange={event=>{setContact(value=>({...value,[item.field]:event.target.value}));clearFieldError(item.id);}} />{fieldFeedback(item.id)}</div>)}</div>
           </fieldset>
           {Object.keys(fieldErrors).length > 0 && <div className="booking-error-summary" role="alert"><strong>{tr("ui.calendarWorkspace.checkFields")}</strong><ul>{Object.entries(fieldErrors).map(([id, key]) => <li key={id}><button type="button" onClick={() => bookingField(id)?.focus()}>{tr(key)}</button></li>)}</ul></div>}
-          {errorMessage && (
-            <div className="alert danger" role="alert">
-              <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
-              <span>{translate(errorMessage)}</span>
-            </div>
-          )}
-
-          {errorMessage && timeIsValid && resourceId && !submissionUncertain && <BookingAvailabilityHelp key={quoteKey} resourceId={resourceId} startAt={vietnamTimeToIso(selectedDate, startTime)} endAt={vietnamTimeToIso(selectedDate, endTime)} purposeCode={purposeCode} onChoose={(date, start, end) => { setSelectedDate(date); setStartTime(start); setEndTime(end); setReview(null); setErrorMessage(''); }}/>}
           {/* Resource Selector */}
           <div className="booking-field">
             <label htmlFor="booking-resource-select" className="booking-label">
@@ -584,9 +593,12 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                 effectiveRequiresApproval ? (
                   <span className="booking-approval-badge is-required">
                     <ShieldAlert size={11} aria-hidden="true" /> {tr("ui.approval_required_dc95ee8f")}</span>
+                ) : confirmationNeedsPayment ? (
+                  <span className="booking-approval-badge is-pending">
+                    <Shield size={11} aria-hidden="true" /> {tr("ui.confirmed_after_payment_2c477063")}</span>
                 ) : (
                   <span className="booking-approval-badge is-instant">
-                    <Shield size={11} aria-hidden="true" /> {tr("ui.immediate_confirmation_6313fc02")}</span>
+                    <Shield size={11} aria-hidden="true" /> {tr(quotedAmount === 0 ? "ui.immediate_confirmation_6313fc02" : "ui.automatic_confirmation_under_policy_bfbbda9a")}</span>
                 )
               )}
             </label>
@@ -616,10 +628,12 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                   <option value="">{tr("ui.choose_a_laboratory_resource_027a2e88")}</option>
                 )}
                 {resources.map((r) => {
-                  const rApproval = false;
+                  const amount = r.id === resourceId ? quotedAmount : null;
+                  const needsPayment = amount !== null ? amount > 0 : Number(r.rental?.hourlyRateVnd) > 0;
+                  const suffix = needsPayment ? ` ${tr("ui.confirmed_after_payment_suffix_ac8e62f6")}` : amount === 0 ? tr("ui.immediate_e80f0a67") : ` (${tr("ui.automatic_a25c8028")})`;
                   return (
                     <option key={r.id} value={r.id}>
-                      {r.code} — {r.name}{rApproval ? tr("ui.approval_required_b136f084") : tr("ui.immediate_e80f0a67")}
+                      {r.code} — {r.name}{suffix}
                     </option>
                   );
                 })}
@@ -734,7 +748,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             <div className="booking-summary-content"><span className="slot-ticket-code">{currentResource?.code}</span><h3>{currentResource?.name || tr('ui.choose_a_resource_1ba6fed9')}</h3>
             <dl className="booking-summary-time"><div><dt>{tr('ui.booking_date_502b0188')}</dt><dd>{selectedDate || '—'}</dd></div><div><dt>{tr('ui.time_b295fd62')}</dt><dd>{startTime}–{endTime}</dd></div></dl>
             <div className="booking-summary-fee"><h4>{tr('ui.bookingStudio.fee')}</h4>
-          <div className="alert" aria-live="polite">{quoteError ? <span role="alert">{translate(quoteError)} <button className="secondary-button" type="button" onClick={() => setPricingRetry(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></span> : quote?.key === quoteKey ? <span>{tr("ui.usage_fee_10b23fee")}<strong>{quote.amountVnd.toLocaleString("vi-VN")} {tr("ui.vnd_bf502a39")}</strong>{quote.amountVnd > 0 ? tr("ui.pay_after_confirmation_and_before_2effbba2") : tr("ui.no_payment_required_a44e1364")}</span> : !timeIsValid ? tr("ui.calendarWorkspace.validTimeForFee") : tr("ui.updating_usage_fee_be66cd3f")}</div>
+          <div className={`alert${quoteError ? " danger" : ""}`} aria-live="polite">{quoteError ? <span role="alert">{translate(quoteError)} <button className="secondary-button" type="button" onClick={() => setPricingRetry(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></span> : quote?.key === quoteKey ? <span>{tr("ui.usage_fee_10b23fee")}<strong>{quote.amountVnd.toLocaleString("vi-VN")} {tr("ui.vnd_bf502a39")}</strong>{quote.amountVnd > 0 ? tr("ui.pay_after_confirmation_and_before_2effbba2") : tr("ui.no_payment_required_a44e1364")}</span> : !timeIsValid ? tr("ui.calendarWorkspace.validTimeForFee") : tr("ui.updating_usage_fee_be66cd3f")}</div>
           <QuoteDiscountSummary quote={quote?.key === quoteKey ? quote : null} />
             </div><p className="booking-summary-note">{tr('ui.bookingStudio.notReserved')}</p></div>
           </aside>

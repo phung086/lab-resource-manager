@@ -1,3 +1,4 @@
+import { renderEmailDocument } from './emailTemplate.js';
 import { localize, normalizeLocale } from "../locales/index.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -7,7 +8,7 @@ import { config } from "../config.js";
 import { prisma } from "../db.js";
 import { CUSTOMER } from "../constants/roles.js";
 import { HttpError } from "../middleware/errors.js";
-import { sendRequiredEmail, escapeHtml } from "./emailService.js";
+import { sendRequiredEmail } from "./emailService.js";
 import { enqueueRegistrationEmail } from "./emailAutomationService.js";
 import { validateVietnamAddress } from "./addressService.js";
 import { createBookingWithTransaction } from "./bookingService.js";
@@ -136,7 +137,7 @@ export async function sendGuestBookingOtp({ email, fullName, locale = "vi" }) {
     to: normalizedEmail,
     subject: localize(language, "email.otp.subject"),
     text: `${greeting}\n${label} ${code}\n${notice}`,
-    html: `<div lang="${language}"><p>${escapeHtml(greeting)}</p><p>${escapeHtml(label)}</p><p style="font-size:24px;font-weight:700;letter-spacing:4px">${code}</p><p>${escapeHtml(notice)}</p></div>`
+    html: renderEmailDocument({locale:language,title:localize(language,"email.otp.subject"),preview:label,paragraphs:[greeting,label,notice],code})
   };
   const result = testOtpDelivery
     ? await testOtpDelivery({ ...message, code })

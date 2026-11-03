@@ -100,7 +100,7 @@ export function UserCreatePanel(props: UserCreatePanelProps) {
           </label>
           <label htmlFor={id + '-password'}>{tr('ui.password_d46b0c39')}
             <input id={id + '-password'} name="password" type="password" autoComplete="new-password" minLength={12} maxLength={128} required value={draft.password} aria-invalid={!!errors.password} aria-describedby={errors.password ? id + '-error-password' : id + '-password-hint'} onChange={(event) => setDraft((current) => ({ ...current, password: event.target.value }))} />
-            {errors.password ? <span id={id + '-error-password'} className="users-field-error">{tr(errors.password)}</span> : <small id={id + '-password-hint'} className="users-field-hint">{tr('ui.account.passwordHint')}</small>}
+            {errors.password ? <span id={id + '-error-password'} className="users-field-error">{tr(errors.password)}</span> : <small id={id + '-password-hint'} className="users-field-hint">{tr('ui.users.passwordHint')}</small>}
           </label>
         </fieldset>
 

@@ -48,7 +48,7 @@ try {
   await dialog.waitFor();
   await Promise.all([
     staffPage.waitForResponse((r) => r.url().includes("/approve") && r.status() === 200),
-    dialog.getByRole("button", { name: "Duyệt booking" }).click()
+    dialog.getByRole("button", { name: "Duyệt lịch đặt" }).click()
   ]);
 
   await staffPage.getByRole("button", { name: /Chờ bàn giao/ }).click();
@@ -89,7 +89,7 @@ try {
   dialog = staffPage.getByRole("dialog");
   await dialog.getByText("Tạo yêu cầu", { exact: true }).waitFor({ timeout: 5000 });
   const historyText = await dialog.innerText();
-  for (const label of ["Tạo yêu cầu", "Duyệt booking", "Bàn giao tài nguyên", "Tiếp nhận hoàn trả", "Hoàn tất workflow"]) {
+  for (const label of ["Tạo yêu cầu", "Duyệt lịch đặt", "Bàn giao tài nguyên", "Tiếp nhận hoàn trả", "Hoàn tất workflow"]) {
     assert.ok(historyText.includes(label), `Timeline must include ${label}`);
   }
   await dialog.getByRole("button", { name: "Đóng hộp thoại", exact: true }).click();

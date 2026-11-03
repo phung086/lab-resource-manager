@@ -286,7 +286,7 @@
     "calendar.offlineDetails": "The resource is unavailable",
     "email.auto.account": "Sign-in email",
     "email.auto.amount": "Amount paid",
-    "email.auto.bookingNotice": "Payment does not replace booking approval or equipment handover. Check the current booking status in the application and arrive on time.",
+    "email.auto.bookingNotice": "Payment has been recorded. Check the current booking status and collection or handover instructions in the app before using the resource.",
     "email.auto.bookingReference": "Booking reference",
     "email.auto.bookingStatus": "Booking status at payment time",
     "email.auto.bookingTitle": "Booking title",
@@ -487,6 +487,9 @@
     "assistant.connectionNeeded": "This explanation needs the AI assistant. The connection cannot provide an answer right now. You can still use resource and schedule lookups or contact LAB staff.",
     "api.BOOKING_NOTICE_REQUIRED": "The start time is too soon. Please choose a time that meets the laboratory minimum booking notice.",
     "api.LAB_POLICY_CHANGED": "The laboratory policy has changed. Reload before saving.",
-    "calendar.noticeRequired": "The laboratory minimum booking notice has not been met."
+    "calendar.noticeRequired": "The laboratory minimum booking notice has not been met.",
+    "email.auto.welcomeTitle": "Your LAB account",
+    "email.auto.paymentTitle": "Payment confirmation",
+    "email.auto.reconciliationTitle": "Payment requires reconciliation"
   }
 }

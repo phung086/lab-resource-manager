@@ -30,6 +30,7 @@ export type Resource = {
   location?: string;
   operationalStatus?: string;
   effectiveRequiresApproval?: boolean;
+  rental?: { hourlyRateVnd?: number; currency?: string };
   labPolicy?: BookingNoticePolicy;
   laboratory?: { labPolicy?: BookingNoticePolicy };
   trainingRequirements?: Array<{ id: string; courseId: string; code?: string; name?: string }>;
@@ -82,6 +83,7 @@ export function GuestQuickBookingPanel({
   const [purposeCode, setPurposeCode] = useState("");
   const [quote, setQuote] = useState<any>(null);
   const [quoteError, setQuoteError] = useState("");
+  const [quoteRetry, setQuoteRetry] = useState(0);
   const [step1Error, setStep1Error] = useState("");
 
   // Step 2: Customer Information fields
@@ -104,7 +106,10 @@ export function GuestQuickBookingPanel({
   const [error, setError] = useState("");
 
   const cooldownTimerRef = useRef<any>(null);
+  const [invalidField, setInvalidField] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
+  const invalidAttrs = (id: string) => ({ 'aria-invalid': invalidField === id, 'aria-describedby': invalidField === id ? 'guest-step-error' : undefined });
+  const editError = <button type="button" className="guest-error-edit" onClick={()=>panelRef.current?.querySelector<HTMLElement>('[id="'+invalidField+'"]')?.focus()}>{tr('ui.feedback.fixField')}</button>;
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const previousStep = useRef(step);
   const busy = busyOtp || busyBooking;
@@ -124,12 +129,15 @@ export function GuestQuickBookingPanel({
     setQuote(null);
     setPricingRules([]);
     setPurposeCode("");
+  }, [resource.id, resource.name]);
+
+  useEffect(() => {
     let active = true;
     apiRequest(`/booking-pricing/${encodeURIComponent(resource.id)}`)
       .then((rows: any[]) => {
         if (active) {
           setPricingRules(rows || []);
-          setPurposeCode(rows?.[0]?.purposeCode || "");
+          setPurposeCode(current => rows?.some(row=>row.purposeCode===current) ? current : rows?.[0]?.purposeCode || "");
         }
       })
       .catch((cause: Error) => {
@@ -138,12 +146,15 @@ export function GuestQuickBookingPanel({
     return () => {
       active = false;
     };
-  }, [resource.id, resource.name]);
+  }, [resource.id, quoteRetry]);
 
   const quoteKey = useMemo(
     () => `${resource.id}|${purposeCode}|${selectedDate}|${startTime}|${endTime}`,
     [resource.id, purposeCode, selectedDate, startTime, endTime]
   );
+  const confirmationNeedsPayment = quote?.key === quoteKey && Number.isFinite(quote.amountVnd)
+    ? quote.amountVnd > 0
+    : Number(resource.rental?.hourlyRateVnd) > 0;
 
   useEffect(() => {
     let active = true;
@@ -169,7 +180,7 @@ export function GuestQuickBookingPanel({
       active = false;
       clearTimeout(timer);
     };
-  }, [resource.id, purposeCode, selectedDate, startTime, endTime, quoteKey, tr]);
+  }, [resource.id, purposeCode, selectedDate, startTime, endTime, quoteKey, tr, quoteRetry]);
 
   useEffect(() => {
     if (resendCooldown <= 0) {
@@ -190,31 +201,35 @@ export function GuestQuickBookingPanel({
     if (busy) return false;
     setStep1Error("");
 
-    function invalid(message: string) {
+    function invalid(message: string, field = "guest-start-time") {
+      setInvalidField(field);
       setStep(1);
       setStep1Error(message);
       return false;
     }
 
     if (!title.trim()) {
-      return invalid(tr("ui.enter_a_booking_title_c05aa504"));
+      return invalid(tr("ui.enter_a_booking_title_c05aa504"), "guest-booking-title");
     }
     if (!purpose.trim()) {
-      return invalid(tr("ui.enter_the_purpose_of_your_2256a6ae"));
+      return invalid(tr("ui.enter_the_purpose_of_your_2256a6ae"), "guest-booking-purpose");
     }
     if (!selectedDate) {
-      return invalid(tr("ui.choose_a_date_5b0f76c4"));
+      return invalid(tr("ui.choose_a_date_5b0f76c4"), "guest-booking-date");
     }
     const today = getVietnamTodayDateString();
     if (selectedDate < today) {
-      return invalid(tr("ui.the_booking_date_cannot_be_f83fc184"));
+      return invalid(tr("ui.the_booking_date_cannot_be_f83fc184"), "guest-booking-date");
     }
     if (!startTime || !endTime) return invalid(tr("ui.enter_start_and_end_times_dd573c8f"));
     if (startTime >= endTime) {
-      return invalid(tr("ui.start_time_must_be_before_b0b279ec"));
+      return invalid(tr("ui.start_time_must_be_before_b0b279ec"), "guest-end-time");
     }
-    if (!bookingNoticeSatisfied(vietnamTimeToIso(selectedDate, startTime), resource.labPolicy || resource.laboratory?.labPolicy)) return invalid(tr('ui.bookingNotice.tooSoon'));
+    try {
+      if (!bookingNoticeSatisfied(vietnamTimeToIso(selectedDate, startTime), resource.labPolicy || resource.laboratory?.labPolicy)) return invalid(tr('ui.bookingNotice.tooSoon'));
+    } catch { return invalid(tr('ui.invalid_date_or_time_e55672a4'), 'guest-booking-date'); }
     if (!quote || quote.key !== quoteKey) return invalid(quoteError || tr("ui.wait_for_the_fee_to_077bf617"));
+    setInvalidField('');
     if (advance) setStep(2);
     return true;
   }
@@ -225,23 +240,24 @@ export function GuestQuickBookingPanel({
     setStep(2);
     setStep2Error("");
 
-    if (!fullName.trim() || fullName.trim().length < 2) {
-      setStep2Error("ui.full_name_must_have_at_9c55a1b6");
+    if (!fullName.trim() || fullName.trim().length < 2 || fullName.trim().length > 255) {
+      setInvalidField("guest-full-name"); setStep2Error("ui.full_name_must_have_at_9c55a1b6");
       return;
     }
-    if (!email.trim() || !email.includes("@")) {
-      setStep2Error("ui.enter_a_valid_email_address_7b84c8c5");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setInvalidField("guest-email"); setStep2Error("ui.enter_a_valid_email_address_7b84c8c5");
       return;
     }
     const cleanPhone = phone.trim().replace(/[^\d+]/g, "");
     if (!cleanPhone || cleanPhone.length < 9 || cleanPhone.length > 20) {
-      setStep2Error("ui.phone_number_must_contain_9_e6d51790");
+      setInvalidField("guest-phone"); setStep2Error("ui.phone_number_must_contain_9_e6d51790");
       return;
     }
     if (!address.addressLine.trim() || !address.provinceCode || !address.wardCode) {
-      setStep2Error("ui.complete_your_vietnam_address_ee486855");
+      setInvalidField(!address.addressLine.trim() ? "address-line" : !address.provinceCode ? "address-province" : "address-ward"); setStep2Error("ui.complete_your_vietnam_address_ee486855");
       return;
     }
+    setInvalidField('');
     setStep(3);
   }
 
@@ -269,7 +285,7 @@ export function GuestQuickBookingPanel({
   async function submitBooking(event: React.FormEvent) {
     event.preventDefault();
     if (submissionStarted.current || submissionUncertain || busyBooking || !quote || quote.key !== quoteKey) return;
-    if (!otpCode || otpCode.length !== 6) {
+    if (!/^\d{6}$/.test(otpCode.trim())) {
       setError("ui.enter_the_6_digit_verification_0e45892f");
       return;
     }
@@ -368,16 +384,16 @@ export function GuestQuickBookingPanel({
 
       {/* STEP 1: Resource & Booking */}
       {step === 1 && (
-        <form className="guest-step-form" onSubmit={handleGoToStep2}>
+        <form className="guest-step-form" noValidate onSubmit={handleGoToStep2}>
           <div className="guest-resource-summary-box">
             <div className="guest-resource-badge-row">
-              <span className="badge-tag">{categoryName}</span>
+              <span className="badge-tag">{tr(categoryName)}</span>
               <span className="badge-code font-mono">{resource.code}</span>
               <span className={`status-pill ${resource.operationalStatus === "AVAILABLE" ? "status-available" : "status-other"}`}>
-                {operationalName}
+                {tr(operationalName)}
               </span>
               <span className="badge-approval">
-                {resource.effectiveRequiresApproval ? tr("ui.lab_staff_approval_required_60bf0b59") : tr("ui.automatic_confirmation_under_policy_bfbbda9a")}
+                {resource.effectiveRequiresApproval ? tr("ui.lab_staff_approval_required_60bf0b59") : confirmationNeedsPayment ? tr("ui.confirmed_after_payment_2c477063") : tr("ui.automatic_confirmation_under_policy_bfbbda9a")}
               </span>
             </div>
             <h4 className="guest-resource-title">{resource.name}</h4>
@@ -395,9 +411,9 @@ export function GuestQuickBookingPanel({
           </div>
 
           {step1Error && (
-            <div className="guest-booking-alert danger" role="alert" tabIndex={-1}>
-              <AlertTriangle size={16} aria-hidden="true" />
-              {translate(step1Error)}
+            <div id="guest-step-error" className="guest-booking-alert danger" role="alert" tabIndex={-1}>
+              <AlertTriangle size={20} aria-hidden="true" />
+              <div><strong>{tr("ui.feedback.checkInput")}</strong><p>{translate(step1Error)}</p>{invalidField && editError}</div>
             </div>
           )}
 
@@ -405,6 +421,7 @@ export function GuestQuickBookingPanel({
             <label htmlFor="guest-booking-title">
               {tr("ui.booking_title_a845edb3")}<input
                 id="guest-booking-title"
+                {...invalidAttrs("guest-booking-title")}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -414,6 +431,7 @@ export function GuestQuickBookingPanel({
             <label htmlFor="guest-booking-purpose">
               {tr("ui.purpose_2d299730")}<input
                 id="guest-booking-purpose"
+                {...invalidAttrs("guest-booking-purpose")}
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
                 required
@@ -423,6 +441,7 @@ export function GuestQuickBookingPanel({
             <label htmlFor="guest-booking-date">
               {tr("ui.booking_date_vietnam_time_utc_6b3b90ae")}<input
                 id="guest-booking-date"
+                {...invalidAttrs("guest-booking-date")}
                 type="date"
                 value={selectedDate}
                 min={getVietnamTodayDateString()}
@@ -434,7 +453,8 @@ export function GuestQuickBookingPanel({
               <label htmlFor="guest-start-time">
                 {tr("ui.start_time_1dd67708")}<input
                   id="guest-start-time"
-                  aria-describedby="guest-booking-notice"
+                {...invalidAttrs("guest-start-time")}
+                  aria-describedby={invalidField==='guest-start-time' ? "guest-step-error guest-booking-notice" : "guest-booking-notice"}
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
@@ -444,6 +464,7 @@ export function GuestQuickBookingPanel({
               <label htmlFor="guest-end-time">
                 {tr("ui.end_time_7a02aed3")}<input
                   id="guest-end-time"
+                {...invalidAttrs("guest-end-time")}
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
@@ -471,7 +492,7 @@ export function GuestQuickBookingPanel({
 
           <div className="guest-booking-quote" aria-live="polite">
             {quoteError ? (
-              <span role="alert" className="quote-error">{tr(quoteError)}</span>
+              <span role="alert" className="quote-error">{tr(quoteError)} <button type="button" className="guest-error-edit" onClick={()=>setQuoteRetry(value=>value+1)}>{tr("ui.retry_c58d068c")}</button></span>
             ) : quote?.key === quoteKey ? (
               <span>
                 {tr("ui.estimated_fee_c69e3fcf")}<strong>{formatMoney(quote.amountVnd)} {tr("ui.vnd_bf502a39")}</strong>
@@ -494,16 +515,16 @@ export function GuestQuickBookingPanel({
 
       {/* STEP 2: Customer Information */}
       {step === 2 && (
-        <form className="guest-step-form" onSubmit={handleGoToStep3}>
+        <form className="guest-step-form" noValidate onSubmit={handleGoToStep3}>
           <div className="step-info-banner">
             <User size={16} aria-hidden="true" />
             <span>{tr("ui.provide_the_actual_booking_contact_f277fd88")}</span>
           </div>
 
           {step2Error && (
-            <div className="guest-booking-alert danger" role="alert" tabIndex={-1}>
-              <AlertTriangle size={16} aria-hidden="true" />
-              {translate(step2Error)}
+            <div id="guest-step-error" className="guest-booking-alert danger" role="alert" tabIndex={-1}>
+              <AlertTriangle size={20} aria-hidden="true" />
+              <div><strong>{tr("ui.feedback.checkInput")}</strong><p>{translate(step2Error)}</p>{invalidField && editError}</div>
             </div>
           )}
 
@@ -511,6 +532,7 @@ export function GuestQuickBookingPanel({
             <label htmlFor="guest-full-name">
               {tr("ui.full_name_5f1d93c1")}<input
                 id="guest-full-name"
+                {...invalidAttrs("guest-full-name")}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -523,6 +545,7 @@ export function GuestQuickBookingPanel({
             <label htmlFor="guest-email">
               {tr("ui.verification_email_2a481e07")}<input
                 id="guest-email"
+                {...invalidAttrs("guest-email")}
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -539,6 +562,7 @@ export function GuestQuickBookingPanel({
             <label htmlFor="guest-phone">
               {tr("ui.contact_phone_e47e9925")}<input
                 id="guest-phone"
+                {...invalidAttrs("guest-phone")}
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -598,7 +622,7 @@ export function GuestQuickBookingPanel({
             <dl className="guest-review-dl">
               <div>
                 <dt>{tr("ui.resource_9a35ef53")}</dt>
-                <dd>{resource.name} ({resource.code}) · {categoryName}</dd>
+                <dd>{resource.name} ({resource.code}) · {tr(categoryName)}</dd>
               </div>
               <div>
                 <dt>{tr("ui.time_b295fd62")}</dt>

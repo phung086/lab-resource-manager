@@ -46,7 +46,7 @@
     "test:operations-report": "cross-env LOG_FORMAT=dev node --test test/operationsReport.test.js test/resourceCare.test.js test/monitoringLimits.test.js",
     "test:operations-report:integration": "cross-env LOG_FORMAT=dev node --test test/operationsReport.integration.test.js",
     "test:required": "npm run test:planning && npm run test:core && npm run test:release-security && npm run test:assistant && npm run test:operations-report && npm run test:loyalty && npm run test:chatgpt-bridge && npm run test:media",
-    "test:release-security": "cross-env LOG_FORMAT=dev node --test test/releaseSecurity.test.js test/metricsAccess.test.js",
+    "test:release-security": "cross-env LOG_FORMAT=dev node --test test/releaseSecurity.test.js test/metricsAccess.test.js test/emailTemplate.test.js",
     "test:batch7": "cross-env LOG_FORMAT=dev node --test test/batch7.production-demo-hardening.integration.test.js",
     "test:batch8": "cross-env LOG_FORMAT=dev node --test test/batch8.smart-monitoring.integration.test.js",
     "test:guest-integrity": "cross-env LOG_FORMAT=dev node --test test/guestBookingIntegrity.integration.test.js",

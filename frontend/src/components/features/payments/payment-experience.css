@@ -1,0 +1,28 @@
+.payment-page .checkout-banner { display:flex; align-items:center; gap:22px; padding:30px; border:1px solid #d4c8eb; border-radius:22px; background:linear-gradient(120deg,#eee7ff,#f7f4ff 60%,#e2f3ed); color:#3e2b70; }
+.checkout-banner-icon { display:grid; place-items:center; width:70px; height:70px; flex-shrink:0; border-radius:20px; background:#fff; box-shadow:0 8px 24px #4b30701a; }
+.checkout-banner-status { font-size:14px; font-weight:600; }
+.payment-page .checkout-banner h2 { font-size:clamp(30px,4vw,46px); letter-spacing:-.035em; margin:8px 0; line-height:1.2; }
+.payment-page .checkout-banner p { font-size:13px; margin:0; overflow-wrap:anywhere; }
+.checkout-banner-context { margin-left:auto; display:flex; align-items:flex-start; gap:10px; font-size:15px; max-width:35%; }
+.checkout-banner-context small { display:block; font-size:13px; margin-top:8px; }
+.payment-page .checkout-banner.is-success { background:linear-gradient(120deg,#dcf2e9,#f2fbf6 65%,#eae5fa); border-color:#abd7c5; color:#1d5a47; }
+.payment-page .checkout-banner:is(.is-failed,.is-expired,.is-review,.is-closed) { background:linear-gradient(120deg,#fff0d8,#fff8ef 70%,#efe8fc); border-color:#e1bd86; color:#77450e; }
+.payment-page .booking-checkout-order { border:0; background:transparent; box-shadow:none; grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr); align-items:start; }
+.payment-page .booking-checkout-summary { border-radius:20px; padding:28px; }
+.payment-page .booking-checkout-summary>dl { margin:24px 0; gap:0; }
+.booking-checkout-summary>dl :is(dt,dd) { padding-block:13px; border-bottom:1px solid #e8e3ee; line-height:1.7; overflow-wrap:anywhere; font-size:14px; }
+.payment-page .booking-checkout-status { border-radius:20px; padding:26px; box-shadow:0 12px 32px -20px #49347655; }
+.checkout-action-heading { display:flex; gap:10px; align-items:center; font-size:18px; margin:0 0 24px; color:#43305f; }
+.checkout-email-note { margin-top:24px; padding:18px; background:#f2f0fa; border:1px solid #ddd4ee; border-radius:12px; color:#504565; }
+.checkout-email-note strong { font-size:14px; }
+.checkout-email-note p { font-size:13px; line-height:1.8; margin:8px 0 0; }
+.booking-checkout-status .booking-checkout-payment>.primary-button { width:100%; justify-content:center; min-height:56px; border-radius:12px; font-size:15px; }
+.payment-ledger .payment-value-block { background:linear-gradient(120deg,#e8ddff,#f3edff 65%,#ddf2e9); padding-block:32px; }
+.payment-ledger .payment-value-block.is-success { background:linear-gradient(120deg,#d8f0e6,#eaf9f1 70%,#eae4fa); }
+.payment-ledger .payment-value-block:is(.is-failed,.is-expired) { background:linear-gradient(120deg,#ffecd1,#fff6ea 70%,#f2e9fc); }
+.payment-ledger .payment-value-block .payment-amount { font-size:clamp(30px,3vw,40px); }
+.payment-ledger .payment-value-icon { width:62px; height:62px; border-radius:19px; box-shadow:0 8px 22px #56407014; }
+.payment-ledger .customer-payment-list button { border-radius:16px; }
+.payment-ledger .customer-payment-list button[aria-pressed=true] { background:#f1eaff; border-color:#8b6fc8; box-shadow:inset 4px 0 #7250c5; }
+@media(max-width:800px) { .payment-page .booking-checkout-order { grid-template-columns:1fr; }.checkout-banner-context { max-width:none; margin-left:0; flex-basis:100%; }.payment-page .checkout-banner { flex-wrap:wrap; padding:22px; }.payment-page .booking-checkout-summary,.payment-page .booking-checkout-status { padding:22px 18px; } }
+@media(max-width:420px) { .checkout-banner-icon { width:52px; height:52px; border-radius:15px; }.payment-page .checkout-banner { gap:14px; }.payment-page .booking-checkout-summary>dl { grid-template-columns:1fr; }.booking-checkout-summary>dl dt { border-bottom:0; padding-bottom:0; }.booking-checkout-summary>dl dd { padding-top:5px; } }

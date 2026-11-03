@@ -15,6 +15,7 @@ export function PasswordChangeForm({ email, targetId, showSteps = false, onSucce
   const [draft, setDraft] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [reason, setReason] = useState('');
   const [challenge, setChallenge] = useState<Challenge | null>(null), [otp, setOtp] = useState('');
+  const errorRef = useRef<HTMLParagraphElement>(null);
   const [errors, setErrors] = useState<Record<string,string>>({}), [error, setError] = useState(''), [busy, setBusy] = useState(false), [success, setSuccess] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [resendAt, setResendAt] = useState('');
@@ -36,6 +37,7 @@ export function PasswordChangeForm({ email, targetId, showSteps = false, onSucce
   function setField(field: keyof typeof draft, value: string) {
     setDraft(current => ({ ...current, [field]: value })); setErrors(current => { const next = { ...current }; delete next[field]; return next; }); setError('');
   }
+  useEffect(()=>{ if(error && !busy) errorRef.current?.focus(); },[error,busy]);
   function editDetails() { pendingFocus.current = assisted ? 'newPassword' : 'currentPassword'; setChallenge(null); setOtp(''); setErrors({}); setError(''); }
   async function submit(event: React.FormEvent) {
     event.preventDefault(); if (busyRef.current || success) return;
@@ -76,7 +78,7 @@ export function PasswordChangeForm({ email, targetId, showSteps = false, onSucce
       <p className="account-security-hint">{tr(assisted ? 'account.security.assistedHint' : 'account.security.selfHint')}</p>
       {!challenge && email && <p className="account-security-recipient"><Mail size={16} aria-hidden="true" />{email}</p>}
       {Object.keys(errors).length > 0 && <div className="account-security-error" role="alert"><strong>{tr('ui.account.checkFields')}</strong><ul>{Object.entries(errors).map(([field, key]) => <li key={field}><a href={'#' + id + '-' + field} onClick={event => { event.preventDefault(); focus(field); }}>{tr(key)}</a></li>)}</ul></div>}
-      {error && <p className="account-security-error" role="alert">{tr(error)}</p>}
+      {error && <p ref={errorRef} tabIndex={-1} className="account-security-error" role="alert">{tr(error)}</p>}
       {!challenge ? <fieldset disabled={busy}>
         {fields.map(field => <label key={field.name} htmlFor={id + '-' + field.name}>{tr(field.label)}<input id={id + '-' + field.name} name={field.name} type="password" required minLength={8} maxLength={128} autoComplete={field.name === 'currentPassword' ? 'current-password' : 'new-password'} value={draft[field.name]} aria-invalid={!!errors[field.name]} aria-describedby={errors[field.name] ? id + '-error-' + field.name : field.name === 'newPassword' ? id + '-password-hint' : undefined} onChange={event => setField(field.name, event.target.value)} />{errors[field.name] && <span id={id + '-error-' + field.name} className="account-security-field-error">{tr(errors[field.name])}</span>}</label>)}
         {assisted && <label htmlFor={id + '-reason'}>{tr('account.security.reason')}<input id={id + '-reason'} name="reason" value={reason} maxLength={500} required aria-invalid={!!errors.reason} aria-describedby={errors.reason ? id + '-error-reason' : undefined} onChange={event => { setReason(event.target.value); setErrors(current => { const next = { ...current }; delete next.reason; return next; }); }} />{errors.reason && <span id={id + '-error-reason'} className="account-security-field-error">{tr(errors.reason)}</span>}</label>}

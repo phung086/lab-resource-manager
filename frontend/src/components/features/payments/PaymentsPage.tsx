@@ -1,14 +1,16 @@
 import { HelpDisclosure } from "../../base/HelpDisclosure";
 import { ArrowRight, RefreshCw, CreditCard, Landmark, ReceiptText, CircleCheck, Clock3, CircleAlert } from "lucide-react";
 import { navigateApp, readRouteParams, workspacePathForTab } from "../../../workspaceRoutes.js";
-import { paymentSessionStatus, safeVnpayUrl, validatePaymentAction } from "../../../utils/paymentValidation";
+import { canInitiateBookingPayment, paymentSessionStatus, safeVnpayUrl, validatePaymentAction } from "../../../utils/paymentValidation";
 import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest } from "../../../api.js";
-import { BaseModal2026 } from "../../BaseModal2026";
+import { PaymentReceipt, type PaymentReceiptData } from "./PaymentReceipt";
 import { formatVietnamDateTime } from "../../../utils/timezone";
 import "./payments.css";
+import "./payment-experience.css";
+import { PaymentHoldNotice } from "./PaymentHoldNotice";
 import { BookingCheckout } from "./BookingCheckout";
 type Payment = {
   id: string;
@@ -28,7 +30,7 @@ type Payment = {
   booking: {
     id: string;
     title: string;
-    status: string;
+    status: string; requestedById: string; startAt?: string; paymentDueAt?: string | null;
     resource: { code: string; name: string };
   } | null;
   user: { fullName: string };
@@ -72,12 +74,15 @@ function PaymentsLedger({
   const { tr } = useLocale();
   const admin = user.role === "ADMIN";
   const loadAbort = useRef<AbortController | null>(null), busyRef = useRef(false), selectionRef = useRef(readRouteParams().get("transaction") || ""), notesRef = useRef<Record<string,string>>({}), dossierRef = useRef<HTMLElement>(null);
+  const actionErrorRef = useRef<HTMLDivElement>(null);
+  const focusActionError = useRef(false);
   const [formErrors,setFormErrors] = useState<Record<string,string>>({});
   const [rows, setRows] = useState<Payment[]>([]),
     [providers, setProviders] = useState({ vnpay: false, vietqr: false });
   const [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [busy, setBusy] = useState("");
+  useEffect(()=>{if(error && !busy && focusActionError.current && actionErrorRef.current){focusActionError.current=false;actionErrorRef.current.focus();}},[error,busy]);
   const [status, setStatus] = useState(""),
     [provider, setProvider] = useState(""),
     [search, setSearch] = useState("");
@@ -86,12 +91,7 @@ function PaymentsLedger({
     [url, setUrl] = useState(""),
     [copied, setCopied] = useState(""),
     [reconciliationReason, setReconciliationReason] = useState("");
-  const [receipt, setReceipt] = useState<{
-    title: string;
-    disclaimer: string;
-    transaction: Payment;
-    generatedAt: string;
-  } | null>(null);
+  const [receipt, setReceipt] = useState<PaymentReceiptData | null>(null);
   const [bookings, setBookings] = useState<{ id: string; title: string; status: string; feeAmountVnd: number }[]>([]);
   async function load() {
     loadAbort.current?.abort(); const controller = new AbortController(); loadAbort.current = controller;
@@ -157,13 +157,13 @@ function PaymentsLedger({
       form.reset();
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      focusActionError.current=true; setError((e as Error).message);
     } finally {
       busyRef.current=false;setBusy("");
     }
   }
   async function initiate(method: string) {
-    if (!selected || busyRef.current || selected.userId !== user.id || selected.booking?.status !== 'CONFIRMED' || !['pending','failed','expired'].includes(selected.status)) return;
+    if (!selected || busyRef.current || !canInitiateBookingPayment(user, selected.booking, selected)) return;
     busyRef.current=true;
     setBusy(method);
     setError("");
@@ -180,7 +180,7 @@ function PaymentsLedger({
       selectionRef.current=data.transaction.id;const params=readRouteParams();params.set("transaction",data.transaction.id);navigateApp(workspacePathForTab("payments",params),{notify:false});
       setRows(previous => previous.some(row=>row.id===data.transaction.id)?previous.map(row=>row.id===data.transaction.id?data.transaction:row):[data.transaction,...previous]);
     } catch (e) {
-      setError((e as Error).message);
+      focusActionError.current=true; setError((e as Error).message);
     } finally {
       busyRef.current=false;setBusy("");
     }
@@ -191,7 +191,7 @@ function PaymentsLedger({
     try {
       setReceipt(await apiRequest(`/payments/${row.id}/receipt`));
     } catch (e) {
-      setError((e as Error).message);
+      focusActionError.current=true; setError((e as Error).message);
     } finally {
       busyRef.current=false;setBusy("");
     }
@@ -210,7 +210,7 @@ function PaymentsLedger({
       setReconciliationReason("");
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      focusActionError.current=true; setError((e as Error).message);
     } finally {
       busyRef.current=false;setBusy("");
     }
@@ -225,7 +225,7 @@ function PaymentsLedger({
       );
     }
   }
-  const canPay = selected && ['pending','failed','expired'].includes(selected.status) && selected.userId === user.id && selected.booking?.status === 'CONFIRMED';
+  const canPay = selected && canInitiateBookingPayment(user, selected.booking, selected);
   const hasPaymentMethod = selected && ((providers.vnpay && ['unselected','vnpay'].includes(selected.provider)) || (providers.vietqr && ['unselected','vietqr'].includes(selected.provider)));
   const paymentHelp = selected?.status === 'success' ? 'ui.paymentStudio.paidHelp'
     : selected?.status === 'refunded' ? 'ui.paymentStudio.refundedHelp'
@@ -288,7 +288,7 @@ function PaymentsLedger({
         </div>
       )}
       {error && (
-        <div role="alert" className="alert danger">
+        <div role="alert" tabIndex={-1} ref={actionErrorRef} className="alert danger">
           {translate(error)}
         </div>
       )}
@@ -460,13 +460,14 @@ function PaymentsLedger({
             <div className="payment-booking-context"><h3>{selected.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</h3><p>{selected.booking?.resource.name}</p><p className="payment-description">{selected.description}</p>
             <dl><dt>{tr('ui.payer_9f6325a0')}</dt><dd>{selected.user?.fullName}</dd><dt>{tr('ui.transaction_reference_717b27eb')}</dt><dd className="payment-ref">{selected.txnRef}</dd></dl>
             {selected.booking && <a className="payment-booking-link" href={workspacePathForTab("bookings",new URLSearchParams({booking:selected.booking.id}))}>{tr('ui.paymentStudio.viewBooking')}<ArrowRight size={16} aria-hidden="true" /></a>}</div>
-            {selected.status === 'success' && <button className="primary-button payment-open-receipt" disabled={!!busy} onClick={() => void openReceipt(selected)}><ReceiptText size={18} aria-hidden="true" />{tr('ui.open_receipt_68f863f1')}</button>}
+            {selected.status === 'success' && <button className="primary-button payment-open-receipt" aria-disabled={!!busy} onClick={() => void openReceipt(selected)}><ReceiptText size={18} aria-hidden="true" />{tr('ui.open_receipt_68f863f1')}</button>}
             {selected.reconciliationStatus !== "none" && (
               <div className="alert warning" role="status">
                 <strong>{selected.reconciliationStatus === "manual_review" ? translate("ui.manual_reconciliation_required_ad0551a4") : translate("ui.reconciliation_resolved_6c18a62d")}</strong>
                 <p>{selected.reconciliationReason || translate("ui.an_administrator_needs_to_review_463c5778")}</p>
               </div>
             )}
+            {selected.booking?.status === 'PENDING_APPROVAL' && selected.booking.paymentDueAt && <PaymentHoldNotice paymentDueAt={selected.booking.paymentDueAt} startAt={selected.booking.startAt} onExpired={()=>void load()} />}
             <ol className="payment-timeline" aria-label={translate("ui.payment_progress_280450c6")}>
               <li className="is-complete"><span className="payment-step-mark" aria-hidden="true"><ReceiptText size={15} /></span><strong>{translate("ui.request_created_8af32592")}</strong><time dateTime={selected.createdAt}>{formatVietnamDateTime(selected.createdAt)}</time></li>
               <li className={selected.provider !== "unselected" ? "is-complete" : "is-current"}><span className="payment-step-mark" aria-hidden="true"><CreditCard size={15} /></span><strong>{selected.provider !== "unselected" ? translate("ui.method_selected_ef6b1341") : translate("ui.choose_method_da36b3c9")}</strong><span>{selected.provider === "vnpay" ? tr('ui.vnpay_sandbox_667598b8') : selected.provider === "vietqr" ? "VietQR" : translate("ui.not_initiated_fd25f9ff")}</span></li>
@@ -586,48 +587,7 @@ function PaymentsLedger({
           </div>
         )}
       </aside></div>
-      <BaseModal2026
-        isOpen={!!receipt}
-        onClose={() => setReceipt(null)}
-        title={translate("ui.internal_payment_receipt_d9efbde5")}
-        footer={
-          <button className="primary-button" onClick={() => window.print()}>
-             {translate("ui.print_receipt_ce9c48ea")} </button>
-        }
-      >
-        {receipt && (
-          <article className="payment-receipt">
-            <h2>{tr('ui.internal_payment_receipt_d9efbde5')}</h2>
-            <p className="payment-state payment-success">
-              {tr(labels[receipt.transaction.status])} ·{" "}
-              {receipt.transaction.provider === "vnpay"
-                ? "VNPAY"
-                : receipt.transaction.provider}
-            </p>
-            <dl>
-              {Object.entries({
-                [translate("ui.transaction_reference_717b27eb")]: receipt.transaction.txnRef,
-                [translate("ui.amount_4cbdc55b")]: `${money(receipt.transaction.amount)} (${receipt.transaction.currency})`,
-                [translate("ui.payer_9f6325a0")]: receipt.transaction.user.fullName,
-                [translate("ui.bookings_00f5b333")]:
-                  receipt.transaction.booking?.title || translate("ui.no_longer_linked_774c604c"),
-                [translate("ui.booking_reference_189e7a5d")]: receipt.transaction.booking?.id || "—",
-                [translate("ui.resource_9a35ef53")]: `${receipt.transaction.booking?.resource.code || ""} ${receipt.transaction.booking?.resource.name || ""}`,
-                [translate("ui.payment_time_cfbad42e")]: receipt.transaction.paidAt
-                  ? formatVietnamDateTime(receipt.transaction.paidAt)
-                  : "—",
-                [translate("ui.receipt_generated_at_9f7b0997")]: formatVietnamDateTime(receipt.generatedAt),
-              }).map(([k, v]) => (
-                <React.Fragment key={k}>
-                  <dt>{k}</dt>
-                  <dd>{v}</dd>
-                </React.Fragment>
-              ))}
-            </dl>
-            <HelpDisclosure>{tr('ui.paymentJourney.receiptDisclaimer')}</HelpDisclosure>
-          </article>
-        )}
-      </BaseModal2026>
+      <PaymentReceipt receipt={receipt} onClose={() => setReceipt(null)} />
     </section>
   );
 }

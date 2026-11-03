@@ -1,10 +1,11 @@
+import { renderEmailDocument } from './emailTemplate.js';
 import bcrypt from "bcryptjs";
 import { createHmac, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { prisma } from "../db.js";
 import { config } from "../config.js";
 import { HttpError } from "../middleware/errors.js";
 import { accountWrite, managedTarget } from "./accountAccess.js";
-import { emailConfiguration, escapeHtml, sendRequiredEmail } from "./emailService.js";
+import { emailConfiguration, sendRequiredEmail } from "./emailService.js";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "./systemAuditService.js";
 
 const TTL_MS = 10 * 60 * 1000;
@@ -48,7 +49,7 @@ export async function requestPasswordOtp(actor, { targetUserId = actor.id, curre
     ? `Password change verification: ${code}. Valid for 10 minutes. Do not share this code unless you requested assistance. If you did not request a password change, ignore this email.`
     : `Mã xác thực đổi mật khẩu: ${code}. Có hiệu lực 10 phút. Chỉ cung cấp mã khi bạn đã yêu cầu hỗ trợ đổi mật khẩu. Nếu không yêu cầu, hãy bỏ qua email này.`;
   const delivery = await sendRequiredEmail({ to: challenge.email, subject: english ? "LAB password verification" : "LAB — Xác thực đổi mật khẩu",
-    text, html: `<p>${escapeHtml(text)}</p>` });
+    text, html: renderEmailDocument({locale:english?"en":"vi",title:english?"Password change verification":"Xác thực đổi mật khẩu",paragraphs:[text],code}) });
   if (!delivery.success) {
     await prisma.passwordChallenge.updateMany({ where: { id: challenge.id, consumedAt: null }, data: { consumedAt: new Date() } });
     raise(failure("OTP_NOT_SENT", 503));

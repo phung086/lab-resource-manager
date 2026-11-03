@@ -378,7 +378,7 @@ export function PublicResourceCatalog({
                 <div className="catalog-card-badges">
                   <span className={`card-badge ${opBadge.class}`}>{tr(opBadge.label)}</span>
                   <span className="card-badge badge-approval">
-                    {row.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : tr("ui.automatic_a25c8028")}
+                    {row.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : Number(row.rental?.hourlyRateVnd) > 0 ? tr("ui.confirmed_after_payment_2c477063") : tr("ui.automatic_a25c8028")}
                   </span>
                   {row.trainingRequirements && row.trainingRequirements.length > 0 && (
                     <span className="card-badge badge-training">{tr("ui.training_required_cf046e4c")}</span>
@@ -484,7 +484,7 @@ export function PublicResourceCatalog({
                   <dd>
                     {selected.effectiveRequiresApproval
                       ? tr("ui.staff_approval_required_before_handover_4d6bf5a3")
-                      : tr("ui.automatic_confirmation_under_policy_bfbbda9a")}
+                      : Number(selected.rental?.hourlyRateVnd) > 0 ? tr("ui.confirmed_after_payment_2c477063") : tr("ui.automatic_confirmation_under_policy_bfbbda9a")}
                   </dd>
                 </div>
                 <div>
@@ -559,6 +559,9 @@ export function PublicResourceCatalog({
                 <ArrowRight size={17} aria-hidden="true" />
               </button>
 
+
+            </div>
+          </div>
               {/* Guest Quick Booking Section */}
               {onGuestBookingComplete && !detailLoading && !detailError && computeEligibility(selected).type !== "danger" && (
                 <details key={selected.id} className="catalog-guest-booking" onToggle={event => { if (event.currentTarget.open) setGuestBookingOpened(true); }}>
@@ -567,8 +570,6 @@ export function PublicResourceCatalog({
                   {guestBookingOpened && <GuestQuickBookingPanel key={selected.id} resource={selected} onComplete={onGuestBookingComplete} />}
                 </details>
               )}
-            </div>
-          </div>
         </section>
       )}
     </div>

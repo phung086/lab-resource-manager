@@ -1,6 +1,6 @@
 /* ===================================================================
    O1 Booking Operations — LAB Design System Integration
-   Palette: cream #FFF9EE, violet #6441D9, mint #6EE7D2, coral #FF9B85
+   Palette: cream #FFF9EE, violet #6040ce, mint #6EE7D2, coral #FF9B85
    Structure: two-column (queue + dossier), stacks on narrow
    =================================================================== */
 
@@ -237,7 +237,7 @@
 .operation-card:hover,
 .operation-card.is-selected {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(100, 65, 217, 0.1);
+  box-shadow: 0 0 0 3px rgba(96, 64, 206, 0.1);
 }
 
 .operation-card-header {
@@ -270,7 +270,7 @@
 
 .operation-resource-code {
   display: inline-flex;
-  border: 1px solid rgba(100, 65, 217, 0.2);
+  border: 1px solid rgba(96, 64, 206, 0.2);
   border-radius: 5px;
   background: var(--primary-tint);
   color: var(--primary);
@@ -846,6 +846,6 @@
 .operations-dossier-empty p { margin: 2px 0 0; color: var(--workspace-text-muted, #625b70); font-size: .85rem; line-height: 1.6; max-width: 34ch; }
 .operations-queue-snapshot { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--workspace-border, #d8d2e1); display: grid; gap: 8px; width: 100%; }
 .operations-queue-snapshot button { display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 12px; border: 1px solid var(--workspace-border, #d8d2e1); border-radius: 10px; background: var(--workspace-surface, #fff); cursor: pointer; font: inherit; color: inherit; }
-.operations-queue-snapshot button:hover { border-color: var(--workspace-accent, #6441d9); color: var(--workspace-accent, #6441d9); }
+.operations-queue-snapshot button:hover { border-color: var(--workspace-accent, #6040ce); color: var(--workspace-accent, #6040ce); }
 .operations-queue-snapshot button strong { font-size: .84rem; font-weight: 550; overflow-wrap: anywhere; }
 .operations-queue-snapshot .status-badge-inline { flex-shrink: 0; }

@@ -5,7 +5,7 @@
   --resource-ink: #26243A;
   --resource-muted: var(--workspace-muted, #5D596B);
   --resource-line: var(--workspace-border, #DED7E8);
-  --resource-accent: var(--workspace-accent, #6441D9);
+  --resource-accent: var(--workspace-accent, #6040ce);
   --resource-tint: var(--workspace-accent-tint, #F5F2FF);
   --resource-paper: var(--workspace-paper, #FFF9EE);
   color: var(--resource-ink);

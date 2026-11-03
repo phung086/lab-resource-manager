@@ -1,10 +1,16 @@
 import { ResourceCategoryArt } from "../ResourceCategoryArt";
 import "../../styles/booking-studio.css";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, DoorOpen, ListFilter, Microscope, Search } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, DoorOpen, ListFilter, Microscope, Search } from 'lucide-react';
 import { apiRequest } from '../../api.js';
 import { useLocale } from '../../providers/LocaleProvider';
-import { freeWindows, intervalFor, policyFor, resourceBlocked, serviceWindow, timeLabel, upcomingFreeDays, type PlannerEvent, type PlannerResource } from './plannerModel';
+import { freeWindows, intervalFor, slotIssue, policyFor, resourceBlocked, serviceWindow, timeLabel, upcomingFreeDays, type PlannerEvent, type PlannerResource } from './plannerModel';
+
+import { BaseModal2026 } from '../BaseModal2026';
+import { ResourceGallery } from '../ResourceGallery';
+import { ResourceSpecifications } from '../ResourceSpecifications';
+import { ResourceMediaPreview } from '../ResourceMediaPreview';
+import '../../styles/planner-validation.css';
 
 type Interval = { startAt: string; endAt: string };
 export function BookingSlotPicker({ dateControls, resources, resourceId, onResource, date, dateTitle, events, busy, scheduleError, timeFilter, onFilterTime, onBook, entry, onEntry, duration, onDuration, rangeEnd, onChooseDate, onRefresh, selectedResourceIds, onAddToSelection, onViewSelection }: {
@@ -17,6 +23,14 @@ export function BookingSlotPicker({ dateControls, resources, resourceId, onResou
   selectedResourceIds: string[]; onAddToSelection?: (resource: PlannerResource) => void; onViewSelection?: () => void;
 }) {
   const { tr, locale } = useLocale();
+  const [preview, setPreview] = useState<PlannerResource | null>(null);
+  const [previewError, setPreviewError] = useState(''), [previewBusy, setPreviewBusy] = useState(false);
+  useEffect(() => {
+    if (!preview?.id) return;
+    const controller = new AbortController(); setPreviewBusy(true); setPreviewError('');
+    apiRequest(`/resources/${encodeURIComponent(preview.id)}`, { signal: controller.signal }).then(row => { if (!controller.signal.aborted) setPreview(row); }).catch(() => { if (!controller.signal.aborted) setPreviewError('ui.could_not_load_access_requirements_f8f02857'); }).finally(() => { if (!controller.signal.aborted) setPreviewBusy(false); });
+    return () => controller.abort();
+  }, [preview?.id]);
   const [start, setStart] = useState(''), [end, setEnd] = useState('');
   const [customTime, setCustomTime] = useState(false);
   // Sequential wizard: step 1 picks the resource, step 2 picks duration/day/slot.
@@ -29,6 +43,7 @@ export function BookingSlotPicker({ dateControls, resources, resourceId, onResou
   const [clock, setClock] = useState(Date.now);
   useEffect(() => { const timer = setInterval(()=>setClock(Date.now()),30000); return ()=>clearInterval(timer); }, []);
   const resource = resources.find(row=>row.id===resourceId), interval = intervalFor(date,start,end);
+  const issue = slotIssue(resource, date, start, end, clock);
   const checkKey = `${resourceId}|${interval?.startAt}|${interval?.endAt}`;
   const choiceRef=useRef({key:checkKey,resource});choiceRef.current={key:checkKey,resource};
   useEffect(() => { controllerRef.current?.abort(); checkingRef.current=false; setCheckBusy(false); setCheckError(''); }, [checkKey, resources]);
@@ -44,13 +59,15 @@ export function BookingSlotPicker({ dateControls, resources, resourceId, onResou
   },[windows,start,end,entry,busy,customTime]);
   async function continueBooking() {
     if (!interval || !resource || checkingRef.current) return;
+    const invalid = slotIssue(resource, date, start, end);
+    if (invalid) { setCheckError(tr(invalid.key, invalid.params)); return; }
     controllerRef.current?.abort(); const controller = new AbortController(); controllerRef.current = controller;
     checkingRef.current=true; setCheckBusy(true); setCheckError('');
     try {
       const data = await apiRequest(`/bookings/availability?${new URLSearchParams({ resourceId:resource.id,...interval })}`, { signal:controller.signal });
       if (controller.signal.aborted || choiceRef.current.key!==checkKey || choiceRef.current.resource!==resource) return;
       if(data.available===true)onBook({resourceId:resource.id,...interval});
-      else {setCheckError('ui.planner.justBooked');onRefresh();}
+      else {setCheckError(data.conflicts?.some((item: { type: string })=>item.type==='MAINTENANCE_CONFLICT') ? 'ui.planner.validation.maintenance' : 'ui.planner.justBooked');onRefresh();}
     } catch (error: unknown) { if (!controller.signal.aborted) setCheckError((error as Error).message || 'api.API_REQUEST_FAILED'); }
     finally { if (!controller.signal.aborted) {checkingRef.current=false;setCheckBusy(false);} }
   }
@@ -60,15 +77,16 @@ export function BookingSlotPicker({ dateControls, resources, resourceId, onResou
   const chooseResource = (id: string) => {
     onResource(id);
     setStep(2);
-    slotPanel.current?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
+    requestAnimationFrame(() => slotPanel.current?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'}));
   };
+  const changeResource = () => { setStep(1); requestAnimationFrame(() => document.querySelector<HTMLElement>('.planner-resource-picker h2')?.focus()); };
   return <>
     <div className="planner-entry" role="group" aria-label={tr('ui.planner.searchBy')}><button type="button" aria-pressed={entry==='resource'} onClick={()=>{onEntry('resource');onFilterTime(null);}}><Microscope size={17}/>{tr('ui.planner.resourceFirst')}</button><button type="button" aria-pressed={entry==='time'} onClick={()=>{onEntry('time');setStart(start||'09:00');setEnd(end||'10:00');}}><Clock size={17}/>{tr('ui.planner.timeFirst')}</button></div>
     {entry==='time' && <form className="planner-time-search" onSubmit={event=>{event.preventDefault();if(interval){onFilterTime(interval);setFindError('');}else setFindError('ui.calendarWorkspace.futureTime');}}>
       <label>{tr('ui.planner.start')}<input type="time" required value={start} onChange={event=>{setStart(event.target.value);onFilterTime(null);}}/></label><label>{tr('ui.planner.end')}<input type="time" required value={end} onChange={event=>{setEnd(event.target.value);onFilterTime(null);}}/></label><button type="submit" className="btn btn-primary"><Search size={16}/>{tr('ui.planner.findCandidates')}</button><p>{tr(timeFilter ? 'ui.planner.candidateHint' : 'ui.planner.chooseTimeHint')}</p>{findError && <p role="alert">{tr(findError)}</p>}
     </form>}
     {wizard && <nav className="planner-steps" aria-label={tr('ui.planner.stepsLabel')}>
-      <button type="button" className={`planner-step ${step===1?'is-active':''}`} aria-current={step===1?'step':undefined} onClick={()=>setStep(1)}><span className="planner-step-index">1</span>{tr('ui.choose_a_resource_1ba6fed9')}</button>
+      <button type="button" className={`planner-step ${step===1?'is-active':''}`} aria-current={step===1?'step':undefined} onClick={changeResource}><span className="planner-step-index">1</span>{tr('ui.choose_a_resource_1ba6fed9')}</button>
       <span className="planner-step-sep" aria-hidden="true"><ChevronRight size={15}/></span>
       <button type="button" className={`planner-step ${step===2?'is-active':''}`} aria-current={step===2?'step':undefined} aria-disabled={!resource} onClick={()=>resource&&setStep(2)}><span className="planner-step-index">2</span>{tr('ui.planner.chooseSlot')}</button>
     </nav>}
@@ -77,11 +95,15 @@ export function BookingSlotPicker({ dateControls, resources, resourceId, onResou
         {resource.category==='ROOM'?<DoorOpen size={16}/>:<Microscope size={16}/>}
         <strong>{resource.name}</strong><small>{resource.code}</small>
       </span>
-      <button type="button" className="btn btn-secondary" onClick={()=>setStep(1)}><ChevronLeft size={15}/>{tr('ui.planner.changeResource')}</button>
+      <button type="button" className="btn btn-secondary" onClick={changeResource}><ChevronLeft size={15}/>{tr('ui.planner.changeResource')}</button>
     </div>}
     <div className={`planner-booking-layout ${wizard?(step===1?'is-step-resource':'is-step-time'):''}`}>
-      <section className="planner-resource-picker" hidden={wizard&&step===2} aria-label={tr('ui.choose_a_resource_1ba6fed9')}><header><h2>{tr('ui.planner.resourceHeading')}</h2><span>{tr('ui.planner.loadedResources',{count:resources.length})}</span></header>
-        {busy && !resources.length ? <p role="status" className="planner-empty">{tr('ui.loading_laboratory_resources_e55dcf2e')}</p> : !resources.length ? <div className="planner-empty"><ListFilter size={28}/><h3>{tr('ui.planner.noMatch')}</h3><p>{tr('ui.planner.changeFilters')}</p></div> : <div className="planner-resource-options" role="group" aria-label={tr('ui.choose_a_resource_1ba6fed9')}>{resources.slice(page*8,page*8+8).map(row=><button type="button" className="planner-resource-option" key={row.id} aria-pressed={resourceId===row.id} onClick={()=>chooseResource(row.id)}><span className="planner-resource-symbol">{row.category==='ROOM'?<DoorOpen size={22}/>:<Microscope size={22}/>}</span><span><strong>{row.name}</strong><small>{row.code}</small><span>{row.laboratory?.name}</span>{resourceBlocked(row)&&<small>{tr('ui.this_resource_is_not_accepting_7365dfdb')}</small>}</span>{resourceId===row.id?<Check size={18}/>:<ChevronRight size={18}/>}</button>)}</div>}
+      <section className="planner-resource-picker" hidden={wizard&&step===2} aria-label={tr('ui.choose_a_resource_1ba6fed9')}><header><h2 tabIndex={-1}>{tr('ui.planner.resourceHeading')}</h2><span>{tr('ui.planner.loadedResources',{count:resources.length})}</span></header>
+        {busy && !resources.length ? <p role="status" className="planner-empty">{tr('ui.loading_laboratory_resources_e55dcf2e')}</p> : !resources.length ? <div className="planner-empty"><ListFilter size={28}/><h3>{tr('ui.planner.noMatch')}</h3><p>{tr('ui.planner.changeFilters')}</p></div> : <div className="planner-resource-options" role="group" aria-label={tr('ui.choose_a_resource_1ba6fed9')}>{resources.slice(page*8,page*8+8).map(row=><article className="planner-resource-card" key={row.id}>
+          <div className="planner-resource-photo">{row.media?.find(media=>media.kind==='IMAGE') ? <ResourceMediaPreview kind="IMAGE" size="card" url={row.media.find(media=>media.kind==='IMAGE')!.url} alt={row.name}/> : <ResourceCategoryArt category={row.category}/>}</div>
+          <div className="planner-resource-card-copy"><small>{row.code} · {row.category ? tr(`enum.category.${row.category}`) : ''}</small><h3>{row.name}</h3><p>{row.laboratory?.name || row.location}</p>{row.description&&<p className="planner-resource-description">{row.description}</p>}{resourceBlocked(row)&&<p className="planner-resource-blocked">{tr('ui.this_resource_is_not_accepting_7365dfdb')}</p>}</div>
+          <div className="planner-resource-card-actions"><button type="button" className="btn btn-secondary" onClick={()=>setPreview(row)}>{tr('ui.view_details_f6f88b0f')}</button><button type="button" className="planner-resource-option btn btn-primary" aria-pressed={resourceId===row.id} onClick={()=>chooseResource(row.id)}>{tr('ui.planner.chooseSlot')}<ChevronRight size={16}/></button></div>
+        </article>)}</div>}
         {resources.length>8&&<nav className="planner-pagination" aria-label={tr('ui.planner.resourcePages')}><button type="button" disabled={!page} onClick={()=>setPage(page-1)}><ChevronLeft size={17}/>{tr('ui.planner.previousResources')}</button><span>{page+1} / {Math.ceil(resources.length/8)}</span><button type="button" disabled={(page+1)*8>=resources.length} onClick={()=>setPage(page+1)}>{tr('ui.planner.nextResources')}<ChevronRight size={17}/></button></nav>}
       </section>
       <section className="planner-slot-panel" ref={slotPanel} hidden={wizard&&step===1} aria-label={tr('ui.planner.chooseSlot')}>
@@ -95,20 +117,23 @@ export function BookingSlotPicker({ dateControls, resources, resourceId, onResou
               {nextDays.length>0&&<details className="planner-next-times" open={!windows.length}><summary>{tr(windows.length?'ui.planner.otherDays':'ui.planner.nearestTimes')}</summary>{nextDays.map(next=><button key={next.date} type="button" onClick={()=>onChooseDate(next.date)}><span>{formatDay(next.date)}</span><strong>{next.window.start}–{next.window.end}</strong><ChevronRight size={16}/></button>)}</details>}
               {!windows.length&&!nextDays.length&&hours&&!resourceBlocked(resource)&&<p className="planner-policy-note">{tr('ui.planner.noTimeWeek')}</p>}
             </>}
-            <details className="planner-custom-time" onToggle={event=>{if(event.currentTarget.open)setCustomTime(true);}}><summary>{tr('ui.planner.customTime')}</summary><div><label>{tr('ui.planner.start')}<input type="time" value={start} onChange={event=>{setCustomTime(true);setStart(event.target.value);}}/></label><label>{tr('ui.planner.end')}<input type="time" value={end} onChange={event=>{setCustomTime(true);setEnd(event.target.value);}}/></label></div></details>
+            <details className="planner-custom-time" onToggle={event=>{if(event.currentTarget.open)setCustomTime(true);}}><summary>{tr('ui.planner.customTime')}</summary><div><label>{tr('ui.planner.start')}<input type="time" aria-invalid={!!issue} aria-describedby={issue ? "planner-slot-error" : undefined} value={start} onChange={event=>{setCustomTime(true);setStart(event.target.value);}}/></label><label>{tr('ui.planner.end')}<input type="time" aria-invalid={!!issue} aria-describedby={issue ? "planner-slot-error" : undefined} value={end} onChange={event=>{setCustomTime(true);setEnd(event.target.value);}}/></label></div></details>
           </>}
           </div><aside className="slot-ticket" aria-label={tr('ui.bookingStudio.summary')}>
             <div className="slot-ticket-art"><ResourceCategoryArt category={resource.category} /></div>
             <div className="slot-ticket-body"><span className="slot-ticket-code">{resource.code}</span><h2>{resource.name}</h2><p>{resource.laboratory?.name}</p>
           {interval&&<div className="planner-choice"><div><strong>{start}–{end}</strong><span>{dateTitle}</span></div><span className="planner-choice-label">{tr('ui.planner.yourTime')}</span></div>}
-          {checkError&&<p className="planner-check-status" role="alert">{tr(checkError)}</p>}
-          {customTime&&start&&end&&!interval&&<p className="planner-check-status" role="alert">{tr('ui.calendarWorkspace.futureTime')}</p>}
-          <div className="planner-booking-actions"><button type="button" className="btn btn-primary" disabled={!interval||resourceBlocked(resource)||checkBusy||busy} onClick={()=>void continueBooking()}>{tr(checkBusy?'ui.planner.checking':'ui.planner.continueBooking')}<ArrowRight size={18}/></button>{onAddToSelection&&<button type="button" className="btn btn-secondary" disabled={!selectedResourceIds.includes(resource.id)&&selectedResourceIds.length>=30} title={selectedResourceIds.length>=30?tr('ui.resourceSelection.limit'):undefined} onClick={()=>selectedResourceIds.includes(resource.id)?onViewSelection?.():onAddToSelection(resource)}>{tr(selectedResourceIds.includes(resource.id)?'ui.selectionTray.open':'ui.planner.addSelection')}</button>}</div>
+          {(checkError || (!busy && issue))&&<div id="planner-slot-error" className="planner-validation" role="alert"><AlertTriangle size={22} aria-hidden="true"/><div><strong>{tr('ui.planner.validation.title')}</strong><p>{checkError ? tr(checkError) : issue ? tr(issue.key, issue.params) : ''}</p><button type="button" onClick={()=>{setCustomTime(true);document.querySelector<HTMLDetailsElement>('.planner-custom-time')?.setAttribute('open','');document.querySelector<HTMLInputElement>('.planner-custom-time input')?.focus();}}>{tr('ui.planner.validation.edit')}</button></div></div>}
+
+          <div className="planner-booking-actions"><button type="button" className="btn btn-primary" aria-describedby={issue || checkError ? "planner-slot-error" : undefined} disabled={!interval||Boolean(issue)||Boolean(scheduleError)||resourceBlocked(resource)||checkBusy||busy} onClick={()=>void continueBooking()}>{tr(checkBusy?'ui.planner.checking':'ui.planner.continueBooking')}<ArrowRight size={18}/></button>{onAddToSelection&&<button type="button" className="btn btn-secondary" disabled={!selectedResourceIds.includes(resource.id)&&selectedResourceIds.length>=30} title={selectedResourceIds.length>=30?tr('ui.resourceSelection.limit'):undefined} onClick={()=>selectedResourceIds.includes(resource.id)?onViewSelection?.():onAddToSelection(resource)}>{tr(selectedResourceIds.includes(resource.id)?'ui.selectionTray.open':'ui.planner.addSelection')}</button>}</div>
           <p className="planner-policy-note">{tr('ui.planner.finalCheckNote')}</p>
           {policyFor(resource)?.allowWeekend===false&&<p className="planner-policy-note">{tr('ui.planner.weekdaysOnly')}</p>}
           </div></aside></div>
         </>}
       </section>
     </div>
+    <BaseModal2026 isOpen={!!preview} onClose={()=>setPreview(null)} title={preview?.name || ''} footer={<button type="button" className="btn btn-primary" disabled={previewBusy || !!previewError || !preview} onClick={()=>{if(preview){chooseResource(preview.id);setPreview(null);}}}>{tr('ui.planner.chooseSlot')}</button>}>
+      {preview && <div className="planner-resource-preview">{previewBusy?<p role="status">{tr('ui.loading_42d77f3a')}</p>:previewError?<p role="alert" className="alert danger">{tr(previewError)}</p>:<><p>{preview.code} · {preview.laboratory?.name || preview.location}</p><ResourceGallery key={preview.id} resourceId={preview.id} initialItems={preview.media} category={preview.category}/><p>{preview.description}</p><ResourceSpecifications specs={preview.specs}/></>}</div>}
+    </BaseModal2026>
   </>;
 }

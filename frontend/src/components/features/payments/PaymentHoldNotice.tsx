@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocale } from '../../../providers/LocaleProvider';
+import { AlertTriangle, Clock } from 'lucide-react';
 import { formatVietnamDateTime } from '../../../utils/timezone';
 
 export function PaymentHoldNotice({ paymentDueAt: storedDeadline, startAt, onExpired }: { paymentDueAt: string; startAt?: string; onExpired?: () => void }) {
@@ -19,8 +20,9 @@ export function PaymentHoldNotice({ paymentDueAt: storedDeadline, startAt, onExp
   }, [paymentDueAt]);
   const seconds = Math.max(0, Math.ceil((Date.parse(paymentDueAt) - now) / 1000));
   const remaining = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-  return <div className="alert warning payment-hold-notice">
-    <strong>{t('ui.paymentHold.pending')}</strong>
+  return <div className={`alert warning payment-hold-notice${seconds <= 120 ? ' is-urgent' : ''}`}>
+    <div className="payment-hold-heading">{seconds <= 120 ? <AlertTriangle size={22} aria-hidden="true"/> : <Clock size={22} aria-hidden="true"/>}<strong>{t(seconds === 0 ? 'ui.feedback.holdElapsed' : seconds <= 120 ? 'ui.feedback.holdSoon' : 'ui.paymentHold.pending')}</strong></div>
+    <span className="sr-only" role="status">{t(seconds === 0 ? 'ui.feedback.holdElapsed' : seconds <= 120 ? 'ui.feedback.holdSoon' : 'ui.paymentHold.pending')}</span>
     <p>{seconds > 0 ? t('ui.paymentHold.deadline', { time: formatVietnamDateTime(paymentDueAt), remaining }) : t('ui.paymentHold.expired')}</p>
     <p>{t('ui.paymentHold.rule')}</p>
   </div>;

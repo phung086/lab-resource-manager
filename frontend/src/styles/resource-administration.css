@@ -4,9 +4,9 @@
 .resource-form-group { min-width:0; border:0; padding:0 0 24px; margin:0; }
 .resource-form-group legend { font-size:1.1rem; font-weight:650; margin-bottom:16px; padding:0; }
 .resource-record-link { display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-height:44px; border:0; background:transparent; text-align:left; font:inherit; color:inherit; cursor:pointer; padding:4px 0; }
-.resource-record-link strong { color:var(--accent, #6441d9); }
+.resource-record-link strong { color:var(--accent, #6040ce); }
 .resource-record-link span { font-size:.85rem; color:var(--text-secondary, #625a72); }
-.resource-workspace-admin .resource-editor { border-left:4px solid var(--accent, #6441d9); }
+.resource-workspace-admin .resource-editor { border-left:4px solid var(--accent, #6040ce); }
 .resource-workspace-lab_staff .resource-row-actions { justify-content:flex-start; }
 .resource-management-view [hidden] { display:none !important; }
 .resource-management-view .resource-edit-fields { min-width:0; }

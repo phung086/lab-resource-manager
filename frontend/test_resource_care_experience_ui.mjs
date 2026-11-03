@@ -26,6 +26,14 @@ const unconfigured={...gpu,id:'care-camera',code:'CAM-02',name:'Camera th·ªã gi√
 const results=[];
 async function open(width,locale='vi',id=gpu.id){
  const context=await browser.newContext({viewport:{width,height:width<600?844:1000},reducedMotion:'reduce'}),page=await context.newPage(),errors=[],diagnostic=[];let failed=false;
+ // Exercise the optional view only inside this isolated browser. Runtime flags
+ // and backend authorization remain unchanged; every API below is intercepted.
+ await context.route('**/src/config/featureFlags.ts',async route=>{
+  const response=await route.fetch(),source=await response.text();
+  const body=source.replace(/export const TELEMETRY_FEATURES_ENABLED = [^;]+;/,'export const TELEMETRY_FEATURES_ENABLED = true;');
+  assert.notEqual(body,source,'Vite feature module must expose the optional UI test flag');
+  await route.fulfill({response,body});
+ });
  page.on('console',message=>{if(message.type()==='error')diagnostic.push(message.text());});
  page.on('pageerror',e=>errors.push(e.message));
  await context.addInitScript(({user,locale})=>{sessionStorage.setItem('lrm_token','isolated-care-fixture');sessionStorage.setItem('lrm_user',JSON.stringify(user));localStorage.setItem('lrm_locale',locale);},{user,locale});

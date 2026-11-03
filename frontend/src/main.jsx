@@ -25,6 +25,7 @@ import "./styles/global.css"; // single global layer: order of the former 10 fil
 import "./styles/spectrum.css";
 import "./styles/liquid-glass.css"; // landing liquid-glass layer, last so its hero/section overrides win
 import "./styles/lab-motion.css"; // shared kinetic vocabulary, wins the motion namespace
+import "./styles/feedback-visibility.css";
 // The shared system owns the final presentation, after structural styles.
 
 createRoot(document.getElementById("root")).render(

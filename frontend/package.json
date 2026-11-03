@@ -55,13 +55,16 @@
     "test:planning-ui": "node --experimental-strip-types --test test_planning_presentation.mjs",
     "test:ui:a11y": "node test_a11y_icon_names.mjs",
     "test:ui:workspace-refresh": "node test_workspace_refresh_ui.mjs",
+    "test:ui:payment-checkout": "node test_payment_checkout_ui.mjs",
     "test:ui:support-payment-experience": "node test_support_payment_experience_ui.mjs",
     "test:ui:operations-workbench": "node test_operations_workbench_ui.mjs",
     "test:ui:resource-care-experience": "node test_resource_care_experience_ui.mjs",
     "test:ui:resource-profile-journey": "node test_resource_profile_journey_ui.mjs",
     "test:maintenance-drafts": "node --experimental-strip-types --test test_maintenance_draft_storage.mjs",
     "test:ui:shared-form-drafts": "node test_shared_form_drafts_ui.mjs",
-    "test:ui:customer-accessibility": "node test_customer_accessibility_ui.mjs"
+    "test:ui:customer-accessibility": "node test_customer_accessibility_ui.mjs",
+    "test:ui:workspace-command": "node test_workspace_command_ui.mjs",
+    "test:ui:system-presentation": "node test_system_presentation_ui.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",

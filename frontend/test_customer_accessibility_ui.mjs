@@ -15,7 +15,7 @@ const resources = [
   ["qa-5", "EQUIPMENT", "GPU_SERVER", "Máy trạm kiểm thử"], ["qa-6", "MACHINE", "OTHER", "Máy kiểm thử"],
   ["qa-7", "EXPERIMENT_KIT", "KIT", "Bộ kiểm thử"], ["qa-8", "MATERIAL", "MATERIAL", "Vật tư kiểm thử"],
   ["qa-9", null, "ROOM", "Tài nguyên chưa phân loại"],
-].map(([id, category, subtype, name]) => ({ id, code: id.toUpperCase(), category, subtype, name, description: "Hồ sơ kiểm thử giao diện, không phải tài sản thực tế.", laboratoryId: lab.id, laboratory: lab, labPolicy: lab.labPolicy, location: lab.name, capacity: category === "ROOM" ? 24 : 1, operationalStatus: id === "qa-4" ? "MAINTENANCE" : "AVAILABLE", availability: { state: id === "qa-4" ? "UNAVAILABLE" : "AVAILABLE" }, bookingState: "bookable", effectiveRequiresApproval: true, media: [], trainingRequirements: [], specs: { environment: "LOCAL_DEMO", technical: { resolution: "24 MP", includedAccessories: ["Cáp kiểm thử", "Giá đỡ kiểm thử"], sensor: { format: "APS-C", stabilisation: false } }, usageGuide: { beforeUse: ["Kiểm tra cùng cán bộ."], steps: ["Theo tài liệu đúng model."], afterUse: ["Kiểm tra khi trả."], safetyNotes: "Hướng dẫn kiểm thử." } } }));
+].map(([id, category, subtype, name]) => ({ id, code: id.toUpperCase(), category, subtype, name, description: "Hồ sơ kiểm thử giao diện, không phải tài sản thực tế.", laboratoryId: lab.id, laboratory: lab, labPolicy: lab.labPolicy, location: lab.name, capacity: category === "ROOM" ? 24 : 1, operationalStatus: id === "qa-4" ? "MAINTENANCE" : "AVAILABLE", availability: { state: id === "qa-4" ? "UNAVAILABLE" : "AVAILABLE" }, bookingState: "bookable", effectiveRequiresApproval: false, rental: { hourlyRateVnd: id === "qa-2" ? 0 : 75000 }, media: [], trainingRequirements: [], specs: { environment: "LOCAL_DEMO", technical: { resolution: "24 MP", includedAccessories: ["Cáp kiểm thử", "Giá đỡ kiểm thử"], sensor: { format: "APS-C", stabilisation: false } }, usageGuide: { beforeUse: ["Kiểm tra cùng cán bộ."], steps: ["Theo tài liệu đúng model."], afterUse: ["Kiểm tra khi trả."], safetyNotes: "Hướng dẫn kiểm thử." } } }));
 
 function contrastScan(root = document.body) {
   const rgb = value => (value.match(/[\d.]+/g) || []).map(Number);
@@ -54,6 +54,9 @@ try {
   const page = await context.newPage();
   const errors = [], requests = [];
   let pricingFailed = false;
+  let preflightFailure = true;
+  let failGuestQuote = false;
+  let bookingQuoteAmount = 0;
   let historyMode = 'denied';
   let saveFailure = true;
   page.on("pageerror", error => errors.push(error.message));
@@ -63,8 +66,10 @@ try {
     const request = route.request(), url = new URL(request.url()), path = url.pathname.replace(/^\/api/, "");
     requests.push({ path, method: request.method() });
     let data = [];
-    if(path==='/booking-pricing/quote')return route.fulfill({contentType:'application/json',body:JSON.stringify({amountVnd:0,version:'a11y-fixture',loyaltyPolicyVersion:'none'})});
-    if(path==='/bookings/preflight')return route.fulfill({contentType:'application/json',body:JSON.stringify({ready:true,quote:{amountVnd:0,version:'a11y-fixture',loyaltyPolicyVersion:'none'}})});
+    if(path==='/booking-pricing/quote' && failGuestQuote) return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'API_REQUEST_FAILED'})});
+    if(path==='/booking-pricing/quote')return route.fulfill({contentType:'application/json',body:JSON.stringify({amountVnd:bookingQuoteAmount,version:'a11y-fixture',loyaltyPolicyVersion:'none'})});
+    if(path==='/bookings/preflight' && preflightFailure) return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:{code:'BOOKING_CONFLICT',message:'api.BOOKING_CONFLICT'}})});
+    if(path==='/bookings/preflight')return route.fulfill({contentType:'application/json',body:JSON.stringify({ready:true,quote:{amountVnd:bookingQuoteAmount,version:'a11y-fixture',loyaltyPolicyVersion:'none'}})});
     if(['/support/sessions','/incidents'].includes(path)&&request.method()==='POST')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'API_REQUEST_FAILED'})});
     if(path==='/support/metadata')return route.fulfill({contentType:'application/json',body:JSON.stringify({laboratories:[lab],presence:null,quickReplies:[]})});
     if(path==='/support/sessions')return route.fulfill({contentType:'application/json',body:JSON.stringify({items:[],summary:{},pagination:{page:1,total:0,totalPages:0}})});
@@ -112,6 +117,7 @@ try {
     await page.locator('.resource-catalogue-name').first().click();await page.locator('.resource-profile-hero').waitFor();await scan(`detail-${width}`);
     await page.goto(`${base}/workspace/support`);await page.locator('.support-request textarea').waitFor();await scan(`support-${width}`);
     await page.locator('.support-request textarea').fill('Kiểm tra lỗi gửi hỗ trợ bằng bàn phím');
+    await page.waitForFunction(()=>!document.querySelector('.support-request button[type=submit]')?.disabled);
     await page.locator('.support-request button[type=submit]').focus();await page.keyboard.press('Enter');
     await page.waitForFunction(()=>document.activeElement?.matches('.support-page>.alert.danger'));
     assert.equal(await page.locator('.support-request textarea').inputValue(),'Kiểm tra lỗi gửi hỗ trợ bằng bàn phím');
@@ -134,8 +140,27 @@ try {
     await page.locator('#booking-contact-phone').fill('0900000000');
     await page.locator('#booking-date').fill(new Date(Date.now()+86400000).toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'}));
     await page.locator('#booking-start-time').fill('09:00');await page.locator('#booking-end-time').fill('11:00');
+    const messages = JSON.parse(readFileSync(new URL(`./src/locales/catalog/${locale}.json`, import.meta.url))).messages;
+    const badge=dialog.locator('.booking-approval-badge');
+    await page.waitForFunction(label=>document.querySelector('.booking-approval-badge')?.textContent.includes(label),messages['ui.immediate_confirmation_6313fc02']);
+    assert.ok((await dialog.locator('#booking-resource-select option:checked').innerText()).includes(messages['ui.immediate_e80f0a67'].trim()),'A zero quote overrides a positive catalogue rate');
+    bookingQuoteAmount=75000;
+    await page.locator('#booking-end-time').fill('12:00');
+    await page.waitForFunction(label=>document.querySelector('.booking-approval-badge')?.textContent.includes(label),messages['ui.confirmed_after_payment_2c477063']);
+    assert.ok((await dialog.locator('#booking-resource-select option:checked').innerText()).includes(messages['ui.confirmed_after_payment_suffix_ac8e62f6']),'Paid quote updates the selected option');
+    assert.ok(!(await badge.innerText()).includes(messages['ui.immediate_confirmation_6313fc02']),'Paid booking never promises immediate confirmation');
+    bookingQuoteAmount=0;
+    await page.locator('#booking-end-time').fill('11:00');
+    await page.waitForFunction(label=>document.querySelector('.booking-approval-badge')?.textContent.includes(label),messages['ui.immediate_confirmation_6313fc02']);
     const submit=dialog.locator('button[type=submit]');await submit.focus();
     await page.waitForFunction(()=>!document.querySelector('[role=dialog] button[type=submit]')?.disabled);
+    if(preflightFailure){
+      await page.keyboard.press('Enter');await page.locator('.booking-submit-error').waitFor();
+      await page.waitForFunction(()=>document.activeElement?.classList.contains('booking-submit-error'));
+      assert.equal(await page.locator('#booking-title').inputValue(),'Kiểm tra đặt lịch bằng bàn phím','Conflict preserves title');
+      assert.equal(await page.locator('.booking-submit-error').isVisible(),true);
+      preflightFailure=false;await submit.focus();
+    }
     await page.keyboard.press('Enter');await page.locator('#booking-review-heading').waitFor();
     await page.waitForFunction(()=>document.activeElement?.id==='booking-review-heading');
     await scan(`booking-review-${width}`);
@@ -148,6 +173,37 @@ try {
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:`${screenshots}/customer-calendar-${locale}-${width}.png`,fullPage:true});
   }
+  failGuestQuote=true;
+  await page.evaluate(()=>{sessionStorage.clear();localStorage.setItem('lrm_locale','vi');});
+  await page.goto(`${base}/resources`);
+  await page.locator('.catalog-cover').first().click();
+  await page.locator('.catalog-guest-booking summary').click();
+  const guest=page.locator('.guest-booking-panel');
+  await guest.locator('#guest-booking-date').fill(new Date(Date.now()+86400000).toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'}));
+  await guest.locator('#guest-booking-title').fill('');
+  await guest.locator('button[type=submit]').click();
+  await guest.locator('#guest-step-error').waitFor();
+  assert.equal(await guest.locator('#guest-booking-title').getAttribute('aria-invalid'),'true');
+  await guest.locator('.guest-error-edit').click();
+  assert.equal(await guest.locator('#guest-booking-title').evaluate(el=>el===document.activeElement),true);
+  await guest.locator('#guest-booking-title').fill('Guest feedback test');
+  await guest.locator('.quote-error button').waitFor();
+  failGuestQuote=false;await guest.locator('.quote-error button').click();
+  await guest.locator('.guest-booking-quote strong').waitFor();
+  assert.equal(await guest.locator('#guest-booking-title').inputValue(),'Guest feedback test','Quote retry preserves title');
+  assert.equal((await guest.locator('.badge-approval').innerText()).trim(),vi['ui.automatic_confirmation_under_policy_bfbbda9a'],'Guest zero quote does not claim a payment is required');
+  await guest.locator('button[type=submit]').click();
+  await guest.locator('#guest-full-name').waitFor();
+  await guest.locator('#guest-full-name').fill('Guest Test');
+  await guest.locator('#guest-email').fill('wrong-address');
+  await guest.locator('button[type=submit]').click();
+  assert.equal(await guest.locator('#guest-email').getAttribute('aria-invalid'),'true');
+  await guest.locator('.guest-error-edit').click();
+  assert.equal(await guest.locator('#guest-email').evaluate(el=>el===document.activeElement),true);
+  assert.equal(await guest.locator('#guest-full-name').inputValue(),'Guest Test');
+  assert.equal(requests.filter(row=>row.path==='/guest-booking/book').length,0);
+  assert.equal((await guest.innerText()).includes('ui.lab_room_'),false,'Guest labels resolve locale keys');
+  await guest.screenshot({path:`${screenshots}/guest-validation.png`});
   console.log(JSON.stringify({findings,errors},null,2));
   assert.ok(findings.every(x=>!x.unnamed.length),'All visible controls have labels');assert.deepEqual(errors,[]);
   assert.ok(findings.every(x=>!x.contrast.length),'Solid-background text meets measured contrast thresholds');

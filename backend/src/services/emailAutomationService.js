@@ -1,7 +1,8 @@
+import { renderEmailDocument } from './emailTemplate.js';
 import { randomUUID } from "node:crypto";
 import { prisma } from "../db.js";
 import { normalizeLocale, localize } from "../locales/index.js";
-import { emailConfiguration, escapeHtml, sendEmail } from "./emailService.js";
+import { emailConfiguration, sendEmail } from "./emailService.js";
 
 const MAX_ATTEMPTS = 5;
 const LEASE_MS = 120000;
@@ -57,13 +58,13 @@ export function renderAutomatedEmail(row) {
   const fields = [], paragraphs = [t("greeting", { name: p.name || p.email })];
   let subject, path;
   if (row.kind === "ACCOUNT_REGISTERED") {
-    subject = t("registeredSubject"); path = "/";
+    subject = t("registeredSubject"); path = "/login";
     paragraphs.push(t("registered"));
     if (p.name) fields.push([t("name"), p.name]);
     fields.push([t("account"), p.email]);
     paragraphs.push(t(p.requiresPasswordSetup ? "passwordSetup" : "passwordChosen"));
   } else if (row.kind === "PAYMENT_RECEIPT") {
-    subject = t("paymentSubject", { reference: p.txnRef }); path = "/";
+    subject = t("paymentSubject", { reference: p.txnRef }); path = p.booking?.id ? `/workspace/payments?booking=${encodeURIComponent(p.booking.id)}` : "/workspace/payments";
     paragraphs.push(t("paymentReceived"));
     fields.push([t("paymentReference"), p.txnRef], [t("provider"), String(p.provider).toUpperCase()],
       [t("providerReference"), p.transactionNo],
@@ -80,10 +81,9 @@ export function renderAutomatedEmail(row) {
   } else throw new Error("EMAIL_KIND_INVALID");
   const link = appUrl + path;
   const text = [...paragraphs, ...fields.map(([label, value]) => `${label}: ${value ?? "—"}`), `${t("openApp")}: ${link}`, t("footer")].join("\n\n");
-  const html = `<div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;color:#172033;line-height:1.6">
-    <h2>${escapeHtml(subject)}</h2>${paragraphs.map(line => `<p>${escapeHtml(line)}</p>`).join("")}
-    <table style="border-collapse:collapse;width:100%">${fields.map(([label, value]) => `<tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">${escapeHtml(label)}</th><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(value ?? "—")}</td></tr>`).join("")}</table>
-    <p><a href="${escapeHtml(link)}">${escapeHtml(t("openApp"))}</a></p><p style="font-size:12px;color:#64748b">${escapeHtml(t("footer"))}</p></div>`;
+  const html = renderEmailDocument({ locale: row.locale, title: t(row.kind === "ACCOUNT_REGISTERED" ? "welcomeTitle" : p.reconciliationRequired ? "reconciliationTitle" : "paymentTitle"), preview: paragraphs[1], paragraphs, fields,
+    link, linkLabel: t("openApp"), footer: t("footer"), warning: Boolean(p.reconciliationRequired),
+    highlight: row.kind === "PAYMENT_RECEIPT" ? { label: t("amount"), value: new Intl.NumberFormat(row.locale === "en" ? "en-GB" : "vi-VN", {style:"currency",currency:p.currency}).format(p.amount) } : undefined });
   return { subject, html, text };
 }
 

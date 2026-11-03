@@ -3,7 +3,7 @@
   --incident-ink: #202138;
   --incident-muted: var(--workspace-muted, #5d596b);
   --incident-border: var(--workspace-border, #ded7e8);
-  --incident-accent: var(--workspace-accent, #6441d9);
+  --incident-accent: var(--workspace-accent, #6040ce);
   --incident-critical-bg: rgba(239, 68, 68, 0.10);
   --incident-critical-border: rgba(239, 68, 68, 0.32);
   --incident-critical-text: #b91c1c;
@@ -99,8 +99,8 @@
 }
 
 .incidents-workspace .primary-button:hover:not(:disabled) {
-  background: var(--workspace-accent-hover, #5030b6);
-  border-color: var(--workspace-accent-hover, #5030b6);
+  background: var(--workspace-accent-hover, #4d33b8);
+  border-color: var(--workspace-accent-hover, #4d33b8);
   box-shadow: none;
   transform: none;
 }
