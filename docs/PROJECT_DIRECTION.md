@@ -7,6 +7,19 @@ Phiếu giao đề tài và dòng 19 người dùng cung cấp yêu cầu quản
 Raspberry Pi, UAV, camera và tài nguyên dùng chung; đặt lịch/phê duyệt, phân
 quyền, online/offline, nhật ký, thông báo và giám sát CPU/GPU/RAM/dung lượng.
 
+## Lý do chọn đề tài
+
+Phòng thí nghiệm có tài nguyên dùng chung và số khung sử dụng hữu hạn. Một
+lịch trống vẫn có thể chưa dùng được vì tài nguyên đang bảo trì, hỏng hoặc
+người đặt chưa đạt điều kiện. Bài toán cần ghép lịch, điều kiện sử dụng và
+trạng thái tài nguyên để xác định một lượt đặt hợp lệ.
+
+Nhật ký bàn giao và hoàn trả giúp cán bộ đối chiếu ai đã nhận tài nguyên,
+khi nào và trong tình trạng nào. Mẫu giám sát có nguồn xác thực giúp nhận ra
+tải cao, số đo cũ hoặc nguồn mất kết nối, từ đó kiểm tra và xử lý sự cố.
+Đồ án chọn triển khai cả hai luồng để kiểm chứng sự liên hệ giữa kế hoạch
+sử dụng, vận hành thực tế và cảnh báo trên cùng hồ sơ tài nguyên.
+
 Đã đọc hai nguồn giảng viên trong `docs/instructor/` và Hướng triển khai.docx
 người dùng cung cấp ngày 07/10/2026. IOC yêu cầu tài liệu có ích trực tiếp cho
 phát triển: SRS/use case, convention, backlog, ERD, UI/UX và kiến trúc. Tài liệu
@@ -20,9 +33,12 @@ thiếu thiết bị; không thay thế đề tài gốc hay tự đổi framewo
 2. Giám sát: nguồn được xác thực, chỉ số CPU/GPU/RAM/disk/online khi có nguồn,
    lịch sử mẫu, dashboard, ngưỡng, cảnh báo/sự cố và Prometheus.
 
-Thiếu phần cứng không phải lý do bỏ giám sát. Dùng simulator có nhãn trong môi
-trường demo riêng và ghi rõ nguồn tổng hợp; không giả số đo sản xuất hay tự đổi
-trạng thái vật lý. Preview quy tắc hiện có chưa phải simulator tích hợp.
+Vận hành tài nguyên dùng lịch, tải hoặc sức chứa khai báo và giờ máy chủ.
+Giám sát dùng nguồn xác thực, thể hiện tuổi mẫu và tình trạng mất kết nối.
+Theo quyết định ngày 09/11, bản demo local có kịch bản giới hạn với nhãn
+`SIMULATED`. Bộ thu Windows là nguồn đo CPU/RAM/đĩa riêng. Cảnh báo từ cả
+hai luồng không tự thay đổi trạng thái vật lý. Xem
+[kịch bản trình bày](GRADUATION_DEMO_RUNBOOK.md).
 
 ## Hỗ trợ và phần mở rộng
 
@@ -30,8 +46,12 @@ AI tập trung tìm lịch/tài nguyên phù hợp và tóm tắt vận hành c�
 quyết định quyền, trạng thái hay phê duyệt. Cần đánh giá hai luồng với provider
 thật trước khi tuyên bố đã hoàn thành. Dự báo bảo trì chỉ làm khi đủ dataset.
 
-Kho vật tư, nhóm học phần, VI/EN, guest OTP, pricing/payment và media đã được
-người dùng chấp thuận; giữ hợp đồng hiện có, không coi chúng là trọng tâm mới.
+Kho vật tư, VI/EN, guest OTP, pricing/payment, hỗ trợ, loyalty,
+fulfillment và ChatGPT bridge đã được người dùng chấp thuận; giữ hợp đồng hiện
+có theo ADR hiện hành, không coi chúng là trọng tâm mới. Ba role hiện tại là
+ADMIN, LAB_STAFF, CUSTOMER (ADR-033); paid hold theo ADR-038 thay tự xác nhận
+lịch có phí, không tự quay lại quy trình/role trong đề xuất Word cũ.
+Học phần đã dừng ở giao diện và API. Dữ liệu lịch sử được giữ theo ADR-047.
 QR demo, NSGA-II/Pareto, fair-share, tối ưu điện năng, chargeback, stress
 showcase và bản sao số 3D cũ không phải điều kiện của đề tài. Code nghiên cứu
 đã bị ngừng dùng được loại khỏi runtime và xóa theo allowlist đã kiểm tra; không

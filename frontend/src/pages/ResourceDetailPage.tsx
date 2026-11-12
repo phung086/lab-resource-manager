@@ -1,3 +1,4 @@
+import "../styles/resource-experience.css";
 /**
  * ResourceDetailPage.tsx
  * Dedicated page for viewing resource details (R3-A repair)
@@ -6,19 +7,25 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowLeft, CalendarClock, History, DoorOpen, Microscope, MapPin, Users, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Activity, Wrench, CalendarClock, History, DoorOpen, Microscope, MapPin, Users, ShieldCheck } from "lucide-react";
+import { readRouteParams, workspacePathForTab } from "../workspaceRoutes.js";
+import { TELEMETRY_FEATURES_ENABLED } from "../config/featureFlags";
+
 import { apiRequest } from "../api.js";
 import { useLocale } from "../providers/LocaleProvider";
 import { translate } from "../i18n.js";
 import { ResourceGallery } from "../components/ResourceGallery";
+import { StatusPill } from '../components/features/resources/ResourceStatusPill';
 import { ResourceUsageGuide } from "../components/ResourceUsageGuide";
 import { LabPolicySummary } from "../components/LabPolicySummary";
 import { ResourceSpecifications } from "../components/ResourceSpecifications";
 import { ResourcePricingSummary } from "../components/ResourcePricingSummary";
+import { ResourceFulfillmentEditor } from '../components/features/operations/ResourceFulfillmentEditor';
 import { formatVietnamDateTime } from "../utils/timezone.js";
 import "../styles/resource-workspace.css";
 import "../styles/resource-discovery.css";
 import "../styles/resource-catalogue.css";
+import "../styles/resource-dossier.css";
 
 export interface ResourceDetailPageProps {
   user?: { id: string; role: string };
@@ -64,6 +71,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   onViewSelection
 }) => {
   const { tr } = useLocale();
+  const isOperator = user?.role === 'ADMIN' || user?.role === 'LAB_STAFF';
 
   // Separate resource state
   const [resource, setResource] = useState<any>(null);
@@ -192,7 +200,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   // Loading state
   if (resourceLoading) {
     return (
-      <div className="workspace-container resource-detail-page">
+      <div className="workspace-container resource-detail-page resource-dossier-studio">
         <div className="resource-detail-loading" role="status" aria-live="polite">
           <p>{tr("ui.loading_148ded83")}</p>
         </div>
@@ -203,7 +211,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   // Resource error state
   if (resourceError || !resource) {
     return (
-      <div className="workspace-container resource-detail-page">
+      <div className="workspace-container resource-detail-page resource-dossier-studio">
         <div className="alert danger" role="alert">
           <p>{tr(resourceError || "ui.resourceDiscovery.notFound")}</p>
           <button type="button" className="btn btn-secondary" onClick={() => setResourceRevision(value => value + 1)}>
@@ -219,10 +227,9 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
 
   const bookings = schedule?.bookings || [];
   const maintenance = schedule?.maintenanceWindows || [];
-  const cover = resource.media?.find((item: any) => item.kind === "IMAGE");
 
   return (
-    <div className="workspace-container resource-detail-page">
+    <div className="workspace-container resource-detail-page resource-dossier-studio">
       {/* Breadcrumb / Back */}
       <nav className="resource-detail-breadcrumb" aria-label={tr("ui.resourceDiscovery.navigation")}>
         <button
@@ -245,21 +252,27 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
         </div>
         <dl className="resource-profile-facts">
           <div><dt><Users size={16} aria-hidden="true" />{tr(resource.category === "ROOM" ? "ui.catalogue.seats" : "ui.catalogue.quantity")}</dt><dd>{resource.capacity}</dd></div>
-          <div><dt><ShieldCheck size={16} aria-hidden="true" />{tr("ui.approval_required_cc220dc0")}</dt><dd>{tr(resource.effectiveRequiresApproval ? "ui.approval_required_dc95ee8f" : "ui.confirm_automatically_when_eligible_e47b0eb4")}</dd></div>
+          <div><dt><ShieldCheck size={16} aria-hidden="true" />{tr("ui.approval_required_cc220dc0")}</dt><dd>{tr(resource.effectiveRequiresApproval ? "ui.approval_required_dc95ee8f" : Number(resource.rental?.hourlyRateVnd) > 0 ? "ui.confirmed_after_payment_2c477063" : "ui.confirm_automatically_when_eligible_e47b0eb4")}</dd></div>
         </dl>
       </header>
-      <nav className="resource-profile-nav" aria-label={tr("ui.catalogue.detailNavigation")}>
-        {[ ["overview", "ui.resourceDiscovery.overview"], ["specs", "ui.catalogue.specifications"], ["usage", "ui.usage_guide_28e5af8d"], ["pricing", "ui.rental.pricing"], ["schedule", "ui.resourceDiscovery.schedule"] ].map(([value,label]) => <button key={value} type="button" aria-pressed={section === value} aria-controls={`${value}-heading`} onPointerEnter={() => setSection(value)} onFocus={() => setSection(value)} onClick={() => setSection(value)}>{tr(label)}</button>)}
-      </nav>
       {/* Main Content Grid */}
+      {isOperator && <nav className="resource-operations-strip" aria-label={tr('ui.dossier.operations')}>
+        <div><Wrench size={22} aria-hidden="true"/><span><strong>{tr('ui.dossier.operations')}</strong><small>{tr('ui.dossier.operationsHint')}</small></span></div>
+        {TELEMETRY_FEATURES_ENABLED && <a href={workspacePathForTab('monitoring',{...Object.fromEntries(readRouteParams()),resource:resource.id})}><Activity size={17} aria-hidden="true"/>{tr('ui.care.title')}<ArrowRight size={16} aria-hidden="true"/></a>}
+        <a href={workspacePathForTab('maintenance',{...Object.fromEntries(readRouteParams()),resource:resource.id})}>{tr('ui.rental.scheduleService')}<ArrowRight size={16} aria-hidden="true"/></a>
+      </nav>}
       <div className="resource-detail-layout">
         {/* Left Column: Gallery + Details */}
-        <div className="resource-detail-main">
+        <div className="resource-detail-main" data-section={section}>
           {/* Gallery */}
-          <section className="resource-detail-gallery" aria-labelledby="gallery-heading" hidden={section !== "overview"}>
+          <section className="resource-detail-gallery" aria-labelledby="gallery-heading">
             <h2 id="gallery-heading" className="sr-only">{tr("ui.resourceDiscovery.media")}</h2>
-            <ResourceGallery key={resource.id} resourceId={resource.id} initialItems={resource.media} />
+            <ResourceGallery key={resource.id} resourceId={resource.id} initialItems={resource.media} category={resource.category} studio />
           </section>
+
+      <nav className="resource-profile-nav" aria-label={tr("ui.catalogue.detailNavigation")}>
+        {[ ["overview", "ui.resourceDiscovery.overview"], ["specs", "ui.catalogue.specifications"], ["usage", "ui.usage_guide_28e5af8d"], ["pricing", "ui.rental.pricing"], ["schedule", "ui.resourceDiscovery.schedule"], ...(user ? [["history", "refine.history"]] : []) ].map(([value,label]) => <button key={value} type="button" aria-pressed={section === value} aria-controls={`${value}-heading`} onClick={() => { setSection(value); if (value === 'history') loadHistory(); }}>{tr(label)}</button>)}
+      </nav>
 
           {/* Overview */}
           <section className="resource-detail-section" aria-labelledby="overview-heading" hidden={section !== "overview"}>
@@ -278,7 +291,9 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
                 label={tr("ui.approval_required_cc220dc0")}
                 value={resource.effectiveRequiresApproval
                   ? tr("ui.approval_required_dc95ee8f")
-                  : tr("ui.confirm_automatically_when_eligible_e47b0eb4")}
+                  : Number(resource.rental?.hourlyRateVnd) > 0
+                    ? tr("ui.confirmed_after_payment_2c477063")
+                    : tr("ui.confirm_automatically_when_eligible_e47b0eb4")}
               />
               {resource.trainingRequirements?.length > 0 && (
                 <DetailFact
@@ -312,6 +327,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
           <section className="resource-detail-section" aria-labelledby="pricing-heading" hidden={section !== "pricing"}>
             <h3 id="pricing-heading" className="resource-section-title">{tr("ui.catalogue.pricing")}</h3>
             <ResourcePricingSummary key={resource.id} resourceId={resource.id} />
+            {user?.role === 'ADMIN' && <ResourceFulfillmentEditor key={resource.id} resourceId={resource.id} />}
           </section>
 
           {/* Schedule */}
@@ -356,11 +372,12 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
           </section>
 
           {/* History — loads on demand */}
-          <section className="resource-detail-section" aria-labelledby="history-heading" hidden={!user || section !== "schedule"}>
+          <section className="resource-detail-section resource-history-panel" aria-labelledby="history-heading" hidden={!user || section !== "history"}>
             <h3 id="history-heading" className="resource-section-title">
               <History size={18} aria-hidden="true" />
               {tr("ui.recorded_resource_history_e8b75ec5")}
             </h3>
+            <p className="resource-history-intro">{tr('ui.dossier.historyHint')}</p>
             {!historyLoaded && (
               <button
                 type="button"
@@ -389,15 +406,17 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
               <p className="resource-detail-empty">{tr("ui.no_history_events_recorded_8a049a1a")}</p>
             )}
             {history.length > 0 && (
-              <div className="resource-event-list resource-history-list">
+              <div className="resource-event-list resource-history-list" role="list">
                 {history.slice(0, 20).map((event: any) => (
-                  <div key={`${event.source}-${event.id}`} className="resource-event-item">
+                  <div key={`${event.source}-${event.id}`} className="resource-event-item" role="listitem" data-source={event.source}>
+                    <span className="resource-history-kind">{tr(['booking','usage_log','booking_activity'].includes(event.source) ? 'ui.booking_b2e1971c' : event.source === 'maintenance_window' ? 'ui.maintenance_8ad424bd' : event.source === 'incident' ? 'ui.incident_36824380' : 'ui.physical_state_c30af32d')}</span>
                     <strong>{historyLabel(event)}</strong>
                     <span className="resource-event-meta">
                       {formatDate(event.timestamp)}
-                      {" · "}{tr("ui.source_7a7af506")}{event.source}
                       {event.actor?.fullName ? ` · ${event.actor.fullName}` : ""}
                     </span>
+                    {isOperator && event.reference?.maintenanceWindowId && <a href={workspacePathForTab('maintenance',{...Object.fromEntries(readRouteParams()),resource:resource.id,job:event.reference.maintenanceWindowId})}>{tr('ui.dossier.openRecord')}<ArrowRight size={15} aria-hidden="true"/></a>}
+                    {isOperator && event.reference?.incidentId && <a href={workspacePathForTab('incidents',{incident:event.reference.incidentId})}>{tr('ui.dossier.openRecord')}<ArrowRight size={15} aria-hidden="true"/></a>}
                   </div>
                 ))}
               </div>
@@ -413,6 +432,8 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
 
         {/* Right Column: Actions Sidebar */}
         <aside className="resource-detail-sidebar">
+
+
           <div className="resource-sidebar-card">
             {/* Header */}
             <div className="resource-sidebar-header">
@@ -426,17 +447,13 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
             <div className="resource-sidebar-status">
               <div className="resource-status-row">
                 <span className="resource-state-label">{tr("ui.physical_state_c30af32d")}</span>
-                <span className={`resource-status-pill status-${String(resource.operationalStatus).toLowerCase()}`}>
-                  {tr(operationalLabels[resource.operationalStatus]) || resource.operationalStatus}
-                </span>
+                <StatusPill value={resource.operationalStatus} label={tr(operationalLabels[resource.operationalStatus]) || resource.operationalStatus} />
               </div>
               <div className="resource-status-row">
                 <span className="resource-state-label">{tr("ui.current_availability_f57c5e36")}</span>
-                <span className={`resource-status-pill status-${String(resource.availability?.state || "unavailable").toLowerCase()}`}>
-                  {resource.availability?.state
+                <StatusPill value={resource.availability?.state || 'UNAVAILABLE'} label={resource.availability?.state
                     ? tr(availabilityLabels[resource.availability.state]) || tr("ui.not_bookable_cc51bab6")
-                    : tr("ui.not_bookable_cc51bab6")}
-                </span>
+                    : tr("ui.not_bookable_cc51bab6")} />
               </div>
               {!resource.category && (
                 <span className="resource-status-pill status-unresolved">{tr("ui.unclassified_10fe63fa")}</span>
@@ -468,7 +485,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
               {onViewSelection && (
                 <button
                   type="button"
-                  className="btn btn-ghost"
+                  className="btn btn-secondary"
                   onClick={onViewSelection}
                 >
                   {tr("ui.resourceDiscovery.viewSelection")}

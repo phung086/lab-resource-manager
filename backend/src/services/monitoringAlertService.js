@@ -1,5 +1,16 @@
 import { ADMIN, LAB_STAFF } from "../constants/roles.js";
 import { HttpError } from "../middleware/errors.js";
+import { lockCurrentAccount } from './accountAccess.js';
+
+export const SOURCE_STALE_RULE = 'SOURCE_STALE';
+export const staleNoticePrefix = alertId => `monitoring:stale:${alertId}:`;
+
+export const monitoringAlertInclude = {
+  source: { select: { id: true, code: true, name: true } },
+  resource: { select: { id: true, code: true, name: true } },
+  acknowledgedBy: { select: { id: true, fullName: true, role: true } },
+  incident: { select: { id: true, severity: true, status: true, category: true } }
+};
 
 export function monitoringScopeWhere(user) {
   if (user.role === ADMIN) return {};
@@ -14,20 +25,18 @@ async function assertAlertScope(tx, alert, actor) {
   if (actor.role !== LAB_STAFF) {
     throw new HttpError(403, "Only ADMIN or LAB_STAFF can acknowledge monitoring alerts", undefined, "FORBIDDEN");
   }
-  const assignment = await tx.userLabAssignment.findUnique({
-    where: { userId_laboratoryId: { userId: actor.id, laboratoryId: alert.laboratoryId } },
-    select: { userId: true }
-  });
-  if (!assignment) {
+  const assignments = await tx.$queryRaw`SELECT "userId" FROM user_lab_assignments WHERE "userId" = ${actor.id} AND "laboratoryId" = ${alert.laboratoryId} FOR SHARE`;
+  if (!assignments.length) {
     throw new HttpError(403, "Monitoring alert is outside assigned laboratories", undefined, "FORBIDDEN");
   }
 }
 
 export async function acknowledgeMonitoringAlert(tx, { alertId, actor }) {
+  const current = await lockCurrentAccount(tx, actor.id, actor.authVersion);
   await tx.$queryRaw`SELECT id FROM monitoring_alerts WHERE id = ${alertId} FOR UPDATE`;
   const alert = await tx.monitoringAlert.findUnique({ where: { id: alertId } });
   if (!alert) throw new HttpError(404, "Monitoring alert not found", undefined, "NOT_FOUND");
-  await assertAlertScope(tx, alert, actor);
+  await assertAlertScope(tx, alert, current);
   if (alert.status === "RESOLVED") {
     throw new HttpError(409, "Resolved monitoring alerts cannot be acknowledged", undefined, "MONITORING_ALERT_INVALID_TRANSITION");
   }
@@ -36,6 +45,20 @@ export async function acknowledgeMonitoringAlert(tx, { alertId, actor }) {
     where: { id: alertId },
     data: { status: "ACKNOWLEDGED", acknowledgedById: actor.id, acknowledgedAt: new Date() }
   });
+}
+
+// Called after the same source row has been locked by ingestion.
+export async function resolveStaleSourceAlert(tx, { source, sample, now, staleMinutes }) {
+  if (!sample.online || now - sample.sampledAt > staleMinutes * 60_000) return;
+  const alert = await tx.monitoringAlert.findUnique({
+    where: { activeDedupeKey: `${source.id}:${SOURCE_STALE_RULE}` },
+    select: { id: true, sample: { select: { sampledAt: true } } }
+  });
+  if (!alert || sample.sampledAt <= alert.sample.sampledAt) return;
+  await tx.monitoringAlert.update({ where: { id: alert.id }, data: {
+    activeDedupeKey: null, status: 'RESOLVED', resolvedAt: now, resolution: 'FRESH_SAMPLE_RECEIVED'
+  } });
+  await tx.notification.updateMany({ where: { dedupeKey: { startsWith: staleNoticePrefix(alert.id) }, readAt: null }, data: { readAt: now } });
 }
 
 export function serializeMonitoringAlert(alert) {

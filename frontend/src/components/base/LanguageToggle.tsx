@@ -6,10 +6,10 @@ const choices = [
   { locale: "en", label: "ui.en_69374b09", title: "ui.english_ba118bf7" }
 ];
 
-export function LanguageToggle() {
+export function LanguageToggle({ className = "", labelKey = "ui.language_selector_385e1c32" }: { className?: string; labelKey?: string } = {}) {
   const { locale, changeLocale, loadingLocale, t } = useLocale();
   return (
-    <div className="segmented-control-2026" role="group" aria-label={t("ui.language_selector_385e1c32")}>
+    <div className={`segmented-control-2026 studio-language ${className}`} role="group" aria-label={t(labelKey)}>
       {choices.map(choice => (
         <button
           key={choice.locale}
@@ -20,6 +20,7 @@ export function LanguageToggle() {
           aria-pressed={locale === choice.locale}
           title={t(choice.title)}
         >
+          <img className="studio-language-flag" src={`/flags/${choice.locale}.svg`} alt="" width="16" height="12" />
           {t(choice.label)}
         </button>
       ))}

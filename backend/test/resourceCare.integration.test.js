@@ -132,7 +132,7 @@ test("resource lifecycle: real API, database, booking, fault and maintenance", a
     await dispatchMaintenanceNotices(prisma);
     assert.equal(await prisma.notification.count({ where: { ...where, userId: users.staff.id, titleKey: "care.due.title" } }), 1);
     assert.equal((await request(app).get(`/api/resources/${machine.id}`)).body.availability.available, false);
-    const body = { resourceId: machine.id, title: "Must not book overdue resource", purpose: "Testing", startAt: new Date(Date.now() + 60000).toISOString(), endAt: new Date(Date.now() + 3660000).toISOString() };
+    const body = { resourceId: machine.id, title: "Must not book overdue resource", purpose: "Testing", startAt: new Date(Date.now() + 3600000).toISOString(), endAt: new Date(Date.now() + 7200000).toISOString() };
     assert.equal((await request(app).post("/api/bookings").set("Authorization", `Bearer ${tokens.student}`).send(body)).status, 409);
     await prisma.resourceCareProfile.update({ where: { resourceId: machine.id }, data: { servicedAt: new Date() } });
     const list = (await request(app).get("/api/resource-care").set("Authorization", `Bearer ${tokens.staff}`)).body.items.find(r => r.id === machine.id);
@@ -166,7 +166,9 @@ test("resource lifecycle: real API, database, booking, fault and maintenance", a
       const quote = (await request(app).post("/api/booking-pricing/quote").send({ resourceId: machine.id, purposeCode: "STUDY", startAt: body.startAt, endAt: body.endAt })).body;
       assert.equal(quote.amountVnd, 180000);
       const created = await request(app).post("/api/bookings").set("Authorization", `Bearer ${tokens.student}`).send({ ...body, acceptedQuote: { amountVnd: quote.amountVnd, version: quote.version } });
-      assert.equal(created.status, 201, JSON.stringify(created.body)); assert.equal(created.body.status, "CONFIRMED");
+      assert.equal(created.status, 201, JSON.stringify(created.body)); assert.equal(created.body.status, "PENDING_APPROVAL");
+      assert.equal(created.body.approvedAt, null, "A priced reservation cannot confirm before payment verification");
+      assert.equal(Date.parse(created.body.paymentDueAt) - Date.parse(created.body.createdAt), 15 * 60000);
       assert.equal((await prisma.paymentTransaction.findFirst({ where: { bookingId: created.body.id } })).status, "pending");
       assert.equal((await put("admin", 200000)).status, 200);
       assert.equal((await prisma.booking.findUnique({ where: { id: created.body.id } })).feeAmountVnd, 180000);

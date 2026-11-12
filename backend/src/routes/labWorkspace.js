@@ -12,6 +12,4 @@ const stock = z.object({ id, resourceId: id, unit: text(1, 30), kind: z.enum(["R
 router.get("/stock", route(async (req, res) => res.json(await workspace.listStock(req.user))));
 router.get("/stock/:resourceId", route(async (req, res) => res.json(await workspace.stockHistory(req.user, id.parse(req.params.resourceId)))));
 router.post("/stock", route(async (req, res) => res.status(201).json(await workspace.recordStock(req.user, stock.parse(req.body)))));
-router.get("/groups", route(async (req, res) => res.json(await workspace.listTeachingGroups(req.user))));
-router.get("/groups/:id", route(async (req, res) => res.json(await workspace.teachingGroupDetail(req.user, id.parse(req.params.id)))));
 export default router;

@@ -87,12 +87,19 @@
 }
 
 .guest-wizard-step.is-completed {
-  color: var(--status-available-text);
+  color: var(--status-available-text, #166534);
 }
 
 .guest-wizard-step.is-completed .step-number {
-  background: var(--status-available-text);
+  background: var(--status-available-text, #166534);
   color: #fff;
+}
+
+@media (max-width: 480px) {
+  .guest-booking-panel { padding: 0.85rem; }
+  .guest-wizard-nav { gap: 0.25rem; padding: 0.35rem; }
+  .guest-wizard-step { padding-inline: 0.125rem; }
+  .guest-wizard-step .step-label { font-size: 0.75rem; }
 }
 
 .step-divider {
@@ -273,6 +280,10 @@
   border-radius: 10px;
   color: #475569;
   font-size: 0.82rem;
+}
+
+.step-info-banner > svg {
+  flex: none;
 }
 
 .guest-address-block {

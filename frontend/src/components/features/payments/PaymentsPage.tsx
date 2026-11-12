@@ -1,16 +1,21 @@
+import { formatVnd } from '../../../utils/currency';
+import { PageHeading } from '../../base/PageHeading';
 import { HelpDisclosure } from "../../base/HelpDisclosure";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, RefreshCw, CreditCard, Landmark, ReceiptText, CircleCheck, Clock3, CircleAlert } from "lucide-react";
 import { navigateApp, readRouteParams, workspacePathForTab } from "../../../workspaceRoutes.js";
-import { paymentSessionStatus, safeVnpayUrl, validatePaymentAction } from "../../../utils/paymentValidation";
+import { canChoosePaymentProvider, canInitiateBookingPayment, paymentMethods as methods, paymentProviderName, paymentSessionStatus, paymentStatusLabels, safeVnpayUrl, validatePaymentAction, type PaymentAvailability, type PaymentProvider } from "../../../utils/paymentValidation";
 import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest } from "../../../api.js";
-import { BaseModal2026 } from "../../BaseModal2026";
+import { PaymentReceipt, type PaymentReceiptData } from "./PaymentReceipt";
 import { formatVietnamDateTime } from "../../../utils/timezone";
 import "./payments.css";
-import { ResourcePricingEditor } from "./ResourcePricingEditor";
+import "./payment-experience.css";
+import { PaymentHoldNotice } from "./PaymentHoldNotice";
+import { BankTransferQr, type BankTransferDetails } from "./BankTransferQr";
 import { BookingCheckout } from "./BookingCheckout";
+import { PaymentReceiptPage } from "./PaymentReceiptPage";
 type Payment = {
   id: string;
   txnRef: string;
@@ -29,70 +34,57 @@ type Payment = {
   booking: {
     id: string;
     title: string;
-    status: string;
+    status: string; requestedById: string; startAt?: string; paymentDueAt?: string | null;
     resource: { code: string; name: string };
   } | null;
   user: { fullName: string };
 };
-type Qr = {
-  qrUrl: string;
-  bank: string;
-  accountNumber: string;
-  accountName: string;
-  amount: number;
-  content: string;
-};
-const labels: Record<string, string> = {
-  pending: "ui.awaiting_payment_dd717eb2",
-  success: "ui.payment_verified_c37ae36e",
-  failed: "ui.payment_failed_39d4ec59",
-  expired: "ui.session_expired_213530d5",
-  refunded: "ui.refunded_d0d4c45f",
-};
-const money = (v: number) =>
-  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-    v,
-  );
 export default function PaymentsPage(props: {
   user: { id: string; role: string };
   bookingId?: string;
+  receiptId?: string;
   onClearBooking?: () => void;
+  onChanged?: () => void;
 }) {
-  return props.bookingId ? <BookingCheckout user={props.user} bookingId={props.bookingId} onClearBooking={props.onClearBooking} /> : <PaymentsLedger {...props} />;
+  if (props.receiptId) return <PaymentReceiptPage key={`${props.user.id}:${props.receiptId}`} transactionId={props.receiptId} onChanged={props.onChanged} />;
+  return props.bookingId ? <BookingCheckout user={props.user} bookingId={props.bookingId} onClearBooking={props.onClearBooking} onChanged={props.onChanged} /> : <PaymentsLedger {...props} />;
 }
 
 function PaymentsLedger({
   user,
   bookingId,
   onClearBooking,
+  onChanged,
 }: {
   user: { id: string; role: string };
   bookingId?: string;
   onClearBooking?: () => void;
+  onChanged?: () => void;
 }) {
-  const { tr } = useLocale();
+  const { tr, locale } = useLocale();
   const admin = user.role === "ADMIN";
+  const onChangedRef = useRef(onChanged);
+  onChangedRef.current = onChanged;
+  const sharedSnapshot = useRef("");
+
   const loadAbort = useRef<AbortController | null>(null), busyRef = useRef(false), selectionRef = useRef(readRouteParams().get("transaction") || ""), notesRef = useRef<Record<string,string>>({}), dossierRef = useRef<HTMLElement>(null);
+  const actionErrorRef = useRef<HTMLDivElement>(null);
+  const focusActionError = useRef(false);
   const [formErrors,setFormErrors] = useState<Record<string,string>>({});
   const [rows, setRows] = useState<Payment[]>([]),
-    [providers, setProviders] = useState({ vnpay: false, vietqr: false });
+    [providers, setProviders] = useState<PaymentAvailability>({});
   const [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [busy, setBusy] = useState("");
+  useEffect(()=>{if(error && !busy && focusActionError.current && actionErrorRef.current){focusActionError.current=false;actionErrorRef.current.focus();}},[error,busy]);
   const [status, setStatus] = useState(""),
     [provider, setProvider] = useState(""),
     [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Payment | null>(null),
-    [qr, setQr] = useState<Qr | null>(null),
+    [qr, setQr] = useState<BankTransferDetails | null>(null),
     [url, setUrl] = useState(""),
-    [copied, setCopied] = useState(""),
     [reconciliationReason, setReconciliationReason] = useState("");
-  const [receipt, setReceipt] = useState<{
-    title: string;
-    disclaimer: string;
-    transaction: Payment;
-    generatedAt: string;
-  } | null>(null);
+  const [receipt, setReceipt] = useState<PaymentReceiptData | null>(null);
   const [bookings, setBookings] = useState<{ id: string; title: string; status: string; feeAmountVnd: number }[]>([]);
   async function load() {
     loadAbort.current?.abort(); const controller = new AbortController(); loadAbort.current = controller;
@@ -109,7 +101,12 @@ function PaymentsLedger({
       );
       if (controller.signal.aborted) return;
       setRows(data.transactions);
-      setProviders(data.providers);
+      setProviders(data.providers || {});
+      const snapshot = JSON.stringify(data.transactions.map((row: Payment) => [row.id, row.status, row.booking?.status]));
+      if (snapshot !== sharedSnapshot.current) {
+        sharedSnapshot.current = snapshot;
+        onChangedRef.current?.();
+      }
       if (selectionRef.current) {
         const refreshed =
           data.transactions.find((r: Payment) => r.id === selectionRef.current) || null;
@@ -117,7 +114,6 @@ function PaymentsLedger({
         if (refreshed?.status !== "pending") {
           setQr(null);
           setUrl("");
-          setCopied("");
         }
       }
     } catch (e) {
@@ -133,11 +129,34 @@ function PaymentsLedger({
     if(admin) apiRequest("/bookings",{signal:controller.signal}).then(setBookings).catch((cause:Error)=>{if(!controller.signal.aborted)setError(cause.message);});
     return()=>{controller.abort();loadAbort.current?.abort();};
   },[admin,bookingId]);
-  useEffect(()=>{const sync=()=>{const id=readRouteParams().get('transaction') || '';notesRef.current[selectionRef.current]=reconciliationReason;selectionRef.current=id;setSelected(rows.find(row=>row.id===id)||null);setReconciliationReason(notesRef.current[id]||'');setQr(null);setUrl('');setCopied('');setFormErrors({});};window.addEventListener('popstate',sync);return()=>window.removeEventListener('popstate',sync);},[rows,reconciliationReason]);
+  useEffect(()=>{const sync=()=>{const id=readRouteParams().get('transaction') || '';notesRef.current[selectionRef.current]=reconciliationReason;selectionRef.current=id;setSelected(rows.find(row=>row.id===id)||null);setReconciliationReason(notesRef.current[id]||'');setQr(null);setUrl('');setFormErrors({});};window.addEventListener('popstate',sync);return()=>window.removeEventListener('popstate',sync);},[rows,reconciliationReason]);
+  const pendingTransferId = qr && selected?.status === 'pending' ? selected.id : null;
+  useEffect(() => {
+    if (!pendingTransferId) return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    async function poll() {
+      try {
+        if (!document.hidden && !busyRef.current) {
+          const row: Payment = await apiRequest(`/payments/${pendingTransferId}`, { signal: controller.signal });
+          if (controller.signal.aborted) return;
+          if (row.status !== 'pending' || paymentSessionStatus(row) === 'expired') {
+            await loadRef.current();
+            return;
+          }
+        }
+        timer = setTimeout(() => void poll(), 10000);
+      } catch (error) {
+        if (!controller.signal.aborted) setError((error as Error).message);
+      }
+    }
+    timer = setTimeout(() => void poll(), 10000);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [pendingTransferId]);
   function choose(row: Payment) {
     if(busyRef.current)return;
     notesRef.current[selectionRef.current]=reconciliationReason; selectionRef.current=row.id;
-    setSelected(row);setReconciliationReason(notesRef.current[row.id]||'');setQr(null);setUrl('');setCopied('');setError('');setFormErrors({});
+    setSelected(row);setReconciliationReason(notesRef.current[row.id]||'');setQr(null);setUrl('');setError('');setFormErrors({});
     const params=readRouteParams();params.set('transaction',row.id);navigateApp(workspacePathForTab('payments',params),{notify:false});
     if(window.matchMedia('(max-width:1000px)').matches)requestAnimationFrame(()=>{dossierRef.current?.scrollIntoView({block:'start'});dossierRef.current?.focus({preventScroll:true});});
   }
@@ -158,13 +177,13 @@ function PaymentsLedger({
       form.reset();
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      focusActionError.current=true; setError((e as Error).message);
     } finally {
       busyRef.current=false;setBusy("");
     }
   }
-  async function initiate(method: string) {
-    if (!selected || busyRef.current || selected.userId !== user.id || selected.booking?.status !== 'CONFIRMED' || !['pending','failed','expired'].includes(selected.status)) return;
+  async function initiate(method: PaymentProvider) {
+    if (!selected || busyRef.current || !providers[method] || !canChoosePaymentProvider(selected, method) || !canInitiateBookingPayment(user, selected.booking, selected)) return;
     busyRef.current=true;
     setBusy(method);
     setError("");
@@ -177,11 +196,11 @@ function PaymentsLedger({
       });
       setSelected(data.transaction);
       if (data.vietqr) setQr(data.vietqr);
-      if (data.paymentUrl) { const safe=safeVnpayUrl(data.paymentUrl);if(!safe)throw new Error("ui.invalid_vnpay_payment_address_please_bed3b506");setUrl(safe); }
+      if (data.paymentUrl) { const safe=safeVnpayUrl(data.paymentUrl);if(!safe)throw new Error("ui.checkout.invalidProviderUrl");setUrl(safe); }
       selectionRef.current=data.transaction.id;const params=readRouteParams();params.set("transaction",data.transaction.id);navigateApp(workspacePathForTab("payments",params),{notify:false});
       setRows(previous => previous.some(row=>row.id===data.transaction.id)?previous.map(row=>row.id===data.transaction.id?data.transaction:row):[data.transaction,...previous]);
     } catch (e) {
-      setError((e as Error).message);
+      focusActionError.current=true; setError((e as Error).message);
     } finally {
       busyRef.current=false;setBusy("");
     }
@@ -192,7 +211,7 @@ function PaymentsLedger({
     try {
       setReceipt(await apiRequest(`/payments/${row.id}/receipt`));
     } catch (e) {
-      setError((e as Error).message);
+      focusActionError.current=true; setError((e as Error).message);
     } finally {
       busyRef.current=false;setBusy("");
     }
@@ -211,25 +230,44 @@ function PaymentsLedger({
       setReconciliationReason("");
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      focusActionError.current=true; setError((e as Error).message);
     } finally {
       busyRef.current=false;setBusy("");
     }
   }
-  async function copy(value: string, label: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(translate("ui.copied_092dba1f", { value0: label }));
-    } catch {
-      setCopied(
-        translate("ui.automatic_copying_failed_select_the_2c75e78e"),
-      );
+  const canPay = selected && canInitiateBookingPayment(user, selected.booking, selected);
+  const hasPaymentMethod = selected && methods.some(method => providers[method] && canChoosePaymentProvider(selected, method));
+  const paymentHelp = selected?.status === 'success' ? 'ui.paymentStudio.paidHelp'
+    : selected?.status === 'refunded' ? 'ui.paymentStudio.refundedHelp'
+    : !canPay ? 'ui.paymentStudio.reviewHelp'
+    : selected?.provider === 'vietqr' && selected.status === 'pending' ? 'ui.paymentStudio.transferHelp'
+    : !hasPaymentMethod ? 'ui.paymentStudio.unavailableHelp'
+    : ['failed','expired'].includes(paymentSessionStatus(selected)) ? 'ui.paymentStudio.retryHelp'
+    : 'ui.paymentStudio.pendingHelp';
+  // Overview is derived from the same live ledger rows — no separate source of truth.
+  const overview = useMemo(() => {
+    const counts: Record<string, number> = { pending: 0, success: 0, failed: 0, expired: 0, refunded: 0 };
+    let paidSum = 0, pendingSum = 0;
+    const vndDay = (iso: string) => new Date(new Date(iso).getTime() + 7 * 3600_000).toISOString().slice(0, 10);
+    const buckets = Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(Date.now() + 7 * 3600_000 - (13 - i) * 86400_000);
+      return { key: d.toISOString().slice(0, 10), label: `${d.getDate()}/${d.getMonth() + 1}`, sum: 0, count: 0 };
+    });
+    const byDay = new Map(buckets.map((b) => [b.key, b]));
+    for (const row of rows) {
+      const state = paymentSessionStatus(row);
+      counts[state] = (counts[state] || 0) + 1;
+      if (state === 'success') paidSum += row.amount;
+      if (state === 'pending') pendingSum += row.amount;
+      const bucket = byDay.get(vndDay(row.paidAt || row.createdAt));
+      if (bucket) { bucket.sum += row.amount; bucket.count += 1; }
     }
-  }
+    return { counts, paidSum, pendingSum, buckets, max: Math.max(1, ...buckets.map(b => b.sum)) };
+  }, [rows]);
   return (
-    <section className="content-stack payment-page payment-ledger">
+    <section className="content-stack payment-page payment-ledger" data-role={user.role}>
 
-      <header className="page-section-header">
+      <PageHeading className="page-section-header">
         <div>
           <h1>
             {bookingId
@@ -246,7 +284,7 @@ function PaymentsLedger({
           onClick={load}
         >
           {tr("ui.refresh_b4c61340")}</button>
-      </header>
+      </PageHeading>
       {bookingId && (
         <div className="alert">
           <p>
@@ -260,7 +298,7 @@ function PaymentsLedger({
         </div>
       )}
       {error && (
-        <div role="alert" className="alert danger">
+        <div role="alert" tabIndex={-1} ref={actionErrorRef} className="alert danger">
           {translate(error)}
         </div>
       )}
@@ -312,6 +350,7 @@ function PaymentsLedger({
           void load();
         }}
       >
+        <span className="payment-filter-icon" aria-hidden="true"><CreditCard size={22} /></span>
         <label>
            {translate("ui.find_transactions_dcd7a5a8")} <input
             value={search}
@@ -323,7 +362,7 @@ function PaymentsLedger({
         <label>
           {tr("ui.status_cb31de81")}<select value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">{tr("ui.all_49c73a31")}</option>
-            {Object.entries(labels).map(([k, v]) => (
+            {Object.entries(paymentStatusLabels).map(([k, v]) => (
               <option key={k} value={k}>
                 {tr(v)}
               </option>
@@ -344,6 +383,41 @@ function PaymentsLedger({
         <button className="secondary-button" disabled={loading}>
            {translate("ui.filter_transactions_d79035fe")} </button>
       </form>
+      {!loading && rows.length > 0 && (
+        <section className="payment-overview" aria-label={tr('ui.payments.overview')}>
+          <div className="payment-stat">
+            <span className="payment-stat-label">{tr('ui.payments.txCount')}</span>
+            <strong>{rows.length}</strong>
+            <span className="payment-stat-hint">{tr('ui.showing_up_to_100_recent_6f1a8435')}</span>
+          </div>
+          <div className="payment-stat is-success">
+            <span className="payment-stat-label">{tr('ui.payment_verified_c37ae36e')}</span>
+            <strong>{formatVnd(overview.paidSum, locale)}</strong>
+            <span className="payment-stat-hint">{overview.counts.success} {tr('ui.payments.txUnit')}</span>
+          </div>
+          <div className="payment-stat is-pending">
+            <span className="payment-stat-label">{tr('ui.awaiting_payment_dd717eb2')}</span>
+            <strong>{formatVnd(overview.pendingSum, locale)}</strong>
+            <span className="payment-stat-hint">{overview.counts.pending} {tr('ui.payments.txUnit')}</span>
+          </div>
+          <div className="payment-stat is-failed">
+            <span className="payment-stat-label">{tr('ui.payments.unsuccessful')}</span>
+            <strong>{overview.counts.failed + overview.counts.expired}</strong>
+            <span className="payment-stat-hint">{overview.counts.refunded} {tr('ui.refunded_d0d4c45f').toLowerCase()}</span>
+          </div>
+          <figure className="payment-flow">
+            <figcaption>{tr('ui.payments.flowChart')}<span className="payment-flow-note">{tr('ui.payments.vietnamTime')}</span></figcaption>
+            <div className="payment-flow-bars" role="img" aria-label={`${tr('ui.payments.flowChart')}: ${overview.counts.success} ${tr('ui.payment_verified_c37ae36e').toLowerCase()}, ${formatVnd(overview.paidSum, locale)}`}>
+              {overview.buckets.map(bucket => (
+                <div key={bucket.key} className="payment-flow-col" title={translate('ui.payments.dayTooltip', { date: bucket.label, count: bucket.count, sum: formatVnd(bucket.sum, locale) })}>
+                  <span className={`payment-flow-bar${bucket.sum ? '' : ' is-empty'}`} style={{ height: bucket.sum ? `${Math.max(8, Math.round((bucket.sum / overview.max) * 100))}%` : undefined }} />
+                  <span className="payment-flow-day" aria-hidden="true">{bucket.label}</span>
+                </div>
+              ))}
+            </div>
+          </figure>
+        </section>
+      )}
       <div className="payment-ledger-layout"><div className="payment-ledger-main">
       {loading ? (
         <p role="status">{translate("ui.loading_transactions_68570a8d")}</p>
@@ -353,69 +427,83 @@ function PaymentsLedger({
             ? translate("ui.unable_to_load_transactions_please_79da9051")
             : translate("ui.no_matching_payment_requests_4df227bf")}
         </p>
+      ) : !admin ? (
+        <ul className="customer-payment-list" aria-label={tr('ui.my_payments_dae6e05a')}>
+          {rows.map(row => <li key={row.id}><button type="button" disabled={!!busy} aria-pressed={selected?.id === row.id} onClick={() => choose(row)}>
+            <span className={'payment-state payment-'+paymentSessionStatus(row)}>{tr(paymentStatusLabels[paymentSessionStatus(row)])}</span>
+            <strong>{row.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</strong>
+            <span>{row.booking?.resource?.name}</span>
+            <span className="customer-payment-amount">{formatVnd(row.amount, locale)}</span>
+            <time dateTime={row.createdAt}>{formatVietnamDateTime(row.createdAt)}</time>
+            <span className="customer-payment-action">{tr(row.status === 'success' ? 'ui.paymentJourney.receiptDetails' : 'ui.paymentJourney.viewDetails')}<ArrowRight size={16} /></span>
+          </button></li>)}
+        </ul>
       ) : (
-        <div className="table-wrap payment-register"><table><caption className="sr-only">{tr('ui.payment_ledger_49cf3f23')}</caption><thead><tr><th>{tr('ui.bookings_00f5b333')}</th><th>{tr('ui.amount_4cbdc55b')}</th><th>{tr('ui.status_cb31de81')}</th></tr></thead><tbody>{rows.map(row=><tr key={row.id} className={selected?.id===row.id?'is-selected':''}><td><button type="button" disabled={!!busy} onClick={()=>choose(row)} aria-pressed={selected?.id===row.id}><span><strong>{row.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</strong><small>{row.txnRef}</small><small>{row.user?.fullName} · {formatVietnamDateTime(row.createdAt)}</small></span><ArrowRight size={16} /></button></td><td>{money(row.amount)}</td><td><span className={'payment-state payment-'+paymentSessionStatus(row)}>{tr(labels[paymentSessionStatus(row)])}</span></td></tr>)}</tbody></table></div>
+        <div className="table-wrap payment-register"><table><caption className="sr-only">{tr('ui.payment_ledger_49cf3f23')}</caption><thead><tr><th>{tr('ui.bookings_00f5b333')}</th><th>{tr('ui.amount_4cbdc55b')}</th><th>{tr('ui.status_cb31de81')}</th></tr></thead><tbody>{rows.map(row=><tr key={row.id} className={selected?.id===row.id?'is-selected':''}><td><button type="button" disabled={!!busy} onClick={()=>choose(row)} aria-pressed={selected?.id===row.id}><span><strong>{row.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</strong><small>{row.txnRef}</small><small>{row.user?.fullName} · {formatVietnamDateTime(row.createdAt)}</small></span><ArrowRight size={16} /></button></td><td>{formatVnd(row.amount, locale)}</td><td><span className={'payment-state payment-'+paymentSessionStatus(row)}>{tr(paymentStatusLabels[paymentSessionStatus(row)])}</span></td></tr>)}</tbody></table></div>
       )}
       <HelpDisclosure>{tr('ui.showing_up_to_100_recent_6f1a8435')}</HelpDisclosure>
       </div>
-      <aside ref={dossierRef} tabIndex={-1} className="payment-dossier" aria-label={tr('ui.payment_request_ec7f1b84')}>
-        <header><h2>{tr('ui.payment_request_ec7f1b84')}</h2></header>
-        {!selected && <p className="empty-state">{tr('ui.payments.selectTransaction')}</p>}
-        {selected && <button type="button" className="btn btn-secondary" onClick={()=>void load()} disabled={loading||!!busy}>{tr('ui.refresh_status_5c5763c1')}</button>}
+      <aside ref={dossierRef} tabIndex={-1} className="payment-dossier" aria-label={tr(selected?.status === 'success' ? 'ui.fulfillment.receipt' : 'ui.paymentJourney.viewDetails')}>
+        <header><h2>{tr('ui.paymentStudio.detailTitle')}</h2>{selected && <button type="button" className="payment-status-refresh" onClick={()=>void load()} disabled={loading||!!busy} aria-label={tr('ui.refresh_status_5c5763c1')} title={tr('ui.refresh_status_5c5763c1')}><RefreshCw size={17} aria-hidden="true" /></button>}</header>
+        {!selected && <div className="payment-dossier-empty"><ReceiptText size={40} aria-hidden="true" /><p>{tr('ui.payments.selectTransaction')}</p>
+          <div className="payment-gateways">
+            <h3>{tr('ui.payments.gatewaysTitle')}</h3>
+            <ul>
+              <li className={providers.vnpay ? 'is-on' : 'is-off'}>{tr('ui.vnpay_sandbox_667598b8')}</li>
+              <li className={providers.vietqr ? 'is-on' : 'is-off'}>{tr('ui.payments.vietqrName')}</li>
+            </ul>
+            {!methods.some(method => providers[method]) && <p className="payment-gateways-off">{tr('ui.payments.noGateway')}</p>}
+          </div>
+        </div>}
         {selected && (
-          <div className="payment-detail">
-            <h2>{selected.booking?.title}</h2>
-            <p>{selected.booking?.resource.name}</p>
-            <p>{selected.description}</p>
-            <p>{tr("ui.payer_9f6325a0")}: {selected.user?.fullName}</p>
-            {selected.booking && <a className="table-action" href={workspacePathForTab("bookings",new URLSearchParams({booking:selected.booking.id}))}>{tr("ui.bookings_00f5b333")} <ArrowRight size={16} /></a>}
-            <strong className="payment-amount">{money(selected.amount)}</strong>
+          <div className="payment-detail" key={selected.id}>
+            <div className={`payment-value-block is-${paymentSessionStatus(selected)}`}>
+            <span className="payment-value-icon" aria-hidden="true">{selected.status === 'success' ? <CircleCheck size={28} /> : ['failed','expired'].includes(paymentSessionStatus(selected)) ? <CircleAlert size={28} /> : <Clock3 size={28} />}</span>
             <span className={`payment-state payment-${paymentSessionStatus(selected)}`}>
-              {selected.provider === "vietqr" && selected.status === "pending"
-                ? translate("ui.awaiting_reconciliation_06361b86")
-                : tr(labels[paymentSessionStatus(selected)])}
+              {tr(paymentStatusLabels[paymentSessionStatus(selected)])}
             </span>
-            <p className="payment-ref">{translate("ui.transaction_reference_05a9f7a2")} {selected.txnRef}</p>
+            <strong className="payment-amount">{formatVnd(selected.amount, locale)}</strong>
+            <p>{tr(paymentHelp)}</p>
+            </div>
+            <div className="payment-booking-context"><h3>{selected.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</h3><p>{selected.booking?.resource.name}</p><p className="payment-description">{selected.description}</p>
+            <dl><dt>{tr('ui.payer_9f6325a0')}</dt><dd>{selected.user?.fullName}</dd><dt>{tr('ui.transaction_reference_717b27eb')}</dt><dd className="payment-ref">{selected.txnRef}</dd></dl>
+            {selected.booking && <a className="payment-booking-link" href={workspacePathForTab("bookings",new URLSearchParams({booking:selected.booking.id}))}>{tr('ui.paymentStudio.viewBooking')}<ArrowRight size={16} aria-hidden="true" /></a>}</div>
+            {selected.status === 'success' && <button className="primary-button payment-open-receipt" aria-disabled={!!busy} onClick={() => void openReceipt(selected)}><ReceiptText size={18} aria-hidden="true" />{tr('ui.open_receipt_68f863f1')}</button>}
             {selected.reconciliationStatus !== "none" && (
               <div className="alert warning" role="status">
                 <strong>{selected.reconciliationStatus === "manual_review" ? translate("ui.manual_reconciliation_required_ad0551a4") : translate("ui.reconciliation_resolved_6c18a62d")}</strong>
                 <p>{selected.reconciliationReason || translate("ui.an_administrator_needs_to_review_463c5778")}</p>
               </div>
             )}
+            {selected.booking?.status === 'PENDING_APPROVAL' && selected.booking.paymentDueAt && !['success', 'refunded'].includes(selected.status) && <PaymentHoldNotice paymentDueAt={selected.booking.paymentDueAt} startAt={selected.booking.startAt} onExpired={()=>void load()} />}
             <ol className="payment-timeline" aria-label={translate("ui.payment_progress_280450c6")}>
-              <li className="is-complete"><strong>{translate("ui.request_created_8af32592")}</strong><time dateTime={selected.createdAt}>{formatVietnamDateTime(selected.createdAt)}</time></li>
-              <li className={selected.provider !== "unselected" ? "is-complete" : ""}><strong>{selected.provider !== "unselected" ? translate("ui.method_selected_ef6b1341") : translate("ui.choose_method_da36b3c9")}</strong><span>{selected.provider === "vnpay" ? tr('ui.vnpay_sandbox_667598b8') : selected.provider === "vietqr" ? "VietQR" : translate("ui.not_initiated_fd25f9ff")}</span></li>
-              <li className={selected.status === "success" ? "is-complete" : ""}><strong>{tr(labels[paymentSessionStatus(selected)])}</strong>{selected.paidAt && <time dateTime={selected.paidAt}>{formatVietnamDateTime(selected.paidAt)}</time>}</li>
+              <li className="is-complete"><span className="payment-step-mark" aria-hidden="true"><ReceiptText size={15} /></span><strong>{translate("ui.request_created_8af32592")}</strong><time dateTime={selected.createdAt}>{formatVietnamDateTime(selected.createdAt)}</time></li>
+              <li className={selected.provider !== "unselected" ? "is-complete" : "is-current"}><span className="payment-step-mark" aria-hidden="true"><CreditCard size={15} /></span><strong>{selected.provider !== "unselected" ? translate("ui.method_selected_ef6b1341") : translate("ui.choose_method_da36b3c9")}</strong><span>{selected.provider === 'unselected' ? tr('ui.not_initiated_fd25f9ff') : paymentProviderName(selected.provider)}</span></li>
+              <li className={selected.status === "success" ? "is-complete" : selected.provider !== 'unselected' ? 'is-current' : ''}><span className="payment-step-mark" aria-hidden="true">{selected.status === 'success' ? <CircleCheck size={15} /> : <Clock3 size={15} />}</span><strong>{tr(paymentStatusLabels[paymentSessionStatus(selected)])}</strong>{selected.paidAt && <time dateTime={selected.paidAt}>{formatVietnamDateTime(selected.paidAt)}</time>}</li>
             </ol>
             {error && (
               <p className="alert danger" role="alert">
                 {translate(error)}
               </p>
             )}
-            {['pending','failed','expired'].includes(selected.status) && selected.userId === user.id && selected.booking?.status === 'CONFIRMED' && (
+            {canPay && (
               <>
                 <div className="payment-provider-choices">
-                  <button
-                    className="secondary-button"
-                    disabled={
-                      !!busy ||
-                      !providers.vnpay ||
-                      !["unselected", "vnpay"].includes(selected.provider)
-                    }
-                    onClick={() => initiate("vnpay")}
-                  >
-                     {translate("ui.vnpay_sandbox_667598b8")}
+                  <button className="secondary-button"
+                    disabled={!!busy || !providers.vnpay || !canChoosePaymentProvider(selected, 'vnpay')}
+                    onClick={() => void initiate('vnpay')}>
+                    <CreditCard size={20} aria-hidden="true" /><span>{tr('ui.vnpay_sandbox_667598b8')}<small>{tr('ui.paymentStudio.hostedCheckout')}</small></span><ArrowRight size={16} aria-hidden="true" />
                   </button>
                   <button
                     className="secondary-button"
                     disabled={
                       !!busy ||
                       !providers.vietqr ||
-                      !["unselected", "vietqr"].includes(selected.provider)
+                      !canChoosePaymentProvider(selected, 'vietqr')
                     }
                     onClick={() => initiate("vietqr")}
                   >
-                     {translate("ui.vietqr_d3f03ab0")} <small>{translate("ui.bank_transfer_952fce3f")}</small>
+                     <Landmark size={20} aria-hidden="true" /><span>{translate("ui.vietqr_d3f03ab0")}<small>{translate("ui.bank_transfer_952fce3f")}</small></span><ArrowRight size={16} aria-hidden="true" />
                   </button>
                 </div>
               </>
@@ -423,66 +511,19 @@ function PaymentsLedger({
             {busy && <p role="status">{translate("ui.processing_79eb2035")}</p>}
             {selected.status === "pending" && url && (
               <div className="alert">
-                <strong>{translate("ui.vnpay_sandbox_00e87848")}</strong>
+                <strong>{tr('ui.vnpay_sandbox_667598b8')}</strong>
                 <a
                   className="primary-button"
                   href={url}
                   target="_blank"
                   rel="noreferrer"
                 >
-                   {translate("ui.continue_to_vnpay_sandbox_e35da209")} </a>
+                   {tr('ui.checkout.continueProvider', { provider: paymentProviderName(selected.provider) })} </a>
               </div>
             )}
-            {selected.status === "pending" && qr && (
-              <>
-                <p className="alert">
-                   {translate("ui.awaiting_reconciliation_the_qr_code_53e0c4b8")} </p>
-                <img
-                  className="payment-qr"
-                  src={qr.qrUrl}
-                  alt={translate("ui.vietqr_for_transaction_2dbf8b17", { value0: selected.txnRef })}
-                  onError={() =>
-                    setError(
-                      "ui.unable_to_load_the_provider_5b97408c",
-                    )
-                  }
-                  referrerPolicy="no-referrer"
-                />
-                <dl>
-                  {[
-                    [translate("ui.bank_bin_18dfee69"), qr.bank],
-                    [translate("ui.account_holder_4c1976fc"), qr.accountName],
-                    [translate("ui.account_number_0ff9e285"), qr.accountNumber],
-                    [translate("ui.amount_4cbdc55b"), String(qr.amount)],
-                    [translate("ui.transfer_description_bcc3b45e"), qr.content],
-                  ].map(([label, value]) => (
-                    <React.Fragment key={label}>
-                      <dt>{label}</dt>
-                      <dd>
-                        {value}{" "}
-                        <button
-                          className="table-action"
-                          onClick={() => copy(value, label)}
-                        >
-                           {translate("ui.copy_68b42caf")} {label.toLowerCase()}
-                        </button>
-                      </dd>
-                    </React.Fragment>
-                  ))}
-                </dl>
-                <p role="status">{copied}</p>
-              </>
-            )}
-            {selected.status === "success" && (
-              <button
-                className="primary-button"
-                onClick={() => {
-                  void openReceipt(selected);
+            {canPay && selected.status === "pending" && qr &&
+              <BankTransferQr key={selected.id} details={qr} expiresAt={selected.paymentUrlExpiresAt} />}
 
-                }}
-              >
-                 {translate("ui.open_receipt_68f863f1")} </button>
-            )}
             {admin && selected.reconciliationStatus === "manual_review" && (
               <div className="booking-form">
                 <label>
@@ -510,49 +551,7 @@ function PaymentsLedger({
           </div>
         )}
       </aside></div>
-      {admin && <ResourcePricingEditor />}
-      <BaseModal2026
-        isOpen={!!receipt}
-        onClose={() => setReceipt(null)}
-        title={translate("ui.internal_payment_receipt_d9efbde5")}
-        footer={
-          <button className="primary-button" onClick={() => window.print()}>
-             {translate("ui.print_receipt_ce9c48ea")} </button>
-        }
-      >
-        {receipt && (
-          <article className="payment-receipt">
-            <h2>{receipt.title}</h2>
-            <p className="payment-state payment-success">
-              {tr(labels[receipt.transaction.status])} ·{" "}
-              {receipt.transaction.provider === "vnpay"
-                ? "VNPAY"
-                : receipt.transaction.provider}
-            </p>
-            <dl>
-              {Object.entries({
-                [translate("ui.transaction_reference_717b27eb")]: receipt.transaction.txnRef,
-                [translate("ui.amount_4cbdc55b")]: `${money(receipt.transaction.amount)} (${receipt.transaction.currency})`,
-                [translate("ui.payer_9f6325a0")]: receipt.transaction.user.fullName,
-                [translate("ui.bookings_00f5b333")]:
-                  receipt.transaction.booking?.title || translate("ui.no_longer_linked_774c604c"),
-                [translate("ui.booking_reference_189e7a5d")]: receipt.transaction.booking?.id || "—",
-                [translate("ui.resource_9a35ef53")]: `${receipt.transaction.booking?.resource.code || ""} ${receipt.transaction.booking?.resource.name || ""}`,
-                [translate("ui.payment_time_cfbad42e")]: receipt.transaction.paidAt
-                  ? formatVietnamDateTime(receipt.transaction.paidAt)
-                  : "—",
-                [translate("ui.receipt_generated_at_9f7b0997")]: formatVietnamDateTime(receipt.generatedAt),
-              }).map(([k, v]) => (
-                <React.Fragment key={k}>
-                  <dt>{k}</dt>
-                  <dd>{v}</dd>
-                </React.Fragment>
-              ))}
-            </dl>
-            <HelpDisclosure>{receipt.disclaimer}</HelpDisclosure>
-          </article>
-        )}
-      </BaseModal2026>
+      <PaymentReceipt receipt={receipt} onClose={() => setReceipt(null)} />
     </section>
   );
 }

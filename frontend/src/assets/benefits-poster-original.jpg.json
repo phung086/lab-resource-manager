@@ -1,0 +1,4 @@
+{
+  "origin": "Moved from public/media/poster.jpg on 2026-10-27 (loop #10 media audit): the video poster original shipped unused in every build because public/ is copied verbatim; the deployed poster is benefits-poster.webp (17 KiB, optimized 18/10/2026 from this 122938-byte original). Kept here per the keep-originals media policy; zero runtime references.",
+  "bytes": 122938
+}

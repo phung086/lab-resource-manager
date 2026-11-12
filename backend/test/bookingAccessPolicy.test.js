@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { bookingAccess } from '../src/services/bookingFulfillmentService.js';
+const now=new Date('2026-10-17T09:00:00Z');
+const base={id:'booking',resourceId:'room',requestedById:'owner',status:'CONFIRMED',startAt:new Date(+now+600000),endAt:new Date(+now+3600000),feeAmountVnd:0,contactSnapshot:{phone:'0901234567'},resource:{category:'ROOM'}};
+function db(row=base, paid=true){return {booking:{findUnique:async()=>row},resource:{findUnique:async()=>({category:'ROOM',location:'LAB'})},resourceFulfillment:{findUnique:async()=>({roomPasswordCiphertext:'legacy-shared-secret',pickupInstructions:'Desk'})},paymentTransaction:{findFirst:async()=>paid?{id:'paid'}:null}};}
+test('owner access returns booking phone, never the saved shared password, without requiring a resource secret',async()=>{const result=await bookingAccess('booking',{id:'owner'},db(),now);assert.equal(result.roomPassword,'0901234567');assert.equal(result.roomAccessPolicy,'BOOKING_PHONE');assert.equal(JSON.stringify(result).includes('legacy-shared-secret'),false);});
+test('other owners, unpaid and expired bookings cannot read a room code',async()=>{await assert.rejects(bookingAccess('booking',{id:'other'},db(),now),{code:'NOT_FOUND'});await assert.rejects(bookingAccess('booking',{id:'owner'},db({...base,feeAmountVnd:50000},false),now),{code:'BOOKING_PAYMENT_REQUIRED'});await assert.rejects(bookingAccess('booking',{id:'owner'},db({...base,endAt:now}),now),{code:'BOOKING_INVALID_TRANSITION'});});
+test('legacy booking with missing contact fails closed instead of using a static room password',async()=>{const result=await bookingAccess('booking',{id:'owner'},db({...base,contactSnapshot:null}),now);assert.equal(result.roomPassword,null);assert.equal(result.roomAccessConfigured,false);});

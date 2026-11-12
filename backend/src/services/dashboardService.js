@@ -1,8 +1,9 @@
 import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
+import { OPERATIONAL_STATUSES } from "../constants/resources.js";
 import { ADMIN, LAB_STAFF } from "../constants/roles.js";
 import { serializeCamera } from "./cameraService.js";
-import { serializeMonitoringAlert } from "./monitoringAlertService.js";
-import { serializeTelemetry } from "./telemetryService.js";
+import { monitoringAlertInclude, serializeMonitoringAlert } from "./monitoringAlertService.js";
+import { serializeTelemetryWithHistory } from "./telemetryService.js";
 
 export function dashboardResourceScope(user) {
   if (user.role === ADMIN) return {};
@@ -41,12 +42,7 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
         },
         monitoringAlerts: {
           where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } },
-          include: {
-            source: { select: { id: true, code: true, name: true } },
-            resource: { select: { id: true, code: true, name: true } },
-            acknowledgedBy: { select: { id: true, fullName: true, role: true } },
-            incident: { select: { id: true, severity: true, status: true, category: true } }
-          },
+          include: monitoringAlertInclude,
           orderBy: { openedAt: "desc" }
         }
       } : { laboratory: true },
@@ -67,8 +63,10 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
     }),
     client.booking.findMany({
       where: {
-        startAt: { lt: windowEnd },
-        endAt: { gt: windowStart },
+        OR: [
+          { startAt: { lt: windowEnd }, endAt: { gt: windowStart } },
+          { actualStartAt: { lt: windowEnd }, OR: [{ actualEndAt: null }, { actualEndAt: { gt: windowStart } }] }
+        ],
         status: { notIn: ["REJECTED", "CANCELLED"] },
         resource: resourceWhere
       },
@@ -93,7 +91,7 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
   ]);
 
   const statusCounts = Object.fromEntries(
-    ["AVAILABLE", "IN_USE", "MAINTENANCE", "CALIBRATION", "BROKEN", "RETIRED", "OFFLINE"]
+    OPERATIONAL_STATUSES
       .map((status) => [status, 0])
   );
   const operationalResources = resources.filter(resource => resource.specs?.monitoringSimulation !== true);
@@ -114,26 +112,7 @@ export async function buildDashboard(client, user, now = new Date(), { includeTe
   const openStatuses = new Set(["reported", "triaged", "assigned", "investigating"]);
   const openIncidents = incidents.filter((incident) => openStatuses.has(incident.status));
 
-  const telemetry = includeTelemetry ? resources.map((resource) => ({
-    ...serializeTelemetry(resource, resource.telemetrySamples[0] || null, now),
-    history: resource.telemetrySamples.map((sample) => ({
-      id: sample.id,
-      origin: sample.origin,
-      simulationRunId: sample.simulationRunId,
-      sourceId: sample.sourceId,
-      source: sample.telemetrySource?.code || sample.source,
-      sampledAt: sample.sampledAt,
-      online: sample.online,
-      temperatureC: sample.temperatureC,
-      humidityPercent: sample.humidityPercent,
-      cpuPercent: sample.cpuPercent,
-      gpuPercent: sample.gpuPercent,
-      gpuMemoryPercent: sample.gpuMemoryPercent,
-      ramPercent: sample.ramPercent,
-      diskPercent: sample.diskPercent,
-      signals: sample.verifiedSignals || []
-    }))
-  })) : [];
+  const telemetry = includeTelemetry ? resources.map(resource => serializeTelemetryWithHistory(resource, now)) : [];
   const monitoringAlerts = includeTelemetry ? resources
     .flatMap((resource) => resource.monitoringAlerts)
     .sort((left, right) => new Date(right.lastObservedAt) - new Date(left.lastObservedAt))

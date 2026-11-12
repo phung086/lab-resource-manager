@@ -19,7 +19,7 @@ try {
   const auth = await fetch(`${api}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@lrm.local', password: process.env.UX_DEMO_PASSWORD }) });
   assert.equal(auth.status, 200);
   const session = await auth.json();
-  await page.addInitScript(({ accessToken, user }) => { localStorage.setItem('lrm_token', accessToken); localStorage.setItem('lrm_user', JSON.stringify(user)); }, session);
+  await page.addInitScript(({ accessToken, user }) => { sessionStorage.setItem('lrm_token', accessToken); sessionStorage.setItem('lrm_user', JSON.stringify(user)); }, session);
   await page.goto(`${base}/#/workspace/tai-nguyen`);
   await page.locator('.assistant-launcher').click();
   const dock = page.locator('#lab-assistant-panel'); await dock.waitFor();
@@ -42,7 +42,7 @@ try {
     return { body, text };
   };
   await dock.locator('.assistant-language').getByRole('button', { name: 'VI', exact: true }).click();
-  await page.locator('html[lang=vi]').waitFor();
+  await dock.locator(':scope[lang=vi]').waitFor();
   const identity = await ask('ban la ai', 'assistant.introduction');
   check(identity.text.includes('Tôi là trợ lý của LAB Resource Manager'), 'exact screenshot question receives Vietnamese introduction');
   await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(250);
@@ -51,7 +51,7 @@ try {
   check(unknownVi.text.includes('Tôi chưa hiểu rõ yêu cầu'), 'unknown VI question asks for clarification');
   await page.screenshot({ path: `${output}/clarify-vi.png` });
   await dock.locator('.assistant-language').getByRole('button', { name: 'EN', exact: true }).click();
-  await page.locator('html[lang=en]').waitFor();
+  await dock.locator(':scope[lang=en]').waitFor();
   const identityEn = await ask('Who are you?', 'assistant.introduction');
   check(identityEn.text.includes('LAB Resource Manager assistant'), 'English introduction is translated');
   await page.screenshot({ path: `${output}/identity-en.png` });

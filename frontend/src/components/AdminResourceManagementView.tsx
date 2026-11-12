@@ -10,6 +10,8 @@ export interface AdminResourceManagementViewProps {
   };
 }
 
-export const AdminResourceManagementView: React.FC<AdminResourceManagementViewProps> = ({ user, initialClassification }) => (
+export const AdminResourceManagementView: React.FC<AdminResourceManagementViewProps> = ({ user, initialClassification }) => {
+ return <>
   <ResourceManagementView user={user} managementMode initialClassification={initialClassification} />
-);
+ </>;
+};

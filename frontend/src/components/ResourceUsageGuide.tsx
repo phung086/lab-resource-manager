@@ -10,7 +10,7 @@ export type UsageGuide = {
   safetyNotes?: string;
 };
 
-export function ResourceUsageGuide({ guide }: { guide?: UsageGuide; isSample?: boolean }) {
+export function ResourceUsageGuide({ guide, isSample }: { guide?: UsageGuide; isSample?: boolean }) {
   const { t } = useLocale();
   const sections = [
     { key: 'beforeUse', title: t("ui.before_handover_85b38e1e"), rows: guide?.beforeUse },
@@ -20,6 +20,7 @@ export function ResourceUsageGuide({ guide }: { guide?: UsageGuide; isSample?: b
   const hasGuide = sections.some(section => Array.isArray(section.rows) && section.rows.length) || Boolean(guide?.safetyNotes);
   return <section className="resource-usage-guide" aria-label={t("ui.usage_guide_28e5af8d")}>
     <div className="resource-guide-heading"><BookOpen size={20} aria-hidden="true" /><h4>{t("ui.usage_guide_28e5af8d")}</h4></div>
+    {isSample && <p className="resource-guide-sample" role="note">{t("ui.catalogue.sampleNote")}</p>}
     {hasGuide ? <>
       {sections.map(section => Array.isArray(section.rows) && section.rows.length > 0 && <details key={section.key}>
         <summary>{section.title}<span>{section.rows.length} {t("ui.steps_2313c786")}</span></summary>
@@ -27,6 +28,7 @@ export function ResourceUsageGuide({ guide }: { guide?: UsageGuide; isSample?: b
       </details>)}
       {guide?.safetyNotes && <div className="resource-guide-safety"><ShieldAlert size={18} aria-hidden="true" /><div><strong>{t("ui.safety_notes_4d6fcfbc")}</strong><p>{guide.safetyNotes}</p></div></div>}
     </> : <p className="resource-guide-note">{t("ui.operating_instructions_have_not_been_ee770ae8")}</p>}
+    {isSample && <p className="resource-guide-sample resource-guide-sample-guide" role="note">{t("ui.catalogue.sampleGuide")}</p>}
     <details className="resource-guide-workflow">
       <summary><ClipboardCheck size={17} aria-hidden="true" />{t("ui.borrowing_return_process_d280855d")}</summary>
       <ol>

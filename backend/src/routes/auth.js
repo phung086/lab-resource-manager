@@ -1,7 +1,6 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import express from "express";
-import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 
@@ -13,8 +12,15 @@ import { CUSTOMER, isCanonicalRole } from "../constants/roles.js";
 import { publicCustomerUser } from "../services/guestBookingService.js";
 import { forgetAssistantSession } from "../assistant/assistantService.js";
 import { enqueueRegistrationEmail } from "../services/emailAutomationService.js";
+import { signUserToken, extendSession, sessionInfo } from "../services/authTokens.js";
+import { requestPasswordOtp, confirmPasswordOtp } from "../services/passwordSecurityService.js";
+import { createGoogleAuthRouter } from './googleAuth.js';
 
 const router = express.Router();
+router.use((_req, res, next) => { res.set("Cache-Control", "no-store"); next(); });
+// Unknown accounts still perform the same password-work factor as normal accounts.
+// This public dummy credential grants no account or authentication fallback.
+const absentAccountHash = bcrypt.hashSync('LAB-login-timing-placeholder', 12);
 
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -26,7 +32,7 @@ const authRateLimit = rateLimit({
 
 const loginSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
-  password: z.string().min(8)
+  password: z.string().min(8).max(128)
 }).strict();
 
 const registerSchema = z.object({
@@ -35,12 +41,16 @@ const registerSchema = z.object({
 }).strict();
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(8).max(128),
+  challengeId: z.string().uuid(),
+  otp: z.string().regex(/^\d{6}$/),
+  currentPassword: z.string().max(128).optional(),
   newPassword: z.string().min(8).max(128)
 }).strict().refine((value) => value.currentPassword !== value.newPassword, {
   message: "New password must be different from the current password",
   path: ["newPassword"]
 });
+
+router.use('/google', createGoogleAuthRouter(authRateLimit));
 
 /**
  * Returns a safe public representation of a user.
@@ -65,7 +75,7 @@ router.post("/register", authRateLimit, async (req, res, next) => {
     }
 
     const passwordHash = await bcrypt.hash(data.password, 12);
-    const user = await prisma.$transaction(async tx => {
+    const { user, token } = await prisma.$transaction(async tx => {
       const created = await tx.user.create({
         data: {
           id: crypto.randomUUID(),
@@ -73,18 +83,12 @@ router.post("/register", authRateLimit, async (req, res, next) => {
           fullName: "",
           role: CUSTOMER, // Canonical uppercase
           passwordHash,
-          customerType: "EXTERNAL",
           passwordResetRequired: false,
           isActive: true
         }
       });
       await enqueueRegistrationEmail(tx, created, req.locale);
-      return created;
-    });
-
-    const token = jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, {
-      algorithm: "HS256",
-      expiresIn: config.tokenExpiresIn
+      return { user: created, token: await signUserToken(created, { transaction: tx }) };
     });
 
     res.status(201).json({ accessToken: token, tokenType: "Bearer", user: publicUser(user) });
@@ -111,23 +115,18 @@ router.post("/login", authRateLimit, async (req, res, next) => {
       user = await prisma.user.findUnique({ where: { email: data.email } });
     } catch (dbErr) {
       // Database outage must fail explicitly, not authenticate anyone
-      console.error("Login DB lookup failed:", dbErr.message);
+      console.error("Login DB lookup failed", { code: dbErr?.code || "UNKNOWN" });
       throw new HttpError(503, "Authentication service unavailable", undefined, "DATABASE_UNAVAILABLE");
     }
 
-    if (!user) {
-      throw new HttpError(401, "Email or password is incorrect", undefined, "AUTH_INVALID_CREDENTIALS");
-    }
-
     // Real password verification — always required
-    const isValid = await bcrypt.compare(data.password, user.passwordHash);
-    // A guest's initial phone-based credential is usable only inside the
-    // email-verified setup session, never as proof of identity at login.
-    if (!isValid || (user.customerType === "EXTERNAL" && user.passwordResetRequired)) {
+    const isValid = await bcrypt.compare(data.password, user?.passwordHash || absentAccountHash);
+    // An account awaiting password setup must finish its verified setup flow.
+    if (!user || !isValid || user.passwordLoginEnabled === false || user.passwordResetRequired) {
       throw new HttpError(401, "Email or password is incorrect", undefined, "AUTH_INVALID_CREDENTIALS");
     }
 
-    if (!user.isActive) {
+    if (!user.isActive || user.deletedAt) {
       throw new HttpError(401, "User account is inactive", undefined, "ACCOUNT_INACTIVE");
     }
 
@@ -137,10 +136,7 @@ router.post("/login", authRateLimit, async (req, res, next) => {
       throw new HttpError(403, "User role is not recognized", undefined, "FORBIDDEN");
     }
 
-    const token = jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, {
-      algorithm: "HS256",
-      expiresIn: config.tokenExpiresIn
-    });
+    const token = await signUserToken(user);
 
     res.json({ accessToken: token, tokenType: "Bearer", user: publicUser(user) });
   } catch (error) {
@@ -155,23 +151,42 @@ router.get("/me", requireAuth, (req, res) => {
   res.json(publicUser(req.user));
 });
 
-// Bearer tokens are stateless. Logout acknowledges a valid session; the client
-// remains responsible for discarding its token.
-router.post("/logout", requireAuth, (req, res) => {
-  forgetAssistantSession({ actorId: req.user.id, authorization: req.headers.authorization });
-  res.status(204).end();
+router.get("/session", requireAuth, (req, res) => res.json(sessionInfo(req.authSession)));
+const activityLimit = rateLimit({ windowMs: 60000, limit: 6, keyGenerator: req => req.user.id,
+  standardHeaders: "draft-7", legacyHeaders: false });
+router.post("/activity", requireAuth, activityLimit, async (req, res, next) => {
+  try { z.object({}).strict().parse(req.body); res.json(await extendSession(req.user, req.authSession.id)); }
+  catch (error) { next(error); }
+});
+router.post("/logout", requireAuth, async (req, res, next) => {
+  try {
+    await prisma.authSession.updateMany({ where: { id: req.authSession.id, userId: req.user.id, revokedAt: null }, data: { revokedAt: new Date() } });
+    forgetAssistantSession({ actorId: req.user.id, authorization: req.headers.authorization });
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+router.post("/logout-all", requireAuth, async (req, res, next) => {
+  try {
+    // authVersion invalidates in-flight login snapshots as well as existing sessions.
+    await prisma.user.updateMany({ where: { id: req.user.id, authVersion: req.user.authVersion }, data: { authVersion: { increment: 1 } } });
+    forgetAssistantSession({ actorId: req.user.id, authorization: req.headers.authorization });
+    res.status(204).end();
+  } catch (error) { next(error); }
 });
 
-router.post("/change-password", requireAuth, async (req, res, next) => {
+router.post("/password-otp/request", authRateLimit, requireAuth, async (req, res, next) => {
+  try {
+    const data = z.object({ currentPassword: z.string().max(128).optional() }).strict().parse(req.body);
+    res.json(await requestPasswordOtp(req.user, { ...data, locale: req.locale }));
+  } catch (error) { next(error); }
+});
+
+router.post("/change-password", authRateLimit, requireAuth, async (req, res, next) => {
   try {
     const data = changePasswordSchema.parse(req.body);
-    const currentMatches = await bcrypt.compare(data.currentPassword, req.user.passwordHash);
-    if (!currentMatches) {
-      throw new HttpError(400, "Current password is incorrect", { field: "currentPassword" }, "CURRENT_PASSWORD_INVALID");
-    }
-    const passwordHash = await bcrypt.hash(data.newPassword, 12);
-    await prisma.user.update({ where: { id: req.user.id }, data: { passwordHash, passwordResetRequired: false } });
-    res.status(204).end();
+    const user = await confirmPasswordOtp(req.user, data);
+    forgetAssistantSession({ actorId: req.user.id, authorization: req.headers.authorization });
+    res.json({ accessToken: await signUserToken(user), tokenType: "Bearer", user: publicUser(user) });
   } catch (error) {
     next(error);
   }

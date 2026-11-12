@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { PlanningReport } from '../planning/PlanningReport';
+import '../../../styles/planning-workspace.css';
 import { useLocale } from '../../../providers/LocaleProvider';
 import { getOperationsReport } from '../../../services/monitoring';
 import type { OperationsReportPayload } from '../../../types/telemetry';
@@ -32,6 +34,7 @@ export function OperationsReport({ refreshKey }: { refreshKey: string }) {
   const visible = expanded ? (report?.resources || []) : used.slice(0, 5);
   const maxMinutes = Math.max(1, ...used.map(resource => resource.actualUsageMinutes));
   return <article className="card operations-report" aria-labelledby="operations-report-title" aria-busy={loading}>
+    <details className="planning-workspace"><summary>{tr("planning.report")}</summary><PlanningReport/></details>
     <header className="operations-report-header">
       <div><h2 id="operations-report-title">{tr('report.title')}</h2><p>{tr('report.subtitle')}</p></div>
       <div className="operations-report-period" role="group" aria-label={tr('report.period')}>

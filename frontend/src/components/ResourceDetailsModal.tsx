@@ -18,6 +18,9 @@ export interface ResourceDetailsModalProps {
   onClose: () => void;
   resource?: any;
   onViewCalendar?: (resourceId: string) => void;
+  actorRole?: string;
+  onEdit?: () => void;
+  onChangeStatus?: () => void;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -42,9 +45,9 @@ const maintenanceLabels: Record<string, string> = {
   scheduled: "ui.scheduled_2cf00513", in_progress: "ui.in_progress_50e04c04", completed: "ui.completed_5eb36f8c", cancelled: "ui.cancelled_2f777a90"
 };
 
-export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOpen, onClose, resource, onViewCalendar }) => {
+export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOpen, onClose, resource, onViewCalendar, actorRole, onEdit, onChangeStatus }) => {
   const { tr } = useLocale();
-  const [section, setSection] = useState("overview");
+  const [section, setSection] = useState(actorRole === "ADMIN" ? "specifications" : actorRole === "LAB_STAFF" ? "schedule" : "overview");
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
@@ -73,11 +76,11 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
       subtitle={resource.location ? `${resource.code} · ${resource.location}` : resource.code}
       icon={Server}
       maxWidth="max-w-4xl"
-      footer={<><button type="button" className="secondary-button" onClick={onClose}>{tr("ui.close_5d54c2a1")}</button>{onViewCalendar && <button className="primary-button" onClick={() => { onClose(); onViewCalendar(resource.id); }}>{tr("ui.view_resource_calendar_a11d4b1d")}</button>}</>}
+      footer={<><button type="button" className="secondary-button" onClick={onClose}>{tr("ui.close_5d54c2a1")}</button>{onViewCalendar && <button className="secondary-button" onClick={() => { onClose(); onViewCalendar(resource.id); }}>{tr("ui.view_resource_calendar_a11d4b1d")}</button>}{onChangeStatus && <button type="button" className={actorRole === "LAB_STAFF" ? "primary-button" : "secondary-button"} onClick={onChangeStatus}>{tr("ui.change_status_e85b5764")}</button>}{onEdit && <button type="button" className={actorRole === "ADMIN" ? "primary-button" : "secondary-button"} onClick={onEdit}>{tr("ui.resourceAdmin.configure")}</button>}</>}
     >
       <div className="resource-dossier">
       <nav className="refine-section-nav" aria-label={tr("refine.detailSections")}>
-        {["overview", "specifications", "schedule", "history"].map(value => <button key={value} type="button" aria-pressed={section === value} aria-controls={`dossier-${value}`} onPointerEnter={() => setSection(value)} onFocus={() => setSection(value)} onClick={() => setSection(value)}>{tr(`refine.${value}`)}</button>)}
+        {(actorRole === "ADMIN" ? ["specifications", "history", "schedule", "overview"] : actorRole === "LAB_STAFF" ? ["schedule", "overview", "history", "specifications"] : ["overview", "specifications", "schedule", "history"]).map(value => <button key={value} type="button" aria-pressed={section === value} aria-controls={`dossier-${value}`} onClick={() => setSection(value)}>{tr(`refine.${value}`)}</button>)}
       </nav>
       <section id="dossier-overview" hidden={section !== "overview"}>
       <ResourceGallery key={resource.id} resourceId={resource.id} initialItems={resource.media} />
@@ -92,7 +95,7 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
         <p>{resource.description || tr("ui.no_description_provided_7ca49080")}</p>
         <dl className="resource-overview-facts">
           <Detail label={tr("ui.laboratory_eb85976f")} value={resource.laboratory?.name || resource.location || tr("ui.not_assigned_ebe3cb5d")} />
-          <Detail label={tr("ui.approval_required_cc220dc0")} value={resource.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : tr("ui.confirm_automatically_when_eligible_e47b0eb4")} />
+          <Detail label={tr("ui.approval_required_cc220dc0")} value={resource.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : Number(resource.rental?.hourlyRateVnd) > 0 ? tr("ui.confirmed_after_payment_2c477063") : tr("ui.confirm_automatically_when_eligible_e47b0eb4")} />
           <Detail label={tr("ui.safety_training_d48b0cef")} value={resource.trainingRequirements?.length ? resource.trainingRequirements.map((course: any) => course.name || course.code).join(", ") : tr("ui.not_required_ae94c3a4")} />
         </dl>
       </section>
@@ -106,7 +109,7 @@ export const ResourceDetailsModal: React.FC<ResourceDetailsModalProps> = ({ isOp
         <Detail label={tr("ui.laboratory_eb85976f")} value={resource.laboratory ? `${resource.laboratory.code} - ${resource.laboratory.name}` : tr("ui.no_laboratory_assigned_a03dd58a")} />
         <Detail label={tr("ui.booking_policy_5636b6c2")} value={resource.bookingState === "bookable" ? tr("ui.bookable_f7ce3273") : resource.bookingState === "restricted" ? tr("ui.restricted_booking_1e5b50c0") : tr("ui.not_bookable_fd9badec")} />
         <Detail label={tr("ui.capacity_quantity_1e2e42b3")} value={String(resource.capacity)} />
-        <Detail label={tr("ui.approval_required_cc220dc0")} value={resource.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : tr("ui.confirm_automatically_when_eligible_e47b0eb4")} />
+        <Detail label={tr("ui.approval_required_cc220dc0")} value={resource.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : Number(resource.rental?.hourlyRateVnd) > 0 ? tr("ui.confirmed_after_payment_2c477063") : tr("ui.confirm_automatically_when_eligible_e47b0eb4")} />
         <Detail label={tr("ui.manufacturer_ceeb2ab5")} value={resource.manufacturer || tr("ui.not_updated_ebc5a4d4")} />
         <Detail label={tr("ui.model_5e2c614c")} value={resource.model || tr("ui.not_updated_ebc5a4d4")} />
       </dl>

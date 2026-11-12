@@ -1,0 +1,92 @@
+/* Discovery workspace: one search studio, a resource gallery and a personal itinerary. */
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home { max-width:1500px; padding:12px 0 32px; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .customer-journey { gap:24px; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio { display:grid; grid-template-columns:1.15fr 1fr; min-height:330px; overflow:hidden; border-radius:28px; background:#ebe6ff; border:1px solid #ded5f6; box-shadow:0 18px 50px -36px #544080; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio .journey-discovery-bar { border:0; border-radius:0; background:transparent; box-shadow:none; padding:34px; display:flex; flex-direction:column; justify-content:center; gap:14px; }
+.discovery-eyebrow { font-size:11px; font-weight:700; letter-spacing:.18em; color:#66548b; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio h1 { font-size:clamp(30px,3.2vw,46px); line-height:1.12; max-width:470px; letter-spacing:-.035em; margin:0; color:#30224e; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio p { font-size:15px; line-height:1.6; color:#554769; margin:0; max-width:420px; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio .journey-finder { display:grid; grid-template-columns:1fr auto; padding:8px; background:white; border:1px solid #d5c9ec; border-radius:16px; gap:6px; margin-top:6px; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio .journey-finder-field { grid-column:1/-1; border:0; border-bottom:1px solid #ede9f3; border-radius:0; min-width:0; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio .journey-finder-select { border:0; min-width:0; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio .journey-finder select { width:100%; background:transparent; }
+.discovery-art { position:relative; min-width:0; background:#dddaf3; overflow:hidden; }
+.discovery-art img { width:100%; height:100%; object-fit:cover; position:absolute; inset:0; }
+.discovery-art::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,#ebe6ff 0%,transparent 22%,transparent 70%,#25243c20); pointer-events:none; }
+.discovery-art span { position:absolute; bottom:24px; right:24px; z-index:1; color:white; background:#322b49c9; backdrop-filter:blur(12px); border:1px solid #ffffff45; padding:9px 16px; border-radius:24px; font-size:12px; letter-spacing:.05em; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin:0; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts button { min-height:76px; border:1px solid #d8e8e0; background:#e7f5ed; border-radius:18px; color:#215e4b; display:flex; align-items:center; justify-content:flex-start; gap:12px; padding:16px; font-size:13px; font-weight:600; transition:transform .2s,box-shadow .2s; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts button:nth-child(2) { background:#eee9ff; color:#6245a0; border-color:#e0d8f2; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts button:nth-child(3) { background:#e6efff; color:#325c98; border-color:#d7e3f4; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts button:nth-child(4) { background:#fff0e2; color:#905635; border-color:#eedecf; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts button:nth-child(5) { background:#fbe8ef; color:#954366; border-color:#ecd5df; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts svg { width:26px; height:26px; flex-shrink:0; stroke-width:1.5; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-grid { grid-template-columns:minmax(0,1fr) 310px; gap:28px; align-items:start; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-column-main { gap:18px; min-width:0; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-card,
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-card.is-hero { display:flex; flex-direction:column; grid-column:auto; border:1px solid #e0e3ec; border-radius:20px; overflow:hidden; background:white; box-shadow:0 8px 24px -20px #45396266; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-cover { width:100%; height:155px; min-height:155px; background:linear-gradient(130deg,#e8edf9,#dceee7); }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-cover img { width:100%; height:100%; object-fit:cover; transition:transform .4s ease; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-body { padding:18px; gap:8px; flex:1; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-body h3 { font-size:17px; line-height:1.4; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-cta { margin-top:auto; padding-top:12px; border-top:1px solid #eeedf3; width:100%; justify-content:space-between; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-column-side { padding:20px; background:#ffffffbd; border:1px solid #e2e2ed; border-radius:24px; gap:20px; }
+.discovery-personal-heading { display:flex; gap:12px; align-items:center; }
+.discovery-avatar { display:grid; place-items:center; width:42px; height:42px; background:#e8e0fa; color:#6540a4; border-radius:50%; font-weight:700; font-size:18px; }
+.discovery-personal-heading div { display:grid; gap:3px; }
+.discovery-personal-heading small { color:#666479; font-size:12px; }
+.discovery-personal-heading strong { font-size:15px; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero { display:block; min-height:0; padding:22px; border-radius:18px; background:linear-gradient(150deg,#e7f4ef,#f3f9f6); border:1px solid #d1e8dd; box-shadow:none; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero::before,
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero::after,
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero-art { display:none; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero-copy { padding:0; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero-title { font-size:21px; line-height:1.35; letter-spacing:-.02em; color:#244f43; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero-lede { font-size:13px; line-height:1.6; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero-facts { display:grid; grid-template-columns:1fr; gap:12px; padding:16px 0; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero-actions { display:grid; gap:10px; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-cta { min-height:42px; justify-content:center; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero-status { flex-wrap:wrap; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-side-card { background:transparent; border:0; border-radius:0; padding:0; box-shadow:none; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-timeline-card { background:#fff; }
+.discovery-guide { border-top:1px solid #dcdce8; padding-top:18px; }
+.discovery-guide summary { cursor:pointer; font-weight:600; padding:10px 0; color:#665184; }
+.discovery-guide .home-section-title { display:none; }
+@media (hover:hover) {
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts button:hover { transform:translateY(-3px); box-shadow:0 10px 18px -14px #30224e99; }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-card:hover img { transform:scale(1.04); }
+}
+@media(max-width:1250px) {
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-grid { grid-template-columns:minmax(0,1fr) 280px; gap:18px; }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio .journey-discovery-bar { padding:26px; }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts button { gap:8px; padding:12px; }
+}
+@media(max-width:800px) {
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-grid { grid-template-columns:1fr; }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio { grid-template-columns:1fr; }
+ .discovery-art { height:170px; grid-row:1; }
+ .discovery-art img { object-position:center 58%; }
+ .discovery-art::after { background:linear-gradient(0deg,#ebe6ff,transparent 50%); }
+ .discovery-art span { display:none; }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio .journey-discovery-bar { padding:22px; }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-finder-shortcuts button { flex-direction:column; justify-content:center; text-align:center; font-size:12px; }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-column-side { grid-row:1; }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-cover { min-height:130px; height:130px; }
+}
+@media(max-width:480px) {
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog { grid-template-columns:1fr; }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-studio .journey-finder { grid-template-columns:minmax(0,1fr); }
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero-facts { grid-template-columns:1fr 1fr; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home * { transition:none!important; animation:none!important; }
+}
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-cover { position:relative; display:grid; place-items:center; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-cover img { position:absolute; inset:0; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-catalog-code { z-index:1; }
+
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero[data-state="overdue"] { background:#fff0ee; border-color:#efc5c0; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero[data-state="overdue"] .journey-hero-title { color:#913f3a; }
+.workspace-shell.lab-spectrum .workspace-home.role-customer .discovery-home .journey-hero[data-state="inUse"] { background:#fff5df; border-color:#ebd6aa; }

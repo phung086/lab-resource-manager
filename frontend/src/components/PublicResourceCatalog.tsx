@@ -5,15 +5,22 @@ import {
   ArrowRight,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   Clock,
   DoorOpen,
   Info,
   Microscope,
   RefreshCw,
+  SlidersHorizontal,
+  MapPin,
+  Layers,
   ShieldAlert,
   ShieldCheck,
   XCircle
 } from "lucide-react";
+import { ExpandableCard } from './base/ExpandableCard';
+import { StatusPill } from './features/resources/ResourceStatusPill';
+import { StatusBadge } from './base/StatusBadge';
 import { apiRequest } from "../api.js";
 import { CANONICAL_BOOKING_STATUS_LABELS } from "../constants.js";
 import { GuestQuickBookingPanel } from "./GuestQuickBookingPanel";
@@ -23,8 +30,12 @@ import { ResourceSpecifications } from "./ResourceSpecifications";
 import { ResourceTariffTable } from "./ResourceTariffTable";
 import { ResourcePricingSummary } from "./ResourcePricingSummary";
 import { ResourceMediaPreview } from "./ResourceMediaPreview";
+import { ResourceCategoryArt } from "./ResourceCategoryArt";
+import { ResourceFinder } from './features/resources/ResourceFinder';
+import { searchResources } from '../utils/resourceSearch';
 import { formatVietnamDateTime } from "../utils/timezone";
 import "../styles/public-catalog.css";
+import "../styles/catalog-explorer.css";
 
 type Media = {
   id: string;
@@ -58,6 +69,7 @@ type Resource = {
   capacity: number;
   bookingState: string;
   operationalStatus: string;
+  laboratoryId?: string | null;
   media?: Media[];
   laboratory?: {
     name: string;
@@ -67,6 +79,7 @@ type Resource = {
       maxBookingMinutes?: number;
       minBookingMinutes?: number;
       maxAdvanceBookingDays?: number;
+      minAdvanceBookingMinutes?: number;
       allowWeekend?: boolean;
       workDayStartHour?: number;
       workDayEndHour?: number;
@@ -122,6 +135,9 @@ export function PublicResourceCatalog({
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleError, setScheduleError] = useState("");
   const [filter, setFilter] = useState("ALL");
+  const [laboratoryId, setLaboratoryId] = useState('');
+  const [availableOnly, setAvailableOnly] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(6);
   const [loading, setLoading] = useState(true);
@@ -146,7 +162,7 @@ export function PublicResourceCatalog({
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("lrm_user");
+      const raw = sessionStorage.getItem("lrm_user");
       if (raw) setCurrentUser(JSON.parse(raw));
     } catch {
       setCurrentUser(null);
@@ -181,9 +197,14 @@ export function PublicResourceCatalog({
   }, [revision, tr]);
 
   const categoryOrder = ["ROOM", "EQUIPMENT", "MACHINE", "EXPERIMENT_KIT", "MATERIAL"];
-  const matches = resources.filter(row => (filter === "ALL" || row.category === filter) && `${row.name} ${row.code} ${row.location}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
-    .sort((a, b) => categoryOrder.indexOf(a.category || "") - categoryOrder.indexOf(b.category || "") || a.code.localeCompare(b.code));
+  const laboratories = [...new Map(resources.flatMap(row => row.laboratoryId && row.laboratory?.name
+    ? [[row.laboratoryId, row.laboratory.name] as const] : [])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const scopedRows = resources.filter(row => (!laboratoryId || row.laboratoryId === laboratoryId) && (!availableOnly || row.availability?.state === 'AVAILABLE'));
+  const searched = searchResources(scopedRows, search);
+  const matches = searched.filter(row => filter === 'ALL' || row.category === filter);
+  if (!search.trim()) matches.sort((a, b) => categoryOrder.indexOf(a.category || '') - categoryOrder.indexOf(b.category || '') || a.code.localeCompare(b.code));
   const visible = matches.slice(0, limit);
+  const activeFilterCount = Number(filter !== 'ALL') + Number(Boolean(laboratoryId)) + Number(availableOnly);
 
   async function openDetails(row: Resource, rememberOpener = true) {
     if (rememberOpener) setDetailSection("overview");
@@ -226,7 +247,7 @@ export function PublicResourceCatalog({
   function closeDetails() {
     detailRequest.current += 1;
     setSelected(null);
-    detailOpener.current?.focus();
+    requestAnimationFrame(() => detailOpener.current?.focus());
   }
 
   const busyBookings = (schedule?.bookings || [])
@@ -285,7 +306,7 @@ export function PublicResourceCatalog({
     <div className="public-live-catalog">
       <div className="catalog-head">
         <div>
-          <h3>{tr("ui.explore_lab_rooms_and_equipment_be952c10")}</h3>
+          <h2>{tr("ui.explore_lab_rooms_and_equipment_be952c10")}</h2>
           <p>
             {tr("ui.review_physical_condition_access_requirements_f841db8b")}</p>
         </div>
@@ -294,8 +315,15 @@ export function PublicResourceCatalog({
         </button>
       </div>
 
-      <label className="catalog-search-label">{t("ui.find_a_room_or_equipment_818cf711")}<input type="search" value={search} maxLength={120} onChange={event => { setSearch(event.target.value); setLimit(6); }} placeholder={t("ui.name_resource_code_or_location_9c88af3a")} /></label>
-      <div className="catalog-filters" role="group" aria-label={tr("ui.filter_resources_011c6ead")}>
+      <div className="catalog-browser catalog-explorer-refined" hidden={Boolean(selected)}>
+      <aside className="catalog-sidebar">
+        <h3 className="catalog-filter-heading"><SlidersHorizontal size={17} aria-hidden="true" />{t('ui.filter_resources_011c6ead')}</h3>
+        <button type="button" className="catalog-filter-toggle" aria-controls="public-catalog-facets" aria-expanded={filtersExpanded} onClick={() => setFiltersExpanded(!filtersExpanded)}>
+          <SlidersHorizontal size={17} aria-hidden="true" />{t('ui.filter_resources_011c6ead')}{activeFilterCount > 0 && <span>{activeFilterCount}</span>}<ChevronDown size={16} aria-hidden="true" />
+        </button>
+      <div id="public-catalog-facets" className="catalog-facet-stack" data-expanded={filtersExpanded}>
+      <fieldset className="catalog-facet"><legend>{t('ui.resource_category_5fc170bb')}</legend>
+      <div className="catalog-filters">
         {[
           ["ALL", tr("ui.all_49c73a31")],
           ["ROOM", tr("ui.lab_room_8ed94274")],
@@ -310,11 +338,35 @@ export function PublicResourceCatalog({
             aria-pressed={filter === code}
             onClick={() => { setFilter(code); setLimit(6); }}
           >
-            {tr(label)}
+            {code === "ROOM" ? <DoorOpen size={18} aria-hidden="true" /> : code === "EQUIPMENT" ? <Microscope size={18} aria-hidden="true" /> : <Layers size={18} aria-hidden="true" />}
+            <span>{label}</span>
+            {!loading && !error && <small>{code === 'ALL' ? searched.length : searched.filter(row => row.category === code).length}</small>}
           </button>
         ))}
       </div>
-
+      </fieldset>
+      <fieldset className="catalog-facet"><legend>{t('ui.laboratory_eb85976f')}</legend>
+        <select aria-label={t('ui.laboratory_eb85976f')} value={laboratoryId} onChange={event=>{setLaboratoryId(event.target.value);setLimit(6);}}>
+          <option value="">{t('ui.all_49c73a31')}</option>
+          {laboratories.map(([id, name])=><option key={id} value={id}>{name}</option>)}
+        </select>
+      </fieldset>
+      <fieldset className="catalog-facet"><legend>{t('ui.current_availability_f57c5e36')}</legend>
+        <label className="catalog-availability-toggle"><input type="checkbox" checked={availableOnly} onChange={event=>{setAvailableOnly(event.target.checked);setLimit(6);}}/><span>{t('ui.resourceFinder.availableOnly')}</span></label>
+      </fieldset>
+      {activeFilterCount > 0 && <button type="button" className="catalog-filter-reset" onClick={()=>{setFilter('ALL');setLaboratoryId('');setAvailableOnly(false);setLimit(6);}}>{t('ui.clear_filters_f8f509b1')}</button>}
+      <p className="catalog-sidebar-note">{t('ui.catalogue.explorer.scope')}</p>
+      </div>
+      </aside>
+      <div className="catalog-results">
+      <div className="catalog-toolbar">
+      <ResourceFinder className="catalog-search-label" label={t('ui.find_a_room_or_equipment_818cf711')} placeholder={t('ui.name_resource_code_or_location_9c88af3a')}
+        records={scopedRows.filter(row=>filter==='ALL'||row.category===filter)} ready={!loading&&!error} value={search}
+        onChange={value=>{setSearch(value);setLimit(6);}} onSearch={()=>document.getElementById('public-catalog-results')?.focus()}
+        onPick={row=>void openDetails(row)}/>
+      <button className="catalog-refresh" type="button" onClick={() => setRevision(value => value + 1)} aria-label={t('ui.refresh_catalogue_31811f79')}><RefreshCw size={18} aria-hidden="true" /></button>
+      </div>
+      {!loading && !error && <p id="public-catalog-results" tabIndex={-1} className="catalog-result-count" role="status">{t('ui.catalogue.explorer.results', { count: matches.length })}</p>}
       {loading && <p role="status">{tr("ui.loading_rooms_and_equipment_e2ad6ba4")}</p>}
       {error && (
         <div className="catalog-message" role="alert">
@@ -323,13 +375,13 @@ export function PublicResourceCatalog({
             {tr("ui.retry_c58d068c")}</button>
         </div>
       )}
-      {!loading && !error && visible.length === 0 && (
+      {!priceView && !loading && !error && visible.length === 0 && (
         <p className="catalog-message">{tr("ui.no_resources_in_this_category_4f1d40ef")}</p>
       )}
 
       {/* Catalog Cards Grid */}
       <div className="rental-view-switch"><button type="button" aria-pressed={!priceView} onClick={() => setPriceView(false)}>{tr("ui.care.assets")}</button><button type="button" aria-pressed={priceView} onClick={() => setPriceView(true)}>{tr("ui.rental.pricing")}</button></div>
-      {priceView && <ResourceTariffTable resources={matches} onSelect={row => { const resource = resources.find(item => item.id === row.id); if (resource) void openDetails(resource); }}/>}
+      {priceView && !loading && !error && <ResourceTariffTable resources={matches} onSelect={row => { const resource = resources.find(item => item.id === row.id); if (resource) void openDetails(resource); }}/>}
       <div className="catalog-grid" hidden={priceView}>
         {visible.map((row) => {
           const image = row.media?.find((item) => item.kind === "IMAGE");
@@ -338,7 +390,8 @@ export function PublicResourceCatalog({
             class: "badge-op-other"
           };
           return (
-            <article key={row.id} className="catalog-card">
+            <article key={row.id} className="catalog-card lab-product-card" data-category={row.category} data-resource-code={row.code}>
+              <div className="catalog-card-visual">
               <button
                 type="button"
                 className="catalog-cover"
@@ -346,42 +399,36 @@ export function PublicResourceCatalog({
                 aria-label={`${t("ui.view_details_f6f88b0f")}: ${row.name}`}
               >
                 {image ? (
-                  <ResourceMediaPreview key={image.url} kind="IMAGE" url={image.url} alt={image.altText || row.name} />
+                  <ResourceMediaPreview key={image.url} kind="IMAGE" size="card" url={image.url} alt={image.altText || row.name} fallback={<ResourceCategoryArt category={row.category || undefined} />} />
                 ) : (
                   <span className="catalog-placeholder">
-                    {row.category === "ROOM" ? <DoorOpen size={48} /> : <Microscope size={48} />}
-                    <small>{tr("ui.no_image_available_dcd8ffe7")}</small>
+                    <ResourceCategoryArt category={row.category || undefined} />
+                    <small className="sr-only">{tr("ui.no_image_available_dcd8ffe7")}</small>
                   </span>
                 )}
               </button>
-
+              <span className="catalog-image-category">{tr(categoryLabels[row.category || ''] || 'ui.unclassified_10fe63fa')}</span>
+              <div className="catalog-card-image-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => onViewSchedule(row.id)}><CalendarDays size={16} aria-hidden="true" />{tr('ui.catalogue.calendar')}</button>
+                <button type="button" className="catalog-card-cta btn btn-primary" onClick={() => void openDetails(row)}>{tr('ui.book_a_resource_729e485c')}<ArrowRight size={16} aria-hidden="true" /></button>
+              </div>
+              </div>
               <div className="catalog-card-body">
-                {/* LAB-oriented Status Badges */}
-                <div className="catalog-card-badges">
-                  <span className={`card-badge ${opBadge.class}`}>{tr(opBadge.label)}</span>
-                  <span className="card-badge badge-approval">
-                    {row.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : tr("ui.automatic_a25c8028")}
-                  </span>
-                  {row.trainingRequirements && row.trainingRequirements.length > 0 && (
-                    <span className="card-badge badge-training">{tr("ui.training_required_cf046e4c")}</span>
-                  )}
-                </div>
-
                 <span className="catalog-card-meta">
-                  {tr(categoryLabels[row.category || ""] || row.category || "")} · {row.code}
+                  {row.code}
                 </span>
-                <h4>{row.name}</h4>
-                <p className="catalog-card-loc">{row.location}</p>
+                <h3><button type="button" className="catalog-card-name" onClick={() => void openDetails(row)}>{row.name}</button></h3>
+                <p className="catalog-card-loc"><MapPin size={14} aria-hidden="true" />{row.laboratory?.name || row.location}</p>
+                <div className="catalog-card-bottom">
                 <strong className="rental-card-price">{row.rental ? new Intl.NumberFormat("vi-VN").format(row.rental.hourlyRateVnd) + " ₫ / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</strong>
-
-                {/* Primary CTA */}
-                <button
-                  type="button"
-                  className="catalog-card-cta"
-                  onClick={() => void openDetails(row)}
-                >
-                  {tr("ui.view_schedule_book_8ca5d3f1")}<ArrowRight size={16} aria-hidden="true" />
-                </button>
+                <span title={tr('ui.current_availability_f57c5e36')}><StatusPill value={row.availability?.state || 'UNAVAILABLE'} /></span>
+                </div>
+                <span className="catalog-card-policy badge-approval">{row.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : Number(row.rental?.hourlyRateVnd) > 0 ? tr("ui.confirmed_after_payment_2c477063") : tr("ui.automatic_a25c8028")}</span>
+                {Boolean(row.trainingRequirements?.length) && <StatusBadge tone="attention" className="badge-training">{tr('ui.training_required_cf046e4c')}</StatusBadge>}
+                <ExpandableCard title={tr('ui.catalogue.specifications')} icon={SlidersHorizontal} tone="teal" className="catalog-card-specifications">
+                  {row.description && <p>{row.description}</p>}
+                  <dl><div><dt>{tr('ui.capacity_quantity_a35ef20e')}</dt><dd>{row.capacity}</dd></div><div><dt>{tr('ui.physical_state_c30af32d')}</dt><dd><StatusPill value={row.operationalStatus} label={tr(opBadge.label)} /></dd></div></dl>
+                </ExpandableCard>
               </div>
             </article>
           );
@@ -389,6 +436,8 @@ export function PublicResourceCatalog({
       </div>
 
       {!priceView && !loading && !error && matches.length > limit && <button type="button" className="public-secondary catalog-show-more" onClick={() => setLimit(value => value + 6)}>{t("ui.show_more_resources_8cf8a7b8")} ({matches.length - limit})</button>}
+      </div>
+      </div>
       {/* Resource Detail Section */}
       {selected && (
         <section className="catalog-detail" id="chi-tiet-tai-nguyen" aria-labelledby="catalog-detail-title">
@@ -397,11 +446,11 @@ export function PublicResourceCatalog({
               <span>
                 {tr(categoryLabels[selected.category || ""])} · {selected.code}
               </span>
-              <h3 id="catalog-detail-title" ref={detailHeading} tabIndex={-1}>{selected.name}</h3>
+              <h2 id="catalog-detail-title" ref={detailHeading} tabIndex={-1}>{selected.name}</h2>
               <p>{selected.laboratory?.name || selected.location}</p>
             </div>
             <button type="button" onClick={closeDetails} aria-label={tr("ui.close_details_f6d87bfc")}>
-              {tr("ui.close_5d54c2a1")}</button>
+              {tr("ui.catalogue.explorer.back")}</button>
           </div>
 
           {detailLoading ? (
@@ -413,11 +462,11 @@ export function PublicResourceCatalog({
             </div>
           ) : null}
 
-          <nav className="resource-profile-nav" aria-label={tr('ui.catalogue.detailNavigation')}>{[['overview','ui.resourceDiscovery.overview'],['specs','ui.catalogue.specifications'],['usage','ui.usage_guide_28e5af8d']].map(([value,key]) => <button key={value} type="button" aria-pressed={detailSection===value} onPointerEnter={()=>setDetailSection(value)} onFocus={()=>setDetailSection(value)} onClick={()=>setDetailSection(value)}>{tr(key)}</button>)}</nav>
+          <nav className="resource-profile-nav" aria-label={tr('ui.catalogue.detailNavigation')}>{[['overview','ui.resourceDiscovery.overview'],['specs','ui.catalogue.specifications'],['usage','ui.usage_guide_28e5af8d']].map(([value,key]) => <button key={value} type="button" aria-pressed={detailSection===value} onClick={()=>setDetailSection(value)}>{tr(key)}</button>)}</nav>
           <div className="catalog-detail-layout">
             <div className="catalog-media-gallery">
               <div hidden={detailSection!=="overview"}><ResourceGallery key={selected.id} resourceId={selected.id} initialItems={selected.media}/></div>
-              <section className="resource-detail-section" hidden={detailSection!=="specs"}><h4>{tr("ui.recorded_specifications_eeeff271")}</h4><ResourceSpecifications specs={selected.specs} /></section>
+              <section className="resource-detail-section" hidden={detailSection!=="specs"}><h3>{tr("ui.recorded_specifications_eeeff271")}</h3><ResourceSpecifications specs={selected.specs} /></section>
               <div hidden={detailSection!=="usage"}><ResourceUsageGuide guide={selected.specs?.usageGuide}/></div>
             </div>
 
@@ -462,7 +511,7 @@ export function PublicResourceCatalog({
                   <dd>
                     {selected.effectiveRequiresApproval
                       ? tr("ui.staff_approval_required_before_handover_4d6bf5a3")
-                      : tr("ui.automatic_confirmation_under_policy_bfbbda9a")}
+                      : Number(selected.rental?.hourlyRateVnd) > 0 ? tr("ui.confirmed_after_payment_2c477063") : tr("ui.automatic_confirmation_under_policy_bfbbda9a")}
                   </dd>
                 </div>
                 <div>
@@ -526,27 +575,27 @@ export function PublicResourceCatalog({
                 )}
               </div>
 
-              {/* Internal Booking CTA */}
               <button
                 type="button"
                 className="public-primary"
                 onClick={() => onViewSchedule(selected.id)}
                 disabled={detailLoading || Boolean(detailError) || computeEligibility(selected).type === "danger"}
               >
-                <CalendarDays size={18} aria-hidden="true" /> {currentUser ? t("ui.open_calendar_to_book_47ce166f") : tr("ui.sign_in_to_book_with_df7c9bb7")}{" "}
+                <CalendarDays size={18} aria-hidden="true" /> {currentUser ? t("ui.open_calendar_to_book_47ce166f") : tr("ui.catalog.signInToBook")}{" "}
                 <ArrowRight size={17} aria-hidden="true" />
               </button>
 
+
+            </div>
+          </div>
               {/* Guest Quick Booking Section */}
               {onGuestBookingComplete && !detailLoading && !detailError && computeEligibility(selected).type !== "danger" && (
                 <details key={selected.id} className="catalog-guest-booking" onToggle={event => { if (event.currentTarget.open) setGuestBookingOpened(true); }}>
-                  <summary>{t("ui.quick_booking_for_external_visitors_81f66209")}</summary>
+                  <summary>{t("ui.guest.quickBooking")}</summary>
                   <p>{t("ui.verify_your_email_and_access_8a527832")}</p>
                   {guestBookingOpened && <GuestQuickBookingPanel key={selected.id} resource={selected} onComplete={onGuestBookingComplete} />}
                 </details>
               )}
-            </div>
-          </div>
         </section>
       )}
     </div>

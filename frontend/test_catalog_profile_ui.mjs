@@ -22,7 +22,7 @@ try {
     const auth=await fetch(`${api}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:`${role}@lrm.local`,password:process.env.UX_DEMO_PASSWORD})});
     assert.equal(auth.status,200);
     const session=await auth.json();
-    await page.addInitScript(({accessToken,user})=>{localStorage.setItem('lrm_token',accessToken);localStorage.setItem('lrm_user',JSON.stringify(user));},session);
+    await page.addInitScript(({accessToken,user})=>{sessionStorage.setItem('lrm_token',accessToken);sessionStorage.setItem('lrm_user',JSON.stringify(user));},session);
     await page.goto(base);await page.locator('.sidebar-2026').waitFor();
     await selectWorkspaceTab(page,'resources');await page.locator('.resource-card').first().waitFor();
     check(!await page.locator('#catalog-filters').isVisible(),`${role}: filters initially collapsed`);

@@ -3,7 +3,7 @@
   --home-ink: #26243A;
   --home-muted: #625D72;
   --home-line: #E1DAEB;
-  --home-accent: var(--workspace-accent, #6441D9);
+  --home-accent: var(--workspace-accent, #6040ce);
   --home-tint: var(--workspace-accent-tint, #F5F2FF);
   display: grid; gap: 24px; min-width: 0; color: var(--home-ink);
 }
@@ -88,7 +88,7 @@
 .workspace-shell .lab-home .queue-item-title { color: var(--home-ink); font-size: 15px; }
 .workspace-shell .lab-home :is(.queue-item-meta,.queue-item-time) { color: var(--home-muted); font-size: 12px; line-height: 1.7; }
 .workspace-shell .lab-home .queue-item-time { display: flex; flex-wrap: wrap; gap: 6px; }
-.workspace-shell .lab-home .queue-item-code { color: var(--home-accent); font-size: 11px; }
+.workspace-shell .lab-home .queue-item-code { color: var(--home-accent); font-size: 12px; }
 .workspace-shell .lab-home .queue-status-dot { margin-top: 6px; }
 .workspace-shell .lab-home .queue-location { grid-column: 2; }
 .workspace-shell .lab-home .queue-location-badge { white-space: normal; max-width: 100%; color: var(--home-muted); background: #F2EDF7; }
@@ -104,7 +104,7 @@
 .workspace-shell .lab-home .workflow-step-btn.is-active .workflow-step-number { background: var(--home-accent); color: white; }
 .workspace-shell .lab-home .workflow-step-info { flex: 1; min-width: 0; }
 .workspace-shell .lab-home .workflow-step-label { color: inherit; font-size: 13px; white-space: normal; }
-.workspace-shell .lab-home .workflow-step-count { color: var(--home-muted); font-size: 11px; white-space: normal; }
+.workspace-shell .lab-home .workflow-step-count { color: var(--home-muted); font-size: 12px; white-space: normal; }
 .workspace-shell .lab-home .workflow-step-badge { display: none; }
 .workspace-shell .lab-home .home-finder { min-width: 0; padding: 22px; border: 1px solid #DBD0F4; border-radius: 14px; background: var(--home-tint); }
 .workspace-shell .lab-home .home-finder-form { display: grid; grid-template-columns: minmax(0,1fr) minmax(150px,.45fr) auto; gap: 12px; }
@@ -118,10 +118,10 @@
 .workspace-shell .lab-home .home-resource-cover { display: flex; flex-direction: column; align-items: start; justify-content: space-between; gap: 16px; min-height: 124px; padding: 18px; border-radius: 9px 9px 0 0; background: #F0EBFA; color: var(--home-accent); }
 .workspace-shell .lab-home .home-resource-cover span { font: 11px var(--lab-font-mono); overflow-wrap: anywhere; color: var(--home-muted); }
 .workspace-shell .lab-home .home-resource-body { display: flex; flex-direction: column; align-items: start; gap: 8px; flex: 1; padding: 16px; }
-.workspace-shell .lab-home .home-resource-body > small { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--home-muted); }
+.workspace-shell .lab-home .home-resource-body > small { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--home-muted); }
 .workspace-shell .lab-home .home-resource-body h3 { font-size: 15px; overflow-wrap: anywhere; }
 .workspace-shell .lab-home .home-resource-body p { font-size: 12px; line-height: 1.6; color: var(--home-muted); }
-.workspace-shell .lab-home .home-resource-state { font-size: 11px; line-height: 1.5; color: #3C5F4A; background: #EEF5EF; padding: 4px 7px; border-radius: 4px; }
+.workspace-shell .lab-home .home-resource-state { font-size: 12px; line-height: 1.5; color: #3C5F4A; background: #EEF5EF; padding: 4px 7px; border-radius: 4px; }
 .workspace-shell .lab-home .home-resource-body .home-text-button { margin-top: auto; }
 .workspace-shell .lab-home .home-text-button { display: inline-flex; align-items: center; justify-content: start; gap: 8px; min-height: 44px; padding: 8px 0; border: 0; background: transparent; color: var(--home-accent); text-align: left; font-size: 13px; }
 .workspace-shell .lab-home .home-text-button:hover { text-decoration: underline; text-underline-offset: 4px; }
@@ -166,7 +166,7 @@
 .workspace-shell .lab-home :is(.home-error,.home-section-error) { display: flex; align-items: start; flex-wrap: wrap; gap: 16px; padding: 20px; border: 1px solid #E5BEBC; border-radius: 10px; background: #FFF3F1; color: #A43634; }
 .workspace-shell .lab-home .home-error > div { min-width: 0; flex: 1; }
 .workspace-shell .lab-home .home-error p { line-height: 1.7; margin-top: 6px; }
-.workspace-shell .lab-home .home-loading { display: grid; gap: 20px; }
+.workspace-shell .lab-home .home-loading { display: grid; gap: 20px; min-height: 560px; align-content: start; }
 .workspace-shell .lab-home .home-skeleton-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
 .workspace-shell .lab-home .home-skeleton-grid > div { height: 100px; background: #F0EBFA; border-radius: 12px; }
 @media (max-width: 1150px) {

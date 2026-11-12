@@ -1,13 +1,15 @@
-import { MessageCircle, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { RobotMascot } from './RobotMascot';
 import { useLocale } from '../../../providers/LocaleProvider';
 import './assistant-widget.css';
 
-export function AssistantLauncher({ open, onClick }: { open: boolean; onClick: () => void }) {
+export function AssistantLauncher({ open, onClick, inline = false }: { open: boolean; onClick: () => void; inline?: boolean }) {
   const { tr } = useLocale();
-  return <button type="button" className="assistant-launcher" onClick={onClick}
+  return <button type="button" className={`assistant-launcher${inline ? ' is-inline' : ''}`} onClick={onClick}
     aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? 'lab-assistant-panel' : undefined}
     aria-label={tr(open ? 'assistant.minimize' : 'assistant.launcher')}>
-    {open ? <X size={19} aria-hidden="true" /> : <MessageCircle size={19} aria-hidden="true" />}
-    <span>{tr('assistant.title')}</span>
+    <RobotMascot />
+    {inline && <span>{tr(open ? 'assistant.minimize' : 'assistant.launcher')}</span>}
+    {open ? <span className="assistant-launcher-close"><X size={16} aria-hidden="true" /></span> : <span className="assistant-launcher-label">{tr('assistant.mascot.label')}</span>}
   </button>;
 }

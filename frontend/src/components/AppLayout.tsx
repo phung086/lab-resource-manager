@@ -1,41 +1,49 @@
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
-import { Header } from "./Header.tsx";
+import { Header, type HeaderNotice } from "./Header.tsx";
 import { ProjectFooter } from "./features/ProjectFooter";
-import { KeyRound, Check, ShieldAlert } from "lucide-react";
+import { HandoverReminder } from "./features/operations/HandoverReminder";
+import { KeyRound } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.tsx";
 import "../styles/home-structure.css";
-import { validatePassword } from "../utils/profileValidation";
-import { apiRequest } from "../api.js";
+import { PasswordChangeForm } from './features/accounts/PasswordChangeForm';
 import { AI_ASSISTANT_ENABLED } from "../config/featureFlags";
 import { AssistantLauncher } from './features/assistant/AssistantLauncher';
-import { MaintenanceNoticeToast } from './features/monitoring/MaintenanceNoticeToast';
+import type { SearchableResource } from '../utils/resourceSearch';
 const LaboratoryAssistant = React.lazy(() => import("./features/assistant/LaboratoryAssistant"));
+const DESKTOP_NAVIGATION = "(min-width: 1100px)";
+const NAVIGATION_PREFERENCE = "lrm.navigation.expanded";
 
 export interface AppLayoutProps {
   activeTab: string;
-  onSelectTab: (tabId: string) => void;
+  onSelectTab: (tabId: string, params?: Record<string, string>) => void;
   user: {
+    id?: string;
     fullName: string;
     role: string;
     email?: string;
     quotaUsed?: number;
     quotaTotal?: number;
     passwordResetRequired?: boolean;
+    passwordLoginEnabled?: boolean;
   } | null;
   locale: string;
   onLocaleChange: (locale: string) => void;
-  notifications?: Array<{ id: string | number; readAt?: string | null }>;
+  notifications?: HeaderNotice[];
+  notificationUnreadCount?: number | null;
   incidents?: Array<{ id: string | number; status?: string }>;
   incidentOpenCount?: number;
   conflictsCount?: number;
   loading?: boolean;
+  searchResources?: readonly SearchableResource[];
+  searchResourcesReady?: boolean;
   onRefresh?: () => void;
+  selectionControl?: React.ReactNode;
   onLogout?: () => void;
   onPasswordChanged?: () => void;
-  onAssistantPrefill?: (slot: { resourceId: string; startAt: string; endAt: string }) => void;
+  onAssistantPrefill?: (slot: { resourceId: string; startAt: string; endAt: string; title?: string; purpose?: string; purposeCode?: string }) => void;
   children: React.ReactNode;
 }
 
@@ -46,42 +54,49 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   locale,
   onLocaleChange,
   notifications = [],
+  notificationUnreadCount,
   incidents = [],
   incidentOpenCount,
   conflictsCount = 0,
   loading = false,
+  searchResources,
+  searchResourcesReady,
   onRefresh,
+  selectionControl,
   onLogout,
   onPasswordChanged,
   onAssistantPrefill,
   children
 }) => {
   const { tr } = useLocale();
-  const [navigationPinned, setNavigationPinned] = useState(() => {
-    try { return localStorage.getItem('lrm.navigation.pinned') === 'true' && window.innerWidth >= 1100; } catch { return false; }
+  const [desktopNavigation, setDesktopNavigation] = useState(() => window.matchMedia(DESKTOP_NAVIGATION).matches);
+  const [navigationExpanded, setNavigationExpanded] = useState(() => {
+    try {
+      const saved = localStorage.getItem(NAVIGATION_PREFERENCE) ?? localStorage.getItem("lrm.navigation.pinned");
+      return saved !== "false";
+    } catch { return true; }
   });
-  function pinNavigation(pinned: boolean) {
-    setNavigationPinned(pinned);
-    try { localStorage.setItem('lrm.navigation.pinned', String(pinned)); } catch { /* Storage can be unavailable. */ }
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const mobileMenuOpen = !desktopNavigation && navigationOpen;
+
+  function changeNavigationExpanded(expanded: boolean) {
+    setNavigationExpanded(expanded);
+    try { localStorage.setItem(NAVIGATION_PREFERENCE, String(expanded)); } catch { /* Storage can be unavailable. */ }
   }
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 1100px)');
-    const resize = () => { if (!media.matches) setNavigationPinned(false); };
+    const media = window.matchMedia(DESKTOP_NAVIGATION);
+    const resize = () => {
+      setDesktopNavigation(media.matches);
+      setNavigationOpen(false);
+    };
     media.addEventListener('change', resize);
     return () => media.removeEventListener('change', resize);
   }, []);
-  const [navigationOpen, setNavigationOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantMounted, setAssistantMounted] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [passwordError, setPasswordError] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
-  const passwordBusyRef = useRef(false);
-  const [passwordFields, setPasswordFields] = useState<Record<string,string>>({});
 
   useEffect(() => {
     setNavigationOpen(false);
@@ -99,12 +114,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     return () => window.removeEventListener("lrm:open-password-setup", handleOpen);
   }, []);
 
-  function handleSelectTab(tab: string) {
+  function handleSelectTab(tab: string, params?: Record<string, string>) {
     if (user?.passwordResetRequired && !passwordSuccess) {
       setChangePasswordOpen(true);
       return;
     }
-    onSelectTab(tab);
+    onSelectTab(tab, params);
   }
 
   function openAssistant() {
@@ -113,8 +128,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     setAssistantOpen(true);
   }
 
-  function navigateFromShell(tab: string) {
-    handleSelectTab(tab);
+  useEffect(() => {
+    const open = () => {
+      if (!AI_ASSISTANT_ENABLED) return;
+      if (user?.passwordResetRequired && !passwordSuccess) { setChangePasswordOpen(true); return; }
+      setNavigationOpen(false); setAssistantMounted(true); setAssistantOpen(true);
+    };
+    window.addEventListener('lrm:open-assistant', open);
+    return () => window.removeEventListener('lrm:open-assistant', open);
+  }, [user?.passwordResetRequired, passwordSuccess]);
+
+  function navigateFromShell(tab: string, params?: Record<string, string>) {
+    handleSelectTab(tab, params);
     if (!user?.passwordResetRequired || passwordSuccess) {
       window.scrollTo(0, 0);
       document.getElementById('workspace-main')?.focus({ preventScroll: true });
@@ -125,15 +150,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     if (passwordBusy) return;
     if (user?.passwordResetRequired && !passwordSuccess) return;
     setChangePasswordOpen(false);
-    setPasswordFields({});
-    setPasswordError("");
     setPasswordSuccess(false);
   }
 
   // Map activeTab to readable header title
   const tabTitles: Record<string, string> = {
     stock: translate("ui.materials_inventory_2b570ac6"),
-    home: tr("ui.workspace_970a97e3"),
+    home: tr(`ui.home.${user?.role === "LAB_STAFF" ? "staff" : user?.role === "ADMIN" ? "admin" : "customer"}.title`),
     profile: translate("ui.profile_and_lab_preferences_ab1e68a1"),
     payments: translate("ui.payments_d4b946cc"),
     smart_calendar: tr("ui.room_and_equipment_calendar_cce9c071"),
@@ -159,44 +182,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     ga_solver: translate("ui.scheduling_algorithm_4c48c66a"),
     ai_rca: translate("ui.incident_root_cause_analysis_83e98bb2"),
     assistant: translate("ui.lab_operations_assistant_9d99d2ba"),
+    support: tr("support.title"),
+    chatgpt_bridge: tr("bridge.title"),
     incidents: tr("ui.resource_incidents_0cba217b"),
     training: translate("ui.lab_training_and_safety_26f5f367"),
-    logs: translate("ui.audit_logs_da29e2f6"),
-    users: translate("ui.user_administration_4150792e")
+    logs: tr("ui.audit_logs_883aea8a"),
+    users: tr(user?.role === "ADMIN" ? "ui.user_administration_4150792e" : "account.users.customers")
   };
 
   const currentTitle = tr(tabTitles[activeTab]) || tr("core.app.name");
-  const unreadCount = notifications.filter((n) => !n.readAt).length;
-
-  async function handlePasswordSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (passwordBusyRef.current) return;
-    setPasswordError('');
-    const checked=validatePassword({currentPassword,newPassword,confirmPassword});
-    setPasswordFields(checked.errors);
-    if (!checked.data) { const ids:Record<string,string>={currentPassword:'current-password',newPassword:'new-password',confirmPassword:'confirm-password'}; document.getElementById(ids[Object.keys(checked.errors)[0]])?.focus(); return; }
-    passwordBusyRef.current=true;
-    setPasswordBusy(true);
-    try {
-      await apiRequest("/auth/change-password", {
-        method: "POST",
-        body: JSON.stringify(checked.data)
-      });
-      setPasswordSuccess(true);
-      onPasswordChanged?.();
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error: any) {
-      setPasswordError(error?.message || "ui.could_not_change_your_password_6c44efd3");
-    } finally {
-      passwordBusyRef.current=false;
-      setPasswordBusy(false);
-    }
-  }
+  const unreadCount = notificationUnreadCount === null ? null : notificationUnreadCount ?? notifications.filter((n) => !n.readAt).length;
 
   return (
-    <div className="app-shell-2026 workspace-shell">
+    <div className="app-shell-2026 workspace-shell lab-spectrum lab-studio" data-workspace-role={user?.role} data-workspace-view={activeTab}>
       <a className="skip-link" href="#workspace-main">{translate("ui.skip_to_main_content_a75d7c33")}</a>
       {/* Primary navigation */}
       <Sidebar
@@ -204,44 +202,54 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         onSelectTab={handleSelectTab}
         user={user}
         notifications={notifications}
+        notificationUnreadCount={unreadCount}
         incidents={incidents}
         incidentOpenCount={incidentOpenCount}
         conflictsCount={conflictsCount}
         locale={locale}
-        pinned={navigationPinned}
-        onPinnedChange={pinNavigation}
-        expanded={navigationOpen}
-        onExpandedChange={setNavigationOpen}
+        desktop={desktopNavigation}
+        desktopExpanded={navigationExpanded}
+        onDesktopExpandedChange={changeNavigationExpanded}
+        mobileOpen={mobileMenuOpen}
+        onMobileOpenChange={setNavigationOpen}
       />
 
       {/* 2. Main Work Area with Header */}
-      <div className="main-content-column-2026" inert={navigationOpen}>
+      <div className="main-content-column-2026" inert={mobileMenuOpen}>
         <Header
+          showSearch={activeTab !== 'smart_calendar' && activeTab !== 'resources'}
+          searchResources={searchResources}
+          searchResourcesReady={searchResourcesReady}
           title={currentTitle}
           user={user}
           locale={locale}
           onLocaleChange={onLocaleChange}
           notificationsCount={unreadCount}
+          notifications={notifications}
           loading={loading}
           onRefresh={onRefresh}
-          onOpenNotifications={() => handleSelectTab("escalations")}
+          selectionControl={selectionControl}
+          onOpenNotifications={id => navigateFromShell('escalations', id ? { notification: id } : undefined)}
           onOpenChangePassword={() => setChangePasswordOpen(true)}
           onOpenProfile={() => handleSelectTab("profile")}
           onOpenHome={() => navigateFromShell("home")}
+          onNavigate={navigateFromShell}
           onLogout={onLogout}
-          onOpenAssistant={AI_ASSISTANT_ENABLED ? openAssistant : undefined}
-          assistantControl={AI_ASSISTANT_ENABLED && !changePasswordOpen ? <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} /> : undefined}
         />
+
+        {user?.role === 'CUSTOMER' && !user.passwordResetRequired && !changePasswordOpen && <HandoverReminder
+          key={user.id} onOpen={id => navigateFromShell('bookings', { booking: id })} />}
 
         <main id="workspace-main" tabIndex={-1} className="main-body-container-2026">
           {children}
-          <MaintenanceNoticeToast role={user?.role || ''}/>
         </main>
         <ProjectFooter variant="workspace" role={user?.role} onNavigate={navigateFromShell} />
       </div>
 
+      {AI_ASSISTANT_ENABLED && !mobileMenuOpen && !changePasswordOpen && <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} />}
+
       {AI_ASSISTANT_ENABLED && assistantMounted && <React.Suspense fallback={assistantOpen ? <p className="assistant-loading" role="status">{translate("ui.opening_assistant_9a8f8008")}</p> : null}>
-        <LaboratoryAssistant isOpen={assistantOpen && !navigationOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />
+        <LaboratoryAssistant actorRole={user?.role} isOpen={assistantOpen && !mobileMenuOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />
       </React.Suspense>}
 
       <BaseModal2026
@@ -254,79 +262,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         maxWidth="max-w-md"
         footer={<>
           {(!user?.passwordResetRequired || passwordSuccess) && <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>{tr("ui.close_5d54c2a1")}</button>}
-          {!passwordSuccess && <button type="submit" form="change-password-form" className="btn btn-primary" disabled={passwordBusy}>{passwordBusy ? tr("ui.updating_01c0991e") : tr("ui.update_password_a9f9616f")}</button>}
         </>}
       >
-            <form id="change-password-form" onSubmit={handlePasswordSubmit} className="booking-form password-setup-form" noValidate>
-              {Object.keys(passwordFields).length>0 && <div className="alert danger" role="alert"><ul>{Object.entries(passwordFields).map(([field,message])=><li key={field}>{tr(message)}</li>)}</ul></div>}
-              {passwordError && (
-                <div className="alert danger text-xs flex items-center gap-2" role="alert">
-                  <ShieldAlert size={14} aria-hidden="true" />
-                  <span>{translate(passwordError)}</span>
-                </div>
-              )}
-              {passwordSuccess && (
-                <div className="alert success text-xs flex items-center gap-2" role="status">
-                  <Check size={14} aria-hidden="true" />
-                  <span>{tr("ui.your_password_has_been_updated_90d53208")}</span>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="current-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.current_password_7f06b3a5")}</label>
-                <input
-                  id="current-password"
-                  maxLength={128}
-                  disabled={passwordBusy || passwordSuccess}
-                  aria-invalid={!!passwordFields.currentPassword}
-                  aria-describedby={passwordFields.currentPassword?'current-password-error':undefined}
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-
-                  autoComplete="current-password"
-                  required
-                />
-                {passwordFields.currentPassword && <small className="password-field-error" id="current-password-error">{tr(passwordFields.currentPassword)}</small>}
-              </div>
-
-              <div>
-                <label htmlFor="new-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.new_password_8f6cace3")}</label>
-                <input
-                  id="new-password"
-                  maxLength={128}
-                  disabled={passwordBusy || passwordSuccess}
-                  aria-invalid={!!passwordFields.newPassword}
-                  aria-describedby={passwordFields.newPassword?'new-password-error':undefined}
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-
-                  autoComplete="new-password"
-                  required
-                />
-                {passwordFields.newPassword && <small className="password-field-error" id="new-password-error">{tr(passwordFields.newPassword)}</small>}
-              </div>
-
-              <div>
-                <label htmlFor="confirm-password" className="text-xs text-slate-400 mb-1 block">{tr("ui.confirm_new_password_7a0fe0f4")}</label>
-                <input
-                  id="confirm-password"
-                  maxLength={128}
-                  disabled={passwordBusy || passwordSuccess}
-                  aria-invalid={!!passwordFields.confirmPassword}
-                  aria-describedby={passwordFields.confirmPassword?'confirm-password-error':undefined}
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-
-                  autoComplete="new-password"
-                  required
-                />
-                {passwordFields.confirmPassword && <small className="password-field-error" id="confirm-password-error">{tr(passwordFields.confirmPassword)}</small>}
-              </div>
-
-            </form>
+        <PasswordChangeForm email={user?.email} passwordLoginEnabled={user?.passwordLoginEnabled} onBusyChange={setPasswordBusy} onSuccess={() => { setPasswordSuccess(true); onPasswordChanged?.(); }} />
       </BaseModal2026>
     </div>
   );

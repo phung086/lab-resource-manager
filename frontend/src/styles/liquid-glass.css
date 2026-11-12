@@ -1,0 +1,228 @@
+/* ═══════════════════════════════════════════════════════════════════
+   LIQUID GLASS LANDING — 28/10/2026 (user direction)
+   Full-bleed hero banner under a liquid glass panel, process marquee,
+   aurora-washed sections with translucent cards. Overrides the earlier
+   split-grid hero in global.css (imported after it in main.jsx).
+   Ink text keeps AA on every glass surface (≥.66 white backing).
+   ═══════════════════════════════════════════════════════════════════ */
+.landing-hero {
+  position: relative;
+  display: block;
+  min-height: clamp(600px, 94vh, 860px);
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--lab-paper);
+  border-radius: 0 0 34px 34px;
+}
+.landing-hero-media { position: absolute; inset: 0; z-index: 0; }
+.landing-hero-media .landing-hero-image {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+  border-radius: 0; box-shadow: none;
+  transform: scale(1.02);
+  animation: landing-hero-zoom 18s var(--lab-ease-out, ease-out) forwards;
+}
+@keyframes landing-hero-zoom { from { transform: scale(1.08); } to { transform: scale(1.02); } }
+.landing-hero-veil {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 55% at 82% 12%, rgba(110, 231, 210, 0.28) 0%, transparent 62%),
+    radial-gradient(ellipse 55% 60% at 12% 88%, rgba(196, 148, 244, 0.30) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 45% at 92% 85%, rgba(255, 179, 143, 0.24) 0%, transparent 58%),
+    linear-gradient(105deg, rgba(255, 250, 242, 0.88) 0%, rgba(255, 250, 242, 0.55) 38%, rgba(240, 238, 255, 0.18) 72%, rgba(42, 26, 94, 0.30) 100%);
+}
+.landing-hero::before, .landing-hero::after { content: none; }
+.landing-hero-content {
+  position: relative; z-index: 2;
+  display: block;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: clamp(96px, 16vh, 150px) clamp(20px, 4vw, 64px) clamp(150px, 20vh, 200px);
+  animation: slideUp var(--lab-public-entrance) var(--lab-ease-out);
+}
+.landing-hero-glass {
+  max-width: 660px;
+  padding: clamp(28px, 3.4vw, 46px) clamp(26px, 3vw, 44px);
+  border-radius: 28px;
+  background: linear-gradient(150deg, rgba(255, 252, 247, 0.78) 0%, rgba(250, 246, 255, 0.62) 55%, rgba(238, 252, 246, 0.55) 100%);
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(42, 26, 94, 0.06),
+    0 30px 70px -28px rgba(42, 26, 94, 0.45);
+}
+.landing-hero-title { font-size: clamp(2.4rem, 4.6vw, 3.9rem); margin: 0 0 20px; }
+.landing-hero-title-accent {
+  background: linear-gradient(120deg, #6040ce 10%, #8b5cf6 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.landing-hero-subtitle { font-size: clamp(15px, 1.4vw, 18px); max-width: 50ch; margin-bottom: 26px; }
+.landing-hero-actions { margin-top: 0; gap: 14px; }
+.project-public-shell .landing-hero-cta-primary,
+.project-public-shell .landing-hero-cta-secondary { box-shadow: 0 14px 30px -14px rgba(42, 26, 94, 0.55); border: 0; }
+.project-public-shell .landing-hero-cta-primary:hover,
+.project-public-shell .landing-hero-cta-secondary:hover { transform: translateY(-2px); }
+.landing-hero-cta-secondary { border: 1px solid rgba(255, 255, 255, 0.8) !important; box-shadow: 0 14px 30px -16px rgba(42, 26, 94, 0.4) !important; background: rgba(255, 255, 255, 0.66) !important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+.landing-hero-floating-card {
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background: linear-gradient(150deg, rgba(255, 253, 249, 0.72), rgba(244, 250, 255, 0.55));
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 22px 44px -20px rgba(42, 26, 94, 0.5);
+  border-radius: 18px;
+  z-index: 3;
+}
+.landing-hero-floating-card-1 { left: clamp(16px, 4vw, 64px); bottom: 132px; }
+.landing-hero-floating-card-2 { right: clamp(16px, 4vw, 64px); top: 110px; }
+
+/* Running process strip */
+.landing-hero-marquee {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+  padding: 14px 0;
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.55), rgba(255, 253, 248, 0.78));
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 -18px 40px -30px rgba(42, 26, 94, 0.5);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%);
+}
+.landing-hero-marquee-track { display: flex; width: max-content; animation: landing-marquee-slide 44s linear infinite; }
+.landing-hero-marquee-group { display: flex; gap: 12px; padding: 0 6px; margin: 0; list-style: none; }
+.landing-hero-marquee-chip {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 9px 16px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 6px 16px -10px rgba(42, 26, 94, 0.35);
+  color: var(--lab-ink); font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.landing-hero-marquee-chip svg { color: #6040ce; flex-shrink: 0; }
+@keyframes landing-marquee-slide { to { transform: translateX(-50%); } }
+.landing-hero-marquee:hover .landing-hero-marquee-track { animation-play-state: paused; }
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .landing-hero-glass, .landing-hero-floating-card { background: rgba(255, 252, 247, 0.94); }
+  .landing-hero-marquee { background: rgba(255, 252, 247, 0.95); }
+}
+
+/* Aurora-washed sections with glass cards */
+.landing-benefits, .landing-workflow, .landing-roles, .landing-schedule {
+  position: relative;
+  background:
+    radial-gradient(ellipse 46% 40% at 88% 8%, rgba(110, 231, 210, 0.20) 0%, transparent 60%),
+    radial-gradient(ellipse 42% 38% at 6% 82%, rgba(196, 148, 244, 0.22) 0%, transparent 58%),
+    var(--lab-paper);
+}
+.landing-features {
+  position: relative;
+  background:
+    radial-gradient(ellipse 44% 42% at 8% 12%, rgba(196, 148, 244, 0.20) 0%, transparent 58%),
+    radial-gradient(ellipse 46% 40% at 92% 86%, rgba(255, 179, 143, 0.20) 0%, transparent 58%),
+    var(--lab-paper);
+}
+.landing-feature-card, .landing-workflow-step, .landing-role-card, .landing-schedule-card {
+  border-radius: 24px;
+  background: linear-gradient(155deg, #fffdf9 0%, #f8f6ff 100%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 24px 48px -28px rgba(42, 26, 94, 0.38);
+}
+.project-public-shell .landing-feature-card,
+.project-public-shell .landing-workflow-step,
+.project-public-shell .landing-role-card { transition: transform .2s ease-out, box-shadow .2s ease-out; }
+@media (hover: hover) {
+  .landing-feature-card:hover, .landing-workflow-step:hover, .landing-role-card:hover {
+    transform: translateY(-4px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 32px 56px -26px rgba(42, 26, 94, 0.5);
+  }
+}
+.landing-workflow-step { padding: 26px 28px; }
+.landing-workflow-number {
+  font-family: var(--font-mono); font-size: 15px; font-weight: 600;
+  width: 52px; height: 52px; display: grid; place-items: center;
+  border-radius: 16px; color: #fff; margin-bottom: 18px;
+  background: linear-gradient(135deg, #6040ce, #8b5cf6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 10px 22px -10px rgba(96, 64, 206, 0.7);
+}
+.landing-cta { position: relative; }
+.landing-cta .landing-cta-inner {
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    radial-gradient(ellipse 60% 90% at 85% 15%, rgba(110, 231, 210, 0.20) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 85% at 12% 85%, rgba(196, 148, 244, 0.32) 0%, transparent 55%),
+    linear-gradient(135deg, #42289b 0%, #2a1a5e 100%);
+  box-shadow: 0 34px 70px -30px rgba(42, 26, 94, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  overflow: hidden; position: relative;
+}
+.project-public-shell .landing-cta .landing-cta-inner .landing-cta-title { color: #fff; }
+.project-public-shell .landing-cta .landing-cta-inner .landing-cta-desc { color: #f1ecff; }
+/* Aurora orb drifting behind the copy — depth without new DOM. */
+.landing-cta .landing-cta-inner::before {
+  content: ''; position: absolute; width: 340px; height: 340px; right: -120px; top: -150px;
+  border: 0; border-radius: 50%;
+  background: radial-gradient(circle, rgba(122, 231, 208, 0.28) 0%, rgba(122, 231, 208, 0.10) 45%, transparent 70%);
+  filter: none;
+  /* Static light field: the CTA does not need a continuous compositor layer. */
+  pointer-events: none; z-index: -1;
+}
+.landing-cta .landing-cta-inner::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 40% 30% at 50% -10%, rgba(255, 255, 255, 0.24), transparent 70%);
+}
+/* Inverted buttons pop on the dark glass; old violet-on-violet pair is unreadable here. */
+.project-public-shell .landing-cta .landing-cta-btn-white {
+  background: #fff; color: #3a2587; border: 0;
+  box-shadow: 0 14px 30px -12px rgba(8, 4, 28, 0.65), inset 0 -2px 0 rgba(42, 26, 94, 0.14);
+}
+.project-public-shell .landing-cta .landing-cta-btn-white:hover {
+  background: #f1ebff; transform: translateY(-2px);
+  box-shadow: 0 18px 36px -12px rgba(8, 4, 28, 0.7), inset 0 -2px 0 rgba(42, 26, 94, 0.14);
+}
+.project-public-shell .landing-cta .landing-cta-btn-white:active {
+  transform: translateY(1px); box-shadow: 0 8px 20px -10px rgba(8, 4, 28, 0.65);
+}
+.project-public-shell .landing-cta .landing-cta-btn-outline {
+  background: rgba(255, 255, 255, 0.1); color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+@supports not ((backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px))) {
+  .project-public-shell .landing-cta .landing-cta-btn-outline { background: rgba(46, 30, 104, 0.55); }
+}
+.project-public-shell .landing-cta .landing-cta-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.2); border-color: #fff; transform: translateY(-2px);
+}
+.project-public-shell .landing-cta a:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+@media (max-width: 900px) {
+  .landing-hero { min-height: 0; border-radius: 0 0 24px 24px; }
+  .landing-hero-content { padding: 84px 18px 170px; }
+  .landing-hero-glass { padding: 24px 22px; border-radius: 22px; }
+  .landing-hero-floating-card-1 { bottom: 118px; }
+  .landing-hero-floating-card-2 { display: none; }
+  .landing-hero-marquee-chip { font-size: 12px; padding: 8px 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-media .landing-hero-image { animation: none; }
+  .landing-hero-marquee-track { animation: none; flex-wrap: wrap; width: 100%; }
+  .landing-hero-marquee { position: static; mask-image: none; -webkit-mask-image: none; padding: 16px clamp(16px, 4vw, 64px); }
+  .landing-hero-marquee-group[aria-hidden="true"] { display: none; }
+  .landing-hero-content { animation: none; }
+  .landing-cta .landing-cta-inner::before { animation: none; transform: none; opacity: 0.8; }
+}
+
+/* Keep the selected glass hero; touch screens use a smaller blur budget. */
+@media(max-width:900px) {
+  .landing-hero-glass { backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); background:#fffaf4df; }
+  .landing-hero-floating-card,.landing-hero-marquee { backdrop-filter:none; -webkit-backdrop-filter:none; background:#f7f3fff2; }
+  .landing-hero-cta-secondary,.project-public-shell .landing-cta .landing-cta-btn-outline { backdrop-filter:none; -webkit-backdrop-filter:none; }
+}

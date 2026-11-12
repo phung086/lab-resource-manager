@@ -1,13 +1,20 @@
-import { navigateApp, readRouteParams, workspacePathForTab } from '../../../workspaceRoutes.js';
+import { PageHeading } from '../../base/PageHeading';
+import { CustomerBookingCard } from "./CustomerBookingCard";
+import "../../../styles/my-schedule.css";
+import { BookingWaitlist } from '../planning/BookingWaitlist';
+import { BookingStatusLegend } from '../../BookingStatusLegend';
+import { navigateApp, readRouteParams, resourceSelectionPath, workspacePathForTab } from '../../../workspaceRoutes.js';
 import { apiRequest } from "../../../api.js";
 import type { LocaleMessage } from "../../../providers/LocaleProvider";
 import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
-import { AlertCircle, ClipboardList, History, RefreshCw, X, Clock, FileText } from "lucide-react";
+import { AlertCircle, ClipboardList, History, RefreshCw, X, Clock, CalendarPlus, RotateCcw } from "lucide-react";
 import { BookingActionModal } from "../../BookingActionModal.js";
 import { BaseModal2026 } from "../../BaseModal2026.js";
 import { BookingOperationCard } from "./BookingOperationCard.js";
+import { BookingAccessPanel } from './BookingAccessPanel';
+import { BookingPaymentSummary } from '../payments/BookingPaymentSummary';
 import { BookingWorkflowTimeline } from "./BookingWorkflowTimeline.js";
 import {
   cancelOwnBooking,
@@ -28,6 +35,8 @@ import type { BookingQueueSummary } from "../../../types/queue";
 import { formatVietnamDateTime } from "../../../utils/timezone.js";
 import { BookingStatusBadge } from "../../BookingStatusBadge.js";
 import { BookingRescheduleModal } from "./BookingRescheduleModal";
+import { PaymentHoldNotice } from '../payments/PaymentHoldNotice';
+import '../../../styles/booking-records.css';
 
 export interface BookingOperationsViewProps {
   user: { id: string; role: string; fullName: string };
@@ -35,9 +44,11 @@ export interface BookingOperationsViewProps {
   onPayment?: (booking: BookingRecord) => void;
 }
 
-type FilterKey = "ALL" | "PENDING_APPROVAL" | "CONFIRMED" | "CHECKED_OUT" | "RETURNED" | "HISTORY";
+type FilterKey = 'ALL' | 'ACTION_REQUIRED' | 'PENDING_PAYMENT' | 'PENDING_APPROVAL' | 'CONFIRMED' | 'CHECKED_OUT' | 'RETURNED' | 'HISTORY';
 const FILTER_LABELS: Record<FilterKey, string> = {
   ALL: "ui.all_49c73a31",
+  ACTION_REQUIRED: "ui.customerBooking.actionRequired",
+  PENDING_PAYMENT: 'ui.paymentHold.pending',
   PENDING_APPROVAL: "ui.pending_approval_6af96613",
   CONFIRMED: "ui.awaiting_handover_de28611f",
   CHECKED_OUT: "ui.in_use_a07a3647",
@@ -48,7 +59,8 @@ const routeParams = () => readRouteParams();
 
 function initialFilter(isStaff: boolean): FilterKey {
   const value = routeParams().get("filter");
-  return Object.hasOwn(FILTER_LABELS, value || "") ? value as FilterKey : isStaff ? "CONFIRMED" : "ALL";
+  if (value && Object.hasOwn(FILTER_LABELS, value) && !(isStaff && value === 'ACTION_REQUIRED')) return value as FilterKey;
+  return isStaff ? "CONFIRMED" : "ACTION_REQUIRED";
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -71,7 +83,8 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   const [selectedError, setSelectedError] = useState("");
   const [selectionRevision, setSelectionRevision] = useState(0);
   const dossierRef = useRef<HTMLDivElement>(null);
-  const focusDetail = useRef(false);
+  const quietDetail = useRef(false);
+  const focusDetail = useRef(Boolean(routeParams().get('booking')));
   const [routeAction, setRouteAction] = useState(() => routeParams().get("action") || "");
   const [error, setError] = useState("");
   const [actionLinkError, setActionLinkError] = useState("");
@@ -81,12 +94,30 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   const [historyState, setHistoryState] = useState<BookingHistoryResponse | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [cancelState, setCancelState] = useState<BookingRecord | null>(null);
+  const [queuePageSize, setQueuePageSize] = useState(20);
 
-  const queue = useQueuePage<BookingRecord, BookingQueueSummary>("/bookings", filter, `${user.id}:${user.role}`, 20);
-  const { items: bookings, loading } = queue;
+  const queue = useQueuePage<BookingRecord, BookingQueueSummary>("/bookings", filter, `${user.id}:${user.role}`, queuePageSize);
+  const { items: bookings, loading, refreshQuietly } = queue;
   const loadError = queue.error;
 
   const loadBookings = () => { setError(""); queue.refresh(); setSelectionRevision(value => value + 1); };
+  useEffect(() => {
+    if (isStaff) return;
+    const refreshCustomerBookings = () => {
+      if (document.visibilityState !== 'visible') return;
+      refreshQuietly();
+      if (selectedBookingId) {
+        quietDetail.current = true;
+        setSelectionRevision(value => value + 1);
+      }
+    };
+    const timer = window.setInterval(refreshCustomerBookings, 30_000);
+    document.addEventListener('visibilitychange', refreshCustomerBookings);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshCustomerBookings);
+    };
+  }, [isStaff, refreshQuietly, selectedBookingId]);
 
   useEffect(() => { setFilter(initialFilter(isStaff)); }, [isStaff]);
 
@@ -107,7 +138,8 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   useEffect(() => {
     if (!selectedBookingId) { setSelectedRecord(null); setSelectedError(""); setSelectedLoading(false); return; }
     const controller = new AbortController();
-    setSelectedLoading(true);
+    if (!quietDetail.current) setSelectedLoading(true);
+    quietDetail.current = false;
     setSelectedError("");
     void apiRequest(`/bookings/${encodeURIComponent(selectedBookingId)}`, { signal: controller.signal })
       .then((record: BookingRecord) => { if (!controller.signal.aborted) setSelectedRecord(record); })
@@ -122,7 +154,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     if (focusDetail.current && selectedRecord?.id === selectedBookingId && !selectedLoading) {
       focusDetail.current = false;
       dossierRef.current?.focus({ preventScroll: true });
-      if (window.matchMedia("(max-width: 1000px)").matches) dossierRef.current?.scrollIntoView({ block: "start" });
+      if (window.matchMedia("(max-width: 1099px)").matches) dossierRef.current?.scrollIntoView({ block: "start" });
     }
   }, [selectedRecord, selectedBookingId, selectedLoading]);
 
@@ -181,6 +213,9 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
 
   const counts = queue.data ? {
     ...queue.data.summary.byStatus,
+    ACTION_REQUIRED: queue.data.summary.actionRequired || 0,
+    PENDING_PAYMENT: queue.data.summary.pendingPayment || 0,
+    PENDING_APPROVAL: (queue.data.summary.byStatus.PENDING_APPROVAL || 0) - (queue.data.summary.pendingPayment || 0),
     ALL: queue.data.summary.total,
     HISTORY: queue.data.summary.history
   } : null;
@@ -251,21 +286,38 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
 
   const filters: FilterKey[] = isStaff
     ? ["CONFIRMED", "CHECKED_OUT", "RETURNED", "HISTORY", "ALL"]
-    : ["ALL", "CONFIRMED", "CHECKED_OUT", "RETURNED", "HISTORY"];
+    : ["ACTION_REQUIRED", "ALL", "CONFIRMED", "CHECKED_OUT", "RETURNED", "HISTORY"];
   // Existing pending records remain accessible without presenting approval as the new workflow.
-  if (filter === "PENDING_APPROVAL" || (queue.data?.summary.byStatus.PENDING_APPROVAL || 0) > 0) filters.push("PENDING_APPROVAL");
+  if (filter === 'PENDING_PAYMENT' || (counts?.PENDING_PAYMENT || 0) > 0) filters.push('PENDING_PAYMENT');
+  if (filter === 'PENDING_APPROVAL' || (counts?.PENDING_APPROVAL || 0) > 0) filters.push('PENDING_APPROVAL');
+  const primaryFilters: FilterKey[] = ['ACTION_REQUIRED', 'ALL', 'HISTORY'];
+  const statusFilters = filters.filter(key => !primaryFilters.includes(key));
+  const refreshControl = <button type="button" className="operations-refresh-btn" onClick={loadBookings} disabled={loading}>
+    <RefreshCw size={15} className={loading ? "animate-spin" : ""} aria-hidden="true" />{tr("ui.refresh_b4c61340")}
+  </button>;
+  const filterButtons = (keys: FilterKey[]) => <nav className="operations-filter-row" aria-label={tr("ui.booking_workflow_filters_65688e95")}>
+    {keys.map(key => (
+      <button key={key} type="button" className={`operations-filter-btn${filter === key ? " is-active" : ""}`}
+        aria-pressed={filter === key} onClick={() => selectFilter(key)}>
+        <span>{tr(FILTER_LABELS[key])}</span><strong>{counts ? counts[key] || 0 : "—"}</strong>
+      </button>
+    ))}
+  </nav>;
 
   return (
-    <div className="operations-view" data-testid="operations-view">
-      <header className="operations-header">
+    <div className={`operations-view booking-records-view${!isStaff ? " my-schedule" : ""}${selectedBookingId ? " has-selection" : ""}`} data-testid="operations-view">
+      {isStaff && <BookingWaitlist/>}
+      <PageHeading className="operations-header">
         <div className="operations-header-group">
           <h1>{isStaff ? tr("ui.bookings_and_handover_3e0e5754") : tr("ui.my_bookings_094ca2d9")}</h1>
+          {!isStaff && <p>{tr("ui.mySchedule.intro")}</p>}
         </div>
-        <button type="button" className="operations-refresh-btn" onClick={loadBookings} disabled={loading}>
-          <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-          {tr("ui.refresh_b4c61340")}
-        </button>
-      </header>
+        {isStaff ? refreshControl : <div className="customer-booking-header-actions">
+          <button type="button" className="btn btn-primary schedule-new" onClick={() => navigateApp(workspacePathForTab("smart_calendar"))}><CalendarPlus size={18} aria-hidden="true" />{tr("ui.mySchedule.new")}</button>
+          {refreshControl}
+        </div>}
+      </PageHeading>
+      {isStaff && <BookingStatusLegend />}
 
       {(error || loadError) && (
         <div className="operations-alert danger" role="alert">
@@ -285,26 +337,21 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
         </div>
       )}
 
-      <nav className="operations-filter-row" aria-label={tr("ui.booking_workflow_filters_65688e95")}>
-        {filters.map((key) => (
-          <button
-            key={key}
-            type="button"
-            className={`operations-filter-btn${filter === key ? " is-active" : ""}`}
-            aria-pressed={filter === key}
-            onClick={() => selectFilter(key)}
-          >
-            <span>{tr(FILTER_LABELS[key])}</span>
-            <strong>{counts ? counts[key] || 0 : "—"}</strong>
-          </button>
-        ))}
-      </nav>
+      {isStaff ? filterButtons(filters) : <div className="customer-booking-filters">
+        {filterButtons(primaryFilters)}
+        <label>{tr('ui.customerBooking.statusFilter')}
+          <select value={statusFilters.includes(filter) ? filter : ''} onChange={event => selectFilter(event.target.value as FilterKey || 'ALL')}>
+            <option value="">{tr(FILTER_LABELS.ALL)}</option>
+            {statusFilters.map(key => <option value={key} key={key}>{tr(FILTER_LABELS[key])}{counts ? ` (${counts[key] || 0})` : ''}</option>)}
+          </select>
+        </label>
+      </div>}
 
       <div className="operations-layout">
         {/* Left: Queue */}
         <div className="operations-queue-col">
           <div className="operations-queue-header">
-            <span className="operations-queue-title">{tr("ui.home.staff.queueTitle")}</span>
+            <span className="operations-queue-title">{tr("ui.mySchedule.list")}</span>
           </div>
 
           {loading ? (
@@ -323,31 +370,29 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
           ) : bookings.length === 0 ? (
             <div className="operations-empty">
               <ClipboardList size={22} className="empty-icon" />
-              <strong>{tr("ui.no_bookings_in_this_group_1391cc5e")}</strong>
-              <span>{tr("ui.choose_another_group_to_view_00eb6689")}</span>
+              <strong>{tr(filter === 'ACTION_REQUIRED' ? 'ui.customerBooking.noAction' : 'ui.no_bookings_in_this_group_1391cc5e')}</strong>
+              {filter === 'ACTION_REQUIRED'
+                ? <button type="button" className="btn btn-secondary" onClick={() => selectFilter('ALL')}>{tr('ui.customerBooking.seeAll')}</button>
+                : <span>{tr("ui.choose_another_group_to_view_00eb6689")}</span>}
             </div>
           ) : (
             <>
               <div className="operations-list">
-                {bookings.map((booking) => (
-                  <BookingOperationCard
-                    key={booking.id}
-                    booking={booking}
-                    busy={busyId === booking.id}
-                    isSelected={selectedBookingId === booking.id}
-                    onSelect={selectBooking}
-                  />
-                ))}
+                {bookings.map((booking) => {
+                  const props = { booking, busy: busyId === booking.id, isSelected: selectedBookingId === booking.id, onSelect: selectBooking };
+                  return isStaff ? <BookingOperationCard key={booking.id} {...props} /> : <CustomerBookingCard key={booking.id} {...props} onPayment={onPayment} asOf={queue.data?.summary.asOf} />;
+                })}
               </div>
-              {queue.pagination && (
-                <QueuePagination pagination={queue.pagination} onPage={queue.setPage} disabled={loading || Boolean(busyId)} />
-              )}
             </>
+          )}
+          {/* Keep pagination mounted across page loads to preserve keyboard focus. */}
+          {queue.pagination && !loadError && (
+            <QueuePagination pagination={queue.pagination} onPage={queue.setPage} disabled={loading || Boolean(busyId)} pageSizes={[20, 50, 100]} onPageSize={setQueuePageSize} />
           )}
         </div>
 
         {/* Right: Dossier */}
-        <div className="operations-dossier-col" ref={dossierRef} tabIndex={-1} role="region" aria-label={tr("ui.booking_identity_4e5a6b7c")} aria-busy={selectedLoading}>
+        {selectedBookingId && <div className="operations-dossier-col" ref={dossierRef} tabIndex={-1} role="region" aria-label={tr("ui.booking_identity_4e5a6b7c")} aria-busy={selectedLoading}>
           {selectedError && <div className="operations-alert danger" role="alert">{translate(selectedError)}<button type="button" className="btn" onClick={() => setSelectionRevision(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></div>}
           {selectedBooking ? (
             <BookingDossier
@@ -356,21 +401,22 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
               isStaff={isStaff}
               busy={busyId === selectedBooking.id || selectedLoading}
               onClose={deselectBooking}
-              onRescheduled={loadBookings}
+              onRescheduled={() => { loadBookings(); onChanged?.(); }}
               onCancel={!isStaff && selectedBooking.requestedById === user.id ? () => setCancelState(selectedBooking) : undefined}
               onPayment={user.role === "ADMIN" || selectedBooking.requestedById === user.id ? onPayment : undefined}
               onAction={(action) => setActionState({ action, booking: selectedBooking })}
               onOpenHistory={() => openHistory(selectedBooking)}
             />
-          ) : (
-            <div className="operations-dossier-empty">
-              <FileText size={40} />
-              <strong>{tr(selectedLoading ? "ui.loading_data_84c68bd5" : "ui.select_a_booking_to_view_its_details_1e3b7f1a")}</strong>
-
+          ) : selectedLoading ? (
+            <div className="operations-dossier-empty" role="status">
+              <RefreshCw size={24} className="animate-spin" aria-hidden="true" />
+              <strong>{tr("ui.loading_data_84c68bd5")}</strong>
             </div>
-          )}
-        </div>
+          ) : null}
+        </div>}
       </div>
+
+      {!isStaff && <div className="schedule-waitlist"><BookingWaitlist/><BookingStatusLegend /></div>}
 
       {/* Action modal */}
       {actionState && (
@@ -421,7 +467,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
               <span>{tr("ui.loading_timeline_27459f56")}</span>
             </div>
           )
-          : <BookingWorkflowTimeline booking={historyState.booking} timeline={historyState.timeline} />
+          : <BookingWorkflowTimeline role={user.role} booking={historyState.booking} timeline={historyState.timeline} />
         }
       </BaseModal2026>
     </div>
@@ -448,6 +494,14 @@ function BookingDossier({ booking, user, isStaff, busy, onClose, onAction, onOpe
   const [moving,setMoving] = useState(false);
   const { tr } = useLocale();
   const isOwner = booking.requestedById === user.id;
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  useEffect(() => {
+    if (!isStaff || booking.status !== 'CONFIRMED') return;
+    const timer = setInterval(() => setCurrentTime(Date.now()), 15000);
+    return () => clearInterval(timer);
+  }, [isStaff, booking.status]);
+  const availableAt = Date.parse(booking.startAt) - 30 * 60000;
+  const handoverInWindow = currentTime >= availableAt && currentTime < Date.parse(booking.endAt);
 
   const staffActions: Array<{ action: BookingAction; label: string; primary?: boolean }> = [];
   if (isStaff && booking.status === "PENDING_APPROVAL") {
@@ -460,11 +514,8 @@ function BookingDossier({ booking, user, isStaff, busy, onClose, onAction, onOpe
   if (isStaff && booking.status === "CHECKED_OUT") {
     staffActions.push({ action: "RETURN", label: "ui.receive_return_e099755c", primary: true });
   }
-  if (isOwner && booking.resource?.category === "ROOM" && booking.status === "CHECKED_OUT") {
-    staffActions.push({ action: "SELF_RETURN", label: "ui.return_room_complete_8e8c6af6", primary: true });
-  }
   if (isStaff && booking.status === "RETURNED") {
-    staffActions.push({ action: "COMPLETE", label: "ui.final.complete", primary: true });
+    staffActions.push({ action: "COMPLETE", label: "ui.fulfillment.inspectionComplete", primary: true });
   }
 
   return (
@@ -473,6 +524,8 @@ function BookingDossier({ booking, user, isStaff, busy, onClose, onAction, onOpe
         <div className="operations-dossier-title-group">
           <h2>{booking.resource?.name || booking.title}</h2>
           <p>{booking.title}</p>
+          <p>{formatVietnamDateTime(booking.startAt)} – {formatVietnamDateTime(booking.endAt)}</p>
+          <BookingStatusBadge status={booking.status} paymentDueAt={booking.paymentDueAt} />
         </div>
         <button
           type="button"
@@ -484,6 +537,16 @@ function BookingDossier({ booking, user, isStaff, busy, onClose, onAction, onOpe
         </button>
       </header>
 
+      {isOwner && onPayment && Boolean(booking.feeAmountVnd) && <BookingPaymentSummary key={`payment-${booking.id}`} booking={booking} user={user} onPayment={onPayment} />}
+      {isOwner && <BookingAccessPanel key={`access-${booking.id}`} bookingId={booking.id} status={booking.status} category={booking.resource?.category} onChanged={onRescheduled} />}
+      {isOwner && !isStaff && ['COMPLETED','CANCELLED','REJECTED'].includes(booking.status) && (
+        <div className="operations-dossier-section">
+          <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => navigateApp(resourceSelectionPath({ repeat: booking.id }))}>
+            <RotateCcw size={16} aria-hidden="true" />{tr('ui.customerBooking.repeat')}
+          </button>
+        </div>
+      )}
+
       {/* Identity */}
       <details className="operations-dossier-section">
         <summary className="operations-dossier-section-title">{tr("ui.booking_identity_4e5a6b7c")}</summary>
@@ -494,7 +557,7 @@ function BookingDossier({ booking, user, isStaff, busy, onClose, onAction, onOpe
           </div>
           <div>
             <span className="field-label">{tr("ui.status_e4f6a7b8")}</span>
-            <BookingStatusBadge status={booking.status} />
+            <BookingStatusBadge status={booking.status} paymentDueAt={booking.paymentDueAt} />
           </div>
           <div>
             <span className="field-label">{tr("ui.resource_code_2c3d4e5f")}</span>
@@ -599,21 +662,13 @@ function BookingDossier({ booking, user, isStaff, busy, onClose, onAction, onOpe
       )}
 
       {/* Fee */}
-      {Boolean(booking.feeAmountVnd) && (
-        <section className="operations-dossier-section">
-          <div className="operation-fee-notice">
-            {tr("ui.agreed_usage_fee_38f5f31a")}
-            <strong>{booking.feeAmountVnd?.toLocaleString("vi-VN")} {tr("ui.vnd_bf502a39")}</strong>.
-            {booking.status === "PENDING_APPROVAL"
-              ? tr("ui.payment_is_available_after_approval_f25ebab4")
-              : tr("ui.open_payment_details_to_check_d508cb80")
-            }
-          </div>
-        </section>
-      )}
+      {!isOwner && Boolean(booking.feeAmountVnd) && (user.role === 'ADMIN' && onPayment ? <BookingPaymentSummary key={`admin-payment-${booking.id}`} booking={booking} user={user} onPayment={onPayment} /> : <section className="operations-dossier-section"><strong>{tr('ui.agreed_usage_fee_38f5f31a')} {booking.feeAmountVnd?.toLocaleString('vi-VN')} {tr('ui.vnd_bf502a39')}</strong></section>)}
 
       {/* Actions */}
+      {booking.status === 'PENDING_APPROVAL' && booking.paymentDueAt && <PaymentHoldNotice paymentDueAt={booking.paymentDueAt} startAt={booking.startAt} onExpired={onRescheduled} />}
+      {isStaff && booking.fulfillmentSnapshot && <section className="operations-dossier-section"><h3>{tr('ui.fulfillment.title')}</h3><p>{tr(booking.fulfillmentSnapshot.mode === 'HOME_DELIVERY' ? 'ui.fulfillment.homeDelivery' : booking.fulfillmentSnapshot.mode === 'ROOM_SELF_SERVICE' ? 'ui.fulfillment.roomAccess' : 'ui.fulfillment.labPickup')}</p><p>{booking.fulfillmentSnapshot.address?.fullAddress || booking.fulfillmentSnapshot.pickupInstructions}</p>{booking.contactSnapshot && <p>{booking.contactSnapshot.fullName} · {booking.contactSnapshot.phone}</p>}</section>}
       <div className="operations-dossier-actions">
+        {isStaff && booking.status === 'CONFIRMED' && !handoverInWindow && <p role="status">{currentTime < availableAt ? tr('ui.fulfillment.checkInAt', { time: formatVietnamDateTime(new Date(availableAt).toISOString()) }) : tr('api.BOOKING_HANDOVER_EXPIRED')}</p>}
         {isStaff && booking.status === "CONFIRMED" && <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>setMoving(true)}>{tr("ui.rental.moveBooking")}</button>}
         {moving && <BookingRescheduleModal key={booking.id} booking={booking} onClose={()=>setMoving(false)} onSaved={onRescheduled}/>}
         {staffActions.filter(({ action }) => canOpenBookingAction(booking, action, user)).map(({ action, label }) => (
@@ -622,13 +677,12 @@ function BookingDossier({ booking, user, isStaff, busy, onClose, onAction, onOpe
             type="button"
             className={`btn ${action === "REJECT" ? "btn-danger" : action === "APPROVE" || action === "CHECK_OUT" || action === "RETURN" || action === "SELF_RETURN" || action === "COMPLETE" ? "btn-primary" : "btn-secondary"}`}
             onClick={() => onAction(action)}
-            disabled={busy}
+            disabled={busy || (action === 'CHECK_OUT' && !handoverInWindow)}
           >
             {tr(label)}
           </button>
         ))}
         {onCancel && ["PENDING_APPROVAL", "CONFIRMED"].includes(booking.status) && <button type="button" className="btn btn-danger" onClick={onCancel} disabled={busy}>{tr("ui.cancel_booking_c68ed93d")}</button>}
-        {onPayment && Boolean(booking.feeAmountVnd) && <button type="button" className="btn btn-secondary" onClick={() => onPayment(booking)} disabled={busy}>{tr("ui.pay_for_booking_317a349c")}</button>}
         <span className="operation-actions-spacer" aria-hidden="true" />
         <button type="button" className="btn btn-secondary" onClick={onOpenHistory} disabled={busy}>
           <History size={15} />

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { stopResourceOperation } from "./resourceCareAccounting.js";
 import { careStatus, bookingCareUsage } from "./resourceCareModel.js";
+import { occupiesWithTurnaround } from './planning/policyModel.js';
 
 import { prisma } from "../db.js";
 import { ADMIN } from "../constants/roles.js";
@@ -10,7 +11,7 @@ import {
 } from "../constants/resources.js";
 import { HttpError } from "../middleware/errors.js";
 import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
-import { BLOCKING_MAINTENANCE_STATUSES } from "./availabilityService.js";
+import { BLOCKING_MAINTENANCE_STATUSES, checkLabPolicyCompliance } from "./availabilityService.js";
 import { normalizeSpecs } from "../utils/dataContract.js";
 
 export const BLOCKING_OPERATIONAL_STATUSES = new Set([
@@ -52,6 +53,16 @@ export function resourceAvailability(resource, interval = null) {
   const overlaps = row => new Date(row.startAt) < endAt && new Date(row.endAt) > startAt;
   const now = new Date();
   const intervalIncludesNow = startAt <= now && endAt > now;
+  let outsideBookingPolicy = false;
+  if (interval?.checkBookingPolicy) {
+    try {
+      checkLabPolicyCompliance({ policy: resource.laboratory?.labPolicy, startAt, endAt, now });
+      outsideBookingPolicy = resource.maxBookingMinutes != null && (endAt - startAt) / 60000 > resource.maxBookingMinutes;
+    } catch (error) {
+      if (!(error instanceof HttpError) || !['POLICY_VIOLATION', 'BOOKING_NOTICE_REQUIRED', 'VALIDATION_ERROR'].includes(error.code)) throw error;
+      outsideBookingPolicy = true;
+    }
+  }
 
   if (BLOCKING_OPERATIONAL_STATUSES.has(resource.operationalStatus)) {
     state = resource.operationalStatus;
@@ -68,11 +79,14 @@ export function resourceAvailability(resource, interval = null) {
   } else if (resource.bookingState !== "bookable") {
     state = resource.bookingState === "restricted" ? "RESTRICTED" : "UNAVAILABLE";
     source = "booking_policy";
+  } else if (outsideBookingPolicy) {
+    state = 'UNAVAILABLE';
+    source = 'booking_policy';
   } else if ((resource.maintenanceWindows || []).some((window) => overlaps(window) && BLOCKING_MAINTENANCE_STATUSES.includes(window.status))) {
     const calibration = resource.maintenanceWindows.some((window) => overlaps(window) && window.kind === "calibration" && BLOCKING_MAINTENANCE_STATUSES.includes(window.status));
     state = calibration ? "CALIBRATION" : "MAINTENANCE";
     source = "maintenance_window";
-  } else if ((resource.bookings || []).some((booking) => overlaps(booking) && ACTIVE_BOOKING_STATUSES.includes(booking.status))) {
+  } else if ((resource.bookings || []).some((booking) => (ACTIVE_BOOKING_STATUSES.includes(booking.status) || (booking.status === 'COMPLETED' && booking.schedulingReleasedAt)) && occupiesWithTurnaround(booking, startAt, endAt, interval?.checkBookingPolicy ? resource.laboratory?.labPolicy?.turnaroundMinutes || 0 : 0))) {
     state = "RESERVED";
     source = "booking";
   }

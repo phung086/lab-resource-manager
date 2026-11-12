@@ -253,14 +253,14 @@ try {
 
   // 1e. Cancellation requires explicit confirmation and persisted CANCELLED state.
   console.log("  Testing student booking cancellation confirmation...");
-  const cancelButton = studentPage.getByRole("button", { name: "Hủy booking" }).first();
+  const cancelButton = studentPage.getByRole("button", { name: "Hủy lịch đặt" }).first();
   await cancelButton.waitFor({ state: "visible" });
   let cancelRequests = 0;
   studentPage.on("request", (request) => {
     if (request.url().includes("/cancel") && request.method() === "POST") cancelRequests++;
   });
   await cancelButton.click();
-  const cancelDialog = studentPage.getByRole("dialog", { name: "Xác nhận hủy booking" });
+  const cancelDialog = studentPage.getByRole("dialog", { name: "Xác nhận hủy lịch đặt" });
   await cancelDialog.waitFor();
   assert.equal(cancelRequests, 0, "Opening confirmation must not mutate the booking");
   const [cancelResponse] = await Promise.all([

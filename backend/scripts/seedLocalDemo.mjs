@@ -24,15 +24,16 @@ try {
     const accounts = [
       ["admin", "ADMIN", "LRM Demo Administrator"],
       ["staff", "LAB_STAFF", "LRM Demo Lab Staff"],
-      ["lecturer", "CUSTOMER", "LRM Demo Lecturer"],
-      ["student", "CUSTOMER", "LRM Demo Student"],
+      ["lecturer", "CUSTOMER", "LRM Demo Customer 2", "LRM Demo Lecturer"],
+      ["student", "CUSTOMER", "LRM Demo Customer", "LRM Demo Student"],
     ];
     const users = {};
-    for (const [name, role, fullName] of accounts) {
+    for (const [name, role, fullName, previousDemoName] of accounts) {
       const email = `${name}@lrm.local`;
       const existing = await tx.user.findUnique({ where: { email } });
-      if (existing && (existing.role !== role || existing.fullName !== fullName)) throw new Error(`Refusing to overwrite a conflicting account: ${email}`);
-      users[name] = await tx.user.upsert({ where: { email }, update: {}, create: { id: randomUUID(), email, fullName, role, passwordHash, department: "LOCAL DEMO" } });
+      if (existing && (existing.role !== role || (existing.fullName !== fullName && existing.fullName !== previousDemoName))) throw new Error(`Refusing to overwrite a conflicting account: ${email}`);
+      users[name] = await tx.user.upsert({ where: { email }, update: previousDemoName && existing?.fullName === previousDemoName ? { fullName } : {},
+        create: { id: randomUUID(), email, fullName, role, passwordHash } });
     }
     const campus = await tx.campus.upsert({ where: { code: "LOCAL-DEMO" }, update: {}, create: { id: randomUUID(), code: "LOCAL-DEMO", name: "Cơ sở thực hành — Local Demo", address: "Môi trường trình diễn cục bộ" } });
     const building = await tx.building.upsert({ where: { code: "LOCAL-DEMO-A" }, update: {}, create: { id: randomUUID(), code: "LOCAL-DEMO-A", name: "Khu thực hành A", campusId: campus.id } });

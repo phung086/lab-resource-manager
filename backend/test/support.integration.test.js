@@ -58,6 +58,29 @@ test.beforeEach(async () => {
 });
 test.after(async () => { await new Promise(resolve => server.close(resolve)); await prisma.$disconnect(); });
 
+test('a revoked session cannot send, change availability or close an open support session', async () => {
+  assert.equal((await ready('staff')).status, 200);
+  const opened = await ask('student');
+  assert.equal(opened.status, 201);
+  assert.equal(opened.body.assignedStaffId, users.staff.id);
+  const stale = await prisma.user.findUniqueOrThrow({ where: { id: users.staff.id } });
+  const before = await prisma.supportMessage.count({ where: { sessionId: opened.body.id } });
+  assert.equal((await request(app).post('/api/auth/logout-all').set(auth('staff'))).status, 204);
+  try {
+    const service = createSupportService(prisma);
+    const denied = error => error.code === 'AUTH_INVALID';
+    await assert.rejects(service.send(stale, opened.body.id, { messageId: id(), body: 'Must not be persisted' }), denied);
+    await assert.rejects(service.heartbeat(stale, false), denied);
+    await assert.rejects(service.transition(stale, opened.body.id, 'finish', 'Must not be persisted'), denied);
+    assert.equal(await prisma.supportMessage.count({ where: { sessionId: opened.body.id } }), before);
+    assert.equal((await prisma.supportSession.findUnique({ where: { id: opened.body.id } })).status, 'ACTIVE');
+  } finally {
+    const login = await request(app).post('/api/auth/login').send({ email: stale.email, password: 'SupportTest!2026' });
+    assert.equal(login.status, 200);
+    tokens.staff = login.body.accessToken;
+  }
+});
+
 test('two idle agents handle separate requests; FIFO positions move and completion assigns the oldest waiting request', async () => {
   assert.equal((await ready('staff')).status, 200); assert.equal((await ready('staff2')).status, 200);
   const first = await ask('student'), second = await ask('peer'), third = await ask('third'), fourth = await ask('fourth');
@@ -70,6 +93,17 @@ test('two idle agents handle separate requests; FIFO positions move and completi
   assert.equal(next.body.session.status, 'ACTIVE'); assert.equal(next.body.session.assignedStaffId, first.body.assignedStaffId); assert.equal(waiting.body.session.queuePosition, 1);
   const filtered = await get(assigned, '/sessions?status=CLOSED&page=100');
   assert.deepEqual(filtered.body.items, []); assert.equal(filtered.body.activeSession.id, third.body.id, 'Current assignment survives pagination and filters');
+});
+
+test('support alerts reach active scoped staff/admin, not foreign staff or other customers', async () => {
+  await ready('staff');
+  const first = await ask('student'); assert.equal(first.status, 201);
+  const notices = await prisma.notification.findMany({ where: { dedupeKey: { startsWith: `support:${first.body.id}:` } } });
+  const requested = notices.filter(row => row.titleKey === 'support.requested.title');
+  assert.deepEqual(requested.map(row => row.userId).sort(), [users.admin.id, users.staff.id, users.staff2.id].sort());
+  assert.equal(notices.filter(row => row.titleKey === 'support.assigned.title' && row.userId === users.staff.id).length, 1);
+  await ask('student', { requestId: first.body.id });
+  assert.equal(await prisma.notification.count({ where: { dedupeKey: { startsWith: `support:${first.body.id}:` } } }), notices.length);
 });
 
 test('real two-way messages persist, explicit retries are idempotent, admin can inspect complete history', async () => {

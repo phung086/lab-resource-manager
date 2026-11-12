@@ -31,7 +31,7 @@ const bookingSchema = z.object({
   title: z.string().min(2).max(255),
   purpose: z.string().max(2000).optional().default(""),
   purposeCode: z.enum(["STUDY", "TEACHING", "RESEARCH", "SERVICE"]).optional(),
-  acceptedQuote: z.object({ amountVnd: z.number().int().min(0), version: z.number().int().min(0) }).strict().optional(),
+  acceptedQuote: z.object({ amountVnd: z.number().int().min(0), version: z.number().int().min(0), loyaltyPolicyVersion: z.number().int().min(0).nullable().optional() }).strict().optional(),
   startAt: z.string(),
   endAt: z.string()
 }).strict();
@@ -41,7 +41,6 @@ const completeSchema = z.object({
   otpCode: z.string().trim().regex(/^\d{6}$/),
   fullName: z.string().trim().min(2).max(255),
   phone: z.string().trim().min(9).max(20),
-  organization: z.string().trim().max(255).optional(),
   address: addressSchema,
   booking: bookingSchema
 }).strict();

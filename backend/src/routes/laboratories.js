@@ -8,6 +8,7 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { assertLabStaffLaboratoryAccess } from "../middleware/labScope.js";
 import { HttpError } from "../middleware/errors.js";
 import { normalizeResourceCode, normalizeText } from "../utils/dataContract.js";
+import { updateLabBookingNotice } from '../services/labBookingPolicyService.js';
 
 const router = express.Router();
 
@@ -44,11 +45,22 @@ const laboratorySelect = {
   isActive: true,
   createdAt: true,
   updatedAt: true,
+  labPolicy: true,
   building: { select: { id: true, code: true, name: true, campus: { select: { id: true, code: true, name: true } } } },
   _count: { select: { resources: true, staffAssignments: true } }
 };
 
 router.use(requireAuth);
+
+// ADMIN may strengthen the baseline notice without changing existing reservations.
+router.patch('/:id/booking-policy', requireRole(ADMIN), async (req, res, next) => {
+  try {
+    const input = z.object({ minAdvanceBookingMinutes: z.number().int().min(30).max(43200),
+      expectedMinAdvanceBookingMinutes: z.number().int().min(30).max(43200),
+      reason: z.string().trim().min(10).max(500) }).strict().parse(req.body);
+    res.json(await updateLabBookingNotice(req.user, req.params.id, input));
+  } catch (error) { next(error); }
+});
 
 function visibilityWhere(user) {
   if (user.role === ADMIN) return {};

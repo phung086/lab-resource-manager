@@ -1,3 +1,9 @@
+import { ResourceSelectionTray } from './components/ResourceSelectionTray';
+import { ApiCooldownNotice } from './components/ApiCooldownNotice';
+import { SessionGuard } from './components/features/accounts/SessionGuard';
+import { storeAuthUser } from './services/authStorage.js';
+import { publicSiteOrigin, seoForPath } from './utils/seo.js';
+import { workspaceActorScope, workspaceDataIsCurrent } from './utils/workspaceScope.js';
 
 import { translate } from "./i18n.js";
 
@@ -23,32 +29,35 @@ const SupportPage = React.lazy(() => import("./components/features/support/Suppo
 
 const SmartCalendarView = React.lazy(() => import("./components/SmartCalendarView.tsx").then(module => ({ default: module.SmartCalendarView })));
 const AdminResourceManagementView = React.lazy(() => import("./components/AdminResourceManagementView.tsx").then(module => ({ default: module.AdminResourceManagementView })));
+const AdminResourceConsole = React.lazy(() => import("./components/AdminResourceConsole.tsx").then(module => ({ default: module.AdminResourceConsole })));
+const AdminUserConsole = React.lazy(() => import("./components/AdminUserConsole.tsx").then(module => ({ default: module.AdminUserConsole })));
 const ResourceManagementView = React.lazy(() => import("./components/ResourceManagementView.tsx").then(module => ({ default: module.ResourceManagementView })));
 const BookingOperationsPage = React.lazy(() => import("./pages/operations/BookingOperationsPage.tsx").then(module => ({ default: module.BookingOperationsPage })));
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage.tsx").then(module => ({ default: module.ProfilePage })));
 const AccessUserManagement = React.lazy(() => import("./components/AccessUserManagement.tsx").then(module => ({ default: module.AccessUserManagement })));
+const ChatgptBridgePage = React.lazy(() => import('./pages/ChatgptBridgePage.tsx'));
 const IncidentsPage = React.lazy(() => import("./pages/incidents/IncidentsPage.tsx").then(module => ({ default: module.IncidentsPage })));
 const MonitoringDashboardPage = React.lazy(() => import("./pages/monitoring/MonitoringDashboardPage.tsx").then(module => ({ default: module.MonitoringDashboardPage })));
 const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage").then(module => ({ default: module.MaintenancePage })));
 const StockPage = React.lazy(() => import("./pages/LabWorkspace").then(module => ({ default: module.StockPage })));
 
+
 const ResourceDetailPage = React.lazy(() => import("./pages/ResourceDetailPage.tsx").then(module => ({ default: module.ResourceDetailPage })));
 const SelectionPage = React.lazy(() => import("./pages/SelectionPage.tsx").then(module => ({ default: module.SelectionPage })));
+const RepeatBookingDraft = React.lazy(() => import("./components/features/planning/RepeatBookingDraft.tsx").then(module => ({ default: module.RepeatBookingDraft })));
+const AuditLogsPage = React.lazy(() => import("./pages/AuditLogsPage.tsx").then(module => ({ default: module.AuditLogsPage })));
 
-const ADMIN_ONLY_TABS = new Set(["users"]);
-const STAFF_ONLY_TABS = new Set(["admin_management", "dashboard", "maintenance", "monitoring"]);
+const STAFF_ONLY_TABS = new Set(["users", "admin_management", "dashboard", "maintenance", "monitoring", "logs"]);
 
 function canAccessTab(role, tabId) {
   if (tabId === 'stock') return ['ADMIN', 'LAB_STAFF'].includes(role);
-  if (tabId === 'teaching') return false;
   if (!isTabEnabled(tabId)) return false;
-  if (ADMIN_ONLY_TABS.has(tabId)) return role === "ADMIN";
   if (STAFF_ONLY_TABS.has(tabId)) return role === "ADMIN" || role === "LAB_STAFF";
   return true;
 }
 
 function App() {
-  return <LocaleProvider><Application /></LocaleProvider>;
+  return <LocaleProvider><Application /><SessionGuard /></LocaleProvider>;
 }
 
 function Application() {
@@ -78,12 +87,15 @@ function Application() {
   const [calendarRevision, setCalendarRevision] = useState(0);
   const [dashboard, setDashboard] = useState(null);
   const [resources, setResources] = useState([]);
+  const [resourceSearchReady, setResourceSearchReady] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [bookingSummary, setBookingSummary] = useState(null);
   const [incidentSummary, setIncidentSummary] = useState(null);
   const [maintenance, setMaintenance] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(null);
+  const [loadedWorkspaceScope, setLoadedWorkspaceScope] = useState(null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -99,7 +111,7 @@ function Application() {
     const params = new URLSearchParams(route.search);
     if (context) {
       for (const [key, value] of Object.entries(context)) {
-        if (value && value !== "ALL" && value !== "name") params.set(key, String(value)); else params.delete(key);
+        if (value && (value !== "ALL" || key === "catalogueGroup") && value !== "name") params.set(key, String(value)); else params.delete(key);
       }
       // Save the current register's filters in its existing history entry before leaving it.
       navigateApp(workspacePathForTab("resources", params), { replace: true, notify: false });
@@ -140,11 +152,31 @@ function Application() {
     document.title = translate(key) + " · LAB Resource Manager";
     const description = document.querySelector('meta[name="description"]');
     if (description) description.setAttribute("content", translate(route.kind === "public" ? "route.publicDescription" : "route.privateDescription"));
-  }, [locale, route.kind, route.page, route.tab]);
+    const origin = publicSiteOrigin(import.meta.env.VITE_PUBLIC_SITE_URL);
+    const policy = seoForPath(route.path, { origin, indexable: import.meta.env.VITE_SEO_INDEXABLE === 'true' });
+    const robots = document.querySelector('meta[name="robots"]');
+    if (robots) robots.setAttribute('content', policy.robots);
+    if (policy.page) {
+      document.title = translate(policy.page.titleKey);
+      description?.setAttribute('content', translate(policy.page.descriptionKey));
+    }
+    for (const [property, content] of [['og:title', document.title], ['og:description', description?.getAttribute('content') || ''], ['og:url', policy.canonical]]) {
+      let tag = document.querySelector(`meta[property="${property}"]`);
+      if (!content) { tag?.remove(); continue; }
+      if (!tag) { tag = document.createElement('meta'); tag.setAttribute('property', property); document.head.appendChild(tag); }
+      tag.setAttribute('content', content);
+    }
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (policy.canonical) { if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); } canonical.href = policy.canonical; }
+    else canonical?.remove();
+  }, [locale, route.kind, route.page, route.tab, route.path]);
 
   const routeUserId = user?.id;
   const routeUserRole = user?.role;
+  const workspaceScope = workspaceActorScope(user);
+  useEffect(() => { setActiveGlobalModal(null); }, [workspaceScope]);
   const appDataController = React.useRef(null);
+  const pendingWorkspaceRefresh = React.useRef(false);
   const previousTab = React.useRef(activeTab);
   const isPasswordResetRequired = Boolean(user?.passwordResetRequired);
   useEffect(() => {
@@ -180,7 +212,7 @@ function Application() {
         if (active) setAuthChecking(false);
       }
     }
-    const invalidateSession = () => setUser(null);
+    const invalidateSession = () => { setUser(null); setActiveGlobalModal(null); };
     window.addEventListener("lrm:session-invalid", invalidateSession);
     bootstrapSession();
     return () => {
@@ -190,22 +222,24 @@ function Application() {
   }, []);
 
 
-  const loadData = React.useCallback(async () => {
+  const loadData = React.useCallback(async function loadWorkspaceData({ silent = false } = {}) {
     if (!routeUserId) return;
-    appDataController.current?.abort();
+    // One in-flight load per scope: a second trigger (mount + home entry fire together)
+    // must not restart the cycle, or the mounted home unmounts and remounts (large CLS).
+    if (appDataController.current && !appDataController.current.signal.aborted) return;
     const controller = new AbortController();
     appDataController.current = controller;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError("");
     try {
       const read = path => apiRequest(path, { signal: controller.signal });
       const requests = {
         resources: read("/resources"),
         bookings: read("/bookings?page=1&pageSize=100"),
-        maintenance: read("/maintenance"),
         notifications: read("/notifications"),
+        notificationCount: read('/notifications/unread-count'),
         incidents: read("/incidents?page=1&pageSize=50&filter=OPEN"),
-        ...(["ADMIN", "LAB_STAFF"].includes(routeUserRole) ? { dashboard: read(`/dashboard?includeTelemetry=${TELEMETRY_FEATURES_ENABLED}`) } : {}),
+        ...(["ADMIN", "LAB_STAFF"].includes(routeUserRole) ? { maintenance: read('/maintenance'), dashboard: read(`/dashboard?includeTelemetry=${TELEMETRY_FEATURES_ENABLED}`) } : {}),
         ...(routeUserRole === "ADMIN" ? { users: read("/users") } : {})
       };
       const entries = Object.entries(requests);
@@ -214,13 +248,18 @@ function Application() {
       const data = Object.fromEntries(entries.map(([key], index) => [key, results[index]]));
       const value = (key, fallback) => data[key]?.status === "fulfilled" ? data[key].value : fallback;
 
+      setLoadedWorkspaceScope(workspaceScope);
+
       setDashboard(value("dashboard", null));
       setResources(value("resources", []));
+      setResourceSearchReady(data.resources?.status === 'fulfilled');
       setBookings(value("bookings", null)?.items || []);
       setBookingSummary(value("bookings", null)?.summary || null);
       setIncidentSummary(value("incidents", null)?.summary || null);
       setMaintenance(value("maintenance", []));
       setNotifications(value("notifications", []));
+      const unread = value('notificationCount', null)?.unread;
+      setNotificationUnreadCount(Number.isSafeInteger(unread) && unread >= 0 ? unread : null);
       setUsers(value("users", []));
       setIncidents(value("incidents", null)?.items || []);
 
@@ -235,28 +274,53 @@ function Application() {
         setError(requestError?.message || "ui.unable_to_load_system_data_e9df8dd1");
       }
     } finally {
-      if (!controller.signal.aborted && appDataController.current === controller) {
+      // Only the request that owns the slot may release it. Cancelled requests
+      // must never block a new actor/session or clear a newer request's slot.
+      if (appDataController.current === controller) {
         appDataController.current = null;
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          if (pendingWorkspaceRefresh.current) {
+            pendingWorkspaceRefresh.current = false;
+            void loadWorkspaceData({ silent: true });
+          }
+        }
       }
     }
-  }, [routeUserId, routeUserRole]);
+  }, [routeUserId, routeUserRole, workspaceScope]);
+
+  const refreshData = React.useCallback(() => {
+    if (appDataController.current && !appDataController.current.signal.aborted) {
+      // A mutation may finish while shared reads are pending. Refresh once more
+      // afterwards so an earlier snapshot cannot overwrite the mutation result.
+      pendingWorkspaceRefresh.current = true;
+      return;
+    }
+    void loadData();
+  }, [loadData]);
 
   useEffect(() => {
     if (!routeUserId) return;
     loadData();
-    return () => appDataController.current?.abort();
+    return () => {
+      const controller = appDataController.current;
+      appDataController.current = null;
+      pendingWorkspaceRefresh.current = false;
+      controller?.abort();
+    };
   }, [routeUserId, loadData]);
 
   useEffect(() => {
     const wasHome = previousTab.current === "home";
     previousTab.current = activeTab;
-    if (routeUserId && activeTab === "home" && !wasHome) loadData();
-  }, [activeTab, routeUserId, loadData]);
+    // Home entry refreshes in the background: keep the mounted home stable instead of
+    // flipping the whole workspace back into its loading skeleton.
+    if (routeUserId && activeTab === "home" && !wasHome) loadData({ silent: loadedWorkspaceScope === workspaceScope });
+  }, [activeTab, routeUserId, loadData, loadedWorkspaceScope, workspaceScope]);
 
   useEffect(() => {
     if (routeUserRole && route.kind === "workspace" && !canAccessTab(routeUserRole, activeTab)) {
-      setActiveTab("smart_calendar");
+      setActiveTab("home");
       setError("ui.you_do_not_have_permission_e6eeee92");
     }
   }, [routeUserRole, activeTab, route.kind]);
@@ -279,7 +343,7 @@ function Application() {
     return <PublicShell {...publicShellProps}><div className="public-auth-page">
       <a className="public-auth-back" href="/">{translate("ui.back_to_introduction_7876ebe9")}</a>
       {route.page === "register" ? <AuthRegisterView onRegisterSuccess={setUser} onSwitchToLogin={() => openAuth("login")} locale={locale} onLocaleChange={changeLocale} />
-        : <AuthLoginView onLogin={setUser} onSwitchToRegister={() => openAuth("register")} locale={locale} onLocaleChange={changeLocale} />}
+        : <AuthLoginView onLogin={setUser} onSwitchToRegister={() => openAuth("register")} />}
     </div></PublicShell>;
   }
   if (route.kind === "public") {
@@ -290,13 +354,17 @@ function Application() {
         else { sessionStorage.setItem("lrm_pending_resource", id); navigateApp(publicPathForSection("login", { returnTo: workspacePathForTab("smart_calendar", { resource: id }) })); }
       }} onGuestBookingComplete={handleGuestBookingComplete} />;
   }
+  if (!workspaceDataIsCurrent(loadedWorkspaceScope, user)) {
+    return <PublicShell {...publicShellProps}><div className="route-status-page"><p className="empty-state" role="status">{translate('ui.loading_workspace_959fb711')}</p></div></PublicShell>;
+  }
   return (
-    <AppLayout
+    <DraftActorContext.Provider value={user.id} key={user.id}><AppLayout
+      key={`${user.id}:${user.role}:${user.authVersion ?? 0}`}
       activeTab={activeTab}
-      onSelectTab={(tabId) => {
+      onSelectTab={(tabId, params) => {
         if (canAccessTab(user.role, tabId)) {
           setError("");
-          setActiveTab(tabId);
+          setActiveTab(tabId, params);
         } else {
           setError("ui.you_do_not_have_permission_e6eeee92");
         }
@@ -305,11 +373,15 @@ function Application() {
       locale={locale}
       onLocaleChange={changeLocale}
       notifications={notifications}
+      notificationUnreadCount={notificationUnreadCount}
       incidents={incidents}
       incidentOpenCount={loading || error ? undefined : incidentSummary?.open}
       conflictsCount={0}
       loading={loading}
-      onRefresh={loadData}
+      searchResources={resources.filter(resource => resource.operationalStatus !== 'RETIRED')}
+      searchResourcesReady={resourceSearchReady}
+      onRefresh={refreshData}
+      selectionControl={user.role === "CUSTOMER" ? <ResourceSelectionTray items={resourceSelection.items} onOpen={() => navigateApp(resourceSelectionPath(activeTab === "resources" ? routeParams : {}))} /> : undefined}
       onAssistantPrefill={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
       onLogout={async () => {
         try {
@@ -318,6 +390,7 @@ function Application() {
           // logout already clears local credentials, even if server revocation fails.
           console.warn('Server sign-out could not be confirmed', requestError?.status);
         } finally {
+          setActiveGlobalModal(null);
           setUser(null);
           navigateApp("/login", { replace: true });
         }
@@ -325,12 +398,10 @@ function Application() {
       onPasswordChanged={async () => {
         try {
           const freshUser = await getCurrentUser();
-          localStorage.setItem("lrm_user", JSON.stringify(freshUser));
+          storeAuthUser(freshUser);
           setUser(freshUser);
-        } catch {
-          const updatedUser = { ...user, passwordResetRequired: false };
-          localStorage.setItem("lrm_user", JSON.stringify(updatedUser));
-          setUser(updatedUser);
+        } catch (requestError) {
+          setError(requestError?.message || "api.API_REQUEST_FAILED");
         }
       }}
     >
@@ -358,6 +429,7 @@ function Application() {
 
       <React.Suspense fallback={<p className="empty-state" role="status">{translate("ui.loading_workspace_959fb711")}</p>}>
       {/* REQUIRED CORE — Gated when passwordResetRequired */}
+      <ApiCooldownNotice />
       {!user.passwordResetRequired && activeTab === "home" && (
         <WorkspaceHome
           bookingSummary={bookingSummary}
@@ -373,7 +445,7 @@ function Application() {
           dashboard={dashboard}
           loading={loading}
           error={translate(error)}
-          onRetry={loadData}
+          onRetry={refreshData}
           onNavigate={setActiveTab}
           onSearch={(search, category) => setActiveTab("resources", { search, category })}
           onCalendar={openCalendar}
@@ -384,7 +456,7 @@ function Application() {
       {!user.passwordResetRequired && activeTab === 'stock' && canAccessTab(user.role, 'stock') && <StockPage locale={locale} user={user} maintenance={maintenance} />}
       {!user.passwordResetRequired && PAYMENT_FEATURES_ENABLED && activeTab === "payments" && (
         <React.Suspense fallback={<p role="status">{translate("ui.loading_payments_b1f91304")}</p>}>
-          <PaymentsPage user={user} bookingId={paymentBookingId} onClearBooking={() => { setPaymentBookingId(""); setActiveTab("payments"); }} />
+          <PaymentsPage user={user} onChanged={refreshData} bookingId={paymentBookingId} receiptId={routeParams.get("receipt") || undefined} onClearBooking={() => { setPaymentBookingId(""); setActiveTab("payments"); }} />
         </React.Suspense>
       )}
       {!user.passwordResetRequired && activeTab === "smart_calendar" && (
@@ -393,12 +465,31 @@ function Application() {
           user={user}
           initialResourceId={routeParams.get("resource") || calendarResourceId}
           refreshKey={calendarRevision}
+          selectedResourceIds={resourceSelection.items.map(item => item.id)}
+          onAddToSelection={resourceSelection.add}
+          onViewSelection={() => navigateApp(resourceSelectionPath(routeParams))}
+          onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined}
           onOpenBooking={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
         />
       )}
-      {!user.passwordResetRequired && activeTab === "admin_management" && <AdminResourceManagementView key={routeHash} user={user} initialClassification={routeParams.get("classification") || "ALL"} />}
-      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter notifications={notifications} loading={loading} loadError={translate(error)} onOpenBookings={() => setActiveTab("bookings")} onChanged={loadData} />}
-      {!user.passwordResetRequired && activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={loadData} />}
+      {!user.passwordResetRequired && activeTab === "admin_management" && (
+        user.role === "ADMIN" ? (
+          <AdminResourceConsole
+            key={routeHash}
+            user={user}
+            initialClassification={routeParams.get("classification") || "ALL"}
+            bookingSummary={bookingSummary}
+            incidentSummary={incidentSummary}
+            dashboard={dashboard}
+            incidents={incidents}
+            onNavigate={setActiveTab}
+          />
+        ) : (
+          <AdminResourceManagementView key={routeHash} user={user} initialClassification={routeParams.get("classification") || "ALL"} />
+        )
+      )}
+      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter actorRole={user.role} notifications={notifications} loading={loading} loadError={translate(error)} onOpenBookings={() => setActiveTab("bookings")} onChanged={refreshData} />}
+      {!user.passwordResetRequired && activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={refreshData} />}
       {!user.passwordResetRequired && route.screen === "resource-detail" && (
         <ResourceDetailPage
           key={route.resourceId}
@@ -416,15 +507,32 @@ function Application() {
         onViewCalendar={(id, context) => { catalogueContext(context); openCalendar(id); }}
         onViewDetails={(id, context) => navigateApp(resourceDetailPath(id, catalogueContext(context)))}
         onAddToSelection={resourceSelection.add} selectedResourceIds={resourceSelection.items.map(item => item.id)} onBrowseContextChange={catalogueContext} onViewSelection={context => navigateApp(resourceSelectionPath(catalogueContext(context)))} />}
-      {!user.passwordResetRequired && route.screen === "resource-selection" && <SelectionPage key={user.id} userId={user.id} items={resourceSelection.items} onRemove={resourceSelection.remove}
+      {!user.passwordResetRequired && route.screen === "resource-selection" && user.role === "CUSTOMER" && routeParams.get("repeat") &&
+        <RepeatBookingDraft key={`${user.id}:${routeParams.get("repeat")}`} sourceId={routeParams.get("repeat")}
+          onSaved={() => { setCalendarRevision(value => value + 1); refreshData(); }} />}
+      {!user.passwordResetRequired && route.screen === "resource-selection" && !(user.role === "CUSTOMER" && routeParams.get("repeat")) && <SelectionPage key={user.id} userId={user.id} items={resourceSelection.items} onRemove={resourceSelection.remove}
         onBrowse={() => setActiveTab("resources", Object.fromEntries(routeParams))} onDetails={id => navigateApp(resourceDetailPath(id, routeParams))}
         onViewBookings={id => setActiveTab("bookings", id ? { booking: id } : {})}
-        onConfirmed={() => { setCalendarRevision(value => value + 1); loadData(); }} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
-      {!user.passwordResetRequired && activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={loadData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
-      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage locale={locale} resources={resources} maintenance={maintenance} onChanged={loadData} onBookings={() => setActiveTab('bookings')} />}
-      {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={loadData} />}
-      {activeTab === "monitoring" && <MonitoringDashboardPage userRole={user.role} dashboard={dashboard} loading={loading} onRefresh={loadData} />}
-      {activeTab === "users" && <AccessUserManagement key={routeHash} />}
+        onConfirmed={() => { setCalendarRevision(value => value + 1); refreshData(); }} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
+      {!user.passwordResetRequired && activeTab === "bookings" && <BookingOperationsPage key={routeHash} user={user} onChanged={refreshData} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}
+      {!user.passwordResetRequired && activeTab === "maintenance" && <MaintenancePage key={user.id} actorId={user.id} locale={locale} resources={resources} maintenance={maintenance} onChanged={refreshData} onBookings={() => setActiveTab('bookings')} />}
+      {!user.passwordResetRequired && activeTab === "incidents" && <IncidentsPage user={user} resources={resources} incidents={incidents} onChanged={refreshData} />}
+      {activeTab === "monitoring" && <MonitoringDashboardPage userRole={user.role} dashboard={dashboard} loading={loading} onRefresh={refreshData} />}
+      {activeTab === "users" && (
+        user.role === "ADMIN" ? (
+          <AdminUserConsole
+            key={routeHash}
+            actorRole={user.role}
+            actorId={user.id}
+            users={users}
+            onNavigate={setActiveTab}
+          />
+        ) : (
+          <AccessUserManagement key={routeHash} actorRole={user.role} actorId={user.id} />
+        )
+      )}
+      {activeTab === 'chatgpt_bridge' && !user.passwordResetRequired && <ChatgptBridgePage actorRole={user.role} />}
+      {activeTab === 'logs' && !user.passwordResetRequired && <AuditLogsPage actorRole={user.role} />}
 
       </React.Suspense>
 
@@ -432,16 +540,18 @@ function Application() {
         isOpen={activeGlobalModal?.type === "quick_booking"}
         onClose={() => setActiveGlobalModal(null)}
         initialSlot={activeGlobalModal?.payload}
+        resources={activeGlobalModal?.payload?.resources}
         onProceedPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined}
         onViewBookings={() => { setActiveGlobalModal(null); setActiveTab("bookings"); }}
         onConfirmBooking={() => {
           setCalendarRevision(value => value + 1);
-          loadData();
+          refreshData();
         }}
       />
 
-    </AppLayout>
+    </AppLayout></DraftActorContext.Provider>
   );
 }
 
 export default App;
+import { DraftActorContext } from './providers/DraftActorContext';

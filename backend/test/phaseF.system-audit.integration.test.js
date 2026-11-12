@@ -349,7 +349,7 @@ test("Phase F System Audit Trail and Administrative Accountability", { timeout: 
     assert.ok(guestCreatedEvent);
     assert.equal(guestCreatedEvent.targetType, AUDIT_TARGET_TYPES.USER);
     assert.equal(guestCreatedEvent.afterState?.role, "CUSTOMER");
-    assert.equal(guestCreatedEvent.afterState?.customerType, "EXTERNAL");
+    assert.equal(Object.hasOwn(guestCreatedEvent.afterState, "customerType"), false);
     assert.equal(JSON.stringify(guestCreatedEvent).includes(capturedOtp), false);
     assert.equal(JSON.stringify(guestCreatedEvent).includes("0912345678"), false);
 
@@ -389,8 +389,8 @@ test("Phase F System Audit Trail and Administrative Accountability", { timeout: 
     });
     assert.ok(guestReusedEvent);
     assert.equal(guestReusedEvent.targetType, AUDIT_TARGET_TYPES.USER);
-    assert.deepEqual(guestReusedEvent.beforeState, { customerType: "EXTERNAL" });
-    assert.deepEqual(guestReusedEvent.afterState, { customerType: "EXTERNAL" });
+    assert.equal(guestReusedEvent.beforeState, null);
+    assert.equal(guestReusedEvent.afterState, null);
   });
 
   await t.test("PRICING & PAYMENT: pricing change captures before/after rate; admin charge is auditable", async () => {

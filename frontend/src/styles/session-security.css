@@ -1,0 +1,8 @@
+.session-notice { position: fixed; z-index: 2000; bottom: 1rem; left: 50%; transform: translateX(-50%); width: min(36rem, calc(100vw - 2rem)); padding: 1.25rem; background: var(--bg-surface, #fff); color: var(--text-primary, #25213d); border: 1px solid var(--border-color, #d9d0ef); border-radius: 12px; box-shadow: 0 8px 28px #21134226; }
+.session-notice p { margin: .5rem 0 1rem; }
+.session-notice > div { display: flex; flex-wrap: wrap; gap: .75rem; }
+.session-security dl { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: .75rem; }
+.session-security dt { color: var(--text-secondary, #625a76); }
+.session-security { margin-block: 1.5rem 2rem; padding-block: 0 1.5rem; border-bottom: 1px solid var(--border-color, #d9d0ef); }
+.session-security dd { margin: 0; overflow-wrap: anywhere; }
+@media(max-width: 480px) { .session-security dl { grid-template-columns: 1fr; gap: .35rem; } .session-security dd { margin-bottom: .75rem; } }

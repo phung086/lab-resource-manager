@@ -21,12 +21,12 @@ try {
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
     page.on('request', request => { if (request.method() === 'POST' && /\/api\/(bookings|payments)(\/|$)/.test(request.url())) businessPosts++; });
-    await page.addInitScript(({ accessToken, user }) => { localStorage.setItem('lrm_token', accessToken); localStorage.setItem('lrm_user', JSON.stringify(user)); localStorage.setItem('lrm_locale', 'vi'); }, session);
+    await page.addInitScript(({ accessToken, user }) => { sessionStorage.setItem('lrm_token', accessToken); sessionStorage.setItem('lrm_user', JSON.stringify(user)); localStorage.setItem('lrm_locale', 'vi'); }, session);
     await page.goto(`${base}/#/workspace/tai-nguyen`);
     await page.locator('.assistant-launcher').click();
     const dock = page.locator('#lab-assistant-panel'); await dock.waitFor();
     await dock.locator('.assistant-language').getByRole('button', { name: 'VI', exact: true }).click();
-    await page.locator('html[lang=vi]').waitFor();
+    await dock.locator(':scope[lang=vi]').waitFor();
     const ask = async (message, expectedStatus = 200) => {
       const pending = page.waitForResponse(response => response.url().endsWith('/assistant/chat') && response.request().method() === 'POST');
       await dock.locator('#assistant-question').fill(message); await dock.locator('.assistant-compose button').click();
@@ -51,7 +51,7 @@ try {
     const text = await dock.innerText();
     await dock.locator('.assistant-minimize').click(); await page.locator('.assistant-launcher').click();
     check((await dock.innerText()).includes('Cho tôi xem cái thứ hai'), `${role}: minimize retains conversation`);
-    await dock.locator('.assistant-language').getByRole('button', { name: 'EN', exact: true }).click(); await page.locator('html[lang=en]').waitFor();
+    await dock.locator('.assistant-language').getByRole('button', { name: 'EN', exact: true }).click(); await dock.locator(':scope[lang=en]').waitFor();
     check((await dock.innerText()).includes('Cho tôi xem cái thứ hai'), `${role}: locale preserves original question`);
     check(!/\b(?:assistant|api|enum)\.[A-Za-z_]+/.test(text), `${role}: response has no raw locale keys`);
     await dock.locator('#assistant-question').fill('Keep my unsent draft');
@@ -69,13 +69,12 @@ try {
     }, { times: 1 });
     const expired = await ask('Hello again', 409);
     check(expired.body.error.code === 'ASSISTANT_CONVERSATION_EXPIRED', `${role}: actual server rejects missing conversation`);
-    check(await dock.locator('#assistant-question').inputValue() === 'Hello again', `${role}: rejected continuation retains draft`);
+    check(await dock.locator('#assistant-question').inputValue() === '' && (await dock.locator('.assistant-turn').last().innerText()).includes('Hello again'), `${role}: rejected continuation retains outgoing message separately from composer`);
     check(await dock.locator('.assistant-compose button[type=submit]').isDisabled(), `${role}: expired context requires explicit reset`);
     await dock.getByRole('button', { name: 'New conversation', exact: true }).click();
     const hello = await ask('Hello');
     check(!hello.request.conversationId && hello.body.summary[0].key === 'assistant.introduction', `${role}: reset recovers through real API`);
-    await dock.locator('.assistant-about summary').click();
-    check((await dock.locator('.assistant-about').innerText()).includes('not connected yet'), `${role}: configuration limit disclosed`);
+    check(await dock.locator('.assistant-about').count() === 0, `${role}: provider metadata is absent`);
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${role}: no page horizontal overflow`);
     await page.screenshot({ path: `${output}/${name}-conversation-en.png` });
     const logout = await fetch(`${api}/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${session.accessToken}` } }); assert.equal(logout.status, 204);

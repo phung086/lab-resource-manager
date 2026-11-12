@@ -1,5 +1,302 @@
 # Architecture And Product Decisions
 
+## ADR-047 — Một nhóm khách hàng (11/11/2026)
+
+Đăng ký, Google và đặt nhanh bằng OTP tạo cùng vai trò `CUSTOMER`. API và
+giao diện tài khoản chỉ dùng danh tính, liên hệ và quyền cần thiết cho nghiệp vụ.
+Điều kiện đặt, giá và quyền xem hồ sơ áp dụng theo tài nguyên, chính sách và
+quyền sở hữu. Quyền `LAB_STAFF` và `ADMIN` phục vụ vận hành và quản trị.
+
+Quyết định này thay các quy ước phân loại khách trước đây và phần đọc kho học
+phần của ADR-033. Route học phần ngừng phục vụ. Các giá trị lịch sử và bảng lưu trữ
+được giữ trong cơ sở dữ liệu. Cột phân loại cũ trở thành nullable và bỏ default.
+Phí giao tận nơi theo ADR-037 hiện là 0 đ cho các tài nguyên đủ điều kiện.
+
+## Clarification — Local graduation monitoring demo (09/11/2026)
+
+The user approved 60 sourced demo inventory units and labelled simulation in
+the absence of hardware. This is a narrow exception to the retired simulator:
+the bounded local CLI runner and scoped workspace controls can persist SIMULATED samples, alerts and incidents
+in lab_resources_local_demo only, with active run provenance. Public ingestion
+still rejects simulated sources. Production and real inventory are excluded.
+Canonical physical state and actual booking usage remain independent. Sample
+recovery resolves alert conditions; it does not close the incident workflow.
+The generator is a deterministic teaching scenario, not a calibrated device
+model or AI inference. Quantities/rental prices are demo assumptions; model
+specifications carry manufacturer references. No historical migration is changed.
+The Windows collector registers a separate non-bookable measured resource. A
+bounded assistant request may summarize scoped persisted evidence using the
+configured model. Provider unavailability leaves the evidence visible and
+produces no model answer.
+
+## ADR-046 — Xác thực tài khoản bằng Google (08/11/2026)
+
+Người dùng yêu cầu thêm Google vào đăng nhập và đăng ký. Backend xác minh
+ID token Google và nonce gắn với cookie ngắn hạn. `User.googleSubject` là
+định danh Google duy nhất. Tài khoản mới từ Gmail hoặc Workspace nhận
+`CUSTOMER`. Tài khoản LAB trùng email phải chứng minh mật khẩu hiện tại ở
+lần liên kết đầu, giữ quyền hiện có và vô hiệu hóa phiên cũ qua authVersion.
+Phiên LAB tiếp tục theo ADR-043. Tài khoản Google chưa có mật khẩu có thể đặt
+mật khẩu cục bộ qua OTP email. Tính năng cần Client ID được cấu hình cho origin
+thực tế.
+
+## ADR-045 — Mở rộng quản lý bằng phần mềm (20/10/2026)
+
+Làm rõ theo yêu cầu user20/10: không tạo một luồng/điểm điều hướng “Điều phối”
+riêng. Đặt nhóm nằm trong màn hình tài nguyên đã chọn, hồ sơ/checklist trong
+chi tiết/lịch sử booking, waitlist trong booking, policy trong quản trị tài
+nguyên và số liệu trong báo cáo vận hành. Module nghiệp vụ vẫn tách file để dễ
+đọc nhưng không đồng nghĩa với một chức năng điều hướng riêng.
+
+User yêu cầu triển khai các hướng phát triển đã đề xuất, bám sát đồ án, không
+nặng thuật toán và không có thiết bị vật lý thật. Bổ sung chính sách có revision/
+audit và xem trước tác động; nhóm đặt tối đa5 tài nguyên cùng LAB/cùng giờ;
+hồ sơ/checklist; gợi ý tuần tự; danh sách chờ và báo cáo trong phạm vi quyền.
+
+Tạo nhóm là một transaction, có requestKey để retry; thanh toán và vòng đời
+vẫn độc lập từng booking. Không thêm role/BookingStatus. Checklist là khai báo
+người dùng, không tự transition, không chứng nhận vật lý. Waitlist chỉ thông báo,
+không giữ chỗ. Gợi ý không phải cam kết còn chỗ, phải preflight lại lúc tạo.
+
+LabPolicy có turnaroundMinutes0..240, mặc định0 và revision. Booking lưu snapshot
+chính sách khi tạo/đổi lịch; buffer sau thời điểm kết thúc/giải phóng của lịch
+trước không bị sửa hồi tố bởi policy mới. Giữ notice floor30 phút của ADR-044.
+Preview kiểm tối đa500 lịch tương lai và công khai giới hạn, không tự hủy lịch.
+
+Giải thích code và giới hạn: `backend/src/services/planning/README.md`.
+
+## ADR-044 — Thời gian chuẩn bị trước lịch và hạn thanh toán (19/10/2026)
+
+Human chỉ ra trường hợp tạo lúc15:19 cho lịch15:20, còn được thanh toán tới15:34.
+Trước sửa, hệ thống chỉ chặn giờ bắt đầu trong quá khứ; chưa có hợp đồng về
+minimum notice. Chọn baseline ứng dụng30 phút để chặn đặt ngay trong cửa sổ
+nhận tài nguyên; đây không phải khẳng định LAB ngoài đời bắt buộc đúng30 phút.
+`LabPolicy.minAdvanceBookingMinutes` mặc định30, giới hạn30..43200; ADMIN có
+thể tăng theo quy trình LAB thực tế. Không nhầm với `minBookingMinutes` là
+thời lượng sử dụng. Không tự áp quy định mới để hủy lịch đã xác nhận/đã trả tiền.
+
+Server so sánh chính xác `startAt >= now + notice`, không làm tròn. Áp dụng cho
+báo giá công khai/cá nhân, availability, preflight, create dùng chung signed-in/
+guest, reschedule và gợi ý AI; tài nguyên không có LAB/policy vẫn có baseline.
+Create khóa resource rồi khóa chia sẻ LAB; thay notice khóa LAB độc quyền,
+kiểm tra tài khoản ADMIN hiện hành, expected notice và audit cùng transaction.
+Kiểm tra lại ở thời điểm ghi, vì bước xem lại không phải giữ chỗ hay ngoại lệ.
+UI hiển thị thời gian đặt trước và không gợi ý khung quá gần; server quyết định.
+
+Làm rõ ADR-038: hạn hiệu lực của hold luôn `min(paymentDueAt,startAt)` kể cả
+record cũ có stored deadline sau start. Khởi tạo/retry URL, read, worker,
+resource expiry và IPN đều áp dụng. Đúng hạn là hết hạn, không đợi endAt.
+Callback thành công đến sau hủy vẫn lưu bằng chứng và manual_review, không
+phục hồi booking. Lịch mới có notice30 phút vẫn giữ tối đa15 phút như trước.
+
+API ADMIN `PATCH /api/laboratories/:id/booking-policy` nhận riêng
+`minAdvanceBookingMinutes`, `expectedMinAdvanceBookingMinutes`, `reason`10..500
+ký tự. Notice không vượt maxAdvanceBookingDays. Đây là API cấu hình; chưa có
+form chỉnh notice riêng trong workspace. Migration bổ sung20261019000200,
+không sửa migration đã áp hoặc reset dữ liệu.
+
+## ADR-043 — Phiên đăng nhập, SEO công khai và phản hồi từng phần (19/10/2026)
+
+Theo yêu cầu human tăng bảo mật, hoàn thiện booking/SEO và hướng tới nội dung
+chat đầu tiên trong5–10 giây. JWT HS256 phải có issuer/audience/iat/exp/sid và
+authVersion; sid tham chiếu AuthSession trong PostgreSQL. Mỗi request kiểm tra
+phiên còn hiệu lực và tài khoản/quyền hiện tại. Không chấp nhận JWT legacy thiếu
+sid/claims; nâng cấp buộc đăng nhập lại, thay ngoại lệ token thiếu version của
+ADR-034. Không thêm refresh token hoặc kéo dài JWT vô hạn.
+
+Mặc định idle30 phút, absolute8 giờ; SESSION_IDLE_MINUTES và
+SESSION_ABSOLUTE_MINUTES chỉ giảm giới hạn tương ứng30/480 phút, idle không lớn
+hơn absolute. GET/polling không gia hạn. POST /auth/activity từ tương tác chủ
+động gia hạn idle trong giới hạn absolute; server vẫn là authority, không thể
+chứng minh người thật đang thao tác từ một HTTP request. Logout thu hồi sid;
+logout-all tăng authVersion. Credential/role/activation revocation và OTP giữ
+nguyên. Đăng ký/guest tạo phiên trong transaction nghiệp vụ; không lưu JWT/raw
+credential trong bảng phiên. Cleanup tối đa1000 phiên quá absolute/h, không
+quyết định quyền hợp lệ. FE dùng sessionStorage, báo trước hết hạn và kiểm tra
+khi tab trở lại; storage vẫn chịu rủi ro XSS. Không có cookie refresh/BFF mới.
+
+Booking đăng nhập có preflight dùng chung readiness với create, rồi xem lại
+contact/giờ/phí/cách nhận. Preflight không giữ chỗ và hết giá trị UI sau60s;
+create vẫn recheck dưới lock/DB overlap guard. Guest giữ wizard/OTP, chặn gửi
+lặp đồng thời và khi kết quả mutation không xác định; không có universal
+idempotency qua reload. Giữ nguyên giá/15-minute hold/IPN/nhận trả và RBAC.
+
+SEO chỉ bốn trang công khai /, /resources, /schedule, /how-it-works; build tạo
+HTML giới thiệu/metadata/canonical riêng, sitemap và robots. Private/auth/error
+trả noindex từ HTML đầu, unknown URL HTTP404. Bật indexing chỉ khi cấu hình
+HTTPS origin thật và VITE_SEO_INDEXABLE=true; mặc định staging/local không index.
+Không công khai profile/payment, thêm schema rating/địa chỉ giả hoặc hứa thứ hạng.
+
+Bridge thêm publish_question_partial: tối đa3 phần text tích lũy1500 ký tự,
+sequence đơn điệu/idempotent, yêu cầu context hiện hành và kiểm lại grant/actor/
+generation/expiry/handoff. Partial chưa phải ANSWERED, không đề xuất hay ghi
+nghiệp vụ; final vẫn qua publish_question_reply. Client hiển thị nội dung thật
+trong lúc pending, từ chối phần bị lùi/sửa. Không dùng typing/placeholder làm
+first useful content.5–10s là mục tiêu đo, không SLA của Work Events; thiếu
+subscription/provider phải báo rõ. Câu giải thích không được trả danh mục chỉ
+vì nhắc tới thiết bị. Các FAQ/fast reads vẫn gắn provenance local và quyền thật.
+
+## ADR-042 — Lịch theo tác vụ và vai trò (17/10/2026)
+
+Làm rõ theo phản hồi human cùng ngày: gom khoảng trống theo thời lượng thay vì
+liệt kê mỗi giờ bắt đầu; đọc event bảy ngày cho tài nguyên đang xem để tìm ngày
+gần nhất phù hợp, không fan-out availability từng giờ. Nút “Đặt giờ này” kiểm tra
+lại rồi mở form, bỏ nút precheck riêng. Phần khay nhiều mục giữ check tuần tự.
+Tìm kiếm header/calendar dùng một component; màn lịch chỉ giữ tìm kiếm cục bộ,
+bỏ ô header trùng. Nội dung khách dùng ngôn ngữ đời thường.
+
+Human cho phép Codex tự chốt và triển khai sau trao đổi Gemini 4 Argon/Cao.
+Khách bắt đầu bằng chọn tài nguyên hoặc tìm theo khoảng giờ trên cùng một luồng;
+cán bộ/admin xem lịch ngày theo tài nguyên và LAB đúng phạm vi. Mobile dùng agenda,
+tuần so sánh một tài nguyên bằng bảy ngày có phiên, tháng là overview phụ. Giữ
+nhận diện tím/lavender/kem hiện hành; bỏ lặp trạng thái quá khứ và CTA mỗi ô giờ.
+
+Tuần dùng `/calendar/events` theo khoảng bảy ngày thay vì phụ thuộc lưới `/slots`
+08–20 cũ; không đổi hợp đồng backend. Giờ phục vụ từ policy, thiếu thì hiển thị
+chưa có thông tin. Danh mục lọc `availableFrom/availableTo/availability=AVAILABLE`
+chỉ cho ứng viên. Không suy eligibility/giá/khả dụng cuối từ khoảng không có event.
+
+Khay đã chọn giữ draft/kết quả độc lập. Cho chép giờ chung và precheck tuần tự,
+cache kết quả tối đa một phút, hủy kết quả cũ, dừng khi 429/network/auth; tiếp tục
+chủ động sau cooldown. Không đặt tất cả, không atomic guarantee. Form tạo vẫn
+kiểm lại và có thể thất bại từng món. Pending/uncertain fence và paymentDueAt
+thật từ ADR-038 không đổi; precheck không bắt đầu thời gian giữ chỗ.
+
+## ADR-041 — Mã truy cập theo liên hệ lịch đặt và phục hồi 429 (17/10/2026)
+
+User yêu cầu thay mật khẩu phòng dùng chung bằng số điện thoại người đặt.
+Mã lấy từ contactSnapshot.phone đã lưu của chính booking, giữ số 0 đầu và bỏ
+ký tự định dạng; không lấy profile hiện tại hoặc suy từ resource code. Lịch
+legacy thiếu contact hợp lệ không được fallback sang mật khẩu cố định.
+Quyết định này thay phần mật khẩu phòng dùng chung của ADR-037. Dữ liệu mã hóa
+legacy được giữ nguyên, không sửa migration hoặc ghi lại các booking cũ.
+
+Mã chỉ đi qua GET /bookings/:id/access owner-only, no-store, sau kiểm tra trạng
+thái và thanh toán. Self-check-in giữ owner/authVersion, time window, LAB,
+resource/care/training/conflict, transaction và audit. Số điện thoại không phải
+bằng chứng xác thực độc lập; quyền vào phòng vẫn do phiên đăng nhập và booking.
+Không đưa mã vào catalog, trợ lý, thông báo hay audit. Chưa có tích hợp khóa cửa
+vật lý; mã này thuộc quy trình truy cập/check-in của ứng dụng.
+
+Giao dịch success mở biên nhận nội bộ và chỉ dẫn nhận; nút xem hồ sơ thanh toán
+không tiếp tục gọi là yêu cầu trả tiền. Receipt không thay hóa đơn thuế. UI dùng
+trạng thái server/IPN, không suy thanh toán từ return URL hoặc đồng hồ client.
+Checkout chờ settlement đọc tuần tự tối đa mỗi10 giây, ngừng khi lỗi/ẩn trang,
+không tải lại cả3 API mỗi4 giây; access đọc tuần tự mỗi30 giây. Ingress giữ
+nguyên quota, trả Retry-After và chi tiết thời gian chờ qua CORS. Client tạm dừng
+bucket bị429, không retry mutation, giữ draft và cho retry chủ động sau cooldown.
+
+
+## ADR-040 — Trợ lý mọi vai trò và tra cứu nhanh (15/10/2026)
+
+Theo yêu cầu user, giữ ChatGPT Work, không thêm API key. CUSTOMER/LAB_STAFF/ADMIN
+dùng cùng dock và bridge. Actor lấy từ user hiện tại; role snapshot server lưu
+trong request.context, cùng authVersion và owner kiểm lại mỗi lượt. Field
+customerId trong bảng bridge là tên legacy; không đổi schema/history vì đổi actor.
+Grant ADMIN chỉ là kết nối OAuth, không cấp quyền ADMIN cho câu hỏi của người khác.
+
+Các intent rõ ràng đọc database ngay: tìm tài nguyên/slot, lịch ngày/tuần,
+tồn kho, báo cáo vận hành 7/30 ngày và tra CUSTOMER theo tên/email/điện thoại.
+Không đoán câu ghép hoặc ngày chưa hỗ trợ. Lịch customer chỉ của mình; lịch/kho/
+báo cáo staff theo UserLabAssignment hiện hành; ADMIN toàn hệ thống. Tra thông
+tin liên hệ CUSTOMER của staff theo ngoại lệ ADR-034, không mở quyền đọc lịch/
+payment ngoài LAB. Không gửi password/OTP/room access/address vào chatbot.
+Tổng số lấy trước giới hạn preview; thiếu sổ kho là chưa xác định, không phải 0.
+Giờ theo lịch, thời gian nhận/trả đã khai báo và số đo phần cứng luôn tách biệt.
+
+Fast query lưu ANSWERED/authenticated_mcp, không phát event. Admission tối đa4;
+API đọc nhanh30/phút, tạo/hủy Work6/phút và ingress180/phút mỗi actor. Câu mở/
+câu ghép giữ Work; poll phát event500ms, status GET có tối đa3 retry lỗi mạng/5xx,
+không retry auth/invalid data hay POST. Giữ TTL/cancel/history và quyền backend.
+Provider history thay nội dung fast lookup bằng marker bắt buộc đọc lại, không
+replay danh sách liên hệ như evidence. BOOKING/STAFF_SUPPORT proposal chỉ CUSTOMER;
+mọi role vẫn xác nhận ghi nghiệp vụ qua form/API chuẩn, chatbot không có write tool.
+
+Độ trễ Work ngoài backend không có cam kết vài giây. Kết nối Work gián đoạn vẫn
+cho phép các tra cứu local đã phân quyền; không giả thành công cho câu cần AI.
+
+## ADR-039 — Hội thoại LAB gọn và ngôn ngữ riêng (15/10/2026)
+
+Theo yêu cầu user: VI/EN trong chatbot chỉ đổi chatbot; đổi ngôn ngữ ứng dụng
+sau đó đồng bộ vào chatbot. Dùng chung catalog đã kiểm integrity, giữ draft và
+lịch sử gốc. Tin gửi xuất hiện ngay với trạng thái, composer trống cho draft
+tiếp theo; lỗi/hủy giữ tin với retry chủ động, không tự gửi lại mutation.
+
+Ẩn tên provider, About và metadata phản hồi khỏi dock; giữ lỗi thật và nguồn
+tài liệu khi có. API vẫn phân biệt local_guidance với chatgpt_bridge/model,
+không giả câu trả lời từ provider. Mỗi câu trả lời có đường về tài nguyên/lịch
+đặt của LAB; model được hướng dẫn ngắn gọn và gợi ý bước tiếp theo phù hợp.
+Lời chào, giới thiệu, cảm ơn và hướng dẫn quy trình có sẵn dùng exact intent
+để bỏ chờ provider. Câu ghép, dữ liệu hiện hành và kiến thức chung vẫn theo
+luồng kiểm chứng/receiver hiện có; không hứa mọi câu trả lời trong vài giây.
+Bridge giữ auth, grant/subscription, busy/rate/ownership guards và lưu history,
+không phát webhook cho local guidance. Không thay schema hay quyền nghiệp vụ.
+
+## ADR-038 — Giữ chỗ thanh toán 15 phút (15/10/2026)
+
+Người dùng yêu cầu lịch có phí chưa trả tiền không được báo đã xác nhận; giữ
+khung giờ tối đa 15 phút rồi tự hủy, cho khách khác đặt. Quyết định này thay
+phần tự CONFIRMED trước thanh toán trong ADR-032 và điều kiện checkout ADR-023.
+Giữ bảy BookingStatus: PENDING_APPROVAL + paymentDueAt là chờ xác minh thanh
+toán tự động, UI hiển thị “Chờ thanh toán”; PENDING_APPROVAL không có hạn là
+duyệt legacy. Staff không được approve/reject thay việc xác minh thanh toán.
+Booking miễn phí xác nhận ngay; không tạo payment giả.
+
+Hạn lưu ở DB từ lúc tạo, không gia hạn khi tải lại/mở/retry checkout. URL VNPAY
+không vượt hạn giữ chỗ. Chỉ IPN chữ ký/merchant/owner/amount hợp lệ trước hạn
+mới chuyển CONFIRMED; Return không settle. Worker 5 giây và kiểm tra đồng bộ
+khi đọc lịch/thanh toán/đặt lại hủy giữ chỗ quá hạn, lưu UsageLog SYSTEM có
+actorRef và thông báo owner; không thay trạng thái vật lý tài nguyên. Hủy ở
+backend giải phóng cả GiST và predicate scheduling hiện hành.
+
+Callback thành công đến muộn vẫn lưu success/manual_review, không lấy lại slot
+hoặc tự hoàn tiền. Resource→booking locks phối hợp expiry/IPN/create; account
+lock FOR NO KEY UPDATE vẫn chặn thay đổi credentials/activation, cho phép FK
+của thông báo hết hạn tham chiếu owner để tránh deadlock khi hai khách đặt lại.
+
+Đối với lịch CONFIRMED có phí chưa trả từ luồng cũ và chưa kết thúc, worker
+chuyển sang giữ chỗ với hạn createdAt+15 phút, lưu thay đổi thật và hủy ngay
+nếu đã quá hạn. Không sửa lịch đã kết thúc hay settlement hợp lệ. Queue API
+giữ byStatus canonical, thêm summary.pendingPayment và filter=PENDING_PAYMENT;
+filter=PENDING_APPROVAL chỉ chọn legacy; status=PENDING_APPROVAL vẫn là enum.
+
+### 12/11/2026 — Chuyển khoản VietQR
+
+Theo yêu cầu người dùng, checkout hỗ trợ VNPAY và chuyển khoản VietQR. SePay
+gửi webhook báo có, xác thực bằng API key. LAB kiểm ngân hàng, số tài khoản
+theo phiên phát hành QR, mã giao dịch, số tiền VND và ID báo có duy nhất.
+Giữ hạn cố định của ADR-038, dùng chung settlement và biên nhận với VNPAY.
+Giao dịch ví cũ vẫn đọc được qua lịch sử; migration đã áp dụng được giữ nguyên.
+
+## ADR-037 — Nhận tài nguyên, truy cập phòng và trả sớm (14/10/2026)
+
+Theo yêu cầu người dùng: phòng có mật khẩu riêng do ADMIN cấu hình, mã hóa bằng
+ROOM_ACCESS_SECRET_KEY độc lập. Chỉ owner của lịch còn hiệu lực và đã thanh toán
+đúng khoản phí (hoặc miễn phí) đọc được mật khẩu; public catalog, AI context,
+notification và audit không chứa mật khẩu. Đây là quyền truy cập trong ứng dụng;
+chưa kết nối bộ khóa cửa. Mật khẩu cố định được khách yêu cầu, không phải mã
+đơn dụng theo booking; backend vẫn giới hạn check-in từ startAt−30 phút đến
+trước endAt, kiểm tra payment, trạng thái, care và maintenance trong transaction.
+
+Khách bấm vào phòng mới ghi CHECKED_OUT/actualStartAt; không đánh dấu khách
+vắng mặt là đã sử dụng. Owner ROOM trả sau check-in bất kỳ lúc nào: RETURNED,
+actualEndAt/returnedAt/schedulingReleasedAt được ghi nguyên tử, giải phóng giữ
+lịch nhưng giữ bước kiểm tra RETURNED→COMPLETED cho staff. Không tự ghi kiểm tra
+đạt, hoàn tiền hoặc bỏ qua trạng thái vật lý cứng. Legacy RETURNED chưa có thời
+điểm giải phóng vẫn được giữ lịch; không tự sửa lịch sử cũ.
+
+Thiết bị nhận tại LAB hoặc địa chỉ Việt Nam đầy đủ khi ADMIN bật giao tại nhà
+cho EQUIPMENT/EXPERIMENT_KIT. Phí giao tận nơi hiện cố định 0 đ;
+không gọi/giả lập GHN, tracking hoặc báo giá hãng vận chuyển. Snapshot cách nhận,
+địa chỉ và contact thuộc booking, chỉ owner/admin/staff đúng LAB đọc. Thiết bị
+vẫn cần staff bàn giao/nhận trả. Mọi bàn giao bắt đầu tối đa 30 phút trước lịch.
+
+Thông báo owner trước lịch30 phút và trước hết giờ15 phút; thanh toán thành công
+có chỉ dẫn nhận tài nguyên, yêu cầu support thông báo ADMIN/staff đúng LAB và
+nhân viên được giao. VNPAY return chuyển303 về trang biên lai của origin đã
+allowlist khi khởi tạo; chỉ IPN xác thực được ghi settlement. UI poll kết quả
+thật, Enter gửi chat/Shift+Enter xuống dòng và giữ cuộn khi đang đọc lịch sử.
+
 This log records decisions that future agents must preserve unless the user
 explicitly approves a replacement decision. Detailed evidence remains in the
 linked canonical documents and maintained contracts and reproducible tests.
@@ -607,3 +904,122 @@ liên hệ. Lần sau dùng thông tin đã lưu. Địa chỉ/tổ chức khôn
 đến LAB. Validation giữ field/issue codes an toàn, chỉ rõ trường lỗi, focus đúng
 trường; placeholder form không chứa ví dụ dài. Quote, thanh toán, xung đột, care
 readiness, tự CONFIRMED và scope staff/owner của ADR-032 vẫn bắt buộc.
+
+## ADR-034 — Quản lý khách hàng và đổi mật khẩu có OTP (13/10/2026)
+
+User cho phép ADMIN quản lý mọi tài khoản và LAB_STAFF quản lý tất cả CUSTOMER,
+kể cả khách chưa đặt ở LAB được phân công. Ngoại lệ này chỉ áp dụng tài khoản:
+tạo, đọc, sửa liên hệ, kích hoạt/ngừng và xóa mềm, hỗ trợ đổi mật khẩu. Staff
+không được đổi role, LAB assignment, sửa/xem tài khoản ADMIN/LAB_STAFF; phạm vi
+LAB của tài nguyên, lịch, vận hành, giám sát và chat không thay đổi.
+
+Email đăng ký không thể đổi từ màn quản lý hoặc PATCH profile: nếu staff đổi
+email rồi tự nhận OTP thì mất ý nghĩa đồng ý của khách. Mỗi thay đổi mật khẩu
+bắt buộc OTP gửi tới email hiện tại. Tự đổi còn cần mật khẩu hiện tại; hỗ trợ
+cần lý do 5–500 ký tự. OTP 6 số, hiệu lực 10 phút, gửi lại sau 60 giây, tối đa
+5 lần nhập sai; hash gắn actor/target/email/purpose/credential versions, dùng
+một lần. SMTP thiếu hoặc từ chối phải báo thất bại; không gửi code qua response,
+log hay outbox và không có admin bypass. Đổi mật khẩu ghi audit cùng transaction
+và tăng authVersion để vô hiệu hóa mọi phiên cũ; self-service trả JWT mới.
+
+Role/activation cũng tăng authVersion khi đổi. Các token cũ thiếu version chỉ
+hợp lệ khi tài khoản còn version 0. Xóa mềm có deletedAt, không xóa lịch sử và
+không phục hồi qua activate. Cần xử lý hết booking/loan đang hoạt động trước
+khi xóa; lượt hỗ trợ đang mở chặn xóa/ngừng/đổi role cho đến khi đóng hoặc
+chuyển handler phù hợp. Tạo lịch/chat khóa User và kiểm tra lại active/version,
+không cho in-flight request tạo công việc cho tài khoản đã xóa; tự khóa ADMIN và mất ADMIN hoạt động cuối cùng bị chặn. Account writes
+và policy writes dùng cùng advisory lock, recheck actor trong transaction.
+Khôi phục mật khẩu public khi mất phiên đăng nhập không thuộc batch này; khách
+liên hệ nhân viên hỗ trợ và xác thực email. Đổi email cần luồng riêng đã xác minh.
+
+## ADR-035 — Loyalty theo chi tiêu đã xác thực (13/10/2026)
+
+User chọn chi tiêu làm tiêu chí xét hạng; ADMIN cấu hình ngưỡng và mức giảm.
+Một LoyaltyPolicy SYSTEM có version; mặc định tắt ưu đãi, ngưỡng LAB_PLUS
+1.500.000đ và LAB_PRIORITY 5.000.000đ, mức giảm tương ứng 3%/5%. UI công khai
+trạng thái bật/tắt. Ngưỡng nguyên 1..2.000.000.000đ, priority lớn hơn plus;
+mức giảm 0..50%. Save phải có expectedVersion và audit, không ghi đè thay đổi
+đồng thời. Điểm hiển thị = floor(chi tiêu/10.000), không phải số dư đổi quà.
+
+Chi tiêu chỉ lấy payment success, VND, paidAt tồn tại, provider vnpay/vietqr,
+reconciliation none, đúng chủ booking và amount bằng fee đã lưu; loại booking
+CANCELLED/REJECTED, refunded, pending, orphan và dữ liệu sai. Profile và loyalty
+đọc cùng snapshot RepeatableRead; user loyalty fields cũ không cấp ưu đãi/quyền.
+Quote authenticated CUSTOMER dùng chi tiêu hiện hành; public/operator list price.
+Báo giá và tạo lịch kiểm tra lại amount, tariff version và loyalty policy version;
+feeSnapshot lưu giá gốc, giảm và giá ròng, không đổi booking/payment cũ.
+Refund hoặc đổi chính sách làm quote cũ không hợp lệ nếu giá/hợp đồng đổi.
+Guest quick booking giữ giá public đã chấp nhận, tránh đổi phí sau OTP; muốn
+nhận giảm theo hạng thì đăng nhập trước đặt. Không suy đoán thanh toán thành công
+và không trao thêm quyền LAB hay độ ưu tiên hàng đợi hỗ trợ theo hạng.
+
+## ADR-036 — ChatGPT hỗ trợ qua sự kiện và quyền theo câu hỏi (13/10/2026)
+
+Theo yêu cầu user, thêm lựa chọn plugin ChatGPT Work/Cloud cho chatbot CUSTOMER,
+giữ Responses/MCP nội bộ hiện có cho đường riêng. Bridge mặc định tắt; bật phải
+có HTTPS origin, UI origin, khóa mã hóa 32 byte và redirect ChatGPT chính xác.
+OAuth public client dùng PKCE S256, audience cụ thể, ba scope read/reply/events;
+ADMIN đồng ý grant 30 ngày và có thể thu hồi. Access 15 phút, refresh 7 ngày xoay
+một lần; replay thu hồi cả grant. Đổi chủ kết nối thu hồi grant/subscription và
+câu hỏi đang chờ của kết nối cũ. Không sử dụng JWT nội bộ làm token cho ChatGPT.
+Authorize và code/refresh exchange bỏ tham số mở rộng không hỗ trợ theo RFC6749
+3.1/3.2, không lưu hoặc chuyển tiếp chúng. Trường đã hỗ trợ vẫn kiểm tra kiểu,
+S256/client/callback/audience/scope; tham số bảo mật bị lặp bị từ chối.
+
+Câu hỏi và outbox được lưu cùng transaction, gắn CUSTOMER/authVersion và generation
+của grant. Event chỉ chứa requestId; 2xx là nhận sự kiện, chưa phải trả lời. Work
+chat đọc bộ nghiệp vụ có phiên bản và dữ liệu hiện hành trong phạm vi khách đó;
+tool publish ghi nội dung chat và tối đa hai đề xuất xem trước (BOOKING,
+STAFF_SUPPORT, mỗi loại một đề xuất), không đổi booking, tài khoản, payment hay care.
+Chưa đọc context đúng phiên bản không được publish. Câu hỏi hết hạn sau 10 phút;
+chuyển staff, hủy, đổi credential hoặc revoke đều từ chối phản hồi muộn. Tối đa
+13 lần đọc và 24 KB dữ liệu động/câu hỏi; lịch sử ngữ cảnh tối đa 10 lượt/30 phút.
+Đây là grounding có kiểm soát, không fine-tuning hoặc sao chép toàn DB sang GPT.
+
+Làm rõ 14/10: thời gian tương đối trong câu khách phải lấy từ `timeContext`
+Asia/Ho_Chi_Minh (nowVietnam/today/tomorrow), không suy ngày từ UTC `now` hay lịch
+sử hội thoại. Nêu ngày cụ thể trước khi tra lịch. Context version tăng khi sửa
+quy tắc này; host vẫn phải đọc context mới trước publish.
+
+Callback HTTPS được kiểm tra toàn bộ DNS/IP công khai và ghim IP khi kết nối;
+không redirect. Subscription xác minh challenge ký, bí mật mã hóa tại DB và TTL
+24 giờ; worker lease/SKIP LOCKED, tối đa 5 lần gửi. Bốn MCP lượt đang chạy/process,
+một lượt/grant; hỗ trợ nhiều replica cần kiểm chứng admission chung trước triển khai.
+Tin nhắn được lưu bền trong DB; TTL ngữ cảnh không phải chính sách xóa lịch sử.
+AI transcript của bridge chưa được sao chép tự động vào phiên staff; khách dùng
+nút hỗ trợ hiện có. Plugin phải được cài, OAuth consent và Work chat subscribe;
+cài plugin đơn thuần chưa bảo đảm chatbot chạy hoặc đổi account đã hoàn tất.
+
+Làm rõ 14/10 — hỗ trợ cùng khung chat và một kết nối chuẩn: CUSTOMER chuyển từ
+trợ lý sang form yêu cầu/WAITING/ACTIVE/CLOSED trong chính dock hiện có, giữ các
+lượt AI đang hiển thị. Không điều hướng sang workspace hỗ trợ khi handoff hoặc
+mở STAFF_SUPPORT proposal. Staff/admin tiếp tục dùng workspace để xử lý/lịch sử;
+API support, FIFO, RBAC, tin nhắn bền và bước khách xác nhận không bị bỏ. Chia sẻ
+context vẫn opt-in, chỉ transcript server-owned được phép copy; bridge transcript
+chưa tự copy sang staff. Thu nhỏ giữ draft; mở lại nối phiên đang mở theo API.
+
+Plugin vận hành duy nhất là LAB Support, một grant và một Work event consumer.
+URL ngrok cố định có thể dùng cho local; gateway 8003 định tuyến đúng OAuth/MCP
+tới review8002, mọi đường business tới backend chính8000, không công khai API
+DB review. Ngrok không thay uptime/quota của Work. Cài gói trên tài khoản mới
+vẫn cần OAuth và đăng ký consumer một lần; không sửa code runtime khi giữ domain.
+Không cam kết SLA vài giây qua Work Events hoặc gọi text đang chờ là reply GPT.
+
+Làm rõ 14/10 — user yêu cầu demo đồng nhất: tích hợp tính năng account/OTP,
+loyalty và bridge vào checkout chính, một UI5173/API8000/database local và một
+ngrok target8000. Gateway8003/review8001/8002/5174 chỉ thuộc checkpoint tách trước
+đó, không dùng trong bản tích hợp. Migration bổ sung sau backup, giữ lịch sử và
+không seed khi restart. Plugin/app/issuer/scopes giữ nguyên; public DCR client
+metadata có thể giữ khi chuyển DB, còn grant/token/subscription phải được cấp
+lại theo ADMIN của DB chính và challenge webhook thật. Không chuyển user hay
+giả chứng cứ chat/thanh toán từ DB review vào DB chính.
+
+Theo yêu cầu bổ sung 13/10: bot hỗ trợ khách thao tác bằng form điền sẵn. Server
+kiểm tra đề xuất theo quyền CUSTOMER và dữ liệu hiện hành; tên LAB/tài nguyên và
+giá lấy từ DB, không nhận giá/actor/URL từ model. Đề xuất hết hạn sau tối đa 5 phút;
+khách mở form thường, kiểm tra rồi tự gửi. QuickBookingModal lấy lại quote và API
+kiểm tra policy/certification/availability/phiên bản giá tại thời điểm gửi. Support
+giữ requestId/idempotency/FIFO/presence hiện có; không dispatch từ tool AI. Không
+ghi đè yêu cầu hỗ trợ đã mở hoặc nội dung khách đang nhập. Không có endpoint hay
+migration mới cho business writes. Câu hỏi chung ngoài LAB được trả lời khi có
+bằng chứng phù hợp; dữ kiện biến động cần host search thực có hoặc nêu giới hạn.

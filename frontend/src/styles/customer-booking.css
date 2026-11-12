@@ -1,0 +1,71 @@
+.booking-availability-help {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--studio-line, #dfe6f2);
+  border-radius: 12px;
+  background: var(--studio-wash, #edf3ff);
+  color: var(--studio-ink, #202c47);
+}
+.booking-availability-help h3 { margin: 0; font-size: 1rem; }
+.booking-availability-help p { margin: 0; }
+.booking-recovery-note { color: var(--studio-muted, #596980); font-size: .8125rem; }
+.booking-recovery-purpose { display: grid; gap: 4px; font-size: .8125rem; }
+.booking-recovery-purpose select { width: 100%; min-width: 0; min-height: 44px; }
+.booking-recovery-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.booking-recovery-actions .btn { justify-content: flex-start; text-align: start; min-height: 44px; white-space: normal; }
+.booking-recovery-results { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.booking-recovery-results button {
+  width: 100%;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--studio-control-line, #aebed6);
+  border-radius: 10px;
+  background: var(--studio-soft, #fbfdff);
+  color: var(--studio-selected-ink, #2456a0);
+  font: inherit;
+  text-align: start;
+}
+.booking-recovery-results button:enabled { cursor: pointer; }
+.booking-recovery-results button:enabled:hover { background: var(--studio-selected, #e6efff); }
+.booking-recovery-results button:focus-visible { outline: 2px solid var(--studio-primary, #2563eb); outline-offset: 2px; }
+.booking-recovery-results button:disabled { opacity: .65; }
+.booking-recovery-results strong { display: block; overflow-wrap: anywhere; }
+.workspace-shell.lab-spectrum .my-schedule .customer-booking-ticket {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.customer-ticket-payment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--studio-line, #dfe6f2);
+  background: var(--studio-wash, #edf3ff);
+  color: var(--studio-ink, #202c47);
+}
+.customer-ticket-payment { margin-top: auto; }
+.customer-payment-deadline { display: grid; justify-items: start; gap: 4px; }
+.customer-ticket-payment time { font-size: .8125rem; font-weight: 600; }
+.customer-ticket-payment .btn { min-height: 44px; white-space: normal; }
+.customer-booking-filters { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 16px; }
+.customer-booking-filters label { display: flex; align-items: center; gap: 8px; font-size: .8125rem; white-space: nowrap; }
+.customer-booking-filters select { min-height: 44px; max-width: 100%; }
+.workspace-shell.lab-spectrum .my-schedule .customer-booking-filters .operations-filter-row { margin: 0; }
+.customer-booking-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.customer-repeat-heading { flex-wrap: wrap; gap: 14px; margin-bottom: 20px; }
+.customer-repeat-heading h1 { display: flex; align-items: center; gap: 10px; }
+.customer-repeat-heading h1 svg { flex-shrink: 0; color: var(--studio-primary, #2563eb); }
+.customer-repeat-heading p { max-width: 58ch; }
+@media (max-width: 600px) {
+  .booking-recovery-actions { flex-direction: column; }
+  .customer-ticket-payment .btn { width: 100%; }
+}

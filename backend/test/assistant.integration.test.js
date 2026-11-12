@@ -85,6 +85,9 @@ test('real conversation REST/MCP continuation rejects forged history and foreign
   const peer = await call('conversationPeer', 'Hello'); assert.equal(peer.status, 200);
   const logout = await fetch(`${base}/api/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${tokens.conversationPeer}` } });
   assert.equal(logout.status, 204);
+  assert.equal((await call('conversationPeer', 'Hello')).status, 401);
+  const signedIn = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: users.conversationPeer.email, password: 'AssistantTest!2026' }) });
+  assert.equal(signedIn.status, 200); tokens.conversationPeer = (await signedIn.json()).accessToken;
   assert.equal((await call('conversationPeer', 'Hello', 'en', { conversationId: peer.body.conversation.id })).body.error.code, 'ASSISTANT_CONVERSATION_EXPIRED');
   assert.deepEqual(await Promise.all([prisma.booking.count(), prisma.paymentTransaction.count(), prisma.systemAuditEvent.count()]), before);
 });
@@ -129,6 +132,12 @@ test('VI and EN use the same tool plan; slot proposals remain unsigned form desc
   assert.equal(vi.status, 200); assert.equal(en.status, 200); assert.deepEqual(vi.body.toolsUsed, en.body.toolsUsed); assert.deepEqual(vi.body.toolResults, en.body.toolResults); assert.match(en.body.answer, /Available/); assert.match(vi.body.answer, /Sẵn sàng|Khả dụng|Sẵn có/);
   const before = await prisma.booking.count();
   const slots = await call('lecturer', 'Find available slots', 'en', { resourceId: equipment.id }); assert.equal(slots.status, 200, JSON.stringify(slots.body)); assert.ok(slots.body.toolResults[0].result.candidatesChecked <= 4096); assert.ok(slots.body.actions.length); assert.ok(slots.body.actions.every(a => a.type === 'PREFILL_BOOKING')); assert.equal(await prisma.booking.count(), before);
+  const checkedBefore = Date.now();
+  const near = await fetch(`${base}/mcp`, { method: 'POST', headers: { Authorization: `Bearer ${tokens.admin}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'find_available_slots', arguments: { resourceId: equipment.id, from: new Date(checkedBefore).toISOString(), to: new Date(checkedBefore + 86400000).toISOString(), durationMinutes: 60 } } }) });
+  const nearBody = await near.json();
+  assert.ok(!nearBody.result.isError, JSON.stringify(nearBody));
+  assert.ok(nearBody.result.structuredContent.slots.length > 0);
+  assert.ok(nearBody.result.structuredContent.slots.every(slot => Date.parse(slot.startAt) >= checkedBefore + 30 * 60000));
 });
 test('HTTP deadline releases the account before the next successful actual MCP call', async () => {
   stall = true; const first = await call('timeout'); assert.equal(first.status, 504); assert.equal(first.body.error.code, 'ASSISTANT_TIMEOUT');

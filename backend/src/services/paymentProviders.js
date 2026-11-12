@@ -1,5 +1,8 @@
 import crypto from "node:crypto";
 import { HttpError } from "../middleware/errors.js";
+export const paymentProviders = ["vnpay", "vietqr"];
+// Keep historical settlements eligible for fulfillment and loyalty.
+export const settlementProviders = [...paymentProviders, "momo", "zalopay"];
 export function paymentConfiguration() {
   return {
     vnpay: {
@@ -16,12 +19,10 @@ export function paymentConfiguration() {
     },
     vietqr: {
       enabled: process.env.VIETQR_ENABLED === "true",
-      bank: process.env.VIETQR_BANK_ID || "",
+      bank: process.env.VIETQR_BANK || "",
       account: process.env.VIETQR_ACCOUNT_NO || "",
       name: process.env.VIETQR_ACCOUNT_NAME || "",
-      template: process.env.VIETQR_TEMPLATE || "compact2",
-      client: process.env.VIETQR_CLIENT_ID || "",
-      key: process.env.VIETQR_API_KEY || "",
+      webhookKey: process.env.SEPAY_WEBHOOK_API_KEY || "",
     },
   };
 }
@@ -72,11 +73,10 @@ export function requireVietqr() {
   const c = paymentConfiguration().vietqr;
   if (
     !c.enabled ||
-    !/^\d{6}$/.test(c.bank) ||
+    !/^[a-zA-Z][a-zA-Z0-9 ]{1,39}$/.test(c.bank) ||
     !/^\d{6,19}$/.test(c.account) ||
-    !/^[A-Z0-9 ]{5,50}$/.test(c.name) ||
-    !/^[a-zA-Z0-9_]{1,40}$/.test(c.template) ||
-    Boolean(c.key) !== Boolean(c.client)
+    !c.name.trim() || c.name.length > 70 ||
+    !/^[!-~]{24,256}$/.test(c.webhookKey)
   )
     failConfig();
   return c;
@@ -94,7 +94,6 @@ export function providerAvailability() {
     vnpay: ready(requireVnpay),
     vietqr: ready(requireVietqr),
     vnpayMode: "SANDBOX",
-    vietqrConfirmation: "NOT_CONFIGURED",
   };
 }
 // Official VNPAY 2.1.0 Node sample: sorted keys, UTF-8 percent encoding, spaces as '+'.
@@ -186,64 +185,4 @@ export function buildVnpayUrl(row, ip, now = new Date(), expiresAt = new Date(no
     vnp_ExpireDate: vietnamPaymentDate(expiresAt),
   };
   return `${c.url}?${vnpayQuery(params)}&vnp_SecureHash=${signVnpay(params, c.secret)}`;
-}
-export async function buildVietqr(row) {
-  const c = requireVietqr();
-  const content = `LRM ${row.txnRef}`;
-  const data = {
-    bank: c.bank,
-    accountNumber: c.account,
-    accountName: c.name,
-    amount: row.amount,
-    content,
-    reconciliation: "PENDING",
-    mode: "quicklink",
-  };
-  if (c.key && c.client) {
-    try {
-      const response = await fetch("https://api.vietqr.io/v2/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-client-id": c.client,
-          "x-api-key": c.key,
-        },
-        body: JSON.stringify({
-          accountNo: c.account,
-          accountName: c.name,
-          acqId: Number(c.bank),
-          amount: row.amount,
-          addInfo: content,
-          template: c.template,
-          format: "text",
-        }),
-        signal: globalThis.AbortSignal.timeout(8000),
-      });
-      const result = await response.json();
-      if (
-        !response.ok ||
-        result.code !== "00" ||
-        !/^data:image\/png;base64,/.test(result.data?.qrDataURL || "") ||
-        result.data.qrDataURL.length > 1500000
-      )
-        throw new Error("invalid provider response");
-      return { ...data, mode: "api", qrUrl: result.data.qrDataURL };
-    } catch {
-      throw new HttpError(
-        502,
-        "Không thể tạo VietQR. Vui lòng thử lại.",
-        undefined,
-        "PROVIDER_UNAVAILABLE",
-      );
-    }
-  }
-  const qs = new globalThis.URLSearchParams({
-    amount: String(row.amount),
-    addInfo: content,
-    accountName: c.name,
-  });
-  return {
-    ...data,
-    qrUrl: `https://img.vietqr.io/image/${c.bank}-${c.account}-${c.template}.png?${qs}`,
-  };
 }

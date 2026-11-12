@@ -1,0 +1,50 @@
+:is(.workspace-shell,.project-public-shell) .project-footer.project-footer-refined {
+  --footer-ink: #253859;
+  --footer-muted: #546783;
+  background: #f3f6fc;
+  padding: 34px clamp(20px, 3.4vw, 48px) 24px;
+  border-top: 1px solid #d7e2f2;
+  container-type: inline-size;
+}
+:is(.workspace-shell,.project-public-shell) .project-footer.project-footer-refined > .project-footer-content {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 1.25fr);
+  gap: clamp(14px, 2.4vw, 34px);
+  padding-bottom: 0;
+}
+.project-footer-refined .project-footer-links { grid-template-columns: minmax(0, 1fr); }
+.project-footer-clock {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 12px;
+  padding: 6px 12px;
+  border: 1px solid var(--footer-glass-edge, #c9d9ed80);
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--footer-glass-light, #ffffff80), transparent 90%);
+  box-shadow: inset 0 1px var(--footer-glass-light, #ffffff80);
+  backdrop-filter: blur(12px);
+  color: var(--footer-ink);
+  font: 500 clamp(1.25rem, 1rem + .65vw, 1.6rem)/1.25 var(--font-mono, monospace);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.035em;
+}
+.project-footer-refined :is(.project-footer-links,.project-footer-help) h2 { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin: 0 0 8px; }
+.project-footer-refined :is(.project-footer-links,.project-footer-help) h2 svg { color: #425dbc; flex-shrink: 0; }
+.project-footer-refined .project-footer-links a { min-height: 40px; font-size: 13px; color: var(--footer-muted); overflow-wrap: anywhere; }
+.project-footer-refined .project-footer-help { padding: 14px; background: #eaf0fc; border: 1px solid #dce5f6; border-radius: 13px; }
+.project-footer-refined .project-footer-help summary { justify-content: start; gap: 7px; border-bottom: 1px solid #d4def0; }
+.project-footer-refined .project-footer-help summary svg:last-child { margin-inline-start: auto; }
+.project-footer-refined .project-footer-help details[open] summary svg:first-child { transform: none; }
+.project-footer-refined a.project-footer-action { display: flex; align-self: stretch; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; padding: 6px 10px; border-radius: 8px; background: #fff; color: #2558b9; font-weight: 650; }
+.project-footer-refined .project-footer-account { gap: 0 12px; }
+.project-footer-refined .project-footer-account a { display: inline-flex; align-items: center; font-size: 12px; color: var(--footer-muted); }
+.project-footer.project-footer-refined > .project-footer-baseline { margin-top: 22px; padding-block: 14px 0; border-top-color: #d7e2f2; }
+.workspace-shell .project-footer-refined.project-footer--workspace > .project-footer-baseline { padding-inline-end: 88px; }
+@container (max-width: 850px) {
+  :is(.workspace-shell,.project-public-shell) .project-footer.project-footer-refined > .project-footer-content { grid-template-columns: repeat(2,minmax(0, 1fr)); }
+}
+@container (max-width: 540px) {
+  :is(.workspace-shell,.project-public-shell) .project-footer.project-footer-refined > .project-footer-content { gap: 18px 12px; }
+  .project-footer-refined .project-footer-identity, .project-footer-refined .project-footer-help { grid-column: 1 / -1; }
+  .project-footer-refined .project-footer-links a { min-height: 44px; }
+}

@@ -5,7 +5,7 @@
   --resource-ink: #26243A;
   --resource-muted: var(--workspace-muted, #5D596B);
   --resource-line: var(--workspace-border, #DED7E8);
-  --resource-accent: var(--workspace-accent, #6441D9);
+  --resource-accent: var(--workspace-accent, #6040ce);
   --resource-tint: var(--workspace-accent-tint, #F5F2FF);
   --resource-paper: var(--workspace-paper, #FFF9EE);
   color: var(--resource-ink);
@@ -28,6 +28,13 @@
 .workspace-shell .resource-management-view .resource-filter-grid { display: block; padding: 20px; border-radius: 12px; background: white; }
 .workspace-shell .resource-management-view .resource-filter-grid-inner { padding: 0; grid-template-columns: repeat(auto-fit,minmax(min(100%,200px),1fr)); align-items: end; gap: 16px; }
 .workspace-shell .resource-management-view .resource-filter-grid-inner label { min-width: 0; gap: 8px; }
+.workspace-shell .resource-management-view .resource-filter-sections { grid-template-columns: 1.4fr 1fr; align-items: stretch; }
+.resource-filter-sections fieldset { display: flex; align-items: start; flex-wrap: wrap; gap: 10px; min-width: 0; margin: 0; padding: 12px; border: 1px solid #dce6f5; border-radius: 11px; background: #f7f9ff; }
+.resource-filter-sections fieldset:nth-child(2) { background: #f7f5fd; }
+.resource-filter-sections legend { padding: 0 5px; color: #365583; font-size: 13px; font-weight: 650; }
+.resource-filter-sections fieldset label { flex: 1 1 130px; }
+.resource-filter-sections > button { justify-self: start; }
+@media(max-width: 760px) { .workspace-shell .resource-management-view .resource-filter-sections { grid-template-columns: minmax(0,1fr); } }
 .workspace-shell .resource-management-view .resource-search-field { grid-column: 1 / -1; }
 .workspace-shell .resource-management-view .resource-search-field .search-box { width: 100%; }
 .workspace-shell .resource-management-view .resource-filter-grid-inner label > span:first-child { color: var(--resource-muted); font-size: 13px; }
@@ -123,7 +130,7 @@
 .workspace-shell .resource-management-view .resource-grid{display:block;border:1px solid var(--resource-line);border-radius:12px;background:#fff;overflow:hidden}
 .workspace-shell .resource-management-view .canonical-resource-card{display:grid;grid-template-columns:80px minmax(170px,1.4fr) minmax(100px,1fr) 180px 132px;gap:18px;align-items:center;padding:18px 20px;border:0;border-bottom:1px solid var(--resource-line);border-radius:0;box-shadow:none;min-height:120px;transform:none}
 .workspace-shell .resource-management-view .canonical-resource-card:last-child{border-bottom:0}
-.workspace-shell .resource-management-view .catalog-record-cover{width:80px;margin:0;align-self:center}.workspace-shell .resource-management-view .catalog-record-cover :is(img,.catalog-category-mark){width:80px;height:72px;object-fit:contain;aspect-ratio:auto}.workspace-shell .resource-management-view .catalog-record-cover figcaption{font-size:11px;margin-top:4px}.workspace-shell .resource-management-view .catalog-media-failure{font-size:11px;padding:5px;min-height:72px;overflow-wrap:anywhere}.workspace-shell .resource-management-view .catalog-media-failure :is(svg,small){display:none}
+.workspace-shell .resource-management-view .catalog-record-cover{width:80px;margin:0;align-self:center}.workspace-shell .resource-management-view .catalog-record-cover :is(img,.catalog-category-mark){width:80px;height:72px;object-fit:contain;aspect-ratio:auto}.workspace-shell .resource-management-view .catalog-record-cover figcaption{font-size: 12px;margin-top:4px}.workspace-shell .resource-management-view .catalog-media-failure{font-size: 12px;padding:5px;min-height:72px;overflow-wrap:anywhere}.workspace-shell .resource-management-view .catalog-media-failure :is(svg,small){display:none}
 .workspace-shell .resource-management-view .canonical-resource-card .resource-body{padding:0;min-width:0}.workspace-shell .resource-management-view .canonical-resource-card h2{font-size:17px;font-weight:600;margin:0 0 8px}.workspace-shell .resource-management-view .catalog-resource-lab{margin:0;font-size:13px}.workspace-shell .resource-management-view .catalog-record-status{margin:0;padding:0;display:grid;gap:8px}.workspace-shell .resource-management-view .canonical-resource-card .resource-discovery-actions{display:grid;gap:5px;padding:0;margin:0;border:0}.workspace-shell .resource-management-view .canonical-resource-card .resource-discovery-actions>*{width:100%;min-height:44px;padding:7px;font-size:13px}.workspace-shell .resource-management-view .canonical-resource-card .resource-discovery-actions .table-action{background:transparent}
 @media(max-width:1150px){.workspace-shell .resource-management-view .canonical-resource-card{grid-template-columns:64px minmax(140px,1fr) 160px 120px;gap:12px}.workspace-shell .resource-management-view .catalog-resource-lab{grid-column:2;grid-row:2}.workspace-shell .resource-management-view .catalog-record-status{grid-column:3;grid-row:1/3}.workspace-shell .resource-management-view .resource-discovery-actions{grid-column:4;grid-row:1/3}.workspace-shell .resource-management-view .catalog-record-cover{grid-row:1/3;width:64px}.workspace-shell .resource-management-view .catalog-record-cover :is(img,.catalog-category-mark){width:64px;height:64px}}
 @media(max-width:700px){.workspace-shell .resource-management-view .canonical-resource-card{grid-template-columns:64px minmax(0,1fr);padding:18px;gap:10px 14px}.workspace-shell .resource-management-view .canonical-resource-card .resource-body{grid-column:2;grid-row:1}.workspace-shell .resource-management-view .catalog-resource-lab{grid-column:2;grid-row:2}.workspace-shell .resource-management-view .catalog-record-status{grid-column:1/-1;grid-row:3;grid-template-columns:1fr 1fr;margin-top:8px}.workspace-shell .resource-management-view .resource-discovery-actions{grid-column:1/-1;grid-row:4;grid-template-columns:1fr 1fr}.workspace-shell .resource-management-view .catalog-record-cover{align-self:start}}

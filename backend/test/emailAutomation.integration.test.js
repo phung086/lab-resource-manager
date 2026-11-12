@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import net from "node:net";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 import bcrypt from "bcryptjs";
 import request from "supertest";
@@ -64,6 +66,23 @@ const register = (recipient, locale = "vi") => request(app).post("/api/auth/regi
 const dispatch = options => automation.dispatchEmailDeliveries({ client: prisma, ...options });
 const getDelivery = where => prisma.emailDelivery.findFirstOrThrow({ where });
 
+// Decode ASCII quoted-printable structure without exposing message content in logs.
+const smtpContent = raw => raw.replace(/=\r\n/g, '').replace(/=([a-f0-9]{2})/gi, (_,hex)=>String.fromCharCode(Number.parseInt(hex,16)));
+function assertMailStructure(raw, path) {
+  assert.match(raw, /Content-Type: text\/plain/i);
+  assert.match(raw, /Content-Type: text\/html/i);
+  const decoded=smtpContent(raw);
+  assert.match(decoded, /role="presentation"/);
+  assert.ok(decoded.includes(path), 'Email action points to the intended application page');
+  assert.doesNotMatch(decoded, /href="javascript:/i);
+}
+
+function saveDeliveredPreview(name, rendered) {
+  if (!process.env.EMAIL_TEST_EVIDENCE_DIR) return;
+  mkdirSync(process.env.EMAIL_TEST_EVIDENCE_DIR, {recursive:true});
+  writeFileSync(join(process.env.EMAIL_TEST_EVIDENCE_DIR, name+'.html'), rendered.html);
+}
+
 function callback(payment, changes = {}) {
   const values = { vnp_TmnCode: "TESTONLY", vnp_Amount: String(payment.amount * 100), vnp_TxnRef: payment.txnRef,
     vnp_ResponseCode: "00", vnp_TransactionStatus: "00", vnp_TransactionNo: String(++sequence + 900000), vnp_PayDate: "20261012153500", ...changes };
@@ -121,6 +140,8 @@ test("registration commits a durable welcome email with no passwords/tokens; rea
   assert.deepEqual(await dispatch(), { sent: 1, failed: 0 });
   const sent = await getDelivery({ id: row.id }); assert.equal(sent.status, "SENT"); assert.ok(sent.sentAt); assert.ok(sent.messageId);
   assert.equal(messages[0].recipient, recipient); assert.match(messages[0].raw, /Account registration successful/);
+  assertMailStructure(messages[0].raw, "/login");
+  saveDeliveredPreview("welcome-delivered", rendered);
   assert.doesNotMatch(messages[0].raw, /EmailRegistration!2026/);
   assert.equal((await register(recipient)).status, 409); assert.equal(await prisma.emailDelivery.count(), 1);
   await dispatch(); assert.equal(messages.length, 1);
@@ -181,7 +202,13 @@ test("account and email enqueue roll back together if outbox persistence fails",
 
 test("verified IPN creates exactly one receipt; browser return and duplicate callbacks never enqueue another", async () => {
   const { payment, booking } = await paymentFixture(); const query = callback(payment);
-  assert.equal((await request(app).get("/api/payments/vnpay/return").query(query)).status, 200);
+  const returned = await request(app).get("/api/payments/vnpay/return").query(query);
+  assert.equal(returned.status, 303);
+  const destination = new URL(returned.headers.location);
+  assert.equal(destination.pathname, "/workspace/payments");
+  assert.equal(destination.searchParams.get("booking"), booking.id);
+  assert.equal(destination.searchParams.get("returned"), "1");
+  assert.equal((await prisma.paymentTransaction.findUniqueOrThrow({ where: { id: payment.id } })).status, "pending");
   assert.equal(await prisma.emailDelivery.count(), 0);
   const [one, two] = await Promise.all([request(app).get("/api/payments/vnpay/ipn").query(query), request(app).get("/api/payments/vnpay/ipn").query(query)]);
   assert.deepEqual([one.body.RspCode, two.body.RspCode].sort(), ["00", "02"]);
@@ -191,8 +218,27 @@ test("verified IPN creates exactly one receipt; browser return and duplicate cal
   const rendered = automation.renderAutomatedEmail(row);
   assert.match(rendered.text, /UTC\+7/); assert.match(rendered.text, /15:35/); assert.match(rendered.text, /50\.000/);
   assert.equal((await dispatch()).sent, 1); assert.equal(messages[0].recipient, "owner@mailautomation.test");
+  assertMailStructure(messages[0].raw, `/workspace/payments?booking=${booking.id}`);
   assert.equal((await request(app).get("/api/payments/vnpay/ipn").query(query)).body.RspCode, "02");
   await dispatch(); assert.equal(messages.length, 1);
+});
+
+test("settled paid hold confirms booking, queues one receipt and delivers its confirmed snapshot", async () => {
+  const {payment, booking} = await paymentFixture();
+  await prisma.booking.update({where:{id:booking.id},data:{status:"PENDING_APPROVAL",paymentDueAt:new Date(Date.now()+600000)}});
+  const query=callback(payment);
+  assert.equal((await request(app).get("/api/payments/vnpay/ipn").query(query)).body.RspCode,"00");
+  const confirmed=await prisma.booking.findUniqueOrThrow({where:{id:booking.id}});
+  assert.equal(confirmed.status,"CONFIRMED");
+  const receipt=await getDelivery({kind:"PAYMENT_RECEIPT"});
+  assert.equal(receipt.payload.booking.status,"CONFIRMED");
+  assert.equal(receipt.payload.reconciliationRequired,false);
+  assert.equal((await dispatch()).sent,1);
+  assert.equal(messages.length,1);
+  assertMailStructure(messages[0].raw,`/workspace/payments?booking=${booking.id}`);
+  saveDeliveredPreview("paid-hold-receipt-delivered",automation.renderAutomatedEmail(receipt));
+  assert.equal((await request(app).get("/api/payments/vnpay/ipn").query(query)).body.RspCode,"02");
+  await dispatch();assert.equal(messages.length,1);
 });
 
 test("invalid signatures, wrong amounts and unsuccessful provider outcomes produce no receipt", async () => {
@@ -227,12 +273,16 @@ test("late success preserves cancelled booking and explains manual reconciliatio
   const row = await getDelivery({ kind: "PAYMENT_RECEIPT" }); assert.equal(row.payload.reconciliationRequired, true);
   const rendered = automation.renderAutomatedEmail(row); assert.match(rendered.text, /Đã hủy/); assert.match(rendered.text, /đối soát/);
   assert.equal((await dispatch()).sent, 1);
+  assertMailStructure(messages[0].raw,`/workspace/payments?booking=${booking.id}`);
+  saveDeliveredPreview("reconciliation-delivered",rendered);
 });
 
 test("guest account created after real OTP email queues setup guidance; reusing an account sends no new welcome", async () => {
   const recipient = email("guest");
   const otp = await request(app).post("/api/guest-booking/otp").send({ email: recipient, fullName: "Guest test" });
   assert.equal(otp.status, 202, JSON.stringify(otp.body)); assert.equal(messages.length, 1);
+  assert.match(smtpContent(messages[0].raw), /role="presentation"/);
+  assert.match(messages[0].raw, /Content-Type: text\/plain/i);
   const code = messages[0].raw.match(/\b\d{6}\b/)[0];
   const startAt = new Date(Date.now() + 300 * 3600000); startAt.setUTCMinutes(0, 0, 0);
   const body = { email: recipient, otpCode: code, fullName: "Email guest", phone: "0901234567", address: { addressLine: "123 Nguyen Trai", provinceCode: "79", wardCode: "26734" },

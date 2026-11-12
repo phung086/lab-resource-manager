@@ -71,7 +71,7 @@ async function run() {
     await page.locator("input#guest-full-name").fill("Nguyễn Văn Khách");
     await page.locator("input#guest-email").fill("guest.test@example.com");
     await page.locator("input#guest-phone").fill("0901234567");
-    await page.locator("input#guest-organization").fill("Đại học Bách Khoa");
+    assert.equal(await page.locator("input#guest-organization").count(), 0, "Guest checkout omits affiliation");
 
     // Fill address selector
     await page.locator("select#address-province").selectOption({ index: 1 });
@@ -160,8 +160,7 @@ async function run() {
     // Verify Profile Hierarchy 1 to 7
     assert.ok(await authPage.locator("#section-identity-title").isVisible(), "1. Identity must be visible");
     assert.ok(await authPage.locator("#section-security-title").isVisible(), "2. Security must be visible");
-    assert.ok(await authPage.locator("#section-access-title").isVisible(), "3. Access classification must be visible");
-    assert.ok(await authPage.getByText("customerTypeSemantics = SELF_DECLARED_UNVERIFIED").isVisible(), "customerTypeSemantics must be explicit");
+    assert.equal(await authPage.getByText("customerTypeSemantics = SELF_DECLARED_UNVERIFIED").count(), 0, "Profile omits legacy customer classification");
     assert.ok(await authPage.locator("#section-training-title").isVisible(), "4. Training must be visible");
     assert.ok(await authPage.locator("#section-contact-title").isVisible(), "5. Contact must be visible");
     assert.ok(await authPage.locator("#section-booking-title").isVisible(), "6. Booking summary must be visible");

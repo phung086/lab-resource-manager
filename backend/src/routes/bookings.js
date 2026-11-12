@@ -1,23 +1,36 @@
 import { bookingContactSchema } from "../services/bookingContactService.js";
+import { expirePaymentHolds } from '../services/bookingPaymentHoldService.js';
+import { fulfillmentInputSchema, bookingAccess, listHandoverReminders, selfCheckInRoom } from '../services/bookingFulfillmentService.js';
 import express from "express";
 import { z } from "zod";
 
 import { prisma } from "../db.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { HttpError } from '../middleware/errors.js';
 import { assertBookingAccess, assertLabStaffResourceAccess, requireBookingLabAccess } from "../middleware/labScope.js";
 import {
   cancelBooking,
   createBooking,
+  preflightBooking,
   getUserBookings,
   selfReturnRoom,
   transitionBooking
 } from "../services/bookingService.js";
 import { rescheduleBooking } from "../services/bookingService.js";
-import { getResourceAvailability } from "../services/availabilityService.js";
-import { ADMIN, LAB_STAFF, STAFF_ROLES } from "../constants/roles.js";
+import { getResourceAvailability, checkLabPolicyCompliance } from "../services/availabilityService.js";
+import { ADMIN, CUSTOMER, LAB_STAFF, STAFF_ROLES } from "../constants/roles.js";
 import { bookingListSchema, bookingPageSchema, listBookingPage, listLegacyBookings } from "../services/workspaceQueueService.js";
+import { getRepeatDraft } from "../services/planning/bundleService.js";
 
 const router = express.Router();
+router.post('/preflight', requireAuth, async (req, res, next) => {
+  try {
+    const data = z.object({ resourceId: z.string().uuid(), startAt: z.string().datetime({ offset: true }),
+      endAt: z.string().datetime({ offset: true }), purposeCode: z.enum(['STUDY', 'TEACHING', 'RESEARCH', 'SERVICE']).optional() }).strict()
+      .refine(value => new Date(value.startAt) < new Date(value.endAt), { path: ['endAt'], message: 'Invalid interval' }).parse(req.body);
+    res.json(await preflightBooking(req.user, data));
+  } catch (error) { next(error); }
+});
 router.post("/:id/reschedule", requireAuth, requireRole(ADMIN, LAB_STAFF), requireBookingLabAccess(), async (req, res, next) => {
   try {
     const data = z.object({ startAt: z.coerce.date(), endAt: z.coerce.date(), expectedStartAt: z.coerce.date(), reason: z.string().trim().min(5).max(500) }).strict().parse(req.body);
@@ -29,9 +42,10 @@ const createBookingSchema = z.object({
   resourceId: z.string().min(1),
   title: z.string().min(2).max(255),
   contact: bookingContactSchema.optional(),
+  fulfillment: fulfillmentInputSchema.optional(),
   purpose: z.string().max(2000).optional().default(""),
   purposeCode: z.enum(["STUDY", "TEACHING", "RESEARCH", "SERVICE"]).optional(),
-  acceptedQuote: z.object({ amountVnd: z.number().int().min(0), version: z.number().int().min(0) }).strict().optional(),
+  acceptedQuote: z.object({ amountVnd: z.number().int().min(0), version: z.number().int().min(0), loyaltyPolicyVersion: z.number().int().min(0).nullable().optional() }).strict().optional(),
   startAt: z.string().or(z.date()),
   endAt: z.string().or(z.date())
 }).strict();
@@ -69,6 +83,7 @@ const bookingInclude = {
 // GET / - List bookings with optional filters
 router.get("/", requireAuth, async (req, res, next) => {
   try {
+    await expirePaymentHolds(prisma, req.user.role === CUSTOMER ? { userId: req.user.id } : {});
     if (req.query.page !== undefined) {
       const query = bookingPageSchema.parse(req.query);
       if (req.user.role === LAB_STAFF && query.resourceId) {
@@ -96,6 +111,20 @@ router.get("/my-bookings", requireAuth, async (req, res, next) => {
   }
 });
 
+router.get('/handover-reminders', requireAuth, requireRole(CUSTOMER), async (req, res, next) => {
+  try {
+    const reminders = await listHandoverReminders(prisma, req.user.id);
+    res.set('Cache-Control', 'no-store').json(reminders);
+  } catch (error) { next(error); }
+});
+
+router.get('/:id/repeat-draft', requireAuth, requireRole(CUSTOMER), async (req, res, next) => {
+  try {
+    const id = z.string().min(1).max(255).parse(req.params.id);
+    res.set('Cache-Control', 'no-store').json(await getRepeatDraft(req.user.id, id));
+  } catch (error) { next(error); }
+});
+
 // GET /availability - Pre-check availability for a resource and time window
 router.get("/availability", requireAuth, async (req, res, next) => {
   try {
@@ -114,7 +143,11 @@ router.get("/availability", requireAuth, async (req, res, next) => {
       });
     }
 
+    const resource = await prisma.resource.findUnique({ where: { id: String(resourceId) }, include: { laboratory: { include: { labPolicy: true } } } });
+    if (!resource) throw new HttpError(404, 'Resource not found', undefined, 'NOT_FOUND');
+    checkLabPolicyCompliance({ policy: resource.laboratory?.labPolicy, startAt: start, endAt: end });
     const availability = await getResourceAvailability(prisma, {
+      resource,
       resourceId: String(resourceId),
       startAt: start,
       endAt: end
@@ -154,6 +187,7 @@ router.get("/:id/history", requireAuth, async (req, res, next) => {
         title: booking.title,
         purpose: booking.purpose,
         status: booking.status,
+        paymentDueAt: booking.paymentDueAt,
         resource: booking.resource,
         requestedBy: booking.requestedBy,
         approvedBy: booking.approvedBy,
@@ -189,6 +223,7 @@ router.get("/:id/history", requireAuth, async (req, res, next) => {
 router.get("/:id", requireAuth, async (req, res, next) => {
   try {
     await assertBookingAccess(req.user, req.params.id);
+    await expirePaymentHolds(prisma, { bookingId: req.params.id });
     const booking = await prisma.booking.findUnique({
       where: { id: req.params.id },
       include: bookingInclude
@@ -205,8 +240,10 @@ router.post("/", requireAuth, async (req, res, next) => {
     const data = createBookingSchema.parse(req.body);
     const booking = await createBooking({
       requestedById: req.user.id,
+      expectedAuthVersion: req.user.authVersion,
       resourceId: data.resourceId,
       contact: data.contact,
+      fulfillment: data.fulfillment,
       title: data.title,
       purpose: data.purpose,
       purposeCode: data.purposeCode,
@@ -221,10 +258,16 @@ router.post("/", requireAuth, async (req, res, next) => {
   }
 });
 
+router.get('/:id/access', requireAuth, async (req, res, next) => {
+  try { res.set('Cache-Control', 'no-store'); res.json(await bookingAccess(req.params.id, req.user)); } catch (error) { next(error); }
+});
+router.post('/:id/self-check-in', requireAuth, async (req, res, next) => {
+  try { z.object({}).strict().parse(req.body || {}); res.json(await selfCheckInRoom({ bookingId: req.params.id, actor: req.user })); } catch (error) { next(error); }
+});
 router.post("/:id/self-return", requireAuth, async (req, res, next) => {
   try {
     const data = selfReturnSchema.parse(req.body);
-    res.json(await selfReturnRoom({ bookingId: req.params.id, actorId: req.user.id, actorRole: req.user.role, ...data }));
+    res.json(await selfReturnRoom({ bookingId: req.params.id, actorId: req.user.id, actorRole: req.user.role, expectedAuthVersion: req.user.authVersion, ...data }));
   } catch (error) { next(error); }
 });
 
@@ -237,6 +280,7 @@ router.post("/:id/approve", requireAuth, requireRole(ADMIN, LAB_STAFF), requireB
       toStatus: "CONFIRMED",
       actorId: req.user.id,
       actorRole: req.user.role,
+      expectedAuthVersion: req.user.authVersion,
       reason
     }));
   } catch (error) { next(error); }
@@ -251,6 +295,7 @@ router.post("/:id/reject", requireAuth, requireRole(ADMIN, LAB_STAFF), requireBo
       toStatus: "REJECTED",
       actorId: req.user.id,
       actorRole: req.user.role,
+      expectedAuthVersion: req.user.authVersion,
       reason
     }));
   } catch (error) { next(error); }
@@ -265,6 +310,7 @@ router.post("/:id/check-out", requireAuth, requireRole(ADMIN, LAB_STAFF), requir
       toStatus: "CHECKED_OUT",
       actorId: req.user.id,
       actorRole: req.user.role,
+      expectedAuthVersion: req.user.authVersion,
       reason,
       conditionBefore
     }));
@@ -280,6 +326,7 @@ router.post("/:id/return", requireAuth, requireRole(ADMIN, LAB_STAFF), requireBo
       toStatus: "RETURNED",
       actorId: req.user.id,
       actorRole: req.user.role,
+      expectedAuthVersion: req.user.authVersion,
       reason,
       conditionAfter
     }));
@@ -295,6 +342,7 @@ router.post("/:id/complete", requireAuth, requireRole(ADMIN, LAB_STAFF), require
       toStatus: "COMPLETED",
       actorId: req.user.id,
       actorRole: req.user.role,
+      expectedAuthVersion: req.user.authVersion,
       reason
     }));
   } catch (error) { next(error); }
@@ -303,7 +351,7 @@ router.post("/:id/complete", requireAuth, requireRole(ADMIN, LAB_STAFF), require
 router.post("/:id/cancel", requireAuth, async (req, res, next) => {
   try {
     const { reason } = cancelSchema.parse(req.body || {});
-    res.json(await cancelBooking(req.params.id, req.user.id, req.user.role, reason));
+    res.json(await cancelBooking(req.params.id, req.user.id, req.user.role, reason, req.user.authVersion));
   } catch (error) { next(error); }
 });
 

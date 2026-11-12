@@ -1,0 +1,64 @@
+/* Additive workflow layouts. Spectrum, Liquid Glass and lab-motion remain
+   authoritative for the existing palette, backgrounds and animation. */
+.workspace-shell.lab-spectrum .users-visual-directory{display:grid;grid-template-columns:minmax(0,1fr);gap:24px}
+.workspace-shell.lab-spectrum .users-visual-directory.has-selected-user{grid-template-columns:minmax(0,1fr) 350px}
+.workspace-shell.lab-spectrum .users-dossier[hidden]{display:none}
+.workspace-shell.lab-spectrum .users-visual-directory .users-directory{padding:0;border:0;background:transparent;box-shadow:none}
+.workspace-shell.lab-spectrum .users-directory-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.workspace-shell.lab-spectrum .users-directory-head>p{margin:0}
+.workspace-shell.lab-spectrum .users-directory-caption{display:none}
+.workspace-shell.lab-spectrum .users-directory-count{margin-left:auto;font-size:12px}
+.workspace-shell.lab-spectrum .users-workspace .users-filters label.users-filter-search{display:flex;flex-direction:row;align-items:center;gap:10px;padding:0 12px;min-height:46px;border:1px solid #c8bddd;border-radius:12px;background:#fff;align-self:end}
+.workspace-shell.lab-spectrum .users-workspace .users-filter-search .users-filter-icon{position:static;transform:none;display:flex;flex-shrink:0}
+.workspace-shell.lab-spectrum .users-workspace .users-filter-search input{width:100%;border:0;padding:10px 0;box-shadow:none;background:transparent;min-width:0}
+.workspace-shell.lab-spectrum .users-filter-search:focus-within{outline:2px solid var(--workspace-accent,#6040ce);outline-offset:2px}
+.workspace-shell.lab-spectrum .users-workspace ul.users-table.users-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;list-style:none;margin:24px 0 0;padding:0;border:0;background:transparent;overflow:visible}
+.workspace-shell.lab-spectrum .users-workspace .has-selected-user ul.users-table.users-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.users-card-grid>li{min-width:0;border:0}
+.workspace-shell.lab-spectrum .users-workspace .users-card-grid .users-account-card{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:12px;width:100%;height:100%;min-height:224px;padding:24px 16px;border:1px solid #eeebf4;border-radius:16px;background:#fff;box-shadow:5px 5px 16px #dfd9ea,-5px -5px 16px #fff;text-align:center;transition:transform .18s,box-shadow .18s}
+.workspace-shell.lab-spectrum .users-account-card:hover{transform:translateY(-3px);box-shadow:7px 9px 20px #d9cfe8,-5px -5px 16px #fff}
+.workspace-shell.lab-spectrum .users-workspace .users-account-card.is-selected{background:var(--workspace-accent-tint,#f2ecfc);border-color:#ad94d2;box-shadow:inset 3px 3px 8px #e1d7ef,inset -3px -3px 8px #fff}
+.users-avatar{display:grid;place-items:center;width:66px;height:66px;border:4px solid #fff;border-radius:50%;background:#e2d7f0;color:#705487;font:400 22px/1 var(--font-sans,'Onest',sans-serif);box-shadow:3px 3px 9px #dbd4e7,-3px -3px 9px #fff}
+.users-avatar[data-tone='1']{background:#ddecdf;color:#446b53}.users-avatar[data-tone='2']{background:#e1eaf7;color:#4f6a91}.users-avatar[data-tone='3']{background:#f6e5d6;color:#946d4d}.users-avatar[data-tone='4']{background:#efdfec;color:#8c5b82}
+.workspace-shell.lab-spectrum .users-account-card .users-account-main{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;min-width:0}
+.workspace-shell.lab-spectrum .users-account-card .users-account-name{font-size:14px;font-weight:500;line-height:1.6;overflow-wrap:anywhere}
+.workspace-shell.lab-spectrum .users-account-card .users-account-email{display:flex;justify-content:center;max-width:100%;overflow-wrap:anywhere}
+.workspace-shell.lab-spectrum .users-account-card :is(.users-account-role,.users-status){font-size:11px;font-weight:400;max-width:100%;white-space:normal}
+.workspace-shell.lab-spectrum .users-account-card .users-status{margin-top:auto;background:transparent}
+.users-account-card .users-status::before{content:'';display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background:currentColor}
+
+.booking-view-switch{display:flex;align-items:center;gap:4px;width:max-content;padding:4px;border-radius:12px;background:#eee8f8;box-shadow:inset 2px 2px 6px #e0d8ed,inset -2px -2px 6px #fff;margin:0 0 22px}
+.booking-view-switch button{min-height:40px;padding:9px 18px;border:0;border-radius:9px;background:transparent;color:#6b6177;font:400 13px/1.5 var(--font-sans,'Onest',sans-serif);cursor:pointer}
+.booking-view-switch button[aria-pressed=true]{background:#fff;color:#654b82;box-shadow:2px 2px 7px #d9d3e3}
+.workspace-shell.lab-spectrum :is(.operations-queue-col,.operations-dossier-col,.operations-filter-row)[hidden]{display:none}
+.workspace-shell.lab-spectrum .operations-view :is(.operations-filter-row,.operations-queue-col,.operations-dossier-col)[hidden]{display:none!important}
+
+.workspace-shell.lab-spectrum .workspace-home.lab-home .home-masthead{display:grid;grid-template-columns:minmax(0,1fr) minmax(310px,.85fr);align-items:center;gap:24px}
+.home-image-navigation{position:relative;min-height:200px;overflow:hidden;border-radius:18px;margin:18px}
+.home-image-navigation>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 47%}
+.home-image-navigation>nav{position:relative;display:flex;align-items:flex-end;flex-wrap:wrap;gap:8px;padding:110px 14px 14px;background:linear-gradient(0deg,#f9f7fcee,transparent 90%)}
+.home-image-navigation button{display:flex;align-items:center;gap:8px;min-height:42px;padding:10px 12px;border:1px solid #ffffffaa;border-radius:10px;background:#ffffffe8;color:#59456e;box-shadow:0 4px 12px #42314b16;font:400 12px/1.5 var(--font-sans,'Onest',sans-serif);cursor:pointer;backdrop-filter:blur(8px)}
+.home-image-navigation button:hover{background:#eee5f8;transform:translateY(-2px)}
+.workspace-shell.lab-spectrum .hub-resource-image{position:relative}
+.workspace-shell.lab-spectrum .hub-resource-image .hub-image-action{position:absolute;right:12px;bottom:12px;z-index:2;display:flex;align-items:center;gap:7px;min-height:42px;padding:10px 13px;border:1px solid #ffffffb0;border-radius:10px;background:#ffffffe8;color:#60427e;box-shadow:0 3px 10px #4835541c;font-size:12px;cursor:pointer;backdrop-filter:blur(8px)}
+.workspace-shell.lab-spectrum .hub-focus[data-has-session=false] :is(.hub-focus-status,.hub-button-primary){display:none}
+.workspace-shell.lab-spectrum .workspace-home.role-lab_staff .ops-cluster{grid-template-areas:'queue rail' 'console rail' 'item rail'}
+.workspace-shell.lab-spectrum .workspace-home.role-lab_staff .ops-cluster[data-view=item]{grid-template-areas:'item rail'}
+.workspace-shell.lab-spectrum :is(.home-welcome h1,.home-cluster-header h2,.ops-queue-title){font-weight:500}
+
+.resource-media-frame{position:relative;display:block;width:100%;height:100%;overflow:hidden}.resource-media-frame>img{position:relative;display:block;width:100%;height:100%;object-fit:cover}.resource-media-pending{position:absolute;inset:0;display:grid;place-items:center;background:#eee7f8;color:#9b86b8}
+.modal-container-2026.booking-studio-modal .booking-compose-editor{min-width:0;display:grid;gap:16px}.modal-container-2026.booking-studio-modal .booking-compose.is-reviewing{grid-template-columns:minmax(0,1fr)}.modal-container-2026.booking-studio-modal .booking-compose-summary[hidden]{display:none}
+.booking-draft-disclosure{padding:10px 12px;border:1px solid #e6d1a5;border-radius:10px;background:#fff5de;color:#705420;font-size:12px}.booking-draft-disclosure summary{cursor:pointer}.booking-draft-disclosure .local-draft-notice{padding:10px 0 0;margin:0;background:transparent}
+.workspace-shell.lab-spectrum .planner-filter-bar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:20px}.workspace-shell.lab-spectrum .planner-filters{display:flex;flex:1 1 400px;gap:12px;margin:0;padding:0;border:0;background:transparent}.workspace-shell.lab-spectrum .planner-filters[hidden]{display:none}.planner-filters>label{flex:1;min-width:0}.workspace-shell.lab-spectrum .planner-resource-search{flex:1 1 260px}
+@media(min-width:1100px){.workspace-shell.lab-spectrum .project-account-label,.workspace-shell.lab-spectrum .project-header-shortcut span{display:none}.workspace-shell.lab-spectrum .project-header-tools{flex:1;min-width:0;max-width:440px}.workspace-shell.lab-spectrum .project-header-search{flex:1;max-width:none;min-width:140px}.workspace-shell.lab-spectrum .header-left-2026{flex:0 1 430px;min-width:0}.workspace-shell.lab-spectrum .project-header-location{min-width:0;overflow:hidden}.workspace-shell.lab-spectrum .header-title-2026{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+@media(max-width:1100px){.workspace-shell.lab-spectrum .users-workspace ul.users-table.users-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1000px){.workspace-shell.lab-spectrum .workspace-home.role-lab_staff .ops-cluster{grid-template-columns:minmax(0,1fr);grid-template-areas:'queue' 'console' 'item' 'rail'}}
+@media(max-width:760px){
+ .workspace-shell.lab-spectrum .users-heading .users-actions{display:flex;flex-wrap:wrap;gap:8px}.workspace-shell.lab-spectrum .users-heading .users-actions .btn{flex:0 0 auto;white-space:nowrap}
+ .workspace-shell.lab-spectrum .users-workspace ul.users-table.users-card-grid{gap:14px}.workspace-shell.lab-spectrum .users-workspace .users-card-grid .users-account-card{min-height:210px;padding:20px 10px;gap:10px}.workspace-shell.lab-spectrum .users-account-card .users-account-name{font-size:13px}
+ .workspace-shell.lab-spectrum .users-filters{display:grid;grid-template-columns:1fr 1fr;gap:12px}.workspace-shell.lab-spectrum .users-filter-search{grid-column:1/-1;width:100%;box-sizing:border-box}
+ .home-image-navigation{min-height:150px;margin:0 18px 18px}.home-image-navigation>nav{padding-top:65px}.home-image-navigation button{font-size:11px;min-height:38px;padding:9px}
+ .modal-container-2026.booking-studio-modal .booking-compose-editor{grid-row:1}.modal-container-2026.booking-studio-modal .booking-compose-summary{grid-row:2;position:static}
+ .workspace-shell.lab-spectrum .planner-filter-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;margin-bottom:16px}.workspace-shell.lab-spectrum .planner-filters{grid-column:1/-1;grid-row:2;flex-direction:column}.workspace-shell.lab-spectrum .planner-resource-search{grid-row:1;grid-column:1;min-width:0}.planner-filters-toggle{grid-row:1;grid-column:2}.planner-filters-toggle span{display:none}
+}
+@media(prefers-reduced-motion:reduce){:is(.users-account-card,.home-image-navigation button){transition:none!important;transform:none!important}}

@@ -3,14 +3,17 @@ import { prisma } from "../db.js";
 import { HttpError } from "../middleware/errors.js";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "./systemAuditService.js";
 import { enqueuePaymentReceipt } from "./emailAutomationService.js";
+import { config } from '../config.js';
+import { isPaymentHold, effectivePaymentDeadline, lockPaymentBooking, expirePaymentHolds, expireLockedPaymentHold, confirmPaidBooking } from './bookingPaymentHoldService.js';
+import { scheduleBookingReminders } from './notificationService.js';
 import {
   buildVnpayUrl,
-  buildVietqr,
   verifyVnpay,
   providerAvailability,
   requireVietqr,
   vietnamPaymentDate,
 } from "./paymentProviders.js";
+import { bankTransferDetails, buildBankTransferUrl, matchesBankTransfer, verifyBankTransfer } from "./bankTransferProvider.js";
 const include = {
   booking: {
     select: {
@@ -18,17 +21,22 @@ const include = {
       title: true,
       status: true,
       feeAmountVnd: true,
+      endAt: true,
+      startAt: true,
+      paymentDueAt: true,
+      resourceId: true,
+      requestedById: true,
       resource: { select: { id: true, name: true, code: true, laboratoryId: true } },
     },
   },
   user: { select: { id: true, fullName: true } },
 };
-const VNPAY_SESSION_TTL_MS = 15 * 60 * 1000;
+const PAYMENT_SESSION_TTL_MS = 15 * 60 * 1000;
 const RETRYABLE_PAYMENT_STATUSES = new Set(["failed", "expired"]);
 function publicPayment(row) {
   if (!row) return row;
   const { paymentUrl: _paymentUrl, ...safe } = row;
-  return safe;
+  return safe.booking?.paymentDueAt ? { ...safe, booking: { ...safe.booking, paymentDueAt: effectivePaymentDeadline(safe.booking) } } : safe;
 }
 const missing = () =>
   new HttpError(
@@ -71,11 +79,20 @@ function replacementChargeData(row) {
 }
 
 async function notifyPayment(tx, row, event, { reconciliation = false, now = new Date() } = {}) {
+  const booking = event === 'SUCCESS' && !reconciliation && row.bookingId
+    ? await tx.booking.findUnique({ where: { id: row.bookingId }, include: { resource: true } }) : null;
+  const mode = booking?.fulfillmentSnapshot?.mode || (booking?.resource.category === 'ROOM' ? 'ROOM_SELF_SERVICE' : 'LAB_PICKUP');
+  const roomAccessReady = mode === 'ROOM_SELF_SERVICE' && booking
+    ? Boolean((await tx.resourceFulfillment.findUnique({ where: { resourceId: booking.resourceId }, select: { roomPasswordCiphertext: true } }))?.roomPasswordCiphertext) : false;
+  const guidanceMode = mode === 'ROOM_SELF_SERVICE' && !roomAccessReady ? 'ROOM_ACCESS_PENDING' : mode;
   const definitions = [{
     userId: row.userId,
     key: `payment:${row.id}:${event}:owner`,
     title: event === "SUCCESS" ? "Thanh toán đã được xác minh" : event === "FAILED" ? "Thanh toán chưa thành công" : "Phiên thanh toán đã hết hạn",
-    message: `${row.txnRef} · ${Math.trunc(row.amount).toLocaleString("vi-VN")} VND`,
+    message: booking ? mode === 'ROOM_SELF_SERVICE' ? roomAccessReady ? 'Biên lai và mật khẩu phòng đã sẵn sàng. Check-in từ 30 phút trước lịch.' : 'Đã thanh toán. Liên hệ LAB để hoàn tất cấu hình truy cập phòng.'
+      : mode === 'HOME_DELIVERY' ? 'Đã nhận yêu cầu giao thiết bị. Nhân viên LAB sẽ liên hệ bàn giao.'
+      : `Đến LAB gặp nhân viên để kiểm tra và nhận thiết bị: ${booking.fulfillmentSnapshot?.pickupInstructions || booking.resource.location}`
+      : `${row.txnRef} · ${Math.trunc(row.amount).toLocaleString("vi-VN")} VND`,
     severity: event === "SUCCESS" ? "success" : "warning",
   }];
   if (reconciliation) {
@@ -84,7 +101,7 @@ async function notifyPayment(tx, row, event, { reconciliation = false, now = new
       userId: admin.id,
       key: `payment:${row.id}:MANUAL_REVIEW:${admin.id}`,
       title: "Thanh toán cần đối soát thủ công",
-      message: `${row.txnRef} · booking đã kết thúc trước khi VNPAY xác nhận thành công`,
+      message: `${row.txnRef} · cần kiểm tra khoản thanh toán đã xác minh`,
       severity: "warning",
     })));
   }
@@ -97,7 +114,9 @@ async function notifyPayment(tx, row, event, { reconciliation = false, now = new
         userId: definition.userId,
         title: definition.title,
         message: definition.message,
-        messageParams: { paymentId: row.id, bookingId: row.bookingId, event },
+        titleKey: definition.userId === row.userId ? `payment.${event.toLowerCase()}.title` : null,
+        messageKey: booking && definition.userId === row.userId ? `fulfillment.${guidanceMode}.message` : null,
+        messageParams: { paymentId: row.id, bookingId: row.bookingId, event, location: booking?.fulfillmentSnapshot?.pickupInstructions || booking?.resource.location || '' },
         severity: definition.severity,
         channel: "in_app",
         sentAt: now,
@@ -105,13 +124,18 @@ async function notifyPayment(tx, row, event, { reconciliation = false, now = new
       },
     });
   }
+  if (booking) await scheduleBookingReminders(tx, booking, now);
 }
 export async function getPayment(id, actor) {
-  const row = await prisma.paymentTransaction.findUnique({
+  let row = await prisma.paymentTransaction.findUnique({
     where: { id },
     include,
   });
   assertOwner(row, actor);
+  if (row.bookingId) {
+    await expirePaymentHolds(prisma, { bookingId: row.bookingId });
+    row = await prisma.paymentTransaction.findUnique({ where: { id }, include });
+  }
   return publicPayment(row);
 }
 export async function listPayments(actor, filters = {}, admin = false) {
@@ -122,6 +146,7 @@ export async function listPayments(actor, filters = {}, admin = false) {
       undefined,
       "PAYMENT_FORBIDDEN",
     );
+  await expirePaymentHolds(prisma, admin ? {} : { userId: actor.id });
   const where = {
     ...(admin ? {} : { userId: actor.id }),
     ...(filters.bookingId ? { bookingId: filters.bookingId } : {}),
@@ -168,6 +193,7 @@ export async function bookingPayments(bookingId, actor) {
     (actor.role !== "ADMIN" && booking.requestedById !== actor.id)
   )
     throw missing();
+  await expirePaymentHolds(prisma, { bookingId });
   const rows = await prisma.paymentTransaction.findMany({
     where: { bookingId },
     include,
@@ -249,8 +275,11 @@ export async function createCharge(actor, data) {
     return transaction;
   });
 }
-export async function initiatePayment(id, actor, provider, ip) {
-  if (provider === "vietqr") requireVietqr();
+export async function initiatePayment(id, actor, provider, ip, appOrigin) {
+  const recipient = provider === "vietqr" ? requireVietqr() : null;
+  const payable = await prisma.paymentTransaction.findUnique({ where: { id }, include });
+  assertOwner(payable, actor, false);
+  if (payable.bookingId) await expirePaymentHolds(prisma, { bookingId: payable.bookingId });
   const row = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment:${id}`}))::text`;
     let current = await tx.paymentTransaction.findUnique({
@@ -258,13 +287,19 @@ export async function initiatePayment(id, actor, provider, ip) {
       include,
     });
     assertOwner(current, actor, false);
-    if (current.booking && ["PENDING_APPROVAL", "REJECTED", "CANCELLED"].includes(current.booking.status)) {
+    if (current.bookingId) {
+      await lockPaymentBooking(tx, current.bookingId);
+      current = await tx.paymentTransaction.findUnique({ where: { id }, include });
+    }
+    if (current.booking && current.booking.status !== 'CONFIRMED' && !isPaymentHold(current.booking)) {
       throw new HttpError(409, "Lịch đặt chưa được duyệt hoặc đã kết thúc yêu cầu; không thể thanh toán.", undefined, "BOOKING_PAYMENT_INVALID");
     }
+    if (current.booking?.endAt <= new Date()) throw new HttpError(409, 'Lịch sử dụng đã kết thúc.', undefined, 'BOOKING_HANDOVER_EXPIRED');
     if (current.status === "success") assertPending(current);
 
     const now = new Date();
-    const sessionExpired = current.status === "pending" && current.paymentUrl &&
+    if (isPaymentHold(current.booking) && +effectivePaymentDeadline(current.booking) <= +now) throw new HttpError(409, 'Hết thời gian giữ chỗ thanh toán.', undefined, 'PAYMENT_HOLD_EXPIRED');
+    const sessionExpired = current.status === "pending" && (current.paymentUrl || current.paymentUrlExpiresAt) &&
       (!current.paymentUrlExpiresAt || current.paymentUrlExpiresAt <= now);
     if (sessionExpired) {
       await tx.paymentTransaction.update({
@@ -303,19 +338,21 @@ export async function initiatePayment(id, actor, provider, ip) {
       current.provider === provider &&
       current.paymentUrl &&
       current.paymentUrlExpiresAt &&
-      current.paymentUrlExpiresAt > now
+      current.paymentUrlExpiresAt > now &&
+      (!isPaymentHold(current.booking) || +current.paymentUrlExpiresAt <= +effectivePaymentDeadline(current.booking))
     ) return current;
-    const expiresAt = new Date(now.getTime() + VNPAY_SESSION_TTL_MS);
-    const url = provider === "vnpay" ? buildVnpayUrl(current, ip, now, expiresAt) : null;
+    const expiresAt = new Date(Math.min(now.getTime() + PAYMENT_SESSION_TTL_MS, current.booking?.paymentDueAt ? +effectivePaymentDeadline(current.booking) : Infinity));
+    const url = recipient
+      ? current.paymentUrl || buildBankTransferUrl(current, recipient)
+      : buildVnpayUrl(current, ip, now, expiresAt);
     const updated = await tx.paymentTransaction.updateMany({
       where: { id: current.id, status: "pending", provider: current.provider },
       data: {
         provider,
-        ...(url ? {
-          paymentUrl: url,
-          paymentUrlCreatedAt: now,
-          paymentUrlExpiresAt: expiresAt,
-        } : {}),
+        ...(config.corsOrigins.includes(appOrigin) ? { appOrigin } : {}),
+        paymentUrl: url,
+        paymentUrlCreatedAt: recipient && current.paymentUrlCreatedAt ? current.paymentUrlCreatedAt : now,
+        paymentUrlExpiresAt: expiresAt,
       },
     });
     if (updated.count !== 1)
@@ -327,10 +364,11 @@ export async function initiatePayment(id, actor, provider, ip) {
       );
     return tx.paymentTransaction.findUnique({ where: { id: current.id }, include });
   });
-  return provider === "vietqr"
-    ? { transaction: publicPayment(row), vietqr: await buildVietqr(row) }
+  return recipient
+    ? { transaction: publicPayment(row), vietqr: bankTransferDetails(row) }
     : { transaction: publicPayment(row), paymentUrl: row.paymentUrl, mode: "SANDBOX" };
 }
+
 export async function processVnpayIpn(query) {
   verifyVnpay(query);
   const success =
@@ -362,33 +400,72 @@ export async function processVnpayIpn(query) {
       undefined,
       "INVALID_PROVIDER_CALLBACK",
     );
+  const updated = await settlePayment({
+    provider: 'vnpay', txnRef: query.vnp_TxnRef, amount: Number(query.vnp_Amount) / 100, success, paidAt,
+    evidence: {
+      vnpResponseCode: query.vnp_ResponseCode,
+      vnpTransactionNo: query.vnp_TransactionNo || null,
+      bankCode: query.vnp_BankCode || null,
+      cardType: query.vnp_CardType || null
+    }
+  });
+  return updated ? { RspCode: '00', Message: 'Confirm Success' } : { RspCode: '02', Message: 'Order already confirmed' };
+}
+
+export async function processBankTransfer(body, authorization) {
+  const transfer = verifyBankTransfer(body, authorization);
+  if (!transfer) return false;
+  const { txnRef, amount, paidAt, providerTransactionNo, gateway, accountNumber } = transfer;
+  return settlePayment({
+    provider: "vietqr", txnRef, amount, paidAt, success: true,
+    recipient: { gateway, accountNumber },
+    evidence: { providerTransactionNo },
+  });
+}
+
+async function settlePayment({ provider, txnRef, recipient, amount, success, paidAt, evidence }) {
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`vnpay:${query.vnp_TxnRef}`}))::text`;
-    const row = await tx.paymentTransaction.findUnique({
-      where: { txnRef: query.vnp_TxnRef },
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment-result:${txnRef}`}))::text`;
+    let row = await tx.paymentTransaction.findUnique({
+      where: { txnRef },
       include,
     });
     if (!row) throw missing();
-    if (row.provider !== "vnpay" || !row.paymentUrl || row.currency !== "VND")
+    if (row.provider !== provider || row.currency !== "VND" ||
+        !row.paymentUrl || (recipient && !matchesBankTransfer(row, recipient, paidAt)))
       throw new HttpError(
         400,
         "Provider giao dịch không khớp.",
         undefined,
         "INVALID_PROVIDER_CALLBACK",
       );
-    if (!Number.isSafeInteger(row.amount) || Number(query.vnp_Amount) !== row.amount * 100)
+    if (!Number.isSafeInteger(row.amount) || amount !== row.amount)
       throw new HttpError(
         400,
         "Số tiền callback không khớp.",
         undefined,
         "AMOUNT_MISMATCH",
       );
-    if (row.status === "success" || row.status === "refunded")
-      return { RspCode: "02", Message: "Order already confirmed" };
+    if (row.status === "success" || row.status === "refunded") {
+      if (recipient && row.providerTransactionNo !== evidence.providerTransactionNo) {
+        throw new HttpError(409, 'Khoản chuyển thêm cần được đối soát.', undefined, 'INVALID_PROVIDER_CALLBACK');
+      }
+      return false;
+    }
+
+    if (row.bookingId) await lockPaymentBooking(tx, row.bookingId);
+    const now = new Date();
+    if (row.bookingId) {
+      row = await tx.paymentTransaction.findUnique({ where: { id: row.id }, include });
+      await expireLockedPaymentHold(tx, row.booking, now);
+      row = await tx.paymentTransaction.findUnique({ where: { id: row.id }, include });
+    }
 
     if (success) {
+      const providerTransactionNo = evidence.providerTransactionNo ?? evidence.vnpTransactionNo;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment-evidence:${provider}:${providerTransactionNo}`}))::text`;
       const transactionNoOwner = await tx.paymentTransaction.findFirst({
-        where: { vnpTransactionNo: query.vnp_TransactionNo, id: { not: row.id } },
+        where: { ...(recipient ? { provider, providerTransactionNo } : { vnpTransactionNo: providerTransactionNo }), id: { not: row.id } },
         select: { id: true },
       });
       if (transactionNoOwner)
@@ -400,47 +477,45 @@ export async function processVnpayIpn(query) {
           })
         : null;
       const terminalBooking = row.booking && ["CANCELLED", "REJECTED"].includes(row.booking.status);
-      const reconciliation = terminalBooking || Boolean(otherSuccess);
+      const bookingMismatch = row.booking && (row.amount !== row.booking.feeAmountVnd || row.userId !== row.booking.requestedById);
+      const transferExpired = recipient && row.paymentUrlExpiresAt <= now;
+      const reconciliation = terminalBooking || transferExpired || Boolean(otherSuccess) || Boolean(bookingMismatch);
       const reconciliationReason = terminalBooking
         ? `Provider success received after booking entered ${row.booking.status}.`
         : otherSuccess
           ? "Provider success duplicates an existing settled payment for the booking."
-          : null;
+          : bookingMismatch ? 'Payment does not match the booking owner and accepted fee.'
+          : transferExpired ? 'Bank transfer notification received after checkout expiry.' : null;
       const saved = await tx.paymentTransaction.update({
         where: { id: row.id },
         data: {
           status: "success",
           paidAt,
-          vnpResponseCode: query.vnp_ResponseCode,
-          vnpTransactionNo: query.vnp_TransactionNo,
-          bankCode: query.vnp_BankCode || null,
-          cardType: query.vnp_CardType || null,
+          ...evidence,
           ...(reconciliation ? {
             reconciliationStatus: "manual_review",
             reconciliationReason,
           } : {}),
         },
       });
-      await notifyPayment(tx, saved, "SUCCESS", { reconciliation, now: new Date() });
+      if (!reconciliation && row.booking && saved.amount === row.booking.feeAmountVnd && saved.userId === row.booking.requestedById) await confirmPaidBooking(tx, row.booking, now);
+      await notifyPayment(tx, saved, "SUCCESS", { reconciliation, now });
       await enqueuePaymentReceipt(tx, saved);
-      return { RspCode: "00", Message: "Confirm Success" };
+      return true;
     }
 
     if (row.status !== "pending")
-      return { RspCode: "02", Message: "Order already confirmed" };
+      return false;
     const saved = await tx.paymentTransaction.update({
       where: { id: row.id },
       data: {
         status: "failed",
         paidAt: null,
-        vnpResponseCode: query.vnp_ResponseCode,
-        vnpTransactionNo: query.vnp_TransactionNo || null,
-        bankCode: query.vnp_BankCode || null,
-        cardType: query.vnp_CardType || null,
+        ...evidence,
       },
     });
     await notifyPayment(tx, saved, "FAILED");
-    return { RspCode: "00", Message: "Confirm Success" };
+    return true;
   });
 }
 
@@ -489,7 +564,7 @@ export async function paymentReceipt(id, actor) {
       "PAYMENT_NOT_VERIFIED",
     );
   return {
-    title: "Biên nhận thanh toán nội bộ",
+    title: "Biên nhận thanh toán LAB",
     disclaimer: "Không thay thế hóa đơn điện tử/tài chính theo quy định.",
     transaction: publicPayment(row),
     generatedAt: new Date().toISOString(),

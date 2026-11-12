@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { prisma } from '../db.js';
 import { HttpError } from '../middleware/errors.js';
 import { ADMIN, LAB_STAFF, CUSTOMER } from '../constants/roles.js';
+import { lockCurrentAccount } from './accountAccess.js';
 
 export const SUPPORT_CATEGORIES = ['BOOKING', 'PAYMENT', 'ACCOUNT', 'RESOURCE', 'OTHER'];
 export const SUPPORT_STATUSES = ['WAITING', 'ACTIVE', 'CLOSED', 'CANCELLED'];
@@ -56,6 +57,7 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
       await tx.supportSession.update({ where: { id: next.id }, data: { status: 'ACTIVE', assignedStaffId: agent.userId, assignedAt: now } });
       await tx.supportPresence.update({ where: { userId: agent.userId }, data: { lastAssignedAt: now } });
       await event(tx, next.id, 'ASSIGNED', agent.userId);
+      await supportNotice(tx, [agent.userId], next, 'assigned', now);
     }
   }
   async function publicSession(tx, row) {
@@ -98,6 +100,7 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
     const fingerprint = createHash('sha256').update(JSON.stringify(data)).digest('hex');
     return db.$transaction(async tx => {
       await lockDispatch(tx);
+      await lockCurrentAccount(tx, actor.id, actor.authVersion);
       const existing = await tx.supportSession.findUnique({ where: { id: data.requestId }, include });
       if (existing) {
         if (existing.requesterId !== actor.id || existing.requestFingerprint !== fingerprint) fail('SUPPORT_REQUEST_CHANGED');
@@ -118,15 +121,18 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
       }
       await tx.supportMessage.create({ data: { id: randomUUID(), sessionId: data.requestId, senderId: actor.id, kind: 'CUSTOMER', body: data.message } });
       await event(tx, data.requestId, 'REQUESTED', actor.id);
+      const recipients = await tx.user.findMany({ where: { isActive: true, deletedAt: null, OR: [{ role: ADMIN }, { role: LAB_STAFF, labAssignments: { some: { laboratoryId: lab.id } } }] }, select: { id: true } });
+      await supportNotice(tx, recipients.map(row => row.id), { id: data.requestId, laboratoryId: lab.id }, 'requested', clock());
       await dispatch(tx);
       return publicSession(tx, await tx.supportSession.findUnique({ where: { id: data.requestId }, include }));
     }, { timeout: 15_000 });
   }
   async function heartbeat(actor, accepting) {
-    operator(actor);
     return db.$transaction(async tx => {
       await lockDispatch(tx);
-      if (!(await labs(tx, actor)).length) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
+      const current = await lockCurrentAccount(tx, actor.id, actor.authVersion);
+      operator(current);
+      if (!(await labs(tx, current)).length) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
       const presence = await tx.supportPresence.upsert({ where: { userId: actor.id }, create: { userId: actor.id, accepting: accepting ?? false, lastSeenAt: clock() }, update: { ...(accepting === undefined ? {} : { accepting }), lastSeenAt: clock() } });
       await dispatch(tx);
       return presence;
@@ -134,27 +140,30 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
   }
   async function send(actor, id, data) {
     return db.$transaction(async tx => {
+      const current = await lockCurrentAccount(tx, actor.id, actor.authVersion);
       await lockSession(tx, id);
-      const row = await sessionFor(tx, actor, id);
-      if (actor.role === ADMIN) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
+      const row = await sessionFor(tx, current, id);
+      if (current.role === ADMIN) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
       const existing = await tx.supportMessage.findUnique({ where: { id: data.messageId }, include: { sender: { select: person } } });
       if (existing) {
         if (existing.sessionId !== id || existing.senderId !== actor.id || existing.body !== data.body || existing.source !== 'CHAT') fail('SUPPORT_MESSAGE_CHANGED');
         return existing;
       }
       if (!['WAITING', 'ACTIVE'].includes(row.status)) fail('SUPPORT_SESSION_CLOSED');
-      if (actor.role === LAB_STAFF && (row.status !== 'ACTIVE' || row.assignedStaffId !== actor.id)) throw missing();
-      const message = await tx.supportMessage.create({ data: { id: data.messageId, sessionId: id, senderId: actor.id, kind: actor.role === LAB_STAFF ? 'STAFF' : 'CUSTOMER', body: data.body }, include: { sender: { select: person } } });
+      if (current.role === LAB_STAFF && (row.status !== 'ACTIVE' || row.assignedStaffId !== actor.id)) throw missing();
+      const message = await tx.supportMessage.create({ data: { id: data.messageId, sessionId: id, senderId: actor.id, kind: current.role === LAB_STAFF ? 'STAFF' : 'CUSTOMER', body: data.body }, include: { sender: { select: person } } });
       await tx.supportSession.update({ where: { id }, data: { updatedAt: clock() } });
       return message;
     });
   }
   async function transition(actor, id, action, reason) {
     return db.$transaction(async tx => {
-      await lockDispatch(tx); await lockSession(tx, id);
-      const row = await sessionFor(tx, actor, id);
+      await lockDispatch(tx);
+      const current = await lockCurrentAccount(tx, actor.id, actor.authVersion);
+      await lockSession(tx, id);
+      const row = await sessionFor(tx, current, id);
       if (action === 'finish') {
-        operator(actor);
+        operator(current);
         if (row.status === 'CLOSED') return publicSession(tx, row);
         if (row.status !== 'ACTIVE' || row.assignedStaffId !== actor.id) fail('SUPPORT_INVALID_TRANSITION');
       } else if (action === 'cancel') {
@@ -162,7 +171,7 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
         if (row.status === 'CANCELLED') return publicSession(tx, row);
         if (!['WAITING', 'ACTIVE'].includes(row.status)) fail('SUPPORT_INVALID_TRANSITION');
       } else {
-        if (actor.role !== ADMIN) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
+        if (current.role !== ADMIN) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
         if (row.status !== 'ACTIVE') fail('SUPPORT_INVALID_TRANSITION');
         await tx.supportPresence.updateMany({ where: { userId: row.assignedStaffId }, data: { accepting: false } });
       }
@@ -170,10 +179,22 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
         ? { status: 'WAITING', assignedStaffId: null, assignedAt: null }
         : { status: action === 'finish' ? 'CLOSED' : 'CANCELLED', closedAt: clock(), resolution: reason } });
       await tx.supportMessage.create({ data: { id: randomUUID(), sessionId: id, senderId: actor.id, kind: 'SYSTEM', body: reason, eventType: action === 'finish' ? 'CLOSED' : action === 'cancel' ? 'CANCELLED' : 'REQUEUED' } });
+      await tx.notification.updateMany({ where: { dedupeKey: { startsWith: `support:${id}:` }, readAt: null }, data: { readAt: clock() } });
       await dispatch(tx);
       return publicSession(tx, await tx.supportSession.findUnique({ where: { id }, include }));
     });
   }
   return { metadata, list, detail, request, heartbeat, send, transition };
+}
+
+async function supportNotice(tx, recipients, session, eventType, now) {
+  for (const userId of recipients) {
+    const dedupeKey = `support:${session.id}:${eventType}:${userId}`;
+    await tx.notification.upsert({ where: { dedupeKey }, update: {}, create: {
+      id: randomUUID(), userId, dedupeKey, title: eventType === 'assigned' ? 'Bạn có phiên hỗ trợ mới' : 'Khách hàng cần hỗ trợ',
+      message: 'Mở chat hỗ trợ để xem yêu cầu.', titleKey: `support.${eventType}.title`, messageKey: 'support.open.message',
+      messageParams: { sessionId: session.id, laboratoryId: session.laboratoryId }, severity: 'info', sentAt: now
+    } });
+  }
 }
 export const supportService = createSupportService();

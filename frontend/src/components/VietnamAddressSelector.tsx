@@ -7,12 +7,13 @@ type Option = { code: string | number; name: string };
 export interface VietnamAddressSelectorProps {
   value: AddressValue;
   onChange: (value: AddressValue) => void;
+  onLabelsChange?: (labels: { provinceName: string; wardName: string }) => void;
   required?: boolean;
   compact?: boolean;
   className?: string;
   fieldErrors?: Record<string, LocaleMessage>;
 }
-export function VietnamAddressSelector({ value, onChange, required = false, compact = false, className = '', fieldErrors = {} }: VietnamAddressSelectorProps) {
+export function VietnamAddressSelector({ value, onChange, onLabelsChange, required = false, compact = false, className = '', fieldErrors = {} }: VietnamAddressSelectorProps) {
   const { tr } = useLocale();
   const [provinces, setProvinces] = useState<Option[]>([]);
   const [wardDirectory, setWardDirectory] = useState<{ province: string; options: Option[] }>({ province: '', options: [] });
@@ -21,6 +22,10 @@ export function VietnamAddressSelector({ value, onChange, required = false, comp
   const [provinceError, setProvinceError] = useState(false);
   const [wardError, setWardError] = useState(false);
   const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    onLabelsChange?.({ provinceName: provinces.find(option => String(option.code) === value.provinceCode)?.name || '',
+      wardName: wardDirectory.province === value.provinceCode ? wardDirectory.options.find(option => String(option.code) === value.wardCode)?.name || '' : '' });
+  }, [onLabelsChange, provinces, wardDirectory, value.provinceCode, value.wardCode]);
   useEffect(() => {
     const controller = new AbortController();
     setLoadingProvinces(true); setProvinceError(false);

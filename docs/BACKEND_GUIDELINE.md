@@ -26,6 +26,15 @@ route -> middleware -> service -> Prisma
 
 ## Authorization
 
+Internal bearer JWTs now require issuer/audience/iat/exp/sid/authVersion and a
+current AuthSession as well as the current user. Both required and optional auth
+check revocation/idle/absolute expiry; optional invalid credentials confer no
+personalized access. Database failure is503. Token issuance is async and can use
+the caller transaction for atomic registration/guest setup. Logout revokes sid;
+logout-all increments authVersion. No compatibility bypass for pre-session JWTs.
+Session activity is explicit, bounded by absolute expiry, and never triggered
+by ordinary reads. Hourly cleanup is bounded, separate from expiry enforcement.
+
 Every sensitive route must verify:
 
 - valid bearer JWT where required
@@ -35,6 +44,17 @@ Every sensitive route must verify:
 - lab scope through `UserLabAssignment` where required
 
 Do not rely on client-provided identity or lab fields.
+
+Google Identity Services is optional and configured with `GOOGLE_CLIENT_ID`.
+`/api/auth/google/config` exposes availability and the public client ID.
+`/api/auth/google/challenge` issues an origin-checked, short-lived nonce bound
+to an HttpOnly SameSite cookie. `POST /api/auth/google` verifies the provider
+signature, audience, issuer, expiry, verified email and nonce before using
+the unique Google subject. New Gmail or Google Workspace accounts receive
+`CUSTOMER` and use the standard persisted LAB session. First linking requires
+the existing password and invalidates previous sessions through authVersion.
+Google-only users set a local password through the existing email OTP flow.
+Keep provider credentials, cookies and password proofs out of logs.
 
 ## Workspace queue reads
 
@@ -62,19 +82,58 @@ See [queue contract and verification](WORKSPACE_QUEUE_PAGINATION_20261003.md).
 
 ## Booking Rules
 
+Booking mutations re-read the current actor under the user lock, then lock
+resource before booking, matching payment and expiry writers. Recheck role,
+authVersion, ownership and current LAB inside the transaction, including cancel.
+Hold a share lock on an accepted staff assignment until commit. Reschedule reads
+the current LAB/activity/policy after locking; a closed LAB is not movable.
+Malformed intervals fail400 before Prisma queries. Released RETURNED records do
+not reserve the resource detail projection; resource schedule reads enforce hold
+expiry even without a scheduler. Catalogue availability for an explicit rental
+interval includes known LAB notice/hours/duration/weekend/horizon and resource
+duration limits; this projection does not replace final eligibility checks.
+
+- ADR-044: server minimum notice is `LabPolicy.minAdvanceBookingMinutes`,
+  default/floor30 minutes even without a policy row. Quotes, availability,
+  preflight, creation (including guests), reschedules and AI suggestions honor it.
+  Recheck at the final write. Creation takes resource then LAB share locks;
+  ADMIN policy edits take the LAB update lock and audit within one transaction.
+  Do not retroactively reject handover of existing confirmed/paid bookings.
+
+- ADR-037: schedulingReleasedAt releases an actual returned booking's hold;
+  RETURNED still awaits inspection. Scheduling reads and both GiST/cross-table
+  triggers use the release predicate. Do not rewrite legacy returned records.
+- Handover/self-check-in requires start−30 minutes <= now < end, eligible paid/free
+  booking and fresh resource/LAB/care/training/maintenance/preceding-booking checks.
+  Room access is an owner-only no-store read. ADR-041 derives the code from the immutable booking contact phone; missing contact fails closed and shared legacy passwords are not returned. ResourceFulfillment secrets must
+  never be included in general resource, model, notification or audit projections.
+
 - Use canonical booking statuses only.
 - `NO_SHOW` is outcome/event, not status.
 - Use half-open intervals `[startAt, endAt)`.
 - Map overlap conflicts to `409 BOOKING_CONFLICT`.
 - Do not bypass database-level overlap protection.
-- Every new eligible booking is automatically CONFIRMED through the shared
-  creation service, including guest booking. Legacy approval flags are projected
-  false in resource/calendar/assistant reads; existing pending records remain
-  operable. AI slot search observes care readiness and resource duration limits.
+- Free eligible bookings automatically CONFIRM through the shared creation
+  service. Positive fees use PENDING_APPROVAL + paymentDueAt (min(creation+15 minutes,startAt))
+  for automatic payment verification, including guests. Set createdAt and the payment deadline from the same server
+  timestamp; do not combine an application-clock deadline with a DB-clock default.
+  Staff approval cannot
+  bypass this hold. Signed settlement before expiry confirms it; expiry cancels
+  and frees the interval. Legacy approval records have no paymentDueAt. See ADR-038.
+  For older holds whose stored deadline exceeds startAt, effective expiry is
+  startAt. Apply that cap to workers, reads, checkout/retries and callbacks.
+  Legacy approval flags remain projected false; AI respects care/duration rules.
 - Future booking/maintenance intervals block only intersecting intervals, not
   current catalogue availability. A closed LAB blocks catalogue/calendar/creation.
 
 ## Resource Rules
+
+Maintenance duration bounds compare exact elapsed milliseconds, not rounded
+minutes. Internal maintenance lists (notes, creators and jobs) require ADMIN or
+assigned LAB_STAFF; customers use public-safe resource/calendar projections.
+Dashboard actual use selects overlapping actual custody independently of planned
+dates, including overdue loans. `/notifications/unread-count` counts the complete
+delivered, unread owner scope; a bounded recent-message list is not that total.
 
 - `Resource.operationalStatus` is authoritative.
 - `Resource.status` is compatibility projection only.
@@ -84,6 +143,15 @@ See [queue contract and verification](WORKSPACE_QUEUE_PAGINATION_20261003.md).
 - Retire instead of hard-delete.
 
 ## Runtime Truthfulness
+
+Monitoring keeps an existing metric alert open when a source disconnects or a
+sample omits that metric. A subsequent online reading must clear the condition.
+Resolving an alert does not close its linked incident or change physical state.
+The liveness worker and ingestion lock the same telemetry source. An active
+external source with an overdue online sample opens one `SOURCE_STALE` alert
+and creates notifications in the same transaction. Only a newer online sample
+within the configured freshness window resolves the alert and marks its notices
+read. Retain the original evidence sample and the recovery time for review.
 
 Database or infrastructure failure must produce explicit failure. Do not fall
 back to mock stores or fake success in core runtime.
@@ -117,6 +185,17 @@ Use guarded isolated databases for integration tests that need PostgreSQL.
 
 
 ## Locale and assistant boundary
+
+ADR-040 extends the request-bound bridge to CUSTOMER/LAB_STAFF/ADMIN. Bind
+server-owned role snapshots to each request and recheck current role/authVersion
+for context, reads, reply, owner polling and event delivery. The OAuth grant owner
+never substitutes for the question actor. New workspace read tools use one fresh
+account/scoped Repeatable Read snapshot; operators retain UserLabAssignment and
+ADR-034 contact permissions separately. Complete totals precede bounded previews.
+No stock ledger means unknown quantity. Only CUSTOMER can receive business-form
+proposals. Deterministic fast reads skip Work but retain admission, rate, privacy,
+failure and history limits. See AI_ASSISTANT_MCP; do not infer model latency from
+local-query benchmarks or introduce a business write through a helper.
 
 Shared server messages come from the generated `src/locales/{vi,en}.json`
 projection. Stable API `error.code`/status/details remain authoritative; the locale
@@ -159,6 +238,11 @@ calls. Unknown questions ask for clarification; never substitute operational
 counts as a catch-all answer. `get_operational_summary` requires an explicit
 overview/summary intent. Vietnamese `trong` (in) alone must not select slot search.
 Keep local guidance marked `source=local_guidance` and the existing finite gates.
+ADR-039 adds exact reviewed greetings/thanks/workflow guidance before provider
+work. Bridge local replies persist as ANSWERED with local/local_guidance and no
+delivery event, preserving connection/customer/busy/rate checks and history.
+Mixed questions and changing facts never use this shortcut. External receiver
+speed remains environment-dependent; do not label local timings as model latency.
 
 Configured contextual routing may plan read-only lookups or converse on general
 topics using strict Responses JSON output. Validate against the original MCP
@@ -178,7 +262,7 @@ must not echo secrets or send a provider request.
 ## Automatic account and payment emails
 
 Enqueue EmailDelivery in the same transaction as public registration, a new
-OTP-verified guest account, or verified VNPAY settlement. Use explicit public
+OTP-verified guest account, or verified payment settlement. Use explicit public
 field snapshots; never include passwords/hashes/OTP/tokens. Email is not account
 activation, password recovery, booking approval or payment authority. Return
 must not enqueue receipts; preserve cancelled/rejected/reconciliation outcomes.
@@ -197,3 +281,56 @@ explicitly Asia/Ho_Chi_Minh. Read-only `email:check -- --verify --queue` checks
 configuration/SMTP and queue states without sending mail. Integration tests
 must guard the dedicated localhost `lab_resources_email_test` database and use
 loopback SMTP, never real business data or customer inboxes. See ADR-030/README.
+
+## Account management and password verification
+
+ADMIN manages all accounts; LAB_STAFF manages every CUSTOMER, regardless of LAB
+assignment, only through the account endpoints. Resource/booking/support scope
+is unchanged (ADR-034). List/get use safe projections; password hashes, OTP data
+and authVersion are private. PATCH /users/:id accepts contact only (fullName
+and phone). Affiliation fields are retained for historical data and excluded
+from account schemas and projections. DELETE accepts reason
+and soft-deletes; active bookings block removal. Removed accounts cannot activate.
+
+POST /auth/password-otp/request: {currentPassword}.
+POST /auth/change-password: {challengeId,otp,currentPassword,newPassword}; returns
+{accessToken,tokenType,user}, replacing the former 204 contract.
+POST /users/:id/password-otp/request: {reason}.
+POST /users/:id/password-otp/confirm: {challengeId,otp,newPassword} -> {success:true}.
+Request returns {challengeId,maskedEmail,expiresAt,resendAfter}; dates are ISO UTC.
+Confirmation requires actual SMTP acceptance, current bound context and one-use
+code. Wrong attempts commit even when confirmation fails. Never return/log code
+or credentials. SMTP runs outside the transaction; password/challenge consumption
+and audit commit together. Strict validation, cooldown and account/auth rate
+limits bound mutations; do not automatically retry them. Store only code hashes.
+
+JWT authVersion must match the active current DB user. Sign with authTokens.js;
+never mint an unversioned token after a credential change. Recheck actor inside
+accountWrite to serialize credential/role/activation/delete and last-admin guards.
+Applied migrations are unchanged; new forward account_security migration is required.
+
+## Spending-based loyalty and pricing
+
+GET /loyalty/me returns {tier,points,discountBps,totalSpendVnd,completedBookings,
+basis,progress,nextTier,nextThreshold,remainingToNext,policyVersion,enabled} for
+current actor only. GET /loyalty/policy is authenticated; PUT is ADMIN-only with
+strict fields enabled,plusThreshold,priorityThreshold,plusDiscountBps,
+priorityDiscountBps,expectedVersion. Always derive spend from eligible settlements
+(ADR-035), not persisted user loyalty fields. Optimistic policy conflicts return
+409 LOYALTY_POLICY_CHANGED; unavailable/unsafe totals return LOYALTY_UNAVAILABLE.
+
+Private quote must authenticate a supplied bearer header strictly. Client userId
+cannot select a discount owner. AcceptedQuote includes amountVnd,version and
+loyaltyPolicyVersion for discounted quotes. Fee snapshot additionally stores
+baseAmountVnd,discountAmountVnd,discountBps,loyaltyTier,loyaltyPolicyVersion;
+amountVnd is the net. Check again under existing booking/resource and policy locks.
+Public guest creation explicitly preserves accepted list price. Free bookings do
+not fabricate payment rows. See tests/accountSecurity.integration.test.js and
+loyalty.integration.test.js; both refuse business databases.
+
+Account removal and booking creation share User FOR UPDATE; booking/support
+creation rechecks active/deleted/version after locking. Support dispatch lock
+serializes account removal with requests; open sessions block removal/deactivation
+and role change. Account permission checks precede these state guards.
+Audit metadata is nullable in Prisma to match the existing applied SQL; services
+still write sanitized objects. No historical audit data or migration was rewritten.

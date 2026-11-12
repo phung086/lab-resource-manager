@@ -6,12 +6,23 @@ import { ADMIN, LAB_STAFF } from "../constants/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { buildDashboard } from "../services/dashboardService.js";
 import { buildOperationsReport } from "../services/operationsReportService.js";
+import { buildOperationsBrief } from "../services/operationsBriefService.js";
 import { dispatchDueNotifications } from "../services/notificationService.js";
 
 import { buildWorkspaceTrends } from '../services/workspaceTrendsService.js';
 import { config } from '../config.js';
 
 const router = express.Router();
+router.get("/operations-brief", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
+  try {
+    const { laboratoryId } = z.object({ laboratoryId: z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/).optional() }).strict().parse(req.query);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.json(await buildOperationsBrief(prisma, req.user, { laboratoryId }));
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/trends', requireAuth, requireRole(ADMIN, LAB_STAFF), async (req,res,next) => {
   try {
     const { period } = z.object({period:z.enum(['day','week','month']).default('week')}).strict().parse(req.query);

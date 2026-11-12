@@ -5,7 +5,8 @@
 - React
 - Vite
 - JavaScript/JSX and existing TypeScript component files
-- CSS currently centralized in `frontend/src/styles.css`
+- Shared CSS is loaded from `frontend/src/styles/`. Feature components may
+  import their own stylesheet for local presentation.
 
 Do not migrate to another frontend framework without explicit approval.
 
@@ -63,6 +64,8 @@ large unrelated diff.
   that customer. The backend independently enforces payment ownership.
   An elapsed hosted-session deadline may display expiry; it never proves failure
   or success at the provider and cannot change settlement evidence.
+  VietQR shows the issued amount, recipient and transfer description before the
+  deadline. The checkout polls backend status for verified settlement.
   VNPAY labels do not promise QR: the server may omit `vnp_BankCode` so the
   merchant offers its supported methods. The hosted-URL guard accepts an absent
   bank code or one uppercase alphanumeric code of 3–20 characters; duplicate,
@@ -73,9 +76,52 @@ large unrelated diff.
 - Frontend visibility is UX only.
 - Backend remains authority for every sensitive action.
 - Use canonical uppercase roles.
-- Handle `401` by clearing local session state and requiring re-authentication.
+- Handle protected-request `401` by clearing local session state and requiring
+  re-authentication. Credential rejection on sign-in is a form error.
+
+Login and registration share the Google Identity Services button. Render it
+only after backend configuration and challenge succeed. The Google credential
+and nonce stay in component memory. Persist the LAB session from the normal
+auth response. When configuration is absent, show Google as unavailable.
 
 ## Data Access
+
+Load internal maintenance jobs only for ADMIN/LAB_STAFF. CUSTOMER uses the safe
+resource schedule. Header/sidebar unread badges use `/notifications/unread-count`,
+independent of the50-row notification preview; refresh the count after mutations.
+User clarification 08/11/2026: the resource shortlist belongs in a header icon
+with a dismissible preview, not a persistent bottom tray. Keep historical events
+in the notification inbox instead of replaying global floating notices. Payment
+reads that change booking/charge state refresh shared workspace data; verified or
+refunded transactions must not retain an awaiting-payment countdown. Latest user
+clarification 08/11/2026: compact navigation keeps four primary role shortcuts
+and Profile; Menu exposes every other enabled, role-authorized destination.
+Desktop Menu expands the sidebar in the page layout. A single control beside
+the brand collapses it. Persist the desktop preference across reloads and
+breakpoint changes. Narrow viewports use a modal drawer with Escape and focus
+return.
+Unread notifications use the same user-controlled stacked preview in the inbox
+and customer overview. Opening or switching a preview never marks it read; only the explicit read
+action persists that change, and failed writes retain the item. Optional resource
+specifications and booking guidance use native disclosures with keyboard support
+and respect reduced-motion preferences.
+Public and signed-in discovery share image actions, compact typography, resource
+state presentation and optional specification disclosures. `StatusBadge` and
+`ResourceStatusPill` own shared presentation; booking status/legend tokens refer
+to the same semantic color variables. Physical operation, derived availability,
+booking status, payment status and incident severity remain separate contracts.
+`system-consistency.css` applies shared button and state presentation to existing
+screens. User correction 08/11/2026: retain the floating robot mascot at the bottom
+right throughout the workspace; do not replace it with a small inline control.
+Opening the mobile drawer or password modal temporarily hides the launcher.
+The booking workbench uses contact-style cards across the available width.
+Filter counts and pages remain server-owned. Open a single dossier on selection,
+focus it on load and return focus to its card on close. Keep handover, return,
+history and payment actions in the dossier.
+Until a read group belongs to the current account/role/credential-version scope,
+do not mount the private workspace with previous cached props. Component keys
+alone do not clear App state. Scope changes also close global private dialogs;
+late reads from the prior scope cannot authorize displaying its cached data.
 
 - Use the live API for core workflows.
 - Reuse the loaded shared records when leaving home. Refresh on session change,
@@ -91,6 +137,11 @@ large unrelated diff.
   Clamp an emptied last page after refresh. Read totals from the server summary,
   never from the current page length. Use the shared accessible VI/EN
   `QueuePagination` control and preserve keyboard focus after changing pages.
+
+Overview refinement: show date and time range once each, use the search
+summary as the disclosure's accessible heading, and retain accessible action
+names when repeated visual link text is omitted. Resource operations own their
+board markers/counts; do not depend on retired booking-board styles.
 
 ## Forms And Tables
 
@@ -115,6 +166,25 @@ dashboard patterns, and accessibility. Do not copy framework architecture
 blindly and do not migrate React/Vite to Next.js because a reference uses it.
 
 ## Verification
+
+ADR-044: booking forms show minimum notice separately from session duration.
+The baseline is30 minutes even without a LAB policy; respect a larger
+`minAdvanceBookingMinutes`. Calendar suggestions round the earliest legal
+instant up to the input minute. Final creation always rechecks server time.
+Pending payment countdowns use min(paymentDueAt,startAt); the client may hide
+an expired payment action but never declare provider success or cancel a record.
+
+Paid booking flow (15/10/2026, ADR-038): PENDING_APPROVAL with paymentDueAt is
+awaiting payment, not staff approval. Show the fixed server deadline/countdown,
+open checkout after creation, and expose an awaiting-payment queue separate from
+legacy approvals. Free bookings confirm immediately. Only server expiry/IPN can
+cancel/confirm; a browser clock, redirect or return is not settlement evidence.
+The VNPAY return opens `/workspace/payments?receipt=<transactionId>`. Load the
+specific transaction and receipt through the authenticated payment API. Show a
+pending state with bounded polling while the payment is pending. Render the
+receipt only after the server authorizes and returns it.
+The local launcher defaults payments on; explicit LRM_LOCAL_PAYMENTS_ENABLED=false
+disables that optional runtime capability without making priced resources free.
 
 Use at least:
 
@@ -147,6 +217,48 @@ boundary and examples of recovery tests.
 
 ## Role entry points
 
+Calendar planner (user approved 17/10/2026): CUSTOMER starts with resource/time
+selection; LAB_STAFF and ADMIN start with a daily resource board. Staff LAB
+choices come from the scoped `/laboratories` response. Mobile renders one agenda
+entry per event/resource, not repeated hourly booking cards. Weekly comparison
+is for one resource and renders day summaries from `/calendar/events`, preserving
+events outside the old 08–20 grid; month remains a secondary overview.
+
+The calendar resource picker is a scheduling step with compact thumbnails,
+resource identity and service hours or booking restrictions. It uses up to
+three columns and nine resources per page. Full photos, pricing, selection-cart
+actions and descriptions belong to the resource catalogue or detail views.
+
+Use the stored LAB policy for service hours and duration hints. No policy means
+unknown hours, not an invented window. Empty event space and interval-filtered
+catalogue candidates are not a booking guarantee. Availability is checked on
+the single “Book this time” action before opening the existing price/eligibility/
+booking form. Do not add a separate precheck button before that action. Group
+continuous free windows instead of listing every half-hour start. Load seven
+days of events for the selected resource, subtract occupied intervals, and offer
+the next suitable dates inside that loaded range. Switching dates within that
+range reuses the projection; never offer unqueried dates as verified free.
+Selection-list checks expire after one minute and are invalidated by changed resource/time.
+Desktop day events keep proportional interval bars and place readable time/title/
+status labels on separate rows; short reservations must not clip time/status.
+Full titles remain available through focus/click details. Mobile retains its agenda.
+The selection tray can copy a common time to unsaved drafts and check them
+sequentially, stopping on rate limit/transport/auth failures. It never creates
+bookings in bulk or retries mutations. Per-resource pending/uncertain fences and
+independent results are retained. Render limits page only the loaded catalogue;
+the resource API cap of 250 is disclosed rather than presented as full totals.
+
+The workspace header and catalogue use ResourceFinder for suggestions from
+the already loaded resource list, with keyboard selection and the normal
+resource detail route. The public catalogue uses its own loaded catalogue and
+scoped facets. Its counts reflect the loaded results for search, laboratory and
+current availability. Calendar retains ResourceSearchField. Both controls use
+one outer focus ring. Calendar and the resource catalogue hide the header's
+global search so each of those pages has one search entry. Clearing the calendar
+input clears its committed search filter. Use plain
+task wording such as “Find an open time” and “Book this time”, not projection,
+candidate or precheck terminology in customer-facing copy.
+
 `pages/WorkspaceHome.tsx` selects a lazily loaded view from
 `components/features/workspace/`. Keep customer discovery and booking,
 LAB staff operations and administrative coordination distinct in information
@@ -169,6 +281,13 @@ explicit readiness writes must win over older heartbeat responses. Human handoff
 shares only an explicitly chosen, owner-validated server transcript. Quick replies
 insert editable text; they never auto-send or change business state.
 
+CUSTOMER handoff uses `CustomerSupportChat` inside the existing assistant dock.
+Keep the prior AI turns visible; prepare/confirm the request in that dock, display
+WAITING position, then assigned staff and real messages without navigation.
+Recover an open session when reopening/reloading the signed-in dock; minimize
+pauses reads and retains its unsent draft. Do not run another AI question while
+human support is open. Staff/admin retain the operational Support workspace.
+
 Use the shared `apiRequest` cancellation and deadline boundary: normal requests
 wait at most 30 seconds, chat 65 seconds, including response-body reads. Preserve
 caller cancellation and catalog error IDs. Do not automatically retry mutations
@@ -181,11 +300,31 @@ request `/dashboard?includeTelemetry=false` without adding a second data loader.
 
 ### Assistant dock — local continuation, 2026-10-05
 
+ADR-040 (15/10/2026): show role-specific suggestions for staff/admin: today's
+schedule, material stock, 7-day report and CUSTOMER search. The same Work bridge
+supports every role; operator navigation returns to existing stock/users/operations/
+calendar pages. Bridge quick-read answers return immediately without polling Work.
+If Work disconnects, preserve internal authenticated local lookups and clearly
+describe the limit for open-ended replies. Operator support opens the staff/admin
+inbox; only customers create human-help requests or receive booking/support drafts.
+Status polling may retry bounded transient GET failures; never retry question
+creation or authorization/validation errors automatically.
+
+15/10/2026 clarification (ADR-039): the chatbot has a `LocaleScope` over the shared
+catalogs. Its VI/EN does not activate/store the global locale or change html.lang;
+later application changes replace the local preference. Preserve drafts/history
+and cancel active work on an effective locale change. Optimistically display the
+outgoing turn, clear only the sent draft immediately, retain failure/cancellation
+with explicit retry and never overwrite a newer draft when the reply arrives.
+Use neutral waiting text; omit About/provider/response metadata from the dock.
+Keep actual document sources and real errors. Completed answers expose navigation
+to existing LAB resource/booking screens without business mutations.
+
 `AssistantLauncher` opens the authenticated assistant at the lower-right corner.
 The desktop chat is nonmodal: keep page scrolling and background controls usable.
 Explicit minimize/Escape returns focus to the launcher; minimize if a background
 control receives focus behind the dock or another dialog opens. Do not add a page
-overlay or a global focus trap. The context chooser and provider/source details
+overlay or a global focus trap. The context chooser and actual document citations
 use disclosures; show three concise initial suggestions.
 
 Mount the lazy assistant once per signed-in workspace session. Minimize preserves
@@ -202,9 +341,9 @@ server context and clears selected context while preserving the unsent draft and
 restoring composer focus. A 409 expired/foreign conversation retains the draft
 and requires explicit reset before further chat. Do not silently retry it.
 
-General model conversation and clarification use response information rather
-than claiming checked LAB sources. About reports configured/local mode without
-claiming the external connection has passed. API keys stay on the backend.
+Response provenance stays explicit in the API. Ordinary conversations do not
+claim checked LAB sources or expose provider metadata in the dock. Connection
+failures remain visible; API keys stay on the backend.
 
 Allowlisted assistant actions prepare the existing `QuickBookingModal`, navigate
 to bookings, or open the context chooser. They never submit a booking or payment.
@@ -245,3 +384,111 @@ configuration without repetitive demo disclaimers; retain provenance in stored
 data/docs and never invent telemetry or business history. ResourcePricingSummary reads actual purpose rates
 independently from resource/schedule/history. An unconfigured rate is not a failed
 read or proof of free usage; the backend quote remains authoritative for booking.
+
+## Account security and loyalty interface
+
+Auth credentials live in sessionStorage through authStorage, never persistent
+localStorage. SessionGuard is mounted across public/workspace routes; it reads
+server deadlines, warns before expiry, and checks on visibility return. Only
+trusted pointer/key actions (at most once/minute) or explicit Continue send
+activity; background polling does not. Absolute expiry cannot be extended.
+Sign-out and credential changes notify the shared guard; stale401 guards remain.
+The profile shows actual session timestamps/deadlines and logout-all. A tab's
+storage is still JavaScript-accessible and is not an XSS mitigation by itself.
+
+QuickBookingModal first submits a preflight/read request and then a review.
+Contact/time/fulfillment/quote changes invalidate review; after60s it rechecks.
+Only the separate final confirmation creates a booking. Do not describe preflight
+as a reservation. Guest uncertain-response fencing prevents automatic resubmits;
+keep draft and direct the customer to history/staff for verification.
+
+Staff CUSTOMER management reuses AccessUserManagement; server enforces global
+CUSTOMER-only scope. Hide role/LAB assignment controls from staff, read email
+without edit, show contact changes separately, and request a reason before remove
+or assisted reset. Removed account actions stay unavailable. Use the shared
+PasswordChangeForm from shell, profile and assisted reset: password draft then
+six-digit OTP, masked recipient, expiry and resend cooldown. Paste/autocomplete
+are allowed. Field errors stay next to their field and receive focus. Never
+retry credential mutations automatically. On self success store renewed token
+before fetching profile; old session is revoked. Missing SMTP remains an error.
+
+Profile renders server-derived loyalty only; show tier, spend and next-tier
+progress compactly. Admin policy lives behind an explicit expandable section.
+Quotes/checkout show actual stored base, discount and net; omit a breakdown for
+legacy snapshots lacking those fields. Never calculate an assumed discount in
+UI. Default policy is disabled. Guest booking retains accepted public price.
+
+Profile uses a shared identity strip, four section controls and contextual
+membership/help alongside the main task; mobile puts the main task first.
+Registration, guest booking and self/managed contact forms omit all affiliation
+fields from display and payloads. Hidden sections keep
+drafts; validation opens a collapsed address before focusing its invalid field.
+Activity bars use the authoritative all-time booking summary, with explicit
+counts and shares in a semantic table. Missing or inconsistent summaries are
+unavailable, not an empty history. Do not invent monthly trends or access scores.
+Password progress reflects the existing challenge/success state only.
+
+## UI research direction — 13/10/2026, proposal only
+
+Current source has separate role homes and shared routing/components, so retain
+React/Vite and the shell. A full redesign has not been implemented in this batch.
+
+| View | Recommended first screen | Secondary content |
+|---|---|---|
+| CUSTOMER | Search, category, date/duration, price, availability and Book action | Own next booking, history, loyalty and support |
+| LAB_STAFF | Handover, return and inspection queues, overdue items, due care | Incidents, available support handler state, customers |
+| ADMIN | Cross-LAB exceptions, pending care, staff assignments and support activity | Accounts/policy, drill-down audit and reports |
+
+Recommendation: a compact service catalogue for customers, an operations table
+for staff, and an exception dashboard for admins. Use the same typography,
+spacing, status colors and interaction primitives; preserve the existing brand.
+All five categories stay discoverable; CustomerHome shortcuts currently cover
+ROOM/EQUIPMENT/EXPERIMENT_KIT, so MACHINE/MATERIAL need clear access in a future
+home refinement. Customer cards should show image, name/LAB, hourly fee and one
+primary action; technical specs expand in detail. Details use explicit tabs or
+anchors activated by click/keyboard; optional hover preview must not be the sole
+way to open information. Hover navigation alone causes accidental jumps on touch
+or while scanning.
+
+Keep room availability visual and equipment in a responsive 3/2/1-column grid;
+show true conflict/maintenance reasons on the selected interval. Staff care rows
+need a cycle progress meter (hours/uses), near/due badge and next action; detailed
+configuration belongs in an edit disclosure. Show unread care notifications as
+small alerts with direct resource links. No count/history may be invented to make
+a page look busy. New bookings auto-confirm; only render legacy approval when
+actual PENDING_APPROVAL exists. Loading, empty, error and forbidden states need
+short copy and an appropriate retry/next action.
+
+Suggested acceptance for a later redesign: from discovery to an available priced
+booking with one clear primary action per step; keyboard focus and mobile reach;
+retained drafts/deep links/VI-EN; complete scoped totals; no fabricated telemetry
+or widening permissions. UI research is based on source and the user's screenshots;
+new account screens have their own browser QA, which does not certify a whole
+system redesign. See INTEGRATION_GUIDE for contract dependencies before changes.
+
+A 401 from an earlier request must not clear a newly installed session: apiRequest
+clears only when its captured token is still the current token. Password/contact
+error focus runs after the fieldset has been enabled and rendered.
+
+## Assistant launcher and support workspace
+
+The shared RobotMascot is a code-native SVG, reused in the bottom-right launcher
+and conversation header. Keep the launcher outside Header, clear of the resource
+selection tray; the nonmodal panel sits above it, fits dynamic viewport height,
+restores keyboard focus on minimize and retains drafts. Respect reduced motion.
+Support CUSTOMER uses New request/My sessions beside the conversation. Preserve
+server sessions, drafts, owner/lab scope and current mutation confirmation flows;
+STAFF/ADMIN retain their operational queue/presence/requeue responsibilities.
+
+### Header và kết nối trợ lý (17/10/2026)
+
+Tìm nhanh trên header chuyển query qua route tài nguyên và guard điều hướng
+hiện có. Tìm tự do mở nhóm Tất cả; không để nhóm mặc định che kết quả tìm kiếm.
+Lối tắt theo role, thu gọn trên màn nhỏ; giữ chức năng trong menu đầy đủ.
+Nhãn mascot chỉ hiện hover/focus-visible, accessible name luôn còn.
+
+Kiểm tra trạng thái trợ lý khi mở widget và khi user yêu cầu, cache resources;
+không dùng polling để thay cho việc khôi phục consumer Work Cloud. Phân biệt
+tra cứu nội bộ với câu hỏi mở, không gắn lỗi provider lên toàn bộ khả năng LAB.
+Kiểm tra trạng thái không đăng ký/gia hạn receiver. Không tự retry câu hỏi ghi
+hoặc đổi provider sau lỗi; giữ câu hỏi/draft và phản ánh BRIDGE_UNAVAILABLE.

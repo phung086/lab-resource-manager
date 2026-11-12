@@ -1,0 +1,3 @@
+.local-draft-notice { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:16px; margin:12px 0; border-radius:12px; background:#fff4dc; color:#654714; }
+.local-draft-notice p { flex:1; min-width:180px; margin:0; line-height:1.6; }
+.local-draft-notice button { font:inherit; min-height:44px; padding:8px 12px; background:#fff; color:#654714; border:1px solid #bca46f; border-radius:8px; cursor:pointer; }

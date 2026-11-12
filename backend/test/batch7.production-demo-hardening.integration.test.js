@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import test from "node:test";
 
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+
 import request from "supertest";
 
 import {
@@ -20,7 +20,7 @@ const databaseUrl = await configureBatch7TestEnvironment(database);
 const prisma = isolatedBatch7Client(databaseUrl);
 
 const { createApp } = await import("../src/app.js");
-const { config } = await import("../src/config.js");
+const { signUserToken } = await import("../src/services/authTokens.js");
 
 const app = createApp();
 
@@ -34,14 +34,7 @@ const ids = {
 
 const password = "Batch7E2E!Passphrase";
 
-function bearer(user) {
-  return {
-    Authorization: `Bearer ${jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, {
-      algorithm: "HS256",
-      expiresIn: "1h"
-    })}`
-  };
-}
+async function bearer(user) { return { Authorization: `Bearer ${await signUserToken(user)}` }; }
 
 async function seed() {
   await prisma.notification.deleteMany();
@@ -91,7 +84,7 @@ test("Batch 7 production demo hardening", async (t) => {
     const admin = await prisma.user.findUnique({ where: { id: ids.admin } });
     const response = await request(app)
       .post("/api/users")
-      .set(bearer(admin))
+      .set(await bearer(admin))
       .send({
         email: "created.staff@lab.test",
         password: "CreatedStaff!Passphrase",
@@ -114,7 +107,7 @@ test("Batch 7 production demo hardening", async (t) => {
     const student = await prisma.user.findUnique({ where: { id: ids.student } });
     const response = await request(app)
       .post("/api/users")
-      .set(bearer(student))
+      .set(await bearer(student))
       .send({
         email: "forbidden.admin@lab.test",
         password: "ForbiddenAdmin!Passphrase",
@@ -130,7 +123,7 @@ test("Batch 7 production demo hardening", async (t) => {
     const admin = await prisma.user.findUnique({ where: { id: ids.admin } });
     const response = await request(app)
       .post("/api/users")
-      .set(bearer(admin))
+      .set(await bearer(admin))
       .send({
         email: "created.staff@lab.test",
         password: "AnotherStrong!Passphrase",

@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { Agent } from 'node:https';
 import { S3Client, DeleteObjectCommand, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { prisma } from "../db.js";
@@ -11,6 +12,10 @@ const formats = {
   "video/mp4": { kind: "VIDEO", ext: "mp4", max: 100 * 1024 * 1024 },
   "video/webm": { kind: "VIDEO", ext: "webm", max: 100 * 1024 * 1024 },
 };
+const { AbortSignal } = globalThis;
+const mediaCacheControl = 'public, max-age=86400';
+let cachedStorage;
+let cachedConfiguration;
 
 function storage() {
   const { MEDIA_S3_ENDPOINT: endpoint, MEDIA_S3_BUCKET: bucket, MEDIA_S3_REGION: region = "auto", MEDIA_S3_ACCESS_KEY_ID: accessKeyId, MEDIA_S3_SECRET_ACCESS_KEY: secretAccessKey, MEDIA_PUBLIC_BASE_URL: publicBase } = process.env;
@@ -19,9 +24,17 @@ function storage() {
   try {
     const endpointUrl = new URL(endpoint);
     base = new URL(publicBase);
-    if (endpointUrl.protocol !== "https:" || base.protocol !== "https:" || endpointUrl.username || base.username || base.search || base.hash) throw new Error("invalid URL");
+    if (endpointUrl.protocol !== "https:" || base.protocol !== "https:" || endpointUrl.username || endpointUrl.password || endpointUrl.search || endpointUrl.hash || base.username || base.password || base.search || base.hash) throw new Error("invalid URL");
   } catch { throw new HttpError(503, "Cấu hình kho ảnh/video không hợp lệ.", undefined, "MEDIA_NOT_CONFIGURED"); }
-  return { client: new S3Client({ endpoint, region, credentials: { accessKeyId, secretAccessKey }, forcePathStyle: true }), bucket, base };
+  const configuration = JSON.stringify([endpoint, bucket, region, accessKeyId, secretAccessKey, publicBase]);
+  if (configuration !== cachedConfiguration) {
+    cachedStorage?.client.destroy();
+    cachedStorage = { client: new S3Client({ endpoint, region, credentials: { accessKeyId, secretAccessKey }, forcePathStyle: true, maxAttempts: 2,
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      requestHandler: { httpsAgent: new Agent({ keepAlive: true, maxSockets: 16, maxTotalSockets: 16 }), connectionTimeout: 3000, requestTimeout: 10000 } }), bucket, base };
+    cachedConfiguration = configuration;
+  }
+  return cachedStorage;
 }
 
 export function publicMediaUrl(base, key) {
@@ -38,18 +51,22 @@ export async function requestResourceMediaUpload(resourceId, { contentType, size
   const format = formatFor(contentType, size);
   const { client, bucket } = storage();
   const key = `resources/${resourceId}/${crypto.randomUUID()}.${format.ext}`;
-  const uploadUrl = await getSignedUrl(client, new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType }), { expiresIn: 600 });
-  return { key, uploadUrl, contentType, maxBytes: format.max, expiresInSeconds: 600 };
+  const uploadUrl = await getSignedUrl(client, new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType, ContentLength: size,
+    CacheControl: mediaCacheControl }), { expiresIn: 600, signableHeaders: new Set(['content-type', 'cache-control']) });
+  return { key, uploadUrl, contentType, cacheControl: mediaCacheControl, maxBytes: format.max, expiresInSeconds: 600 };
 }
 
 export async function finishResourceMediaUpload(resourceId, data) {
   const { client, bucket, base } = storage();
   if (!new RegExp(`^resources/${resourceId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/[a-f0-9-]{36}\\.(jpg|png|webp|mp4|webm)$`).test(data.key)) throw new HttpError(400, "Khóa tệp không hợp lệ.", undefined, "MEDIA_INVALID_KEY");
   let head;
-  try { head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: data.key })); }
-  catch { throw new HttpError(409, "Không tìm thấy tệp đã tải lên kho media.", undefined, "MEDIA_UPLOAD_MISSING"); }
+  try { head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: data.key }), { abortSignal: AbortSignal.timeout(10000) }); }
+  catch (error) {
+    if (error.$metadata?.httpStatusCode === 404 || ['NotFound', 'NoSuchKey'].includes(error.name)) throw new HttpError(409, "Không tìm thấy tệp đã tải lên kho media.", undefined, "MEDIA_UPLOAD_MISSING");
+    throw new HttpError(503, "Kho media tạm thời không khả dụng.", undefined, "DATA_UNAVAILABLE");
+  }
   const format = formatFor(head.ContentType, Number(head.ContentLength));
-  if (format.kind !== data.kind) throw new HttpError(400, "Loại media không khớp tệp đã tải.", undefined, "MEDIA_INVALID_FILE");
+  if (format.kind !== data.kind || !data.key.endsWith('.' + format.ext)) throw new HttpError(400, "Loại media không khớp tệp đã tải.", undefined, "MEDIA_INVALID_FILE");
   const row = await prisma.resourceMedia.create({ data: { id: crypto.randomUUID(), resourceId, kind: data.kind, url: publicMediaUrl(base, data.key), objectKey: data.key, title: data.title, altText: data.altText, credit: data.credit || null, license: data.license || null, sortOrder: data.sortOrder } });
   return row;
 }
@@ -72,7 +89,7 @@ export async function deleteResourceMedia(resourceId, mediaId) {
   if (media.objectKey) {
     try {
       const { client, bucket } = storage();
-      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: media.objectKey }));
+      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: media.objectKey }), { abortSignal: AbortSignal.timeout(10000) });
     } catch (error) {
       // DB ownership is already removed; bucket cleanup can be retried out of band.
     }

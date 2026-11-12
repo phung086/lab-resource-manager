@@ -1,13 +1,16 @@
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React from "react";
+import { minimumBookingNotice } from '../utils/bookingNotice';
 
 interface LabPolicy {
+  turnaroundMinutes?: number | null;
   workDayStartHour?: number | null;
   workDayEndHour?: number | null;
   minBookingMinutes?: number | null;
   maxBookingMinutes?: number | null;
   maxAdvanceBookingDays?: number | null;
+  minAdvanceBookingMinutes?: number | null;
   allowWeekend?: boolean | null;
 }
 
@@ -19,6 +22,8 @@ export function LabPolicySummary({ policy, requiresApproval }: { policy?: LabPol
     ? translate("ui.00_00_vietnam_time_6e1291ef", { value0: String(policy.workDayStartHour).padStart(2, "0"), value1: String(policy.workDayEndHour).padStart(2, "0") }) : unknown;
   const entries = [
     [tr("ui.opening_hours_d7cc3448"), hours],
+    [tr('ui.bookingNotice.label'), duration(minimumBookingNotice(policy))],
+    [tr('planning.turnaroundMinutes'), duration(policy?.turnaroundMinutes ?? 0)],
     [tr("ui.minimum_duration_3734302d"), duration(policy?.minBookingMinutes)],
     [tr("ui.maximum_duration_aa77487c"), duration(policy?.maxBookingMinutes)],
     [tr("ui.advance_booking_limit_b57c91dd"), policy?.maxAdvanceBookingDays == null ? unknown : translate("ui.days_62f408a1", { value0: policy.maxAdvanceBookingDays })],

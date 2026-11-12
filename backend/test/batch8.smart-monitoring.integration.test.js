@@ -19,6 +19,7 @@ const [{ createApp }, { prisma }] = await Promise.all([
 
 const app = createApp();
 const isolated = isolatedBatch8Client(databaseUrl);
+const { scanStaleTelemetrySources } = await import('../src/services/telemetryLivenessService.js');
 const marker = crypto.randomUUID();
 const id = () => crypto.randomUUID();
 const password = "Batch8!Pass";
@@ -283,6 +284,29 @@ test("Batch 8 authenticated smart monitoring extension", { timeout: 180000 }, as
     assert.equal(linked.category, "NON_CERTIFIED_SAFETY_EARLY_WARNING");
   });
 
+  await t.test("offline and missing readings cannot resolve a temperature alert", async () => {
+    assert.equal((await ingest(primary.credential, { online: false, temperatureC: undefined, humidityPercent: undefined })).status, 201);
+    assert.equal((await isolated.monitoringAlert.findUnique({ where: { id: criticalAlertId } })).status, "ACKNOWLEDGED");
+    assert.equal((await ingest(primary.credential, { online: true, temperatureC: undefined, cpuPercent: 20 })).status, 201);
+    assert.equal((await isolated.monitoringAlert.findUnique({ where: { id: criticalAlertId } })).status, "ACKNOWLEDGED");
+    assert.equal((await ingest(primary.credential, { online: true, temperatureC: 28 })).status, 201);
+    const resolved = await isolated.monitoringAlert.findUnique({ where: { id: criticalAlertId } });
+    assert.equal(resolved.status, "RESOLVED");
+    assert.equal(resolved.resolution, "CONDITION_CLEARED");
+    const incident = await isolated.incident.findUnique({ where: { monitoringAlertId: criticalAlertId } });
+    assert.equal(incident.status, 'reported');
+    const endpoint = `/api/incidents/${incident.id}`;
+    assert.equal((await request(app).post(`${endpoint}/triage`).set(bearer(tokens.foreignStaff)).send({})).status, 403);
+    assert.equal((await request(app).post(`${endpoint}/triage`).set(bearer(tokens.staff)).send({})).body.status, 'triaged');
+    assert.equal((await request(app).post(`${endpoint}/investigate`).set(bearer(tokens.staff)).send({})).body.status, 'investigating');
+    const resolution = 'Verified normal temperature after source recovery in the monitoring test.';
+    const closed = await request(app).post(`${endpoint}/resolve`).set(bearer(tokens.staff)).send({ resolution });
+    assert.equal(closed.status, 200);
+    assert.equal(closed.body.status, 'resolved');
+    assert.equal(closed.body.resolution, resolution);
+    assert.equal(closed.body.resource.operationalStatus, 'AVAILABLE');
+  });
+
   await t.test("camera metadata is scoped, private, disabled by default, and every attempt is audited", async () => {
     const created = await request(app)
       .post("/api/telemetry/cameras")
@@ -335,6 +359,56 @@ test("Batch 8 authenticated smart monitoring extension", { timeout: 180000 }, as
     assert.equal(foreignSources.body.some((source) => source.id === primary.source.id), false);
     assert.equal((await request(app).get("/api/telemetry").set(bearer(tokens.student))).status, 403);
     assert.equal((await request(app).get("/api/telemetry/alerts").set(bearer(tokens.lecturer))).status, 403);
+  });
+
+  await t.test('missing telemetry opens one episode with scoped notices, and only a fresh online sample clears it', async () => {
+    const created = await request(app).post('/api/telemetry/sources').set(bearer(tokens.admin)).send({
+      code: `STALE-${marker}`, name: 'Connection watchdog fixture', resourceId: fixture.resources.primary, laboratoryId: fixture.labs.assigned
+    });
+    assert.equal(created.status, 201);
+    const { source, credential } = created.body;
+    const priorAt = new Date(Date.now() - 25 * 60_000).toISOString();
+    const sample = await ingest(credential, { timestamp: priorAt, eventId: `old-${marker}` });
+    assert.equal(sample.status, 201);
+    const conditionKey = `${source.id}:SOURCE_STALE`;
+    const where = { sourceId: source.id, ruleCode: 'SOURCE_STALE' };
+    await Promise.all([scanStaleTelemetrySources(isolated), scanStaleTelemetrySources(isolated)]);
+    const alerts = await isolated.monitoringAlert.findMany({ where });
+    assert.equal(alerts.length, 1);
+    const alert = alerts[0];
+    assert.equal(alert.sampleId, sample.body.latestTelemetry.id);
+    assert.equal(alert.status, 'OPEN');
+    const noticeWhere = { dedupeKey: { startsWith: `monitoring:stale:${alert.id}:` } };
+    const notices = await isolated.notification.findMany({ where: noticeWhere });
+    const administrators = await isolated.user.findMany({ where: { role: 'ADMIN', isActive: true, deletedAt: null }, select: { id: true } });
+    assert.deepEqual(new Set(notices.map(n => n.userId)), new Set([...administrators.map(user => user.id), fixture.users.staff]));
+    assert.ok(notices.every(n => n.sentAt && !n.readAt));
+    assert.equal(await isolated.incident.count({ where: { monitoringAlertId: alert.id } }), 0);
+
+    await ingest(credential, { timestamp: priorAt, eventId: `old-${marker}` });
+    await ingest(credential, { timestamp: new Date(Date.now() - 20 * 60_000).toISOString() });
+    await ingest(credential, { online: false, temperatureC: undefined, humidityPercent: undefined });
+    assert.equal(await isolated.monitoringAlert.count({ where: { activeDedupeKey: conditionKey } }), 1);
+    assert.equal((await ingest(credential, { temperatureC: 30 })).status, 201);
+    const recovered = await isolated.monitoringAlert.findUnique({ where: { id: alert.id } });
+    assert.equal(recovered.status, 'RESOLVED');
+    assert.equal(recovered.resolution, 'FRESH_SAMPLE_RECEIVED');
+    assert.equal(await isolated.notification.count({ where: { ...noticeWhere, readAt: null } }), 0);
+    assert.equal((await isolated.resource.findUnique({ where: { id: fixture.resources.primary } })).operationalStatus, 'AVAILABLE');
+    assert.equal(await isolated.monitoringAlert.count({ where }), 1);
+  });
+
+  await t.test('monitoring summary omits history while the scoped dossier retains it', async () => {
+    const summary = await request(app).get('/api/telemetry?view=summary').set(bearer(tokens.staff));
+    assert.equal(summary.status, 200);
+    const row = summary.body.find(item => item.resource.id === fixture.resources.primary);
+    assert.ok(row.latestTelemetry);
+    assert.equal(row.history, undefined);
+    assert.equal(row.resource.specs, undefined);
+    const detail = await request(app).get(`/api/telemetry?resourceId=${fixture.resources.primary}&take=60`).set(bearer(tokens.staff));
+    assert.equal(detail.status, 200);
+    assert.ok(detail.body[0].history.length > 1);
+    assert.equal((await request(app).get(`/api/telemetry?resourceId=${fixture.resources.primary}&take=60`).set(bearer(tokens.foreignStaff))).status, 403);
   });
 });
 

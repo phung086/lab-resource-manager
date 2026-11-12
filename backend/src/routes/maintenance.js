@@ -67,7 +67,7 @@ router.get("/impact", requireRole(ADMIN, LAB_STAFF), requireLabAccess("query.res
   } catch (error) { next(error); }
 });
 
-router.get("/", async (req, res, next) => {
+router.get("/", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {
     const { resourceId, kind, status, from, to } = maintenanceListQuerySchema.parse(req.query);
     if (from && to && from > to) {
@@ -213,6 +213,16 @@ router.patch("/:id", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
         if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
       }
 
+      // The booked interval can end while the borrower still has the resource.
+      // Use the same resource lock as checkout and return before starting work.
+      if (nextStatus !== fresh.status && ["in_progress", "completed"].includes(nextStatus)) {
+        const checkedOut = await tx.booking.findFirst({
+          where: { resourceId: nextResourceId, status: "CHECKED_OUT" },
+          select: { id: true }
+        });
+        if (checkedOut) throw new HttpError(409, "Receive the resource before maintenance", undefined, "RESOURCE_RETURN_REQUIRED");
+      }
+
       await ensureNoBookingConflictTx(tx, {
         resourceId: nextResourceId,
         startAt: nextStartAt,
@@ -282,7 +292,7 @@ function validateMaintenanceWindow(startAt, endAt) {
   if (startAt >= endAt) {
     throw new HttpError(400, "Maintenance start time must be before end time", undefined, "INVALID_MAINTENANCE_TIME");
   }
-  const durationMinutes = Math.round((endAt.getTime() - startAt.getTime()) / 60_000);
+  const durationMinutes = (endAt.getTime() - startAt.getTime()) / 60_000;
   if (durationMinutes < MIN_MAINTENANCE_MINUTES || durationMinutes > MAX_MAINTENANCE_MINUTES) {
     throw new HttpError(400, "Maintenance duration is outside the allowed range", undefined, "INVALID_MAINTENANCE_TIME");
   }

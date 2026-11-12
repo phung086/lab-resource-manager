@@ -1,9 +1,12 @@
+import { PageHeading } from "../../base/PageHeading";
+import { LocalDraftNotice } from '../../base/LocalDraftNotice';
 import { HelpDisclosure } from "../../base/HelpDisclosure";
 import React, { useState, useId, useEffect, useRef } from "react";
 import "../../../styles/incidents-workspace.css";
 import { useLocale } from "../../../providers/LocaleProvider";
 import { useQueuePage } from "../../../hooks/useQueuePage";
 import { QueuePagination } from "../../base/QueuePagination";
+import { WorkbenchPath } from "../../base/WorkbenchPath";
 import { BaseModal2026 } from "../../BaseModal2026";
 import { translate } from "../../../i18n.js";
 import { apiRequest } from "../../../api.js";
@@ -18,6 +21,8 @@ import {
   Search,
   ShieldAlert,
   Wrench,
+  UserRound,
+  ArrowRight,
 } from "lucide-react";
 import { formatVietnamDateTime } from "../../../utils/timezone";
 import {
@@ -122,10 +127,11 @@ const IncidentDossier: React.FC<{
   const open = isOpen(incident.status);
 
   return (
-    <div className="incident-detail" tabIndex={-1}>
+    <div className="incident-detail workbench-record" tabIndex={-1} key={incident.id}>
       <div className="incident-detail-heading">
+        <span className={`workbench-record-icon severity-${incident.severity}`} aria-hidden="true"><ShieldAlert size={25} /></span>
         <div>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
+          <div className="workbench-badges">
             <SeverityBadge
               severity={incident.severity}
               label={tr(severityI18n[incident.severity])}
@@ -144,13 +150,12 @@ const IncidentDossier: React.FC<{
             {incident.resource?.name ?? tr("ui.resource_9a35ef53")}
           </p>
         </div>
-        <time
-          dateTime={incident.detectedAt}
-          style={{ color: "var(--incident-muted)", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}
-        >
+        <time dateTime={incident.detectedAt}>
           {formatVietnamDateTime(incident.detectedAt)}
         </time>
       </div>
+
+      <WorkbenchPath label={tr('ui.workbench.currentStage')} steps={[tr('ui.reported_977c15d8'),tr('ui.workbench.handling'),tr('ui.workbench.outcome')]} current={incident.status === 'reported' ? 0 : open ? 1 : 2} />
 
       <div className="incident-resource">
         <Wrench size={16} />
@@ -201,7 +206,7 @@ const IncidentDossier: React.FC<{
       )}
 
       {isStaff && open && (
-        <div className="incident-detail-actions">
+        <section className="workbench-next-action"><div><span className="workbench-action-icon" aria-hidden="true"><ArrowRight size={20} /></span><h3>{tr('ui.workbench.nextAction')}</h3></div><p>{tr(incident.status === 'reported' ? 'ui.workbench.triageHint' : 'ui.workbench.investigateHint')}</p><div className="incident-detail-actions">
           {incident.status === "reported" && (
             <button
               className="secondary-button"
@@ -230,8 +235,9 @@ const IncidentDossier: React.FC<{
           >
             {tr("ui.confirm_resolution_df20cec5")}
           </button>
-        </div>
+        </div></section>
       )}
+      {!isStaff && <p className="workbench-context-note">{tr(open ? 'ui.workbench.customerTracking' : 'ui.workbench.recordedOutcome')}</p>}
     </div>
   );
 };
@@ -281,7 +287,8 @@ export const IncidentManagementView: React.FC<Props> = ({
   const [formError, setFormError] = useState("");
 
   // Preserve draft form across show/hide and locale switch
-  const [formDraft, setFormDraft] = useState({
+  const reportBackup = useLocalFormDraft('incident-report',['resourceId','severity','category','title','description']);
+  const [formDraft, setFormDraftState] = useState({
     resourceId: "",
     severity: "medium" as IncidentSeverity,
     category: "",
@@ -290,6 +297,10 @@ export const IncidentManagementView: React.FC<Props> = ({
   });
 
   const [resolutionDraft, setResolutionDraft] = useState("");
+  function setFormDraft(update: React.SetStateAction<typeof formDraft>) {
+    const next=typeof update==='function'?update(formDraft):update;
+    setFormDraftState(next); reportBackup.save(next);
+  }
 
   const queue = useQueuePage<IncidentRecord, IncidentQueueSummary>(
     "/incidents",
@@ -411,8 +422,9 @@ export const IncidentManagementView: React.FC<Props> = ({
     try {
       setBusyId("create");
       await reportIncident(result.data);
+      reportBackup.clear();
       setShowReport(false);
-      setFormDraft((prev) => ({ ...prev, title: "", description: "" }));
+      setFormDraftState((prev) => ({ ...prev, title: "", description: "" }));
       await refresh();
     } catch (e: unknown) {
       setFormError(
@@ -462,12 +474,13 @@ export const IncidentManagementView: React.FC<Props> = ({
   const queueCount = filtered.length;
 
   return (
-    <div className="incidents-workspace">
+    <div className="incidents-workspace operations-workbench" data-role={user?.role} data-has-selection={Boolean(selectedId)}>
+      <LocalDraftNotice disabled={busyId !== null} store={reportBackup} onRestore={value=>{setFormDraftState({resourceId:value.resourceId,severity:value.severity as IncidentSeverity,category:value.category,title:value.title,description:value.description});setShowReport(true);}}/>
       {/* ── Page header ── */}
-      <div className="incident-heading">
+      <PageHeading className="incident-heading">
         <div className="incident-heading-text">
-          <h1>{tr("ui.resource_incidents_0cba217b")}</h1>
-          <HelpDisclosure>{tr("ui.report_observed_problems_lab_staff_c71e9e68")}</HelpDisclosure>
+          <h1>{tr("ui.roleIncident."+(user?.role || "CUSTOMER")+".title")}</h1>
+          <HelpDisclosure><p>{tr('ui.workbench.incidentIntro')}</p>{tr("ui.roleIncident."+(user?.role || "CUSTOMER")+".hint")}</HelpDisclosure>
         </div>
         <button
           className="primary-button"
@@ -478,7 +491,7 @@ export const IncidentManagementView: React.FC<Props> = ({
           <Plus size={16} />
           {tr("ui.report_an_incident_0527866e")}
         </button>
-      </div>
+      </PageHeading>
 
       {/* ── Error banner ── */}
       {(serverError || queue.error) && (
@@ -488,7 +501,7 @@ export const IncidentManagementView: React.FC<Props> = ({
       )}
 
       {/* Compact queue totals from the actual scoped response. */}
-      {summary && (
+      {summary && user?.role !== "CUSTOMER" && (
         <div className="incident-summary-grid">
           <div className="incident-summary-card">
             <span>
@@ -589,8 +602,17 @@ export const IncidentManagementView: React.FC<Props> = ({
           ) : filtered.length === 0 ? (
             <div className="incident-empty">
               <CheckCircle2 size={28} />
-              <h3>{tr("ui.no_incidents_match_the_current_e09d6f91")}</h3>
-              <p>{tr("ui.incident.emptyHint")}</p>
+              {queue.pagination?.total === 0 && filter === "ALL" ? (
+                <>
+                  <h3>{tr("ui.incident.noneRecorded")}</h3>
+                  <p>{tr("ui.incident.noneRecordedHint")}</p>
+                </>
+              ) : (
+                <>
+                  <h3>{tr("ui.no_incidents_match_the_current_e09d6f91")}</h3>
+                  <p>{tr("ui.incident.emptyHint")}</p>
+                </>
+              )}
             </div>
           ) : (
             <ul className="incident-job-list" aria-label={tr("ui.incident.queue")}>
@@ -604,10 +626,10 @@ export const IncidentManagementView: React.FC<Props> = ({
                     disabled={busyId !== null}
                     onClick={() => setSelection(incident.id)}
                   >
-                    <SeverityBadge
+                    <span className="workbench-badges"><SeverityBadge
                       severity={incident.severity}
                       label={tr(severityI18n[incident.severity])}
-                    />
+                    /><StatusPill status={incident.status} label={tr(statusI18n[incident.status] ?? incident.status)} /></span>
                     <span className="incident-job-title">{incident.title}{incident.origin === "SIMULATED" && <small> · {tr("ui.telemetryDetail.simulated")}</small>}</span>
                     <span className="incident-job-resource">
                       {incident.resource?.code
@@ -620,6 +642,7 @@ export const IncidentManagementView: React.FC<Props> = ({
                         {formatVietnamDateTime(incident.detectedAt)}
                       </time>
                     </span>
+                    <span className="workbench-assignee"><UserRound size={14} aria-hidden="true" />{incident.assignedTo?.fullName || tr('ui.unassigned_1f379993')}</span>
                   </button>
                 </li>
               ))}
@@ -898,3 +921,4 @@ export const IncidentManagementView: React.FC<Props> = ({
     </div>
   );
 };
+import { useLocalFormDraft } from '../../../hooks/useLocalFormDraft';

@@ -9,13 +9,13 @@ mkdirSync(screenshots, { recursive: true });
 const fixture = { id:'equipment-a', code:'CAM-01', name:'Camera thực hành — dữ liệu kiểm thử', category:'EQUIPMENT', subtype:'CAMERA', location:'LAB 101', capacity:1, bookingState:'bookable', operationalStatus:'AVAILABLE', effectiveRequiresApproval:true, manufacturer:'Fixture', model:'QA-01', description:'Thiết bị kiểm thử giao diện. Không phải hướng dẫn vận hành một model thực tế.', laboratoryId:'lab-a', laboratory:{id:'lab-a',code:'LAB',name:'Phòng thực hành', labPolicy:{workDayStartHour:0,workDayEndHour:18,requiresApproval:true}}, specs:{resolution:'24 MP', usageGuide:{beforeUse:['Kiểm tra phụ kiện cùng cán bộ.'], steps:['Làm theo hướng dẫn đã được xác minh của thiết bị.'], afterUse:['Ghi nhận tình trạng khi hoàn trả.'],safetyNotes:'Dừng thao tác nếu có bất thường.\nBáo cán bộ LAB.'}}, media:[{id:'image-a',kind:'IMAGE',url:`${base}/qa-image.svg`,title:'Ảnh tổng thể',altText:'Ảnh thiết bị kiểm thử'},{id:'video-a',kind:'VIDEO',url:`${base}/qa-video.mp4`,title:'Video hướng dẫn',altText:'Video kiểm thử'}],trainingRequirements:[],availability:{state:'AVAILABLE'},createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };
 const blocked={...fixture,id:'equipment-b',code:'CAM-02',name:'Thiết bị hạn chế — dữ liệu kiểm thử',bookingState:'restricted',specs:{},media:[]};
 const admin={id:'admin-qa',fullName:'Admin kiểm thử',email:'qa@example.test',role:'ADMIN',isActive:true};
-let patches=[],requests=[];
+let patches=[],requests=[],videoRequests=0;
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE_PATH || undefined,args:['--no-sandbox'],headless:true});
  const context=await browser.newContext({viewport:{width:1440,height:1000}});
  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/qa-image.svg',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><rect width="800" height="500" fill="#e9f0f3"/><rect x="240" y="145" width="320" height="220" rx="25" fill="#174d70"/><circle cx="400" cy="255" r="80" fill="#fff"/><circle cx="400" cy="255" r="50" fill="#476c80"/></svg>'}));
- await page.route('**/qa-video.mp4',r=>r.fulfill({status:404,body:'Intentional media failure'}));
+ await page.route('**/qa-video.mp4',r=>{videoRequests++;return r.fulfill({status:404,body:'Intentional media failure'});});
  await page.route('**/api/**',async route=>{
   const req=route.request(), url=new URL(req.url()), path=url.pathname.replace('/api',''); requests.push(path);
   let data=[];
@@ -41,7 +41,11 @@ let patches=[],requests=[];
  check((await page.locator('#chi-tiet-tai-nguyen').innerText()).includes('0:00'));
  check(!requests.some(p=>p==='/resources/equipment-a/media'));
  await page.locator('.lab-gallery-choices').getByRole('button',{name:/Video/}).click();
+ check(videoRequests===0);
+ check(await page.locator('#chi-tiet-tai-nguyen video').count()===0);
+ await page.locator('#chi-tiet-tai-nguyen').getByRole('button',{name:/Phát video/}).click();
  await page.getByText('Bạn vẫn có thể xem thông tin và điều kiện sử dụng.').waitFor();checks++;
+ check(videoRequests===1);
  await page.locator('.lab-gallery-choices').getByRole('button',{name:/Ảnh/}).click();
  check(await page.locator('#chi-tiet-tai-nguyen img').count()===1);
  await page.locator('#chi-tiet-tai-nguyen').screenshot({path:`${screenshots}/desktop.png`});

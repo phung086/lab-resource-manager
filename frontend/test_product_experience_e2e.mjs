@@ -182,7 +182,7 @@ try {
     await p.locator('.sidebar-2026').waitFor();
     for (const route of routes) {
       await p.goto(`${base}/#/workspace/${route}`,{waitUntil:'networkidle'});
-      await p.waitForFunction(() => !document.querySelector('#workspace-main')?.textContent.match(/Đang tải dữ liệu thật|Đang tổng hợp dữ liệu|Đang tải hồ sơ/));
+      await p.waitForFunction(() => !document.querySelector('#workspace-main')?.textContent.match(/Đang tải dữ liệu…?|Đang tổng hợp dữ liệu|Đang tải hồ sơ/));
       if(route==='booking') await p.locator('.operations-header button').filter({hasText:'Làm mới'}).waitFor();
       await noOverflow(p);
       await capture(p,`after-${role}-${route}`);

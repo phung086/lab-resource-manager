@@ -3,12 +3,13 @@
 ## Môi trường
 
 Desktop: Code → Local → C:/Projects/lab-resource-manager,
-claude/lrm-redesign-v2. Không chọn 497f/Cloud và bỏ sót UI chưa commit.
+nhánh hiện tại phải kiểm tra bằng Git (16/10: main). Không chọn worktree cũ/Cloud
+và bỏ sót thay đổi chưa commit.
 CLI: mở terminal tại checkout trên rồi chạy claude. Launcher:
 .claude/Open-LAB-Claude.cmd. Giữ provider/model/quyền công cụ hiện có.
 
 Kiểm tra Git/runtime; /lab-preflight hoặc node .claude/scripts/preflight.mjs.
-UI dùng localhost:5173, API chung localhost:8000, readiness /api/health/ready.
+UI dùng localhost:5173, API chung localhost:8000, readiness /health/ready.
 Tái dùng server đang chạy. UI tắt: frontend/npm run dev. API tắt: đọc README
 và kiểm tra Docker trước; startup backend có migration/demo seed, không chạy
 như bước QA. Không reset/down -v/seed/rebuild theo phản xạ.
@@ -42,15 +43,11 @@ Không thay model/provider hoặc tắt suy luận cần thiết để đạt qu
 Không ghi dữ liệu nghiệp vụ hợp lệ vào DB demo trong QA. Chạy gate phù hợp
 trong package.json, giữ exit code/failures. Xem UI thật; build không chứng minh UX.
 Tái kiểm tra khi có thay đổi/lỗi mới. Báo ngắn kết quả, coverage và giới hạn.
-Laptop 1366x768/1440x900, VI/EN và bốn role là ưu tiên hiện hành;
+Laptop 1366x768/1440x900, VI/EN và ba role ADMIN/LAB_STAFF/CUSTOMER là ưu tiên;
 bảo toàn responsive, matrix mobile deferred, không ghi PASS chưa kiểm.
 
-## Skill đã cài trên máy
+## Skill
 
-22 skill cá nhân ở C:/Users/Admin/.claude/skills; project chỉ giữ lab-task,
-lab-handoff và lab-preflight. Skill LAB thiết kế tự viết đã gỡ.
-Đã đối chiếu entrypoint và supporting files ngày 10/10/2026 với Codex, trùng nhau.
-Đây là xác nhận file local, không chứng minh phiên đang mở đã nạp skill.
-Trong phiên mới kiểm tra menu /skills hoặc công cụ liệt kê skill sẵn có.
-Chat/Cowork dùng skill được bật trong tài khoản; thư mục local không chứng minh
-đã bật chúng tại Customize → Skills. Không gọi mô hình tốn quota để kiểm tra file.
+Project giữ lab-task, lab-handoff và lab-preflight. Trong phiên mới kiểm tra
+danh sách skill thực sự sẵn có, chỉ đọc skill phù hợp task; số lượng file đã
+cài từ một lần audit cũ không chứng minh phiên hiện tại đã nạp chúng.

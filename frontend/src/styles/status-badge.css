@@ -1,0 +1,20 @@
+.lab-studio {
+  --state-positive-bg:#e8f6ee; --state-positive-ink:#17613d; --state-positive-line:#bfe3cc;
+  --state-info-bg:#eaf1ff; --state-info-ink:#2357ab; --state-info-line:#c7d8f5;
+  --state-attention-bg:#fff4df; --state-attention-ink:#875313; --state-attention-line:#ebd5a6;
+  --state-danger-bg:#fcecef; --state-danger-ink:#a3374b; --state-danger-line:#eec7d0;
+  --state-violet-bg:#f0ebfc; --state-violet-ink:#6545a3; --state-violet-line:#d9ccef;
+  --state-neutral-bg:#f0f3f8; --state-neutral-ink:#526176; --state-neutral-line:#d9e0eb;
+}
+.lab-studio .lab-status.lab-status {
+  --status-bg:var(--state-neutral-bg); --status-ink:var(--state-neutral-ink); --status-line:var(--state-neutral-line);
+  display:inline-flex; align-items:center; gap:5px; width:fit-content; max-width:100%;
+  min-height:24px; padding:3px 8px; border:1px solid var(--status-line); border-radius:7px;
+  background:var(--status-bg); color:var(--status-ink); font-size:12px; font-weight:600;
+  line-height:1.4; letter-spacing:0; text-transform:none; white-space:normal; vertical-align:middle;
+}
+.lab-studio .lab-status[data-tone=positive] { --status-bg:var(--state-positive-bg); --status-ink:var(--state-positive-ink); --status-line:var(--state-positive-line); }
+.lab-studio .lab-status[data-tone=info] { --status-bg:var(--state-info-bg); --status-ink:var(--state-info-ink); --status-line:var(--state-info-line); }
+.lab-studio .lab-status[data-tone=attention] { --status-bg:var(--state-attention-bg); --status-ink:var(--state-attention-ink); --status-line:var(--state-attention-line); }
+.lab-studio .lab-status[data-tone=danger] { --status-bg:var(--state-danger-bg); --status-ink:var(--state-danger-ink); --status-line:var(--state-danger-line); }
+.lab-studio .lab-status[data-tone=violet] { --status-bg:var(--state-violet-bg); --status-ink:var(--state-violet-ink); --status-line:var(--state-violet-line); }

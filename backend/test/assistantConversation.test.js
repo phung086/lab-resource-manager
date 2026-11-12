@@ -13,6 +13,18 @@ const slots = [0, 1].map(i => ({ resourceId: 'a', resourceName: 'Resource a', re
 const fixture = handler => () => ({ client: { connect: async () => {}, close: async () => {}, callTool: async request => ({ structuredContent: await handler(request.name, request.arguments) }) } });
 const memory = () => new AssistantConversationStore({ sweepMs: 0 });
 
+test('simple app guidance skips model and MCP even with configured conversation and previous choices', async () => {
+  const store = memory(), row = store.open(undefined, context());
+  store.commit(row, 'Previous question', { answer: 'Previous guidance', source: 'local_guidance' });
+  row.resources = [{ id: 'old-resource' }];
+  const service = createAssistantService({ settings: configured, conversations: store,
+    plannerCall: async () => { throw new Error('Model must not be called'); },
+    clientFactory: () => { throw new Error('MCP must not be called'); } });
+  const response = await service.answer({ message: 'Xin chào!', locale: 'vi', conversationId: row.id }, context());
+  assert.equal(response.provider, 'local'); assert.equal(response.modelStatus, 'LOCAL_ONLY');
+  assert.deepEqual(response.toolsUsed, []); assert.ok(response.answer.includes('LAB'));
+});
+
 test('conversation IDs are bound to account, bearer session and current role without storing credentials', () => {
   const store = memory(), row = store.open(undefined, context());
   store.commit(row, 'Hello', { answer: 'Hi', source: 'model_conversation' });
@@ -136,11 +148,11 @@ test('malformed/write plans and attempted operational facts in casual mode use t
 test('planner failure circuit is bounded; cancellation and logout cannot commit late history', async () => {
   let calls = 0;
   const failed = createAssistantService({ settings: configured, conversations: memory(), plannerCall: async () => { calls++; throw new Error('Provider down'); }, clientFactory: fixture(() => ({ resources: [] })) });
-  for (let i = 0; i < 3; i++) assert.equal((await failed.answer({ message: 'Hello', locale: 'en' }, context())).modelStatus, i < 2 ? 'MODEL_UNAVAILABLE' : 'CIRCUIT_OPEN');
+  for (let i = 0; i < 3; i++) assert.equal((await failed.answer({ message: 'Tell me a joke', locale: 'en' }, context())).modelStatus, i < 2 ? 'MODEL_UNAVAILABLE' : 'CIRCUIT_OPEN');
   assert.equal(calls, 2);
   let unblock;
   const service = createAssistantService({ settings: configured, conversations: memory(), plannerCall: () => new Promise(resolve => { unblock = resolve; }) });
-  const pending = service.answer({ message: 'Hello', locale: 'en' }, context());
+  const pending = service.answer({ message: 'Tell me a joke', locale: 'en' }, context());
   await new Promise(resolve => setImmediate(resolve)); service.forgetSession(context());
   await assert.rejects(pending, { code: 'ASSISTANT_CANCELLED' });
   unblock(chatPlan('Late reply')); await new Promise(resolve => setImmediate(resolve));
@@ -161,6 +173,6 @@ test('planner and synthesis history payloads respect the UTF-8 budget without pr
   store.commit(row, 'Hello', { answer: '', source: 'local_guidance' });
   store.sessions.get(row.id).turns = [{ question: 'đ'.repeat(15000), reply: '' }];
   const service = createAssistantService({ settings: configured, conversations: store, plannerCall: () => assert.fail('Oversized history'), clientFactory: () => assert.fail('No read intent') });
-  const response = await service.answer({ message: 'Hello', locale: 'en', conversationId: row.id }, context());
+  const response = await service.answer({ message: 'Tell me a joke', locale: 'en', conversationId: row.id }, context());
   assert.equal(response.modelStatus, 'INPUT_TOO_LARGE'); assert.equal(response.provider, 'local');
 });

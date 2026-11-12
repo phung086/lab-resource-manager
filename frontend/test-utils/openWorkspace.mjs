@@ -5,7 +5,7 @@ export async function openWorkspace(page) {
 
 export async function openNavigation(page) {
   if (await page.locator('#workspace-navigation-panel').count() === 0) {
-    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await page.locator('.rail-menu').click();
   }
   await page.locator('#workspace-navigation-panel').waitFor({ state: 'visible' });
 }

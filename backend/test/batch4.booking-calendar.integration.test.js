@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import test from "node:test";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+
 import request from "supertest";
 
 import {
@@ -173,22 +173,17 @@ async function seed() {
   });
 }
 
-function tokenFor(userId, role) {
-  return jwt.sign(
-    { sub: userId, role, email: `${userId}@example.test` },
-    process.env.JWT_SECRET,
-    { algorithm: "HS256", expiresIn: "1h" }
-  );
-}
+const { signUserToken } = await import("../src/services/authTokens.js");
+async function tokenFor(userId) { return signUserToken(await prisma.user.findUniqueOrThrow({ where: { id: userId } })); }
 
 test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (t) => {
   await seed();
 
   const tokens = {
-    admin: tokenFor(fixture.users.admin, "ADMIN"),
-    staff: tokenFor(fixture.users.staff, "LAB_STAFF"),
-    studentA: tokenFor(fixture.users.studentA, "CUSTOMER"),
-    studentB: tokenFor(fixture.users.studentB, "CUSTOMER")
+    admin: await tokenFor(fixture.users.admin, "ADMIN"),
+    staff: await tokenFor(fixture.users.staff, "LAB_STAFF"),
+    studentA: await tokenFor(fixture.users.studentA, "CUSTOMER"),
+    studentB: await tokenFor(fixture.users.studentB, "CUSTOMER")
   };
 
   const slot1Start = futureVietnamTime(1, 9);
@@ -196,6 +191,17 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
 
   let bookingImmediateId;
   let bookingApprovalId;
+
+  await t.test('preflight checks eligibility and quote without creating or holding a booking', async () => {
+    const count = await prisma.booking.count();
+    const payload = { resourceId: fixture.resources.immediate, startAt: slot1Start.toISOString(), endAt: slot1End.toISOString() };
+    const result = await request(app).post('/api/bookings/preflight').set(bearer(tokens.studentA)).send(payload);
+    assert.equal(result.status, 200, JSON.stringify(result.body)); assert.equal(result.body.ready, true);
+    assert.equal(result.body.finalValidationRequired, true); assert.equal(typeof result.body.quote.amountVnd, 'number');
+    assert.equal(await prisma.booking.count(), count);
+    assert.equal((await request(app).post('/api/bookings/preflight').send(payload)).status, 401);
+    assert.equal((await request(app).post('/api/bookings/preflight').set(bearer(tokens.studentA)).send({ ...payload, requestedById: fixture.users.admin })).status, 400);
+  });
 
   await t.test("1. Immediate booking creates CONFIRMED status", async () => {
     const res = await request(app)
@@ -305,6 +311,28 @@ test("Batch 4 - Booking Calendar & Required Workflow Integration Suite", async (
       .send({ reason: "Approved for research thesis" });
 
     assert.equal(approveRes.status, 409);
+
+    const tooEarly = await request(app).post(`/api/bookings/${bookingApprovalId}/check-out`)
+      .set(bearer(tokens.staff)).send({ conditionBefore: "Not yet within the handover window" });
+    assert.equal(tooEarly.status, 409);
+    assert.equal(tooEarly.body.error.code, "BOOKING_HANDOVER_TOO_EARLY");
+
+    // Book just beyond the minimum notice, then wait for real time to enter
+    // the handover window. Never rewrite timestamps or bypass either guard.
+    const handoverLab = crypto.randomUUID(), handoverResource = crypto.randomUUID();
+    await isolated.laboratory.create({ data: { id: handoverLab, code: `HANDOVER-${handoverLab}`, name: "All-hours test LAB",
+      buildingId: fixture.building, labPolicy: { create: { id: crypto.randomUUID(), workDayStartHour: 0, workDayEndHour: 24, allowWeekend: true } } } });
+    await isolated.userLabAssignment.create({ data: { userId: fixture.users.staff, laboratoryId: handoverLab } });
+    await isolated.resource.create({ data: { id: handoverResource, code: handoverResource, name: "Handover fixture", laboratoryId: handoverLab, category: "EQUIPMENT", subtype: "OTHER", location: "Test LAB" } });
+    const handoverStart = new Date(Date.now() + 30 * 60000 + 5000);
+    const nearBooking = await request(app).post('/api/bookings').set(bearer(tokens.studentA)).send({
+      resourceId: handoverResource, title: "Near-term automatic confirmation", purpose: "Handover test",
+      contact: { fullName: "Calendar Customer", phone: "0901234567" }, startAt: handoverStart.toISOString(), endAt: new Date(+handoverStart + 3600000).toISOString()
+    });
+    assert.equal(nearBooking.status, 201, JSON.stringify(nearBooking.body));
+    assert.equal(nearBooking.body.status, "CONFIRMED");
+    bookingApprovalId = nearBooking.body.id;
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, +handoverStart - 30 * 60000 - Date.now())));
 
     // Check out
     const checkOutRes = await request(app)

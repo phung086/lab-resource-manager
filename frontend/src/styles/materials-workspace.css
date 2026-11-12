@@ -8,3 +8,75 @@
 @media(max-width:1100px){.materials-layout{grid-template-columns:minmax(0,1fr) minmax(310px,.95fr);gap:16px}.materials-workspace{padding-inline:16px}.materials-toolbar{grid-template-columns:1fr}.materials-register td,.materials-register th{padding-inline:16px}}
 @media(max-width:900px){.materials-layout{grid-template-columns:1fr}.materials-heading{flex-wrap:wrap}.materials-toolbar{grid-template-columns:minmax(0,1fr) 135px}.materials-workspace{padding-top:20px}.materials-dossier .materials-section-heading{position:static}}
 @media(max-width:480px){.materials-workspace{padding-inline:12px}.materials-toolbar{grid-template-columns:1fr}.materials-section-heading,.materials-toolbar{padding:16px}.materials-register table{min-width:0;table-layout:fixed}.materials-register th:first-child{width:62%}.materials-register td,.materials-register th{padding-inline:12px}.materials-form,.materials-ledger{padding-inline:16px}.materials-balance-card{margin-inline:16px}.materials-fields{gap:10px}.materials-register td:last-child{min-width:0;overflow-wrap:anywhere}.materials-heading{gap:16px;margin-bottom:20px}}
+
+/* ── Inventory overview strip + balance states + quickstart (28/10 detail pass) ── */
+.materials-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 20px}
+.materials-stat{background:#fffdf9;border:1px solid var(--materials-border);border-radius:12px;padding:14px 18px;display:grid;gap:3px;align-content:start;min-width:0}
+.materials-stat span{font-size:.75rem;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--materials-muted)}
+.materials-stat strong{font-size:1.4rem;font-weight:650;letter-spacing:-.02em;color:#282338;font-variant-numeric:tabular-nums}
+.materials-stat small{font-size:.72rem;color:var(--materials-muted);line-height:1.45}
+.materials-stat.is-ok strong{color:#0f6f5f}.materials-stat.is-warn strong{color:#9a4a12}.materials-stat.is-alert strong{color:#a13232}
+.materials-balance.is-zero{color:#a13232}
+.materials-balance.is-zero::after{content:' · 0';display:none}
+.materials-register td .materials-balance.is-zero{position:relative}
+.materials-quickstart{margin-top:18px;padding-top:16px;border-top:1px dashed var(--materials-border);text-align:left}
+.materials-quickstart h3{margin:0 0 10px;font-size:.9rem;color:#282338}
+.materials-quickstart ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.materials-quickstart button{display:flex;align-items:baseline;gap:10px;width:100%;text-align:left;padding:10px 14px;border:1px solid var(--materials-border);border-radius:10px;background:#fff;cursor:pointer;font:inherit;color:inherit}
+.materials-quickstart button:hover{border-color:#7c5cf0;color:#6040ce}
+.materials-quickstart button strong{font-weight:550;overflow-wrap:anywhere}
+.materials-quickstart-hint{margin:10px 0 0;font-size:.75rem;color:var(--materials-muted)}
+@media(max-width:1100px){.materials-overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.materials-quickstart button{transition:none}}
+
+.materials-heading-actions,
+.materials-movement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.materials-catalogue-link,
+.materials-movement-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #d3deed;
+  border-radius: 10px;
+  background: #f3f7fd;
+  color: #254774;
+  font: inherit;
+  font-size: .83rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+.materials-movement-actions { padding: 0 22px 4px; }
+.materials-movement-actions button { cursor: pointer; }
+.materials-movement-actions button[aria-pressed="true"] {
+  background: #e1edff;
+  border-color: #9dbbf0;
+  color: #1c4d9d;
+}
+.materials-movement-actions button:disabled,
+.materials-row-receipt:disabled { opacity: .55; cursor: default; }
+.materials-catalogue-link:hover,
+.materials-movement-actions button:not(:disabled):hover,
+.materials-row-receipt:not(:disabled):hover { background: #e8f0fe; }
+.materials-row-receipt {
+  display: block;
+  margin-inline-start: auto;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #244d9b;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.materials-form { scroll-margin-top: 110px; }
+@media(max-width:480px) { .materials-movement-actions { padding-inline: 16px; } }

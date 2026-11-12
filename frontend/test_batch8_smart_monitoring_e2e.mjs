@@ -89,7 +89,7 @@ try {
   await studentPage.getByRole("button", { name: "Đóng menu", exact: true }).click();
   const ordinaryDashboard = await studentPage.evaluate(async (backendUrl) => {
     const response = await fetch(`${backendUrl}/api/dashboard`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("lrm_token")}` }
+      headers: { Authorization: `Bearer ${sessionStorage.getItem("lrm_token")}` }
     });
     return { status: response.status, body: await response.json() };
   }, apiUrl);

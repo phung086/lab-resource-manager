@@ -160,16 +160,29 @@ async function createBooking(token, resourceId, days = 2, title = `Batch 5 ${cry
     resourceId,
     title,
     purpose: "Batch 5 operational workflow verification",
+    contact: { fullName: "Batch 5 Customer", phone: "0901234567" },
     startAt: start.toISOString(),
     endAt: end.toISOString()
   });
 }
 
 async function createPending(tokens, days) {
-  const response = await createBooking(tokens.studentA, fixture.resources.assigned, days);
-  assert.equal(response.status, 201);
-  assert.equal(response.body.status, "PENDING_APPROVAL");
-  return response.body;
+  // Legacy records have no payment deadline. New free requests auto-confirm;
+  // create explicit legacy fixtures rather than resurrecting approval on creation.
+  assert.ok(tokens.studentA);
+  fixture.resources.assigned = id();
+  await isolated.resource.create({ data: {
+    id: fixture.resources.assigned, laboratoryId: fixture.labs.assigned,
+    code: `B5-LEGACY-${id()}`, name: "Legacy operation fixture", subtype: "OTHER",
+    category: "EQUIPMENT", location: "A-501"
+  } });
+  const start = days >= 4 && days !== 10 ? new Date(Date.now() + 10 * 60000) : futureWindow(days).start;
+  return isolated.booking.create({ data: {
+    id: id(), resourceId: fixture.resources.assigned, requestedById: fixture.users.studentA,
+    title: "Legacy pending fixture", purpose: "Isolated legacy workflow verification",
+    status: "PENDING_APPROVAL", startAt: start, endAt: new Date(+start + 3600000),
+    contactSnapshot: { fullName: "Batch 5 Customer", phone: "0901234567" }
+  } });
 }
 
 async function approve(tokens, bookingId, actor = "staff") {
@@ -323,7 +336,7 @@ test("Batch 5 canonical operational booking workflow", { timeout: 180000 }, asyn
 
     const owner = await request(app).get(`/api/bookings/${booking.id}/history`).set(bearer(tokens.studentA));
     assert.equal(owner.status, 200);
-    for (const action of ["REQUEST", "APPROVE", "CHECK_OUT"]) {
+    for (const action of ["APPROVE", "CHECK_OUT"]) {
       assert.equal(owner.body.timeline.some((row) => row.action === action), true);
     }
     assert.equal((await request(app).get(`/api/bookings/${booking.id}/history`).set(bearer(tokens.studentB))).status, 404);

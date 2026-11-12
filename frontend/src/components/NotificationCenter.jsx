@@ -1,3 +1,5 @@
+import { PageHeading } from './base/PageHeading';
+import { NotificationStack } from './features/notifications/NotificationStack';
 import { HelpDisclosure } from "./base/HelpDisclosure";
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Bell, CheckCheck, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react';
@@ -5,11 +7,12 @@ import { workspacePathForTab, readRouteParams, navigateApp } from '../workspaceR
 import { localizeNotification } from '../i18n.js';
 import { useLocale } from '../providers/LocaleProvider';
 import { apiRequest } from '../api.js';
+import { isTabEnabled } from '../config/featureFlags';
 import { formatVietnamDateTime } from '../utils/timezone.js';
 import '../styles/notifications-workspace.css';
-const typeLabels = {BOOKING_APPROVED:'ui.booking_approved_fbab3009',BOOKING_REJECTED:'ui.booking_rejected_7d50d88b',BOOKING_UPCOMING:'ui.upcoming_booking_65fe3d5f',RETURN_REMINDER:'ui.return_reminder_92b7e4bb'};
+const typeLabels = {BOOKING_APPROVED:'ui.booking_approved_fbab3009',BOOKING_REJECTED:'ui.booking_rejected_7d50d88b',BOOKING_UPCOMING:'ui.upcoming_booking_65fe3d5f',RETURN_REMINDER:'ui.return_reminder_92b7e4bb',WAITLIST_AVAILABLE:'planning.waitlistAvailable'};
 const filterFromRoute = () => ['all','unread','read'].includes(readRouteParams().get('filter')) ? readRouteParams().get('filter') : 'all';
-export function NotificationCenter({ onChanged, onOpenBookings }) {
+export function NotificationCenter({ onChanged, onOpenBookings, actorRole = 'CUSTOMER', notifications: sharedNotifications, loading: sharedLoading = false, loadError: sharedError = '' }) {
  const { tr } = useLocale(), controllerRef=useRef(null), busyRef=useRef(false), detailRef=useRef(null);
  const [notifications,setNotifications]=useState([]), [loading,setLoading]=useState(true), [readError,setReadError]=useState('');
  const [filter,setFilter]=useState(filterFromRoute), [selected,setSelected]=useState(()=>readRouteParams().get('notification') || '');
@@ -24,19 +27,34 @@ export function NotificationCenter({ onChanged, onOpenBookings }) {
    catch(cause){if(!controller.signal.aborted)setReadError(cause?.message || 'ui.could_not_load_notifications_ba2db1e3');}
    finally{if(!controller.signal.aborted)setLoading(false);}
  },[]);
- useEffect(()=>{void load();return()=>controllerRef.current?.abort();},[load]);
- useEffect(()=>{const sync=()=>{setSelected(readRouteParams().get('notification') || '');setFilter(filterFromRoute());};window.addEventListener('popstate',sync);return()=>window.removeEventListener('popstate',sync);},[]);
+ useEffect(()=>{
+   if (sharedNotifications !== undefined) {
+     controllerRef.current?.abort();
+     setNotifications(sharedNotifications);
+     setLoading(sharedLoading);
+     setReadError(sharedError);
+   } else void load();
+   return()=>controllerRef.current?.abort();
+ },[load,sharedNotifications,sharedLoading,sharedError]);
+ useEffect(()=>{
+   const sync=()=>{setSelected(readRouteParams().get('notification') || '');setFilter(filterFromRoute());};
+   window.addEventListener('popstate',sync);
+   window.addEventListener('lrm:route-change',sync);
+   return()=>{window.removeEventListener('popstate',sync);window.removeEventListener('lrm:route-change',sync);};
+ },[]);
  function choose(id){setSelected(id);setError('');const params=readRouteParams();params.set('notification',id);navigateApp(workspacePathForTab('escalations',params),{notify:false});if(window.matchMedia('(max-width:900px)').matches)requestAnimationFrame(()=>{detailRef.current?.scrollIntoView({block:'start'});detailRef.current?.focus({preventScroll:true});});}
  function chooseFilter(value){setFilter(value);const params=readRouteParams();params.set('filter',value);navigateApp(workspacePathForTab('escalations',params),{notify:false});}
  async function markRead(id){
   if(busyRef.current)return;busyRef.current=true;setBusy(id);setError('');
+  const opener = document.activeElement;
   try{await apiRequest(id==='all'?'/notifications/read-all':'/notifications/'+id+'/read',{method:'POST'});await load();await onChanged?.();}
   catch(cause){setError(cause?.message || 'ui.could_not_update_notification_e051a61d');}
-  finally{busyRef.current=false;setBusy('');}
+  finally{busyRef.current=false;setBusy('');requestAnimationFrame(()=>{if(opener && !opener.isConnected)document.getElementById('inbox-title')?.focus({preventScroll:true});});}
  }
- return <section className="notifications-workspace" aria-labelledby="inbox-title" aria-busy={loading}>
-  <header className="inbox-heading"><div><h1 id="inbox-title">{tr('ui.notifications_0c951eef')}</h1><HelpDisclosure>{tr('ui.inbox.subtitle')}</HelpDisclosure></div><div className="inbox-actions"><button type="button" className="btn btn-secondary" disabled={loading||!!busy} onClick={()=>void load()}><RefreshCw size={16} />{tr('ui.refresh_46140fa8')}</button><button type="button" className="btn btn-secondary" disabled={!unread.length||loading||!!busy} onClick={()=>void markRead('all')}><CheckCheck size={16} />{tr(busy==='all'?'ui.updating_01c0991e':'ui.mark_all_as_read_4b943674')}</button></div></header>
+ return <section className="notifications-workspace" data-role={actorRole} aria-labelledby="inbox-title" aria-busy={loading}>
+  <PageHeading className="inbox-heading"><div><h1 id="inbox-title" tabIndex={-1}>{tr('ui.roleInbox.'+actorRole+'.title')}</h1><HelpDisclosure>{tr('ui.roleInbox.'+actorRole+'.hint')}</HelpDisclosure></div><div className="inbox-actions"><button type="button" className="btn btn-secondary" disabled={loading||!!busy} onClick={()=>void load()}><RefreshCw size={16} />{tr('ui.refresh_46140fa8')}</button><button type="button" className="btn btn-secondary" disabled={!unread.length||loading||!!busy} onClick={()=>void markRead('all')}><CheckCheck size={16} />{tr(busy==='all'?'ui.updating_01c0991e':'ui.mark_all_as_read_4b943674')}</button></div></PageHeading>
   {error && <p className="inbox-error" role="alert">{tr(error)}</p>}
+  {!readError && filter !== 'read' && !search.trim() && <NotificationStack items={records.filter(item=>!item.readAt)} disabled={loading||!!busy} onOpen={choose} onRead={markRead} />}
   <div className="inbox-layout">
    <div className="inbox-register">
     <div className="inbox-toolbar"><div role="group" aria-label={tr('ui.filter_notifications_3694490f')}>{['all','unread','read'].map(value=><button type="button" key={value} aria-pressed={filter===value} onClick={()=>chooseFilter(value)}>{tr('ui.inbox.'+value)} <span>{value==='all'?notifications.length:value==='unread'?unread.length:notifications.length-unread.length}</span></button>)}</div><label className="inbox-search">{tr('ui.inbox.search')}<input type="search" maxLength={120} placeholder={tr('ui.inbox.searchHint')} value={search} onChange={event=>setSearch(event.target.value)} /></label></div>
@@ -45,7 +63,7 @@ export function NotificationCenter({ onChanged, onOpenBookings }) {
      <ul className="inbox-list">{visible.map(item=><li key={item.id}><button type="button" className={'inbox-row'+(item.id===selected?' is-selected':'')+(item.readAt?' is-read':'')} aria-pressed={item.id===selected} onClick={()=>choose(item.id)}><div className="inbox-row-top"><span className="inbox-type">{tr(typeLabels[item.type] || 'ui.system_notification_72387b29')}</span><time dateTime={item.sentAt || item.createdAt}>{formatVietnamDateTime(item.sentAt || item.createdAt)}</time></div><strong>{item.title}</strong><p>{item.message}</p><span className="inbox-read-state">{tr(item.readAt?'ui.inbox.read':'ui.inbox.unread')}<ArrowRight size={15} aria-hidden="true" /></span></button></li>)}</ul>}
    </div>
    <aside className="inbox-detail" ref={detailRef} tabIndex={-1} aria-label={tr('ui.inbox.details')}>
-    {!current || readError ? <div className="inbox-empty"><Bell size={28} aria-hidden="true" /><h2>{tr(selected&&!loading?'ui.inbox.unavailable':'ui.inbox.select')}</h2><p>{tr('ui.inbox.selectHint')}</p></div> : <><span className="inbox-type">{tr(typeLabels[current.type] || 'ui.system_notification_72387b29')}</span><h2>{current.title}</h2><time dateTime={current.sentAt || current.createdAt}>{formatVietnamDateTime(current.sentAt || current.createdAt)} · {tr('ui.vietnam_time_896f6f2f')}</time><p className="inbox-message">{current.message}</p><dl><div><dt>{tr('ui.status_cb31de81')}</dt><dd>{tr(current.readAt?'ui.inbox.read':'ui.inbox.unread')}</dd></div>{current.readAt && <div><dt>{tr('ui.inbox.readAt')}</dt><dd>{formatVietnamDateTime(current.readAt)}</dd></div>}</dl><div className="inbox-detail-actions">{current.messageParams?.bookingId && <a className="btn btn-primary" href={workspacePathForTab('bookings',{booking:current.messageParams.bookingId})}>{tr('ui.view_related_booking_af785d42')}<ArrowRight size={16} /></a>}{!current.readAt && <button type="button" className="btn btn-secondary" disabled={loading||!!busy} onClick={()=>void markRead(current.id)}>{tr(busy===current.id?'ui.saving_2b5c2a46':'ui.mark_read_2e5a0c72')}</button>}</div><HelpDisclosure>{tr('ui.inbox.deliveryHint')}</HelpDisclosure></>}
+    {!current || readError ? <div className="inbox-empty"><Bell size={28} aria-hidden="true" /><h2>{tr(selected&&!loading?'ui.inbox.unavailable':'ui.inbox.select')}</h2><p>{tr('ui.inbox.selectHint')}</p></div> : <><span className="inbox-type">{tr(typeLabels[current.type] || 'ui.system_notification_72387b29')}</span><h2>{current.title}</h2><time dateTime={current.sentAt || current.createdAt}>{formatVietnamDateTime(current.sentAt || current.createdAt)} · {tr('ui.vietnam_time_896f6f2f')}</time><p className="inbox-message">{current.message}</p><dl><div><dt>{tr('ui.status_cb31de81')}</dt><dd>{tr(current.readAt?'ui.inbox.read':'ui.inbox.unread')}</dd></div>{current.readAt && <div><dt>{tr('ui.inbox.readAt')}</dt><dd>{formatVietnamDateTime(current.readAt)}</dd></div>}</dl><div className="inbox-detail-actions">{current.titleKey === 'monitoring.stale.title' && current.messageParams?.resourceId && ['ADMIN','LAB_STAFF'].includes(actorRole) && isTabEnabled('monitoring') && <a className="btn btn-primary" href={workspacePathForTab('monitoring',{view:'sensors',resource:current.messageParams.resourceId})}>{tr('ui.monitorLab.openSource')}<ArrowRight size={16} aria-hidden="true"/></a>}{current.messageParams?.bookingId && <a className="btn btn-primary" href={workspacePathForTab('bookings',{booking:current.messageParams.bookingId})}>{tr('ui.view_related_booking_af785d42')}<ArrowRight size={16} /></a>}{!current.readAt && <button type="button" className="btn btn-secondary" disabled={loading||!!busy} onClick={()=>void markRead(current.id)}>{tr(busy===current.id?'ui.saving_2b5c2a46':'ui.mark_read_2e5a0c72')}</button>}</div><HelpDisclosure>{tr('ui.inbox.deliveryHint')}</HelpDisclosure></>}
    </aside>
   </div>
  </section>;

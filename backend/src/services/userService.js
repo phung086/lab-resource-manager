@@ -7,12 +7,9 @@ export const safeUserSelect = Object.freeze({
   fullName: true,
   role: true,
   isActive: true,
+  deletedAt: true,
   createdAt: true,
-  department: true,
-  studentId: true,
   phone: true,
-  customerType: true,
-  organization: true,
   passwordResetRequired: true,
   defaultAddressLine: true,
   defaultAddressProvinceCode: true,
@@ -38,11 +35,7 @@ export async function createManagedUser(client, input) {
       role: input.role,
       passwordHash,
       isActive: input.isActive,
-      studentId: input.studentId || null,
-      department: input.department || null,
-      phone: input.phone || null,
-      organization: input.organization || null,
-      customerType: input.customerType || "INTERNAL"
+      phone: input.phone || null
     },
     select: safeUserSelect
   });

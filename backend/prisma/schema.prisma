@@ -117,6 +117,7 @@ enum AuditActorType {
 }
 
 enum NotificationType {
+  WAITLIST_AVAILABLE
   BOOKING_APPROVED
   BOOKING_REJECTED
   BOOKING_UPCOMING
@@ -244,11 +245,14 @@ model Laboratory {
 }
 
 model LabPolicy {
+  revision              Int        @default(0)
+  turnaroundMinutes     Int        @default(0)
   id                    String     @id
   laboratoryId          String     @unique
   maxBookingMinutes     Int        @default(480)
   minBookingMinutes     Int        @default(15)
   maxAdvanceBookingDays Int        @default(30)
+  minAdvanceBookingMinutes Int    @default(30)
   checkInGraceMinutes   Int        @default(20)
   requiresApproval      Boolean    @default(false)
   allowWeekend          Boolean    @default(false)
@@ -262,6 +266,9 @@ model LabPolicy {
 }
 
 model User {
+  bookingBundles BookingBundle[]
+  bookingWaitlist BookingWaitlist[]
+  bookingChecklists BookingChecklistEntry[]
   teachingGroups TeachingGroup[] @relation("GroupLecturer")
   groupMemberships TeachingMembership[]
   stockMovements StockMovement[]
@@ -270,10 +277,16 @@ model User {
   fullName                     String @default("")
   role                         Role
   passwordHash                 String
+  googleSubject                String?               @unique
+  passwordLoginEnabled         Boolean               @default(true)
+  authVersion                  Int                   @default(0)
+  authSessions                 AuthSession[]
+  deletedAt                    DateTime?
   studentId                    String?
   department                   String?
   phone                        String?
-  customerType                 String                @default("INTERNAL")
+  // Historical affiliation data. Current account APIs do not read or write it.
+  customerType                 String?
   organization                 String?
   passwordResetRequired        Boolean               @default(false)
   defaultAddressLine           String?
@@ -313,8 +326,64 @@ model User {
   supportMessages              SupportMessage[]
   supportPresence              SupportPresence?
   emailDeliveries              EmailDelivery[]
+  requestedPasswordChallenges  PasswordChallenge[]   @relation("PasswordChallengeActor")
+  receivedPasswordChallenges   PasswordChallenge[]   @relation("PasswordChallengeTarget")
+  chatgptBridgeGrants           ChatgptBridgeGrant[]   @relation("ChatgptBridgeOwner")
+  chatgptBridgeRequests         ChatgptBridgeRequest[] @relation("ChatgptBridgeCustomer")
 
   @@map("users")
+}
+
+model AuthSession {
+  id             String    @id
+  userId         String
+  authVersion    Int
+  createdAt      DateTime  @default(now())
+  lastActiveAt   DateTime  @default(now())
+  idleExpiresAt  DateTime
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model LoyaltyPolicy {
+  id                  String   @id @default("SYSTEM")
+  enabled             Boolean  @default(false)
+  plusThreshold       Int      @default(1500000)
+  priorityThreshold   Int      @default(5000000)
+  plusDiscountBps     Int      @default(300)
+  priorityDiscountBps Int      @default(500)
+  version             Int      @default(0)
+  updatedAt           DateTime @updatedAt
+
+  @@map("loyalty_policy")
+}
+
+model PasswordChallenge {
+  id            String    @id
+  actorId       String
+  targetUserId  String
+  email         String
+  purpose       String
+  actorVersion  Int
+  targetVersion Int
+  codeHash      String
+  reason        String
+  attempts      Int       @default(0)
+  expiresAt     DateTime
+  deliveredAt   DateTime?
+  consumedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  actor         User      @relation("PasswordChallengeActor", fields: [actorId], references: [id], onDelete: Restrict)
+  target        User      @relation("PasswordChallengeTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
+
+  @@index([targetUserId, createdAt])
+  @@index([actorId, createdAt])
+  @@map("password_challenges")
 }
 
 model EmailDelivery {
@@ -413,6 +482,8 @@ model EmailOtp {
 }
 
 model Resource {
+  bookingWaitlist BookingWaitlist[]
+  fulfillment ResourceFulfillment?
   maxBookingMinutes Int?
   careInspectionRequired Boolean @default(false)
   careProfile ResourceCareProfile? @relation("CareResource")
@@ -571,6 +642,13 @@ model UserCertification {
 
 // PostgreSQL bookings_no_active_overlap is preserved externally; Prisma cannot model EXCLUDE.
 model Booking {
+  bundleId String?
+  bundle BookingBundle? @relation(fields: [bundleId], references: [id], onDelete: Restrict)
+  policySnapshot Json @default("{}")
+  checklistEntries BookingChecklistEntry[]
+  paymentDueAt DateTime?
+  fulfillmentSnapshot Json?
+  schedulingReleasedAt DateTime?
   operationSessions ResourceOperation[]
   teachingActivity TeachingActivity?
   feeAmountVnd      Int                   @default(0)
@@ -616,6 +694,65 @@ model Booking {
   @@index([status])
   @@index([idempotencyKey])
   @@map("bookings")
+}
+
+// A bundle is a creation group. Each booking retains its own payment and lifecycle.
+model BookingBundle {
+  id String @id
+  ownerId String
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  requestKey String @unique
+  requestHash String
+  title String
+  createdAt DateTime @default(now())
+  bookings Booking[]
+  @@index([ownerId, createdAt])
+  @@map("booking_bundles")
+}
+
+// Notification interest, never a reservation or an automatic charge.
+model BookingWaitlist {
+  id String @id
+  userId String
+  resourceId String
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  startAt DateTime
+  endAt DateTime
+  purposeCode String
+  status String @default("WAITING")
+  notifiedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, resourceId, startAt, endAt])
+  @@index([status, startAt])
+  @@map("booking_waitlist")
+}
+
+model BookingChecklistEntry {
+  id String @id
+  bookingId String
+  stage String
+  actorId String
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  items Json
+  notes String
+  createdAt DateTime @default(now())
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  @@unique([bookingId, stage])
+  @@map("booking_checklist_entries")
+}
+
+model ResourceFulfillment {
+  resourceId String @id
+  roomPasswordCiphertext String? @db.Text
+  deliveryAllowed Boolean @default(false)
+  pickupInstructions String?
+  version Int @default(0)
+  updatedAt DateTime @updatedAt
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+
+  @@map("resource_fulfillment")
 }
 
 model MaintenanceWindow {
@@ -1007,6 +1144,7 @@ model AiMessage {
 }
 
 model PaymentTransaction {
+  appOrigin String?
   id                   String                      @id
   bookingId            String?
   userId               String
@@ -1019,6 +1157,7 @@ model PaymentTransaction {
   cardType             String?
   vnpResponseCode      String?
   vnpTransactionNo     String?                     @unique
+  providerTransactionNo String?                    @map("walletTransactionNo")
   paymentUrl           String?                     @db.Text
   paymentUrlCreatedAt  DateTime?
   paymentUrlExpiresAt  DateTime?
@@ -1034,6 +1173,7 @@ model PaymentTransaction {
   user                 User                        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   reconciledBy         User?                       @relation("PaymentReconciledBy", fields: [reconciledById], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
+  @@unique([provider, providerTransactionNo], map: "payment_transactions_provider_walletTransactionNo_key")
   @@index([userId])
   @@index([bookingId])
   @@index([status])
@@ -1318,7 +1458,7 @@ model SystemAuditEvent {
   beforeState       Json?     @map("before_state")
   afterState        Json?     @map("after_state")
   reason            String?
-  metadata          Json      @default("{}")
+  metadata          Json?     @default("{}")
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   actor      User?        @relation("SystemAuditActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
@@ -1377,4 +1517,146 @@ model ResourcePart {
   resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   @@unique([resourceId, name])
   @@map("resource_parts")
+}
+
+// Optional ChatGPT account bridge. OAuth credentials are stored only as hashes;
+// subscription signing secrets use authenticated encryption outside Prisma.
+model ChatgptBridgeClient {
+  id           String   @id
+  name         String
+  redirectUris Json
+  createdAt    DateTime @default(now())
+  grants       ChatgptBridgeGrant[]
+  codes        ChatgptBridgeCode[]
+  tokens       ChatgptBridgeToken[]
+  @@map("chatgpt_bridge_clients")
+}
+
+model ChatgptBridgeGrant {
+  id               String    @id
+  ownerId          String
+  ownerAuthVersion Int
+  clientId         String
+  generation       String    @unique
+  audience         String
+  scope            String
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  owner            User      @relation("ChatgptBridgeOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  client           ChatgptBridgeClient @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  codes            ChatgptBridgeCode[]
+  tokens           ChatgptBridgeToken[]
+  subscriptions    ChatgptBridgeSubscription[]
+  requests         ChatgptBridgeRequest[]
+  @@index([ownerId, createdAt])
+  @@map("chatgpt_bridge_grants")
+}
+
+model ChatgptBridgeCode {
+  id            String    @id
+  ticketHash    String    @unique
+  codeHash      String?   @unique
+  clientId      String
+  grantId       String?
+  redirectUri   String
+  state         String
+  codeChallenge String
+  audience      String
+  scope         String
+  expiresAt     DateTime
+  consentedAt   DateTime?
+  consumedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  client        ChatgptBridgeClient @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  grant         ChatgptBridgeGrant? @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  @@index([expiresAt])
+  @@map("chatgpt_bridge_codes")
+}
+
+model ChatgptBridgeToken {
+  id         String    @id
+  tokenHash  String    @unique
+  type       String
+  grantId    String
+  clientId   String
+  audience   String
+  scope      String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  grant      ChatgptBridgeGrant @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  client     ChatgptBridgeClient @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  @@index([grantId, type])
+  @@index([expiresAt])
+  @@map("chatgpt_bridge_tokens")
+}
+
+model ChatgptBridgeSubscription {
+  id              String    @id
+  grantId         String
+  eventType       String
+  webhookId       String
+  callbackUrl     String
+  secretCipher    String
+  oldSecretCipher String?
+  oldSecretUntil  DateTime?
+  arguments       Json      @default("{}")
+  status          String    @default("VERIFIED")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  verifiedAt      DateTime?
+  expiresAt       DateTime
+  grant           ChatgptBridgeGrant @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  deliveries      ChatgptBridgeDelivery[]
+  @@unique([grantId, webhookId])
+  @@index([grantId, status])
+  @@map("chatgpt_bridge_subscriptions")
+}
+
+model ChatgptBridgeRequest {
+  id                  String    @id
+  conversationId      String
+  customerId          String
+  customerAuthVersion Int
+  grantId             String
+  generation          String
+  message             String    @db.Text
+  locale              String    @default("vi")
+  context             Json?
+  readCount           Int       @default(0)
+  contextBytes        Int       @default(0)
+  status              String    @default("PENDING")
+  answer              String?   @db.Text
+  createdAt           DateTime  @default(now())
+  expiresAt           DateTime
+  answeredAt          DateTime?
+  customer            User @relation("ChatgptBridgeCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  grant               ChatgptBridgeGrant @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  deliveries          ChatgptBridgeDelivery[]
+  @@index([customerId, createdAt])
+  @@index([customerId, conversationId, createdAt])
+  @@index([grantId, status])
+  @@map("chatgpt_bridge_requests")
+}
+
+model ChatgptBridgeDelivery {
+  id             String    @id
+  subscriptionId String
+  requestId      String
+  eventId        String    @unique
+  status         String    @default("PENDING")
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime  @default(now())
+  leaseToken     String?
+  leaseUntil     DateTime?
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  subscription   ChatgptBridgeSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  request        ChatgptBridgeRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  @@unique([subscriptionId, requestId])
+  @@index([status, nextAttemptAt])
+  @@map("chatgpt_bridge_deliveries")
 }

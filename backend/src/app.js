@@ -17,9 +17,11 @@ import addressRouter from "./routes/address.js";
 import guestBookingRouter from "./routes/guestBooking.js";
 import resourceMediaRouter from "./routes/resourceMedia.js";
 import userRouter from "./routes/users.js";
+import loyaltyRouter from "./routes/loyalty.js";
 import auditEventsRouter from "./routes/auditEvents.js";
 import resourceRouter from "./routes/resources.js";
 import laboratoryRouter from "./routes/laboratories.js";
+import planningRouter from './routes/planning.js';
 import calendarRouter from "./routes/calendar.js";
 import bookingRouter from "./routes/bookings.js";
 import bookingPricingRouter from "./routes/bookingPricing.js";
@@ -35,6 +37,9 @@ import assistantRouter from "./routes/assistant.js";
 import supportRouter from "./routes/support.js";
 import { handleMcp, mcpRateLimit } from "./assistant/mcpServer.js";
 import { requireAuth } from "./middleware/auth.js";
+import { bridgeOAuth, bridgeMcp, bridgeSettings } from './chatgptBridge/runtime.js';
+import { createBridgeOAuthRouters } from './chatgptBridge/routes.js';
+import bridgeRequestRouter from './routes/chatgptBridgeRequests.js';
 
 export function createApp() {
   const app = express();
@@ -53,18 +58,24 @@ export function createApp() {
         }
         return callback(new HttpError(403, "Origin is not allowed by CORS", undefined, "FORBIDDEN"));
       },
-      credentials: true
+      credentials: true,
+      exposedHeaders: ["Retry-After", "RateLimit", "RateLimit-Policy"]
     })
   );
   app.use(express.json({ limit: config.jsonBodyLimit }));
   app.use(morgan(config.logFormat, {
-    // VNPAY signs its GET callback query. Access logging that URL would persist
+      // Providers can sign their browser-return or GET callback query. Logging would persist
     // the one-time secure hash and provider evidence.
-    skip: (req) => /^\/api\/payments\/vnpay\/(?:ipn|return)(?:\?|$)/.test(req.originalUrl || req.url)
+      skip: (req) => /^\/api\/payments\/(?:vnpay\/(?:ipn|return)|sepay\/webhook)\/?(?:\?|$)/i.test(req.originalUrl || req.url) ||
+      /^\/(?:oauth\/chatgpt|api\/chatgpt-bridge)(?:\/|\?|$)/.test(req.originalUrl || req.url)
   }));
   const ingressLimit = limit => rateLimit({
     windowMs: config.rateLimitWindowMs, limit, standardHeaders: "draft-7", legacyHeaders: false,
-    handler: (req, res) => res.status(429).json({ error: { code: "RATE_LIMITED", message: localizeError(req.locale, "RATE_LIMITED") } })
+    handler: (req, res) => {
+      const retryAfterSeconds = Math.max(1, Math.ceil(((req.rateLimit?.resetTime?.getTime() || Date.now() + config.rateLimitWindowMs) - Date.now()) / 1000));
+      res.set("Retry-After", String(retryAfterSeconds));
+      return res.status(429).json({ error: { code: "RATE_LIMITED", message: localizeError(req.locale, "RATE_LIMITED"), details: { retryAfterSeconds } } });
+    }
   });
   // MCP initialization and tool reads share the loopback IP, but must not spend
   // the ordinary API budget. Both ingress paths remain bounded before auth.
@@ -76,11 +87,19 @@ export function createApp() {
   const monitoringIngress = ingressLimit(config.rateLimitMax * 10);
   app.use((req, res, next) => {
     const path = req.path.toLowerCase().replace(/\/$/, "");
-    const limiter = path === "/mcp" ? mcpIngress : /^\/api\/support(?:\/|$)/.test(path) ? supportIngress
+    const limiter = path === "/mcp" || path === '/mcp/support-bridge' ? mcpIngress : /^\/api\/(?:support|assistant\/bridge)(?:\/|$)/.test(path) ? supportIngress
       : /^\/api\/(?:telemetry|resource-care)(?:\/|$)/.test(path) ? monitoringIngress : apiIngress;
     return limiter(req, res, next);
   });
   app.use(metricsMiddleware);
+  const bridgeRouters = createBridgeOAuthRouters({ oauth: bridgeOAuth, requireAuth });
+  app.use(bridgeRouters.publicRouter);
+  app.use('/api/chatgpt-bridge', bridgeRouters.adminRouter);
+  if (bridgeSettings.enabled) {
+    app.use('/api/assistant/bridge', bridgeRequestRouter);
+    app.post('/mcp/support-bridge', bridgeMcp);
+    app.all('/mcp/support-bridge', (_req, res) => res.sendStatus(405));
+  }
 
   // Health check endpoints
   const healthHandler = (_req, res) => {
@@ -124,12 +143,14 @@ export function createApp() {
 
   // 2. Users & Profiles
   app.use("/api/users", userRouter);
+  app.use("/api/loyalty", loyaltyRouter);
   app.use("/api/audit-events", auditEventsRouter);
 
   // 3. Resources & Catalog
   app.use("/api/resources", resourceMediaRouter);
   app.use("/api/resources", resourceRouter);
   app.use("/api/laboratories", laboratoryRouter);
+  app.use('/api/planning', planningRouter);
 
   // 4. Calendar & Time Slots
   app.use("/api/calendar", calendarRouter);
@@ -145,7 +166,7 @@ export function createApp() {
 
   // Optional integrations are independent of the retired research routes.
   if (config.paymentsEnabled) app.use("/api/payments", paymentRouter);
-  if (config.mcpAssistantEnabled) {
+  if (config.mcpAssistantEnabled || bridgeSettings.enabled) {
     app.use("/api/assistant", assistantRouter);
     app.post("/mcp", requireAuth, mcpRateLimit, handleMcp);
     app.all("/mcp", requireAuth, (_req, res) => res.sendStatus(405));

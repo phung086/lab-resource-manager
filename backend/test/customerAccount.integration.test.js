@@ -49,6 +49,8 @@ test('registration accepts exactly email and password; no personal identity is i
   assert.equal(customer.role,'CUSTOMER'); assert.equal(customer.fullName,''); assert.equal(customer.phone,null);
   assert.equal(customer.email,`new-${marker}@customer.test`);
   const stored=await prisma.user.findUniqueOrThrow({where:{id:customer.id}});assert.ok(await bcrypt.compare(password,stored.passwordHash));
+  assert.equal(stored.customerType, null);
+  for (const field of ['customerType','customerTypeSemantics','studentId','department','organization']) assert.equal(Object.hasOwn(customer, field), false);
   const welcome=await prisma.emailDelivery.findFirstOrThrow({where:{userId:customer.id,kind:'ACCOUNT_REGISTERED'}});
   assert.equal(welcome.status,'PENDING');assert.ok(!JSON.stringify(welcome).includes(password));
 });
@@ -56,13 +58,39 @@ test('registration reports email/password separately, rejects role injection and
   const invalid=await call('post','/auth/register',null,{email:'wrong',password:'short'});
   assert.equal(invalid.status,400);assert.deepEqual(Object.keys(invalid.body.error.details.fieldErrors),['email','password']);
   const extra=await call('post','/auth/register',null,{email:`extra-${marker}@customer.test`,password,role:'ADMIN'});assert.equal(extra.status,400);
+  const affiliation=await call('post','/auth/register',null,{email:`affiliation-${marker}@customer.test`,password,organization:'Legacy organization'});assert.equal(affiliation.status,400);
   const duplicate=await call('post','/auth/register',null,{email:customer.email,password});assert.equal(duplicate.status,409);assert.equal(duplicate.body.error.details.field,'email');
 });
-test('customers cannot read other accounts, administer users, operate equipment or read academic archive', async () => {
-  for(const path of ['/users','/lab-workspace/groups']) assert.equal((await call('get',path,'customer')).status,403);
+test('customer and operator roles stay scoped and academic routes are retired', async () => {
+  assert.equal((await call('get','/users','customer')).status,403);
+  for (const actor of ['customer','staff','admin']) assert.equal((await call('get','/lab-workspace/groups',actor)).status,404);
   assert.equal((await call('patch',`/resources/${resource.id}/operational-status`,'customer',{operationalStatus:'BROKEN',reason:'Invalid privilege attempt'})).status,403);
   for(const role of ['STUDENT','LECTURER']) assert.equal((await call('patch',`/users/${customer.id}/role`,'admin',{role})).status,400);
   assert.equal((await call('post','/lab-workspace/groups','admin',{code:'X'})).status,404);
+});
+test('legacy affiliation does not affect account rights or password setup', async () => {
+  const hash = await bcrypt.hash(password, 4);
+  for (const customerType of ['INTERNAL', 'EXTERNAL', null]) {
+    const row = await prisma.user.create({data:{id:randomUUID(),email:`${randomUUID()}@customer.test`,fullName:'Contract customer',role:'CUSTOMER',
+      passwordHash:hash,customerType,studentId:'historical-id',department:'Historical department',organization:'Historical organization'}});
+    const signed = await call('post','/auth/login',null,{email:row.email,password});
+    assert.equal(signed.status,200);
+    assert.equal(signed.body.user.role,'CUSTOMER');
+    const actor = request(app).get('/api/users/me').set('Authorization', 'Bearer ' + signed.body.accessToken);
+    const profile = await actor;
+    assert.equal(profile.status,200);
+    for (const field of ['customerType','customerTypeSemantics','studentId','department','organization']) {
+      assert.equal(Object.hasOwn(signed.body.user,field),false);
+      assert.equal(Object.hasOwn(profile.body,field),false);
+    }
+    assert.equal((await request(app).patch('/api/users/me').set('Authorization', 'Bearer ' + signed.body.accessToken).send({ customerType:'EXTERNAL' })).status,400);
+    const managed = await call('get','/users/'+row.id,'staff');
+    assert.equal(managed.status,200);
+    assert.equal(Object.hasOwn(managed.body,'organization'),false);
+    await prisma.user.update({where:{id:row.id},data:{passwordResetRequired:true}});
+    assert.equal((await call('post','/auth/login',null,{email:row.email,password})).status,401);
+    assert.equal((await prisma.user.findUnique({where:{id:row.id}})).customerType,customerType);
+  }
 });
 const interval=offset=>{const start=Math.ceil(Date.now()/60000)*60000+86400000+offset*3600000;return {startAt:new Date(start).toISOString(),endAt:new Date(start+3600000).toISOString()};};
 test('first booking requires contact; errors identify only the incorrect contact field', async () => {

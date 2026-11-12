@@ -1,4 +1,37 @@
 .notifications-workspace { color:var(--workspace-text,#282338); }
+/* Unread previews stay in the inbox flow. There is no timer or automatic dismissal. */
+.workspace-shell .inbox-stack { display:grid; grid-template-columns:minmax(180px,.6fr) minmax(0,1fr); align-items:center; gap:32px; padding:22px 26px; margin:0 0 30px; border:1px solid #dce6f5; border-radius:18px; background:linear-gradient(115deg,#edf4ff,#f5f4fd); }
+.workspace-shell .inbox-stack-heading { display:flex; align-items:center; gap:12px; }
+.workspace-shell .inbox-stack-symbol { display:grid; place-items:center; width:44px; height:44px; flex-shrink:0; border:1px solid #d0ddf5; border-radius:13px; color:#315bb0; background:#fff; }
+.workspace-shell .inbox-stack-heading h2 { font-size:17px; margin:0 0 4px; font-weight:650; }
+.workspace-shell .inbox-stack-heading p { font-size:12px; margin:0; color:#596980; line-height:1.55; }
+.workspace-shell .inbox-stack-deck { position:relative; isolation:isolate; min-width:0; padding-top:18px; }
+.workspace-shell .inbox-stack-deck::before,.workspace-shell .inbox-stack-deck::after { content:''; position:absolute; inset:8px 10px auto; height:80px; border:1px solid #d4dff2; border-radius:14px; background:#ffffffa8; z-index:-1; pointer-events:none; }
+.workspace-shell .inbox-stack-deck::before { inset:0 20px auto; background:#ffffff60; opacity:.7; }
+.workspace-shell .inbox-stack[data-depth="1"] .inbox-stack-deck { padding-top:0; }
+.workspace-shell .inbox-stack[data-depth="1"] .inbox-stack-deck::after,.workspace-shell .inbox-stack[data-depth="1"] .inbox-stack-deck::before,.workspace-shell .inbox-stack[data-depth="2"] .inbox-stack-deck::before { content:none; }
+.workspace-shell .inbox-stack-card { position:relative; padding:16px 18px; background:#fff; border:1px solid #c9d9f2; border-radius:14px; box-shadow:0 6px 18px #385b8f0d; }
+.workspace-shell .inbox-stack-card-top { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.workspace-shell .inbox-stack-icon { display:grid; place-items:center; flex-shrink:0; width:34px; height:34px; border-radius:10px; background:#eaf1ff; color:#3462b4; }
+.workspace-shell .inbox-stack-card[data-tone=teal] .inbox-stack-icon { background:#e5f5ef; color:#19716d; }
+.workspace-shell .inbox-stack-card[data-tone=violet] .inbox-stack-icon { background:#f0ebfc; color:#7455b3; }
+.workspace-shell .inbox-stack-card time { font-size:11px; color:#64758e; }
+.workspace-shell .inbox-stack-copy { animation:inbox-card-in 180ms ease-out; }
+.workspace-shell .inbox-stack-copy h3 { margin:10px 0 4px; font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.workspace-shell .inbox-stack-copy p { margin:0; font-size:12px; color:#596980; line-height:1.6; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+.workspace-shell .inbox-stack-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; }
+.workspace-shell .inbox-stack-actions .btn { font-size:12px; min-height:38px; padding:8px 12px; }
+.workspace-shell .inbox-stack-read,.workspace-shell .inbox-stack-controls button { display:grid; place-items:center; width:38px; min-height:38px; padding:5px; background:#f1f5fd; border:1px solid #d7e2f4; border-radius:10px; color:#315bb0; cursor:pointer; }
+.workspace-shell .inbox-stack-controls { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:10px; }
+.workspace-shell .inbox-stack-controls > span { color:#536986; font-size:11px; font-variant-numeric:tabular-nums; }
+.workspace-shell .inbox-stack-controls button { width:44px; min-height:44px; border:0; background:transparent; }
+.workspace-shell .inbox-stack :disabled { opacity:.45; cursor:default; }
+.workspace-shell .inbox-stack-dots { display:flex; gap:4px; }
+.workspace-shell .inbox-stack-dots span { width:5px; height:5px; border-radius:10px; background:#c6d2e8; transition:width 180ms,background 180ms; }
+.workspace-shell .inbox-stack-dots span[data-active=true] { width:18px; background:#6261c7; }
+@keyframes inbox-card-in { from { opacity:.4; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+@media(max-width:700px) { .workspace-shell .inbox-stack { grid-template-columns:1fr; padding:16px; gap:16px; border-radius:14px; } .workspace-shell .inbox-stack-heading h2 { font-size:15px; } .workspace-shell .inbox-stack-card { padding:14px; } .workspace-shell .inbox-stack-actions .btn,.workspace-shell .inbox-stack-read { min-height:44px; } .workspace-shell .inbox-stack-read { width:44px; } }
+@media(prefers-reduced-motion:reduce) { .workspace-shell .inbox-stack-copy { animation:none; } .workspace-shell .inbox-stack-dots span { transition:none; } }
 .inbox-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; margin-bottom:24px; }
 .inbox-heading h1 { margin:0 0 8px; font-size:clamp(1.7rem,2.4vw,2.15rem); letter-spacing:-.025em; }
 .inbox-heading p { color:var(--workspace-text-muted,#625b70); line-height:1.6; max-width:65ch; margin:0; }
@@ -42,3 +75,8 @@
 .notifications-workspace :is(input,button,a):focus-visible,.inbox-detail:focus-visible { outline:2px solid var(--workspace-accent,#7258c7); outline-offset:3px; }
 @media(max-width:900px) { .inbox-layout { grid-template-columns:1fr; gap:24px; } }
 @media(max-width:600px) { .inbox-heading { flex-direction:column; gap:16px; } .inbox-heading>.inbox-actions { width:100%; } .inbox-actions>.btn { flex:1; } .inbox-detail { padding:24px 16px; } .inbox-row { padding:18px 16px; } }
+@media(min-width:901px) {
+ .notifications-workspace[data-role="CUSTOMER"] .inbox-layout { grid-template-columns:minmax(0,1.35fr) minmax(280px,.75fr); }
+ .notifications-workspace[data-role="LAB_STAFF"] .inbox-layout { grid-template-columns:minmax(300px,.75fr) minmax(0,1.25fr); }
+ .notifications-workspace[data-role="ADMIN"] .inbox-row { padding:14px 18px; }
+}

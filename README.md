@@ -12,8 +12,9 @@ Luồng REQUIRED CORE hiện tập trung vào:
 `Quản lý tài nguyên -> Đặt lịch -> Chống trùng -> Tự xác nhận -> Bàn giao -> Hoàn trả -> Thông báo -> Sự cố -> Giám sát`
 
 Vai trò hiện hành: `CUSTOMER`, `LAB_STAFF`, `ADMIN`. Khách hàng đăng ký bằng
-email/mật khẩu, bổ sung họ tên và số điện thoại khi đặt lịch. Tài khoản giảng
-viên/sinh viên cũ được chuyển sang khách hàng bằng forward migration, giữ lịch sử.
+email/mật khẩu, bổ sung họ tên và số điện thoại khi đặt lịch. Tất cả khách hàng
+áp dụng cùng điều kiện đặt lịch và quy tắc báo giá. Vai trò cán bộ LAB và quản
+trị viên dành cho nhiệm vụ vận hành.
 Kiểm thử contract này: tạo PostgreSQL local riêng `lab_resources_customer_test`,
 đặt `CUSTOMER_TEST_DATABASE_URL`, rồi chạy trong `backend/`:
 `npm run test:customer:prepare` và `npm run test:customer:integration`.
@@ -50,63 +51,76 @@ Không coi một tính năng là verified chỉ vì UI hiển thị hoặc build
 
 ## Chạy local
 
-### Backend Docker chung, hai frontend chạy bằng npm
+### Bản local tích hợp: một giao diện, một backend, một ngrok
 
-1. Mở Docker Desktop, chờ Engine running.
-2. Trong Docker Desktop, bật nhóm `lrm-local-review` (cả backend và postgres), hoặc:
-
-```powershell
-cd C:\Projects\lab-resource-manager\frontend
-npm run dev:backend
-```
-
-3. Mở frontend cần sử dụng:
+Mở Docker Desktop. Từ checkout chính, terminal ứng dụng:
 
 ```powershell
-# Nhánh đang sửa — http://localhost:5173
-cd C:\Projects\lab-resource-manager\frontend
-npm run dev
+Set-Location C:/Projects/lab-resource-manager/frontend
+npm.cmd run dev:demo
 ```
+
+Lệnh build/bật backend Docker8000, áp dụng forward migrations và mở UI5173
+với thanh toán/trợ lý/giám sát. Đăng nhập CUSTOMER, LAB_STAFF hoặc ADMIN tại
+http://localhost:5173; mọi tính năng dùng cùng database local hiện có. Restart
+không tự seed hoặc ghi đè cấu hình tài nguyên.5174 và gateway8002/8003 đã ngừng
+dùng cho demo. Backend/database chạy nền Docker; Ctrl+C chỉ dừng frontend.
+
+Terminal ngrok riêng. Kiểm tra target trong [ngrok local inspector](http://127.0.0.1:4040/api/tunnels)
+ở trường `config.addr`. Nếu tunnel đang trỏ vào cổng 3000 hoặc 5173, dừng
+đúng terminal ngrok đó bằng Ctrl+C rồi chạy lại với đích API 8000:
 
 ```powershell
-# Main — http://localhost:5180, terminal riêng
-cd C:\Projects\lab-resource-manager-main\frontend
-npm run dev
+ngrok http http://127.0.0.1:8000 --url=https://projector-blaspheme-angelfish.ngrok-free.dev --inspect=false
 ```
 
-Hai frontend dùng chung API `http://localhost:8000/api` và database
-`lrm-local-review_review-data`. Thay đổi dữ liệu ở một giao diện sẽ xuất hiện ở
-cả hai. Đây là so sánh frontend; backend dùng source nhánh hiện tại.
+Ngrok forward8000, không forward5173: backend nhận cả VNPAY IPN và ChatGPT MCP.
+ERR_NGROK_334 nghĩa là cùng URL đã chạy, kiểm target ở http://127.0.0.1:4040;
+không mở phiên thứ hai hoặc bật pooling. Cấu hình bridge trong backend/.env,
+ADMIN cấp quyền ở /workspace/chatgpt-bridge; chỉ một plugin LAB Support và một
+bộ nhận Tiếp nhận hỗ trợ LAB. Tham khảo AI_ASSISTANT_SETUP8.1.
 
-`npm run dev` chỉ kiểm tra API rồi chạy Vite: không build, tạo hoặc bật Docker.
-`npm run dev:backend` tái sử dụng image/container có sẵn (`--no-build`). Chỉ khi
-đổi dependencies hoặc Dockerfile mới chạy `npm run dev:backend:rebuild`
-ở frontend nhánh hiện tại. Trên máy mới cũng cần lệnh rebuild lần đầu.
-Sửa backend/src thông thường được nodemon nạp lại qua bind mount.
+Nếu chỉ cần mở frontend khi backend đã healthy: npm.cmd run dev -- --payments.
+Nếu5173 đang dùng, giữ phiên hiện có hoặc dừng đúng terminal frontend trước.
+Launcher không tự dừng ứng dụng khác. Hai tài khoản mẫu đã có dùng vai trò
+CUSTOMER và giữ địa chỉ email đăng nhập cũ để tiếp tục truy cập lịch sử.
+SMTP Gmail local đã xác minh kết nối và chấp nhận thư kiểm thử; inbox cần người
+dùng xác nhận. Worker email đang tạm dừng vì còn thư tới địa chỉ thử nghiệm;
+xem checkpoint email trong docs/CURRENT_STATE.md trước khi bật gửi tự động.
 
-Ctrl+C chỉ dừng frontend. `npm run dev:stop` tại nhánh dừng backend/database CHUNG,
-không xóa dữ liệu. Có thể dừng/bật nhóm trong Docker Desktop. Restart policy
-`unless-stopped` và log rotation 10 MB x 3 được cấu hình cho cả hai container.
-
-Tài khoản demo: `admin@lrm.local`, `staff@lrm.local`, `lecturer@lrm.local`,
-`student@lrm.local`; mật khẩu `LabDemo!2026Pass`. Migration và seed local có bảo vệ,
-không reset bản ghi nghiệp vụ khi bật lại. AI cần provider riêng; payment/research tắt.
-Nếu cổng đang dùng, dừng frontend cũ trước; launcher không tự diệt tiến trình khác.
-
-Danh mục local gồm 25 tài nguyên mẫu: 6 phòng, 10 thiết bị, 4 máy, 3 bộ thí nghiệm
-và 2 vật tư. Trang `/workspace/resources` tách Phòng / Thiết bị / Vật tư & khác,
-dùng lưới 3 cột trên desktop và hồ sơ chi tiết có thông số, hướng dẫn, chính sách,
-bảng giá hiện hành và lịch. Dữ liệu/ảnh/hướng dẫn LOCAL DEMO là minh họa.
-Muốn bổ sung bộ mẫu vào database local đang có (không reset), chạy có chủ đích:
+Chỉ khi muốn bổ sung dữ liệu tài nguyên mẫu có chủ đích mới chạy:
 
 ```powershell
 docker exec lrm-local-review-backend-1 npm run demo:seed-local
 ```
 
-Seed từ chối database ngoài `lab_resources_local_demo` hoặc tài nguyên trùng mã
-không thuộc LOCAL DEMO. Seed thêm bản ghi thiếu, chỉ bổ sung mô tả/thông số mặc định,
-giữ nguyên trạng thái, lịch đặt, giao dịch và giá hiện có. Chạy lại không tạo bản sao.
-Ảnh tài nguyên mới cần bổ sung từ nguồn được phép sử dụng khi có dữ liệu thực tế.
+Không reset database. Seed có guard riêng; không dùng lệnh này mỗi lần demo.
+Hướng dẫn kiểm thử cả ba role ở [SYSTEM_TEST_GUIDE](docs/SYSTEM_TEST_GUIDE.md).
+
+### Địa điểm và liên hệ ở footer công khai
+
+Footer mặc định hiển thị khuôn viên [Đại học Phenikaa](https://pseb.phenikaa-uni.edu.vn/vi/page/lien-he).
+Nút liên hệ mở kênh Hỗ trợ trực tuyến của LAB. Nếu triển khai tại địa điểm khác,
+đặt `VITE_PUBLIC_LAB_ADDRESS` và `VITE_PUBLIC_LAB_MAP_EMBED_URL` trong
+`frontend/.env.local` hoặc môi trường build Compose. Lấy URL `src` từ mục
+[Nhúng bản đồ](https://support.google.com/maps/answer/7101463?hl=vi) của Google Maps.
+`VITE_PUBLIC_LAB_SUPPORT_EMAIL` và `VITE_PUBLIC_LAB_SUPPORT_PHONE` dùng cho
+kênh hỗ trợ được phép công khai. Các giá trị này xuất hiện trong bản frontend.
+
+### Bật đăng nhập và đăng ký bằng Google
+
+Tạo OAuth client loại **Web application** trong Google Cloud theo
+[hướng dẫn Google Identity Services](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid).
+Thêm chính xác origin trình duyệt dùng, ví dụ `http://localhost:5173` và
+`http://127.0.0.1:5173` nếu truy cập qua cả hai địa chỉ. Với bản chạy trên tên
+miền HTTPS, đăng ký origin đó trong Google Cloud và `CORS_ORIGINS` của backend.
+Frontend và API cần cùng site để gửi cookie xác minh.
+
+Đặt `GOOGLE_CLIENT_ID` trong `backend/.env` cho launcher local dùng chung rồi
+chạy `npm run dev:backend` từ `frontend/` để nạp cấu hình. Với Compose production,
+biến nằm trong `.env.production`. Luồng Google Identity Services dùng Client ID
+và xác minh ID token ở backend. Khi thiếu cấu hình, hai màn xác thực vẫn dùng
+email và mật khẩu.
 
 ### Kết nối VNPAY Sandbox với runtime local
 
@@ -153,16 +167,22 @@ cd C:\Projects\lab-resource-manager\frontend
 npm.cmd run dev -- --payments
 ```
 
-Cờ `--payments` bật API thanh toán và UI tương ứng; bỏ cờ để trở về mặc định
-tắt. Trong PowerShell, dùng `npm.cmd` để giữ nguyên đối số `--payments`;
+Cập nhật 15/10: launcher local mặc định bật API thanh toán và UI tương ứng;
+`--payments` vẫn được hỗ trợ. Để chủ động tắt, đặt
+`$env:LRM_LOCAL_PAYMENTS_ENABLED='false'` trước khi chạy backend/frontend.
+Trong PowerShell, dùng `npm.cmd` để giữ nguyên đối số `--payments`;
 trên Linux/macOS dùng `npm`. Thay `backend/.env` cần chạy lại lệnh backend để container nhận cấu hình
 mới; thay frontend flag cần dừng/bật frontend. Dữ liệu trong volume chung được
 giữ nguyên. Không bật stack demo cũ ở 15005/15181 để thay thế runtime này.
 
-Thử một lịch có giá dương và mục đích khớp bảng giá. Lịch hợp lệ được xác nhận
-tự động sau kiểm tra trùng lịch, bảo trì và chính sách; chủ lịch chọn thanh toán,
-rồi chọn phương thức trên VNPAY Sandbox. Chỉ IPN hợp lệ khớp merchant, mã giao dịch và số tiền mới cập nhật
-thanh toán; browser Return không xác nhận đã trả tiền. Đối chiếu trạng thái,
+Thử một lịch có giá dương và mục đích khớp bảng giá. Sau kiểm tra điều kiện,
+lịch chuyển sang **Chờ thanh toán** và mở checkout, giữ chỗ 15 phút từ lúc tạo.
+Chủ lịch chọn phương thức trên VNPAY Sandbox. Chỉ IPN hợp lệ trước hạn khớp
+merchant, mã giao dịch và số tiền mới xác nhận lịch. Return chuyển trình duyệt
+thẳng đến biên lai của giao dịch. Trang biên lai chờ xác minh nếu IPN chưa tới
+và tự hiển thị biên lai khi LAB đã ghi nhận thanh toán.
+Hết hạn chưa trả, backend tự hủy và mở khung giờ; tải lại/retry không gia hạn.
+Lịch miễn phí vẫn xác nhận ngay. Đối chiếu trạng thái,
 `vnpTransactionNo` và `paidAt`, rồi làm mới trang checkout. Dùng phương tiện
 kiểm thử do VNPAY cung cấp; không coi app ngân hàng thật là công cụ Sandbox.
 Không đổi trạng thái thành công thủ công. QueryDr/refund tự động chưa được
@@ -172,12 +192,62 @@ Nếu cổng báo `70 – Sai chữ ký`, kiểm tra cặp Terminal ID/HashSecre
 container đã nhận `.env`, và cách ký/encode theo tài liệu. Nút **Test call IPN**
 nhận được JSON chỉ chứng minh endpoint có phản hồi; mã `97` chưa chứng minh
 chữ ký hợp lệ. Sau khi sửa key, URL thanh toán đã lưu vẫn được tái dùng trong
-15 phút: chờ hết phiên rồi mở thanh toán lại để API tạo phiên mới. Không sửa
+thời gian giữ chỗ: khi hết hạn, chọn khung giờ khả dụng và tạo lịch mới. Không sửa
 DB hay giả lập IPN thành công để bỏ qua lỗi. Khi deploy, thay domain backend
 trong Return/IPN và domain frontend trong `PAYMENT_APP_URL`, cập nhật IPN trên
 merchant rồi thử lại. Domain chính thức không tự đổi Sandbox thành production.
 
 Tài liệu chính thức: [kết nối VNPAY PAY](https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay/pay.html).
+
+Nếu trình duyệt dừng ở [ERR_NGROK_6024](https://ngrok.com/docs/errors/err_ngrok_6024),
+mở **Visit Site** trong cùng profile khi đã xác nhận đúng domain ngrok của
+mình. Đây là màn cảnh báo của gói miễn phí. Nếu thấy
+[ERR_NGROK_8012](https://ngrok.com/docs/errors/err_ngrok_8012) hoặc 502 sau đó,
+kiểm tra target cổng 8000 và `http://127.0.0.1:8000/health/ready`.
+Có thể kiểm tra đường IPN qua HTTPS bằng yêu cầu không chữ ký:
+
+```powershell
+curl.exe -H "ngrok-skip-browser-warning: 1" https://projector-blaspheme-angelfish.ngrok-free.dev/api/payments/vnpay/ipn
+```
+
+Phản hồi `RspCode: "97"` ở phép thử này xác nhận yêu cầu đã tới bộ kiểm chữ ký
+của LAB. Nếu đã thanh toán khi tunnel lỗi, đối chiếu giao dịch gốc trên
+Merchant Sandbox và chờ IPN xác thực trước khi thử thanh toán lại.
+
+### Chuyển khoản VietQR qua SePay
+
+Lịch có phí có thể thanh toán qua VNPAY hoặc chuyển khoản VietQR. QR mang số
+tài khoản nhận, số tiền VND từ đơn và mã riêng `LRM<txnRef>` trong nội dung.
+LAB dùng webhook SePay báo có để xác minh và phát hành biên nhận tự động.
+
+1. Liên kết tài khoản nhận tại SePay. Kiểm tra ngân hàng và loại tài khoản hỗ
+   trợ báo có qua webhook. Lấy tên ngân hàng theo trường `gateway` trong
+   thông báo SePay (ví dụ `Vietcombank`), dùng cùng giá trị cho `VIETQR_BANK`.
+2. Trong `backend/.env` cho local hoặc biến môi trường backend khi triển khai,
+   cấu hình các biến sau. Đặt khóa webhook riêng ngẫu nhiên ít nhất 24 ký tự.
+
+   ```dotenv
+   PAYMENTS_ENABLED=true
+   VIETQR_ENABLED=true
+   VIETQR_BANK=
+   VIETQR_ACCOUNT_NO=
+   VIETQR_ACCOUNT_NAME=
+   SEPAY_WEBHOOK_API_KEY=
+   ```
+
+3. Tạo webhook SePay cho đúng tài khoản, sự kiện **Có tiền vào**, định dạng
+   JSON, xác thực **API Key** cùng khóa trong cấu hình. Trỏ tới địa chỉ HTTPS
+   công khai của API, đường dẫn `/api/payments/sepay/webhook`. Bật gửi lại
+   khi máy chủ trả lỗi. Có thể lọc theo mã thanh toán LAB nếu tài khoản SePay
+   hỗ trợ cấu hình bộ lọc tương ứng. Giữ tiền tố `SEVQR` trên nội dung QR.
+4. Thử một lịch có phí với khoản nhỏ sau khi kiểm tra tên người nhận trong
+   ứng dụng ngân hàng. Sau khi báo có khớp mã, ngân hàng, tài khoản và số
+   tiền, checkout tự cập nhật và mở được biên nhận. Giao dịch đến muộn cần
+   đối soát. Khoản sai số tiền hoặc khoản chuyển thêm cho cùng mã cần tra
+   trong nhật ký SePay và sao kê.
+
+[Tạo VietQR động](https://docs.sepay.vn/tao-qr-code-vietqr-dong.html) ·
+[Thiết lập webhook SePay](https://docs.sepay.vn/tich-hop-webhooks.html).
 
 ### Chat hỗ trợ trực tiếp
 
@@ -196,7 +266,8 @@ bản đầu cập nhật mỗi 2 giây, heartbeat 15 giây, offline sau 45 giâ
 Launcher local generate Prisma client từ schema đang mount và deploy migration
 forward khi startup; rebuild khi đổi dependencies/image. Không dùng `db push`
 hoặc reset DB.
-Giữ `--payments` nếu phiên local đang bật thanh toán. Kiểm thử chat dùng DB
+Launcher local mặc định bật thanh toán; tắt bằng LRM_LOCAL_PAYMENTS_ENABLED=false.
+Kiểm thử chat dùng DB
 local riêng tên `lab_resources_support_test` qua `SUPPORT_TEST_DATABASE_URL`:
 backend `npm.cmd run test:support:integration`, sau đó frontend
 `npm.cmd run test:ui:support` (UI local đang chạy; Chromium có sẵn hoặc đặt
@@ -213,7 +284,7 @@ toán LAB và mã giao dịch VNPAY. Lịch đã hủy hoặc khoản cần đ�
 rõ; email không phê duyệt lại lịch. Return từ trình duyệt không tạo biên nhận.
 
 Để gửi đến hộp thư thật, cần tài khoản SMTP do hosting/dịch vụ email cấp. Điền
-trực tiếp trong `backend/.env` (đã thêm sẵn các trường trống ở phiên local):
+trực tiếp trong `backend/.env` (cấu hình bí mật local không được commit):
 
 ```dotenv
 SMTP_HOST=
@@ -232,8 +303,8 @@ không phải mật khẩu tài khoản LAB. Khi deploy, `EMAIL_APP_URL` là dom
 HTTPS. Không đưa credential vào frontend, Git hoặc nội dung thư.
 
 Sau khi lưu cấu hình, dùng launcher chính thức từ `frontend/`:
-`npm.cmd run dev:backend:rebuild -- --payments` nếu đang bật thanh toán, hoặc
-bỏ `--payments` khi không dùng. Launcher generate client và áp dụng migration
+`npm.cmd run dev:backend:rebuild` (thanh toán mặc định bật; đặt
+LRM_LOCAL_PAYMENTS_ENABLED=false khi chủ động tắt). Launcher generate client và áp dụng migration
 forward `20261012000200_email_deliveries`, giữ volume nghiệp vụ. Docker cần được
 tạo lại để nhận biến `.env` mới; reload source không nạp lại env_file.
 
@@ -355,8 +426,69 @@ Tài nguyên REQUIRED CORE phải được tạo/persist bằng API/UI chuẩn h
 
 ## Telemetry
 
+### Demo giám sát cho đồ án — 09/11/2026
+
+Shared local UI ở 5173, API ở 8000. Launcher `frontend/scripts/dev-local.mjs`
+bật giám sát mặc định; `LRM_LOCAL_MONITORING_ENABLED=false` để tắt khi cần.
+Đăng nhập ADMIN hoặc LAB_STAFF, mở **Giám sát thiết bị → Nguồn cảm biến**.
+Trong **Phòng thực hành giám sát**, chọn **Thiết lập mô phỏng**, tài nguyên và
+tình huống. Chạy hoặc dừng từng phiên tại đây. API ghi mẫu mỗi 5 giây, tối đa
+60 mẫu mỗi phiên và 6 phiên đồng thời. Cán bộ chỉ thao tác trong LAB được phân công.
+
+Trên stack local hiện có, chạy từ thư mục gốc:
+
+```powershell
+docker compose -f docker-compose.local.yml exec backend node scripts/seedGraduationResources.mjs
+docker compose -f docker-compose.local.yml exec backend node scripts/runDemoMonitoring.mjs
+docker compose -f docker-compose.local.yml exec backend node scripts/verifyDemoMonitoring.mjs
+```
+
+Lệnh đầu bổ sung 60 đơn vị mẫu (10 model × 6 đơn vị), tổng danh mục local hiện
+là 86 khi đã đăng ký máy Windows. Chạy lại giữ nguyên bản ghi đã tồn tại. Thông số có URL hãng trong
+`specs.provenance.sourceUrl`; số lượng, quyền sở hữu và giá thuê là giả định
+demo, không có serial hay chứng nhận kiểm định giả. Danh mục được duy trì tại
+`backend/scripts/graduationResourceCatalog.mjs`.
+
+Runner chạy một nguồn COMPUTE trên `DEMO26-PI5-01`, lưu 60 mẫu theo thời gian
+thật, mỗi 5 giây: bình thường → tải cao → quá nhiệt → báo offline → phục hồi.
+Các thông số được tạo theo kịch bản xác định để trình diễn quy trình, chưa phải
+mô hình nhiệt đã hiệu chuẩn hay dữ liệu cảm biến thật. Dùng ngưỡng hiện hành,
+lưu nguồn/run/sample/cảnh báo/sự cố có `origin=SIMULATED`. Biểu đồ ngắt đoạn
+khi offline. Cảnh báo được giải quyết khi điều kiện hết; sự cố nghiêm trọng
+vẫn cần nhân viên xử lý. Không đổi trạng thái vật lý hay giờ bàn giao thực tế.
+Sau khi phiên dừng, mẫu đã lưu vẫn xem được. Khi quá thời hạn, mẫu online cũ
+chuyển STALE. Mục **12 cảnh báo đã kết thúc gần nhất** giữ bằng chứng đối chiếu
+sau phục hồi. Dùng hai lệnh CLI cuối ở trên để chạy và kiểm chứng kịch bản cũ.
+
+Chỉ chạy trên `DEMO_MODE=true`, DB local `lab_resources_local_demo`, tài nguyên
+có nhãn LOCAL_DEMO; từ chối production, nguồn ngoài, chạy trùng và run đã đóng.
+API nhận mẫu công khai vẫn từ chối nguồn mô phỏng. Không phát số liệu mô phỏng
+vào Prometheus hoặc báo cáo sự cố thực.
+
+Để lấy số đo từ chính máy trình diễn, chạy lệnh dưới trên Windows host với
+stack local đã sẵn sàng. Bộ thu tạo một nguồn `EXTERNAL` cho `DEMO-HOST-PC`,
+đọc CPU/RAM và dung lượng đĩa hệ thống nếu có, lưu số đo qua API xác thực.
+Nhiệt độ và GPU để trống. Khi dừng, trạng thái offline là trạng thái bộ thu.
+
+```powershell
+node backend/scripts/monitorLocalComputer.mjs --duration=300
+```
+
+Mở **Trợ lý phân tích giám sát** trong hồ sơ nguồn để hỏi về số đo và cảnh báo.
+AI dùng tối đa 12 mẫu và 8 cảnh báo đã lưu trong phạm vi được cấp quyền.
+Khi backend thiếu cấu hình mô hình, hồ sơ vẫn hiển thị dữ liệu và báo rõ giới hạn.
+Để kiểm chứng local, dùng `docker compose -f docker-compose.local.yml exec backend node scripts/verifyMonitoringWorkspace.mjs --full`.
+Kết quả đã kiểm tra và giới hạn dùng trong báo cáo nằm trong `docs/CURRENT_STATE.md`.
+
 Nguồn phải xác thực và gắn tài nguyên/LAB. Mẫu được lưu PostgreSQL; thiếu mẫu là
 `NO_DATA`, quá thời hạn là `STALE`, nguồn chủ động báo offline là `UNAVAILABLE`.
+Khi bật thu telemetry hoặc dùng chế độ mô phỏng local, backend quét mỗi 15 giây
+để phát hiện nguồn EXTERNAL ngừng gửi sau mẫu online cuối cùng. Ngưỡng mặc định
+là 15 phút, có thể ghi đè theo LAB hoặc từng tài nguyên. Mỗi đợt mất tín hiệu
+có một cảnh báo và một thông báo cho từng ADMIN hoặc cán bộ LAB được phân công.
+Thông báo mở đúng hồ sơ nguồn. Mẫu online mới còn hạn đóng cảnh báo, ghi thời
+điểm phục hồi và bỏ đánh dấu chưa đọc của thông báo. Bộ thu Windows ở trên chạy
+theo phiên demo và cần chạy lại sau khi dừng đột ngột.
 Trạng thái vật lý do staff quản lý, không đổi theo số đo hoặc trạng thái kết nối.
 Camera hiện là metadata có phân quyền/audit, chưa có video hay phần cứng được xác minh.
 
@@ -420,23 +552,32 @@ Không:
 - biến mock/research UI thành REQUIRED CORE;
 - khai báo fake telemetry/audit/runtime evidence là dữ liệu thật.
 
-## So sánh song song với main trên GitHub
+## Bản so sánh cũ
 
-Thiết lập ngày 2026-10-06 dùng worktree `C:/Projects/lab-resource-manager-main`
-tại commit `a5472d4` của origin/main. Không tự pull khi chạy. Chỉ sửa scripts khởi
-chạy trong package.json của worktree để `npm run dev` gọi launcher chung; source UI
-main giữ nguyên. Có thể chạy `npm run dev:main` từ frontend nhánh thay thế.
+Thiết lập hai frontend5173/5180 ngày06/10 đã ngừng dùng cho demo. Bản tích hợp
+hiện ở checkout chính C:/Projects/lab-resource-manager; dùng dev:demo và một
+ngrok8000 như mục Chạy local. Không mở worktree review hoặc stack thứ hai.
 
-| Bản | Frontend | Backend chung |
-|---|---|---|
-| Nhánh | http://localhost:5173 | http://localhost:8000 |
-| Main | http://localhost:5180 | http://localhost:8000 |
+## Quản lý khách hàng, OTP và loyalty
 
-Hai phiên trình duyệt tách theo cổng, dữ liệu dùng chung. Không dùng backend riêng
-8010 nữa. `dev:main:stop` là alias dừng backend chung, không phải dừng riêng main.
-Khi cập nhật main, giữ thay đổi scripts local và kiểm tra tương thích API/schema
-trước khi tiếp tục dùng chung backend. Không reset/force checkout.
+ADMIN quản lý mọi tài khoản; staff quản lý tất cả CUSTOMER trong màn Tài khoản.
+Sửa liên hệ, bật/tắt và xóa mềm có kiểm tra quyền; email đăng ký chỉ đọc. Xóa
+khách có booking đang hoạt động bị chặn, lịch sử vẫn giữ. Đổi mật khẩu tại Hồ sơ
+hoặc hỗ trợ khách bắt buộc OTP gửi email hiện tại; self-service còn cần mật khẩu
+cũ. Mã có hạn 10 phút, gửi lại sau 60 giây, tối đa 5 lần sai. Không có bypass.
 
-Docker cũ, image không dùng, cache build và volume cũ đã được dọn theo xác nhận
-người dùng. Chỉ volume `lrm-local-review_review-data` được giữ. Không dùng Compose
-cũ để chạy thêm một bộ môi trường khi kiểm thử giao diện; dùng nhóm local nêu trên.
+Dùng các SMTP_HOST/PORT/USER/PASS/EMAIL_FROM đã mô tả ở trên, sau đó chạy
+npm --prefix backend run email:check -- --verify. Chỉ điền bí mật trực tiếp vào
+môi trường backend; không đưa vào Git/chat. SMTP chưa cấu hình thì OTP báo
+SMTP_NOT_CONFIGURED và mật khẩu giữ nguyên. Verify không chứng minh nhận trong
+inbox. Khôi phục public khi mất phiên và đổi email cần luồng riêng.
+
+Loyalty ở Hồ sơ lấy chi tiêu đã thanh toán hợp lệ; ADMIN bật/sửa chính sách trong
+màn Tài khoản. Mặc định tắt, ngưỡng Plus/Priority 1.500.000/5.000.000đ và giảm
+3%/5%, tùy cấu hình. Guest booking giữ giá public; đăng nhập trước đặt để nhận
+ưu đãi theo hạng. Giá đã lưu của lịch/thanh toán cũ không đổi.
+
+Các tính năng đã tích hợp vào checkout chính ngày14/10. Đọc
+[hướng dẫn tích hợp](docs/INTEGRATION_GUIDE.md) trước cập nhật code/migrations;
+không chép .env hoặc git pull đè checkout đang bẩn. Các worktree tách là bản
+tham chiếu, không dùng để demo thay bản tích hợp5173/8000.

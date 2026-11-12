@@ -75,8 +75,3 @@ export const CANONICAL_BOOKING_STATUS_LABELS = {
   CANCELLED: "ui.cancelled_2f777a90"
 };
 
-export const CANONICAL_CUSTOMER_TYPE_LABELS = {
-  INTERNAL: "ui.institution_member_self_declared_8250710f",
-  EXTERNAL: "ui.external_customer_partner_self_declared_75407cc4"
-};
-

@@ -1,16 +1,18 @@
+import { renderEmailDocument } from './emailTemplate.js';
 import { localize, normalizeLocale } from "../locales/index.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
+import { signUserToken } from "./authTokens.js";
 
 import { config } from "../config.js";
 import { prisma } from "../db.js";
 import { CUSTOMER } from "../constants/roles.js";
 import { HttpError } from "../middleware/errors.js";
-import { sendRequiredEmail, escapeHtml } from "./emailService.js";
+import { sendRequiredEmail } from "./emailService.js";
 import { enqueueRegistrationEmail } from "./emailAutomationService.js";
 import { validateVietnamAddress } from "./addressService.js";
 import { createBookingWithTransaction } from "./bookingService.js";
+import { getUserLoyalty } from "./loyaltyService.js";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "./systemAuditService.js";
 
 const PURPOSE = "GUEST_QUICK_BOOKING";
@@ -31,13 +33,6 @@ function normalizePhone(phone) {
 
 function codeHash(email, code) {
   return crypto.createHmac("sha256", config.jwtSecret).update(`${email}:${code}`).digest("hex");
-}
-
-function authToken(user) {
-  return jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, {
-    algorithm: "HS256",
-    expiresIn: config.tokenExpiresIn
-  });
 }
 
 async function lockOtpIdentity(tx, email) {
@@ -67,20 +62,16 @@ export function configureGuestAddressTestValidation(handler) {
   testAddressValidation = handler;
 }
 
-export function publicCustomerUser(user) {
+export function publicCustomerUser(user, loyalty = null) {
   return {
     id: user.id,
     email: user.email,
     fullName: user.fullName,
     role: user.role,
     isActive: user.isActive,
-    studentId: user.studentId || null,
-    department: user.department || null,
     phone: user.phone || null,
-    customerType: user.customerType || "INTERNAL",
-    customerTypeSemantics: "SELF_DECLARED_UNVERIFIED",
-    organization: user.organization || null,
     passwordResetRequired: Boolean(user.passwordResetRequired),
+    passwordLoginEnabled: user.passwordLoginEnabled !== false,
     defaultAddress: user.defaultAddressProvinceCode ? {
       addressLine: user.defaultAddressLine,
       provinceCode: user.defaultAddressProvinceCode,
@@ -90,12 +81,7 @@ export function publicCustomerUser(user) {
       source: user.defaultAddressSource,
       version: user.defaultAddressVersion
     } : null,
-    loyalty: {
-      tier: user.loyaltyTier || "LAB_STANDARD",
-      points: user.loyaltyPoints || 0,
-      discountBps: user.loyaltyDiscountBps || 0,
-      priorityBoost: user.priorityBoost || 0
-    }
+    loyalty
   };
 }
 
@@ -147,7 +133,7 @@ export async function sendGuestBookingOtp({ email, fullName, locale = "vi" }) {
     to: normalizedEmail,
     subject: localize(language, "email.otp.subject"),
     text: `${greeting}\n${label} ${code}\n${notice}`,
-    html: `<div lang="${language}"><p>${escapeHtml(greeting)}</p><p>${escapeHtml(label)}</p><p style="font-size:24px;font-weight:700;letter-spacing:4px">${code}</p><p>${escapeHtml(notice)}</p></div>`
+    html: renderEmailDocument({locale:language,title:localize(language,"email.otp.subject"),preview:label,paragraphs:[greeting,label,notice],code})
   };
   const result = testOtpDelivery
     ? await testOtpDelivery({ ...message, code })
@@ -170,8 +156,6 @@ function guestProfile(payload, phone, address) {
   return {
     fullName: String(payload.fullName || "").trim(),
     phone,
-    organization: String(payload.organization || "").trim() || null,
-    customerType: "EXTERNAL",
     defaultAddressLine: address.addressLine,
     defaultAddressProvinceCode: address.provinceCode,
     defaultAddressProvinceName: address.provinceName,
@@ -249,6 +233,10 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
 
     const booking = await createBookingWithTransaction(tx, {
       requestedById: user.id,
+      expectedAuthVersion: user.authVersion,
+      // The guest accepted a public list-price quote before identity verification.
+      // Loyalty discounts apply to subsequent authenticated owner quotes.
+      applyLoyalty: false,
       resourceId: payload.booking.resourceId,
       title: payload.booking.title,
       purpose: payload.booking.purpose,
@@ -281,8 +269,6 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
         resourceId: payload.booking.resourceId,
         afterState: {
           role: user.role,
-          customerType: user.customerType,
-          customerTypeSemantics: "SELF_DECLARED_UNVERIFIED",
           passwordResetRequired: true
         },
         metadata: {
@@ -297,12 +283,6 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
         targetType: AUDIT_TARGET_TYPES.USER,
         targetId: user.id,
         resourceId: payload.booking.resourceId,
-        beforeState: {
-          customerType: user.customerType
-        },
-        afterState: {
-          customerType: user.customerType
-        },
         metadata: {
           bookingId: booking.id,
           source: "guest_booking"
@@ -310,20 +290,21 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
       });
     }
 
-    return { user, booking, accountCreated: !existing };
+    return { user, booking, loyalty: await getUserLoyalty(tx, user.id), accountCreated: !existing,
+      accessToken: !existing ? await signUserToken(user, { transaction: tx }) : null };
   });
 
   if (outcome.error) throwOtpError(outcome.error);
   return {
     ...(outcome.accountCreated ? {
-      accessToken: authToken(outcome.user),
+      accessToken: outcome.accessToken,
       tokenType: "Bearer"
     } : {
       accessToken: null,
       tokenType: null,
       requiresLogin: true
     }),
-    user: outcome.accountCreated ? publicCustomerUser(outcome.user) : null,
+    user: outcome.accountCreated ? publicCustomerUser(outcome.user, outcome.loyalty) : null,
     booking: outcome.booking
   };
 }

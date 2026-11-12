@@ -189,6 +189,7 @@ test("Batch 6 notifications, incidents, dashboard and telemetry", { timeout: 180
       resourceId: fixture.resources.noData,
       title: "Batch 6 reminder booking",
       purpose: "Reminder verification",
+      contact: { fullName: "Batch 6 Customer", phone: "0901234567" },
       startAt: start.toISOString(),
       endAt: end.toISOString()
     });
@@ -198,11 +199,13 @@ test("Batch 6 notifications, incidents, dashboard and telemetry", { timeout: 180
     const reminders = await isolated.notification.findMany({
       where: {
         userId: fixture.users.studentA,
+        type: { in: ["BOOKING_UPCOMING", "RETURN_REMINDER"] },
         dedupeKey: { startsWith: `booking:${response.body.id}:` }
       },
       orderBy: { type: "asc" }
     });
     assert.equal(reminders.length, 2);
+    assert.equal(await isolated.notification.count({ where: { dedupeKey: `booking:${response.body.id}:auto-confirmed` } }), 1);
     assert.deepEqual(reminders.map((row) => row.type).sort(), ["BOOKING_UPCOMING", "RETURN_REMINDER"]);
     assert.equal(reminders.every((row) => row.sentAt === null), true);
 

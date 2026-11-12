@@ -1,6 +1,8 @@
-import { activeBookingStatuses } from "../utils/bookingOverlap.js";
 import { HttpError } from "../middleware/errors.js";
 import { assertCareReady } from "./resourceCareAccounting.js";
+import { expirePaymentHolds } from './bookingPaymentHoldService.js';
+import { assertBookingNotice } from './bookingNoticePolicy.js';
+import { occupiesWithTurnaround, preparationBookingWhere, turnaroundEnd } from './planning/policyModel.js';
 
 export const maintenanceKinds = ["maintenance", "calibration"];
 export const maintenanceStatuses = ["scheduled", "in_progress", "completed", "cancelled"];
@@ -43,14 +45,14 @@ export function getVietnamTimeParts(date) {
 }
 
 export function checkLabPolicyCompliance({ policy, startAt, endAt, now = new Date() }) {
-  if (!policy) return;
-
   const start = new Date(startAt);
   const end = new Date(endAt);
 
   if (start < now) {
     throw new HttpError(400, "Booking cannot be made in the past", undefined, "POLICY_VIOLATION");
   }
+  assertBookingNotice({ policy, startAt: start, now });
+  if (!policy) return;
 
   // Exact duration comparison without Math.round
   const durationMs = end.getTime() - start.getTime();
@@ -128,6 +130,7 @@ export function checkLabPolicyCompliance({ policy, startAt, endAt, now = new Dat
 }
 
 export async function getResourceAvailability(client, { resourceId, startAt, endAt, excludeBookingId, resource = null }) {
+  if (client.$transaction) await expirePaymentHolds(client, { resourceId });
   const selectedResource = resource || await client.resource.findUnique({
     where: { id: resourceId },
     include: { laboratory: { include: { labPolicy: true } } }
@@ -140,10 +143,8 @@ export async function getResourceAvailability(client, { resourceId, startAt, end
     client.booking.findMany({
       where: {
         resourceId,
-        status: { in: activeBookingStatuses() },
+        ...preparationBookingWhere(startAt, endAt),
         ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
-        startAt: { lt: endAt },
-        endAt: { gt: startAt }
       },
       orderBy: { startAt: "asc" }
     }),
@@ -157,7 +158,7 @@ export async function getResourceAvailability(client, { resourceId, startAt, end
     resource: selectedResource,
     startAt,
     endAt,
-    bookings,
+    bookings: bookings.filter(row => occupiesWithTurnaround(row, startAt, endAt, selectedResource.laboratory?.labPolicy?.turnaroundMinutes || 0)),
     maintenanceWindows
   });
   try { await assertCareReady(client, resourceId); }
@@ -236,9 +237,8 @@ export function buildBlockingIntervals({ resource = null, startAt = null, endAt 
       source: "booking",
       resourceId: booking.resourceId,
       bookingId: booking.id,
-      startAt: toIso(booking.startAt),
-      endAt: toIso(booking.endAt),
-      label: booking.title
+      startAt: toIso(booking.schedulingReleasedAt || booking.startAt),
+      endAt: toIso(turnaroundEnd(booking))
     })),
     ...maintenanceWindows
       .filter((window) => BLOCKING_MAINTENANCE_STATUSES.includes(window.status))

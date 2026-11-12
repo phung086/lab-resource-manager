@@ -122,20 +122,4 @@ assert.equal(isRouteAllowedForUser("payments", normalUser), true, "Normal user c
 assert.equal(isRouteAllowedForUser("bookings", normalUser), true, "Normal user can access bookings");
 console.log("PASS: Temporary account navigation restrictions correctly enforced");
 
-// 3. Customer Classification Semantics Test
-function getCustomerClassificationInfo(user) {
-  return {
-    customerType: user.customerType || "INTERNAL",
-    customerTypeSemantics: "SELF_DECLARED_UNVERIFIED",
-    grantsRbacAuthority: false,
-    bypassesTrainingRules: false
-  };
-}
-
-const classification = getCustomerClassificationInfo({ customerType: "INTERNAL" });
-assert.equal(classification.customerTypeSemantics, "SELF_DECLARED_UNVERIFIED");
-assert.equal(classification.grantsRbacAuthority, false);
-assert.equal(classification.bypassesTrainingRules, false);
-console.log("PASS: customerTypeSemantics remains strictly SELF_DECLARED_UNVERIFIED with zero RBAC/safety bypass");
-
 console.log("ALL ELIGIBILITY & TEMPORARY ACCOUNT TESTS PASSED!");
