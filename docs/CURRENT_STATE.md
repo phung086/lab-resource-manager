@@ -9,6 +9,9 @@
   Dropdown hồ sơ có nền cho từng dòng và chỉ báo ở mục hồ sơ, mật khẩu.
 - Kiểm tra Edge ở 320, 390 và 1440 px cho đường dẫn hỗ trợ, bản đồ thật và
   cấu hình địa chỉ thử. Kiểm tra menu hồ sơ bằng fixture đạt sáu cấu hình.
+- Gate frontend và backend đạt. Bộ planning integration dùng khung giờ
+  ban ngày theo giờ Việt Nam để tránh phụ thuộc thời điểm chạy. Chạy lại
+  trên PostgreSQL 16 riêng với migration chuẩn, đạt 12 ca.
 
 ## Tinh chỉnh từng khu vực trên landing — 12/11/2026
 

@@ -14,7 +14,10 @@ const [{ prisma }, { createApp }, { dispatchWaitlist }] = await Promise.all([imp
 const http = request(createApp()), id = () => crypto.randomUUID(), actors = {}, tokens = {};
 let lab, otherLab;
 const auth = name => ({ Authorization: `Bearer ${tokens[name]}` });
-const startAt = new Date(Math.ceil((Date.now() + 48 * 3600000) / 60000) * 60000).toISOString(), endAt = new Date(Date.parse(startAt) + 3600000).toISOString();
+const testDay = new Date(Date.now() + 48 * 3600000);
+// 10:00 in Vietnam leaves room for adjacent slots and turnaround tests.
+const startAt = new Date(testDay.setUTCHours(3, 0, 0, 0)).toISOString();
+const endAt = new Date(Date.parse(startAt) + 3600000).toISOString();
 async function resource() { return prisma.resource.create({ data: { id: id(), code: id(), name: 'Planning test resource', subtype: 'OTHER', category: 'EQUIPMENT', location: 'Test LAB', laboratoryId: lab.id } }); }
 const plan = ids => ({ resourceIds: ids, startAt, endAt, purposeCode: 'STUDY' });
 const payload = ids => ({ plan: plan(ids), requestKey: id(), title: 'Test laboratory session', purpose: '', contact: { fullName: 'Planning owner', phone: '0900000001' }, quotes: ids.map(resourceId => ({ resourceId, amountVnd: 0, version: 0 })) });
