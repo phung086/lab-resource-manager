@@ -3,7 +3,8 @@
 Các mục chưa hoàn thành; không tự bắt đầu triển khai khi chỉ đọc backlog.
 
 1. Kiểm chứng nguồn telemetry/phần cứng thật khi có thiết bị; giữ provenance,
-   freshness và alert/history. Không khôi phục simulator đã bị bác bỏ ngày12/10.
+   freshness và alert/history. Kịch bản có nhãn ngày 09/11 thuộc phạm vi demo
+   local đã duyệt. Kiểm chứng phần cứng dùng nguồn đo riêng.
 2. Đánh giá AI tìm lịch/tài nguyên phù hợp và tóm tắt vận hành với dữ liệu được
    phân quyền; kiểm chứng VI/EN, dẫn nguồn, lỗi provider và không có write.
 3. Chuẩn bị danh mục demo theo đề tài; booking/history phải tạo qua nghiệp vụ

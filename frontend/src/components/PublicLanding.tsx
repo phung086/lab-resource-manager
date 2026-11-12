@@ -22,13 +22,11 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
   const { t } = useLocale();
   const [catalogReady, setCatalogReady] = useState(false);
   const handleCatalogReady = useCallback(() => setCatalogReady(true), []);
-  const [motionPaused, setMotionPaused] = useState(false);
   const [heroVisible, setHeroVisible] = useState(true);
   const [documentHidden, setDocumentHidden] = useState(() => document.hidden);
   const sectionNavigation = useRef<{ cancelled: boolean; controller: AbortController | null }>({ cancelled: false, controller: null });
   const heroRef = useRef<HTMLElement>(null);
 
-  // Automatic suspension does not change the user's pause preference.
   useEffect(() => {
     const heroEl = heroRef.current;
     if (!heroEl) return;
@@ -44,7 +42,7 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
     };
   }, [page]);
 
-  const effectiveMotionPaused = motionPaused || documentHidden || !heroVisible;
+  const effectiveMotionPaused = documentHidden || !heroVisible;
 
   useEffect(() => {
     if (!initialSection) return;
@@ -76,7 +74,7 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
 
   return (
     <PublicShell onRegister={onRegister} onNavigate={onNavigate} userName={userName} onWorkspace={onWorkspace}
-      beforeMain={page === "home" && <AnnouncementStrip motionPaused={motionPaused} documentHidden={documentHidden} onToggleMotion={() => setMotionPaused(value => !value)} />}>
+      beforeMain={page === "home" && <AnnouncementStrip documentHidden={documentHidden} />}>
       <style>{effectiveMotionPaused ? `
         .project-public-shell .landing-hero-floating-card,
         .project-public-shell .landing-hero-marquee-track,
@@ -171,11 +169,7 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
             </span>
             <h2 className="landing-section-title">{t("ui.landing.benefits.title")}</h2>
           </div>
-          <BenefitsVideo
-            motionPaused={motionPaused}
-            documentHidden={documentHidden}
-            onToggleMotion={() => setMotionPaused(value => !value)}
-          />
+          <BenefitsVideo documentHidden={documentHidden} />
         </div>
       </section>
 
@@ -301,25 +295,25 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
           </div>
           <div className="landing-roles-grid">
             <div className="landing-role-card">
-              <div className="landing-role-icon landing-role-icon-students">
+              <div className="landing-role-icon landing-role-icon-customers">
                 <GraduationCap size={32} aria-hidden="true" />
               </div>
-              <h3 className="landing-role-title">{t("ui.landing.students.title")}</h3>
+              <h3 className="landing-role-title">{t("ui.landing.customers.title")}</h3>
               <p className="landing-role-desc">
-                {t("ui.landing.students.desc")}
+                {t("ui.landing.customers.desc")}
               </p>
               <div className="landing-role-features">
                 <div className="landing-role-feature">
                   <CheckCircle size={16} className="landing-role-feature-icon" aria-hidden="true" />
-                  {t("ui.landing.students.booking")}
+                  {t("ui.landing.customers.booking")}
                 </div>
                 <div className="landing-role-feature">
                   <CheckCircle size={16} className="landing-role-feature-icon" aria-hidden="true" />
-                  {t("ui.landing.students.reminder")}
+                  {t("ui.landing.customers.reminder")}
                 </div>
                 <div className="landing-role-feature">
                   <CheckCircle size={16} className="landing-role-feature-icon" aria-hidden="true" />
-                  {t("ui.landing.students.history")}
+                  {t("ui.landing.customers.history")}
                 </div>
               </div>
             </div>
@@ -347,7 +341,7 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
               </div>
             </div>
             <div className="landing-role-card">
-              <div className="landing-role-icon landing-role-icon-lecturers">
+              <div className="landing-role-icon landing-role-icon-admin">
                 <ShieldCheck size={32} aria-hidden="true" />
               </div>
               <h3 className="landing-role-title">{t("ui.landing.admin.title")}</h3>

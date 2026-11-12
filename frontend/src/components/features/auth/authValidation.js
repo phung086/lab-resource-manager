@@ -1,12 +1,7 @@
 // Mirrors the current auth schemas; the server remains authoritative.
 const emailPattern = /^(?!\.)(?!.*\.\.)([a-z0-9_'+\-.]*)[a-z0-9_+-]@([a-z0-9][a-z0-9-]*\.)+[a-z]{2,}$/i;
 export function normalizeAuth(values) {
-  const result = { ...values, email: values.email.trim().toLowerCase() };
-  for (const field of ['fullName', 'studentId', 'department', 'organization', 'phone']) {
-    if (typeof result[field] === 'string') result[field] = result[field].trim();
-  }
-  if (values.address) result.address = { ...values.address, addressLine: values.address.addressLine.trim() };
-  return result;
+  return { email: values.email.trim().toLowerCase(), password: values.password };
 }
 export function validateAuth(values, mode) {
   const data = normalizeAuth(values), errors = {};

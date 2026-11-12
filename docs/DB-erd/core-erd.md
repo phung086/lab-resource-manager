@@ -1,7 +1,7 @@
 # Core laboratory data relationships
 
 Generated from [canonical Prisma schema](../../backend/prisma/schema.prisma).
-Schema SHA-256 after LF normalization: `f8601c4b24d479d31d98cb88c69b86b7de030ba79efca799819c862d673ff446`.
+Schema SHA-256 after LF normalization: `0c00209e3014006b56c6d01e0e6b382fbae0d4770730e75c82f0dea46040e856`.
 Run `npm run docs:erd` in `backend/`; CI verifies `docs:erd:check`.
 This is a selected model projection, not a claim that only these tables exist.
 Foreign keys and cardinalities come from the generated Prisma data model checked
@@ -33,6 +33,7 @@ erDiagram
         string id PK
         string email UK
         Role role
+        string googleSubject UK
     }
     UserLabAssignment {
         string userId PK,FK
@@ -210,6 +211,7 @@ erDiagram
         string id PK
         string email UK
         Role role
+        string googleSubject UK
     }
     Booking {
         string bundleId FK
@@ -275,8 +277,7 @@ erDiagram
 
 Stock movements record receipts, issues and admin adjustments. A maintenance-linked
 issue must remain in the same laboratory. Teaching groups retain historical
-academic records; their runtime mutations are retired under ADR-033. They grant
-CUSTOMER no operator privileges.
+academic records. The runtime routes are retired under ADR-033 and ADR-047.
 ## Approved human support extension
 
 ```mermaid
@@ -290,6 +291,7 @@ erDiagram
         string id PK
         string email UK
         Role role
+        string googleSubject UK
     }
     UserLabAssignment {
         string userId PK,FK
@@ -338,6 +340,7 @@ erDiagram
         string id PK
         string email UK
         Role role
+        string googleSubject UK
     }
     AuthSession {
         string id PK
@@ -371,6 +374,7 @@ erDiagram
         string id PK
         string email UK
         Role role
+        string googleSubject UK
     }
     EmailDelivery {
         string id PK
@@ -419,6 +423,7 @@ erDiagram
         string id PK
         string email UK
         Role role
+        string googleSubject UK
     }
     Resource {
         string id PK

@@ -62,7 +62,7 @@ try {
     await assertEventually(() => sharedReads === 3, 'A fresh shared read must start after cancellation or queued invalidation');
     await page.locator('.discovery-studio').waitFor();
     await page.locator('.home-loading').waitFor({ state: 'hidden' });
-    assert.equal(await page.locator('.discovery-personal-heading strong').innerText(), actor.fullName);
+    assert.ok((await page.locator('.studio-hero h1').innerText()).includes(actor.fullName));
     assert.deepEqual(errors, []);
     results.push({ scenario, sharedReads, passed: true });
     await context.close();

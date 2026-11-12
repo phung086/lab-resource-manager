@@ -1,3 +1,4 @@
+import { PageHeading } from '../components/base/PageHeading';
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, ArrowRight, CalendarCheck2, CheckCircle2, Clock3, Search, Wrench, CalendarRange } from 'lucide-react';
 import { WorkbenchPath } from '../components/base/WorkbenchPath';
@@ -241,10 +242,10 @@ export function MaintenancePage({ actorId, locale, resources, maintenance, onCha
   }
   const hasFilters = query.trim() || filter !== 'open';
   return <section className="maintenance-workspace operations-workbench" data-has-selection={Boolean(selected || editing)}>
-    <header className="maintenance-heading">
+    <PageHeading className="maintenance-heading">
       <div><h1>{t('ui.maintenance_and_calibration_fa8ebcfe')}</h1><p className="workbench-heading-help">{t('ui.workbench.maintenanceIntro')}</p></div>
       <button ref={newButtonRef} className="primary-button" disabled={busy || Boolean(editing) || Boolean(backup)} onClick={() => openPlanner()}><Wrench size={18} aria-hidden="true" />{t('ui.schedule_maintenance_c16a1e26')}</button>
-    </header>
+    </PageHeading>
     {backup && <section className="maintenance-draft-notice" aria-label={t('ui.maintenanceDraft.title')}>
       <div><strong>{t('ui.maintenanceDraft.title')}</strong><p role="status">{t(storageError ? 'ui.maintenanceDraft.unavailable' : 'ui.maintenanceDraft.saved')} {!storageError && formatVietnamDateTime(new Date(backup.savedAt).toISOString())}</p><small>{t('ui.maintenanceDraft.local')}</small></div>
       {!editing && <button className="primary-button" onClick={restoreDraft}>{t('ui.maintenanceDraft.restore')}</button>}

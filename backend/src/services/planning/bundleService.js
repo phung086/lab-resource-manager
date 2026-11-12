@@ -5,6 +5,7 @@ import { HttpError } from '../../middleware/errors.js';
 import { lockCurrentAccount } from '../accountAccess.js';
 import { preflightBooking, createBookingWithTransaction } from '../bookingService.js';
 import { bookingContactSchema } from '../bookingContactService.js';
+import { TERMINAL_STATUSES } from '../../constants/bookingStatus.js';
 
 export const planInput = z.object({
   resourceIds: z.array(z.string().uuid()).min(1).max(5).refine(ids => new Set(ids).size === ids.length),
@@ -37,6 +38,25 @@ export async function reviewPlan(actor, body) {
     checkedAt: new Date(), reservation: false, individualPayments: true };
 }
 
+export async function getRepeatDraft(ownerId, bookingId) {
+  const resourceSelect = { id: true, name: true, code: true, laboratoryId: true,
+    laboratory: { select: { id: true, name: true } } };
+  const source = await prisma.booking.findFirst({
+    where: { id: bookingId, requestedById: ownerId },
+    select: { status: true, bundleId: true, resource: { select: resourceSelect },
+      bundle: { select: { ownerId: true, _count: { select: { bookings: true } }, bookings: { where: { requestedById: ownerId },
+        orderBy: { resourceId: 'asc' }, take: 6, select: { resource: { select: resourceSelect } } } } } }
+  });
+  if (!source) throw new HttpError(404, 'Booking not found', undefined, 'NOT_FOUND');
+  const resources = source.bundle ? source.bundle.bookings.map(row => row.resource) : [source.resource];
+  if (!TERMINAL_STATUSES.includes(source.status) || (source.bundle && (source.bundle.ownerId !== ownerId || source.bundle._count.bookings !== resources.length))
+    || !resources.length || resources.length > 5 || new Set(resources.map(row => row.id)).size !== resources.length
+    || !resources[0].laboratoryId || resources.some(row => row.laboratoryId !== resources[0].laboratoryId)) {
+    throw new HttpError(409, 'This booking cannot be repeated as a group', undefined, 'BOOKING_REPEAT_UNAVAILABLE');
+  }
+  return { resources };
+}
+
 export async function createBundle(actor, body) {
   const input = bundleInput.parse(body), ids = [...input.plan.resourceIds].sort();
   const requestHash = crypto.createHash('sha256').update(JSON.stringify({ ...input, requestKey: undefined })).digest('hex');
@@ -60,7 +80,7 @@ export async function createBundle(actor, body) {
       const { resourceId: quotedResource, ...acceptedQuote } = quote;
       const booking = await createBookingWithTransaction(tx, { ...input.plan, resourceId: quotedResource,
         title: input.title, purpose: input.purpose, requestedById: actor.id, expectedAuthVersion: actor.authVersion,
-        contact: input.contact, fulfillment: { mode: 'LAB_PICKUP' }, acceptedQuote });
+        contact: input.contact, acceptedQuote });
       bookings.push(await tx.booking.update({ where: { id: booking.id }, data: { bundleId: bundle.id } }));
     }
     return { ...bundle, bookings };

@@ -41,6 +41,39 @@ test.before(async () => {
 });
 test.after(async () => prisma.$disconnect());
 
+test('handover reminders show only the owner’s late or recently missed pickups', async () => {
+  const started = { startAt: new Date(+now - 100 * minute), endAt: new Date(+now + 20 * minute) };
+  const late = await fixtureBooking(await resource(), started);
+  const missed = await fixtureBooking(await resource(), { ...started, endAt: new Date(+now - minute), fulfillmentSnapshot: { mode: 'ROOM_SELF_SERVICE' } });
+  await fixtureBooking(await resource(), { ...started, status: 'CHECKED_OUT', actualStartAt: now });
+  await fixtureBooking(await resource('EQUIPMENT'), { ...started, fulfillmentSnapshot: { mode: 'HOME_DELIVERY' } });
+  await fixtureBooking(await resource(), { startAt: new Date(+now - 26 * 60 * minute), endAt: new Date(+now - 25 * 60 * minute) });
+  await fixtureBooking(await resource());
+  const reply = await http.get('/api/bookings/handover-reminders').set(auth('owner'));
+  assert.equal(reply.status, 200);
+  assert.deepEqual(reply.body.map(row => [row.id, row.expired]), [[late.id, false], [missed.id, true]]);
+  assert.equal(reply.body[0].resource.category, 'ROOM');
+  assert.ok(!('contactSnapshot' in reply.body[0]));
+  assert.deepEqual((await http.get('/api/bookings/handover-reminders').set(auth('peer'))).body, []);
+  assert.equal((await http.get('/api/bookings/handover-reminders').set(auth('staff'))).status, 403);
+  assert.equal((await http.get('/api/bookings/handover-reminders')).status, 401);
+});
+
+test('current booked filter includes an open checkout and keeps manual in-use separate', async () => {
+  const booked = await resource();
+  const manual = await resource();
+  await prisma.resource.updateMany({ where: { id: { in: [booked.id, manual.id] } }, data: { operationalStatus: 'IN_USE' } });
+  await fixtureBooking(booked, { status: 'CHECKED_OUT', actualStartAt: new Date(+now - 90 * minute), startAt: new Date(+now - 100 * minute), endAt: new Date(+now - minute) });
+  const current = await http.get('/api/resources').query({ laboratoryId: lab.id, availability: 'RESERVED' });
+  assert.equal(current.status, 200);
+  assert.equal(current.body.find(row => row.id === booked.id)?.availability.state, 'IN_USE');
+  assert.ok(!current.body.some(row => row.id === manual.id));
+  const unavailable = await http.get('/api/resources').query({ laboratoryId: lab.id, availability: 'UNAVAILABLE' });
+  assert.equal(unavailable.status, 200);
+  assert.ok(unavailable.body.some(row => row.id === manual.id));
+  assert.ok(!unavailable.body.some(row => row.id === booked.id));
+});
+
 test('room configuration is encrypted, audited, ADMIN-only and never public', async () => {
   const r = await resource(); const setting = await setupRoom(r);
   assert.equal(setting.roomAccessConfigured, true); assert.ok(!JSON.stringify(setting).includes('RoomPass2026'));
@@ -167,7 +200,7 @@ test('VNPAY return redirects to allowlisted receipt and does not settle; signed 
   const params = { vnp_TmnCode: 'TESTONLY', vnp_Amount: '8000000', vnp_TxnRef: payment.txnRef, vnp_ResponseCode: '00', vnp_TransactionStatus: '00', vnp_TransactionNo: String(Date.now()), vnp_PayDate: '20261014120000' };
   const query = Object.keys(params).sort().map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`).join('&');
   params.vnp_SecureHash = crypto.createHmac('sha512', process.env.VNPAY_HASH_SECRET).update(query).digest('hex');
-  const returned = await http.get('/api/payments/vnpay/return').query(params); assert.equal(returned.status, 303); assert.equal(returned.headers.location, `http://127.0.0.1:5173/workspace/payments?booking=${b.id}&returned=1`);
+  const returned = await http.get('/api/payments/vnpay/return').query(params); assert.equal(returned.status, 303); assert.equal(returned.headers.location, `http://127.0.0.1:5173/workspace/payments?booking=${b.id}&receipt=${payment.id}&returned=1`);
   assert.equal((await prisma.paymentTransaction.findUnique({ where: { id: payment.id } })).status, 'pending');
   const settled = await http.get('/api/payments/vnpay/ipn').query(params); assert.equal(settled.body.RspCode, '00');
   const again = await http.get('/api/payments/vnpay/ipn').query(params); assert.equal(again.body.RspCode, '02');

@@ -4,6 +4,7 @@ import { AlertTriangle, Building2, CalendarClock, ChevronRight, ClipboardList, C
 import { translate as t } from "../../../i18n.js";
 import { formatVietnamDateTime } from "../../../utils/timezone";
 import type { RoleHomeProps } from "./homeTypes";
+import { OperationsBrief } from "./OperationsBrief";
 
 type Props = RoleHomeProps;
 
@@ -68,6 +69,7 @@ export function AdminHome(props: Props) {
 
   return (
     <div className="home-control-room workspace-container">
+      <OperationsBrief key={props.user.id} onNavigate={props.onNavigate} />
       {/* Cluster 1: Exception overview — server-authoritative counts only */}
       <section className="home-control-cluster admin-excep" aria-labelledby="admin-excep-title">
         <SectionTitle titleKey="ui.home.admin.excepTitle" />

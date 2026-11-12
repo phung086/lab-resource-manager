@@ -39,7 +39,7 @@ export async function enqueuePaymentReceipt(tx, payment) {
   } }) : null;
   return enqueue(tx, { user, dedupeKey: `payment:${payment.id}:success`, kind: "PAYMENT_RECEIPT", locale: "vi",
     payload: { name: user.fullName, txnRef: payment.txnRef, amount: payment.amount, currency: payment.currency,
-      provider: payment.provider, transactionNo: payment.vnpTransactionNo, paidAt: payment.paidAt.toISOString(),
+      provider: payment.provider, transactionNo: payment.providerTransactionNo ?? payment.vnpTransactionNo, paidAt: payment.paidAt.toISOString(),
       reconciliationRequired: payment.reconciliationStatus === "manual_review",
       booking: booking ? { id: booking.id, code: booking.bookingCode || booking.id, title: booking.title,
         status: booking.status, startAt: booking.startAt.toISOString(), endAt: booking.endAt.toISOString(),

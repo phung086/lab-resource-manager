@@ -1,5 +1,45 @@
 # Architecture And Product Decisions
 
+## ADR-047 — Một nhóm khách hàng (11/11/2026)
+
+Đăng ký, Google và đặt nhanh bằng OTP tạo cùng vai trò `CUSTOMER`. API và
+giao diện tài khoản chỉ dùng danh tính, liên hệ và quyền cần thiết cho nghiệp vụ.
+Điều kiện đặt, giá và quyền xem hồ sơ áp dụng theo tài nguyên, chính sách và
+quyền sở hữu. Quyền `LAB_STAFF` và `ADMIN` phục vụ vận hành và quản trị.
+
+Quyết định này thay các quy ước phân loại khách trước đây và phần đọc kho học
+phần của ADR-033. Route học phần ngừng phục vụ. Các giá trị lịch sử và bảng lưu trữ
+được giữ trong cơ sở dữ liệu. Cột phân loại cũ trở thành nullable và bỏ default.
+Phí giao tận nơi theo ADR-037 hiện là 0 đ cho các tài nguyên đủ điều kiện.
+
+## Clarification — Local graduation monitoring demo (09/11/2026)
+
+The user approved 60 sourced demo inventory units and labelled simulation in
+the absence of hardware. This is a narrow exception to the retired simulator:
+the bounded local CLI runner and scoped workspace controls can persist SIMULATED samples, alerts and incidents
+in lab_resources_local_demo only, with active run provenance. Public ingestion
+still rejects simulated sources. Production and real inventory are excluded.
+Canonical physical state and actual booking usage remain independent. Sample
+recovery resolves alert conditions; it does not close the incident workflow.
+The generator is a deterministic teaching scenario, not a calibrated device
+model or AI inference. Quantities/rental prices are demo assumptions; model
+specifications carry manufacturer references. No historical migration is changed.
+The Windows collector registers a separate non-bookable measured resource. A
+bounded assistant request may summarize scoped persisted evidence using the
+configured model. Provider unavailability leaves the evidence visible and
+produces no model answer.
+
+## ADR-046 — Xác thực tài khoản bằng Google (08/11/2026)
+
+Người dùng yêu cầu thêm Google vào đăng nhập và đăng ký. Backend xác minh
+ID token Google và nonce gắn với cookie ngắn hạn. `User.googleSubject` là
+định danh Google duy nhất. Tài khoản mới từ Gmail hoặc Workspace nhận
+`CUSTOMER`. Tài khoản LAB trùng email phải chứng minh mật khẩu hiện tại ở
+lần liên kết đầu, giữ quyền hiện có và vô hiệu hóa phiên cũ qua authVersion.
+Phiên LAB tiếp tục theo ADR-043. Tài khoản Google chưa có mật khẩu có thể đặt
+mật khẩu cục bộ qua OTP email. Tính năng cần Client ID được cấu hình cho origin
+thực tế.
+
 ## ADR-045 — Mở rộng quản lý bằng phần mềm (20/10/2026)
 
 Làm rõ theo yêu cầu user20/10: không tạo một luồng/điểm điều hướng “Điều phối”
@@ -220,6 +260,14 @@ nếu đã quá hạn. Không sửa lịch đã kết thúc hay settlement hợp
 giữ byStatus canonical, thêm summary.pendingPayment và filter=PENDING_PAYMENT;
 filter=PENDING_APPROVAL chỉ chọn legacy; status=PENDING_APPROVAL vẫn là enum.
 
+### 12/11/2026 — Chuyển khoản VietQR
+
+Theo yêu cầu người dùng, checkout hỗ trợ VNPAY và chuyển khoản VietQR. SePay
+gửi webhook báo có, xác thực bằng API key. LAB kiểm ngân hàng, số tài khoản
+theo phiên phát hành QR, mã giao dịch, số tiền VND và ID báo có duy nhất.
+Giữ hạn cố định của ADR-038, dùng chung settlement và biên nhận với VNPAY.
+Giao dịch ví cũ vẫn đọc được qua lịch sử; migration đã áp dụng được giữ nguyên.
+
 ## ADR-037 — Nhận tài nguyên, truy cập phòng và trả sớm (14/10/2026)
 
 Theo yêu cầu người dùng: phòng có mật khẩu riêng do ADMIN cấu hình, mã hóa bằng
@@ -238,7 +286,7 @@ lịch nhưng giữ bước kiểm tra RETURNED→COMPLETED cho staff. Không t�
 điểm giải phóng vẫn được giữ lịch; không tự sửa lịch sử cũ.
 
 Thiết bị nhận tại LAB hoặc địa chỉ Việt Nam đầy đủ khi ADMIN bật giao tại nhà
-cho EQUIPMENT/EXPERIMENT_KIT. Bản đầu giao nội bộ, phí cấu hình cố định 0đ;
+cho EQUIPMENT/EXPERIMENT_KIT. Phí giao tận nơi hiện cố định 0 đ;
 không gọi/giả lập GHN, tracking hoặc báo giá hãng vận chuyển. Snapshot cách nhận,
 địa chỉ và contact thuộc booking, chỉ owner/admin/staff đúng LAB đọc. Thiết bị
 vẫn cần staff bàn giao/nhận trả. Mọi bàn giao bắt đầu tối đa 30 phút trước lịch.

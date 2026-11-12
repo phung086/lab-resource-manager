@@ -1,3 +1,4 @@
+import { formatVnd } from '../utils/currency';
 import React, { useEffect, useState } from "react";
 import { apiRequest } from "../api.js";
 import { useLocale } from "../providers/LocaleProvider";
@@ -25,7 +26,7 @@ export function ResourcePricingSummary({ resourceId }: { resourceId: string }) {
   return <>
     {rules.length ? <dl className="resource-pricing-rules">{rules.map(rule => <div key={rule.id}>
       <dt>{rule.label || rule.purposeCode}<small>{rule.purposeCode}</small></dt>
-      <dd>{new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(rule.hourlyRateVnd)}<small>{tr("ui.catalogue.perHour")}</small></dd>
+      <dd>{formatVnd(rule.hourlyRateVnd, locale)}<small>{tr("ui.catalogue.perHour")}</small></dd>
     </div>)}</dl> : <p className="resource-detail-empty">{tr("ui.catalogue.noPricing")}</p>}
   </>;
 }

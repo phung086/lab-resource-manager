@@ -69,13 +69,9 @@ export function publicCustomerUser(user, loyalty = null) {
     fullName: user.fullName,
     role: user.role,
     isActive: user.isActive,
-    studentId: user.studentId || null,
-    department: user.department || null,
     phone: user.phone || null,
-    customerType: user.customerType || "INTERNAL",
-    customerTypeSemantics: "SELF_DECLARED_UNVERIFIED",
-    organization: user.organization || null,
     passwordResetRequired: Boolean(user.passwordResetRequired),
+    passwordLoginEnabled: user.passwordLoginEnabled !== false,
     defaultAddress: user.defaultAddressProvinceCode ? {
       addressLine: user.defaultAddressLine,
       provinceCode: user.defaultAddressProvinceCode,
@@ -160,8 +156,6 @@ function guestProfile(payload, phone, address) {
   return {
     fullName: String(payload.fullName || "").trim(),
     phone,
-    organization: String(payload.organization || "").trim() || null,
-    customerType: "EXTERNAL",
     defaultAddressLine: address.addressLine,
     defaultAddressProvinceCode: address.provinceCode,
     defaultAddressProvinceName: address.provinceName,
@@ -275,8 +269,6 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
         resourceId: payload.booking.resourceId,
         afterState: {
           role: user.role,
-          customerType: user.customerType,
-          customerTypeSemantics: "SELF_DECLARED_UNVERIFIED",
           passwordResetRequired: true
         },
         metadata: {
@@ -291,12 +283,6 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
         targetType: AUDIT_TARGET_TYPES.USER,
         targetId: user.id,
         resourceId: payload.booking.resourceId,
-        beforeState: {
-          customerType: user.customerType
-        },
-        afterState: {
-          customerType: user.customerType
-        },
         metadata: {
           bookingId: booking.id,
           source: "guest_booking"

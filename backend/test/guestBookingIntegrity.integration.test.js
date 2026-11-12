@@ -60,7 +60,6 @@ function completionPayload(targetEmail, resourceId, offset, overrides = {}) {
     otpCode: deliveredCodes.get(targetEmail),
     fullName: "Guest Submitted Name",
     phone,
-    organization: "Guest Submitted Organization",
     address: { addressLine: "123 Nguyen Trai", provinceCode: "79", wardCode: "26734" },
     booking: {
       resourceId,
@@ -217,7 +216,8 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
       .send(completionPayload(target, resources.free, 150));
     assert.equal(response.status, 201, JSON.stringify(response.body));
     const user = await isolated.user.findUnique({ where: { email: target } });
-    assert.equal(user.customerType, "EXTERNAL");
+    assert.equal(user.customerType, null);
+    assert.equal(Object.hasOwn(response.body.user, "customerType"), false);
     assert.equal(user.passwordResetRequired, true);
     assert.equal(await bcrypt.compare(phone, user.passwordHash), true);
     assert.equal(await isolated.booking.count({ where: { requestedById: user.id } }), 1);

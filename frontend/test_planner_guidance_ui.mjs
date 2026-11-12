@@ -15,6 +15,9 @@ const resources = [
   ["qa-5", "EQUIPMENT", "GPU_SERVER", "Máy trạm kiểm thử"], ["qa-6", "MACHINE", "OTHER", "Máy kiểm thử"],
   ["qa-7", "EXPERIMENT_KIT", "KIT", "Bộ kiểm thử"], ["qa-8", "MATERIAL", "MATERIAL", "Vật tư kiểm thử"],
   ["qa-9", null, "ROOM", "Tài nguyên chưa phân loại"],
+  ["qa-10", "ROOM", "ROOM", "Phòng kiểm thử C"],
+  ["qa-11", "EQUIPMENT", "OTHER", "Thiết bị kiểm thử D"],
+  ["qa-12", "ROOM", "ROOM", "Phòng kiểm thử E"],
 ].map(([id, category, subtype, name]) => ({ id, code: id.toUpperCase(), category, subtype, name, description: "Hồ sơ kiểm thử giao diện, không phải tài sản thực tế.", laboratoryId: lab.id, laboratory: lab, labPolicy: lab.labPolicy, location: lab.name, capacity: category === "ROOM" ? 24 : 1, operationalStatus: id === "qa-4" ? "MAINTENANCE" : "AVAILABLE", availability: { state: id === "qa-4" ? "UNAVAILABLE" : "AVAILABLE" }, bookingState: "bookable", effectiveRequiresApproval: true, media: [], trainingRequirements: [], specs: { environment: "LOCAL_DEMO", technical: { resolution: "24 MP", includedAccessories: ["Cáp kiểm thử", "Giá đỡ kiểm thử"], sensor: { format: "APS-C", stabilisation: false } }, usageGuide: { beforeUse: ["Kiểm tra cùng cán bộ."], steps: ["Theo tài liệu đúng model."], afterUse: ["Kiểm tra khi trả."], safetyNotes: "Hướng dẫn kiểm thử." } } }));
 
 function contrastScan(root = document.body) {
@@ -119,6 +122,19 @@ try {
   assert.equal(await page.locator('.planner-booking-actions .btn-primary').isEnabled(),true);
   await page.locator('.planner-step-context button').click();
   await page.locator('.planner-resource-card').first().waitFor();
+  const picker = page.locator('.planner-resource-picker');
+  const columns = () => picker.locator('.planner-resource-options').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length);
+  assert.equal(await columns(),3,'Wide picker has three columns');
+  assert.equal(await picker.locator('.planner-resource-card').count(),9,'First page fills three rows');
+  assert.equal(await picker.getByText(/Hồ sơ kiểm thử giao diện/).count(),0,'Long catalogue descriptions stay in details');
+  const blocked = picker.locator('.planner-resource-card').filter({hasText:'QA-4'});
+  assert.equal(await blocked.locator('.planner-resource-option').innerText(),vi['ui.catalogue.calendar']);
+  await picker.getByRole('button',{name:vi['ui.planner.nextResources']}).click();
+  await picker.getByText('Phòng kiểm thử E').waitFor();
+  assert.equal(await picker.locator('.planner-resource-card').count(),3);
+  await picker.getByRole('button',{name:vi['ui.planner.previousResources']}).click();
+  await picker.getByText('Camera kiểm thử').waitFor();
+  await picker.screenshot({path:`${screenshots}/resource-choice-desktop.png`});
   assert.ok(await page.locator('.planner-resource-photo img').count()>0);
   const card=page.locator('.planner-resource-card').filter({has:page.locator('small',{hasText:'QA-3'})});
   await card.locator('.btn-secondary').click();
@@ -127,10 +143,15 @@ try {
   await page.keyboard.press('Escape');
   await page.locator('[role=dialog]').waitFor({state:'hidden'});
   await page.setViewportSize({width:390,height:844});
+  assert.equal(await columns(),1,'Narrow picker stacks cards');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:`${screenshots}/resource-choice-mobile.png`,fullPage:true});
+  await page.locator('.header-2026').getByRole('button',{name:'EN',exact:true}).click();
+  await picker.getByRole('heading',{name:'Choose a resource to see its schedule',exact:true}).waitFor();
+  assert.ok(await picker.getByText('Service hours 08:00–20:00',{exact:true}).count()>0);
   await card.locator('.btn-primary').click();
   await page.locator('.planner-slot-panel:not([hidden])').waitFor();
+  await page.waitForFunction(()=>document.activeElement?.matches('.planner-slot-heading h2'));
   assert.equal(await inputs.first().inputValue(),'09:00');
   assert.equal(await inputs.last().inputValue(),'10:00');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);

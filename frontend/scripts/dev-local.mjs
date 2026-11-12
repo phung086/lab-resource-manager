@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 const mainComparison = process.argv.includes("--main");
 const unifiedDemo = process.argv.includes("--demo");
 const paymentsEnabled = unifiedDemo || process.argv.includes('--payments') || process.env.LRM_LOCAL_PAYMENTS_ENABLED !== 'false';
-const monitoringEnabled = unifiedDemo || process.argv.includes("--monitoring");
+const monitoringEnabled = unifiedDemo || process.argv.includes("--monitoring") || process.env.LRM_LOCAL_MONITORING_ENABLED !== "false";
 const source = mainComparison ? path.resolve(root, "../lab-resource-manager-main") : root;
 const frontend = path.join(source, "frontend");
 const uiPort = mainComparison ? "5180" : "5173";

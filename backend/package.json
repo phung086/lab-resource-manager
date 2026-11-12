@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:google-auth": "node --test test/googleAuth.test.js",
+    "test:google-auth:prepare": "node scripts/prepareGoogleAuthTest.mjs",
+    "test:google-auth:integration": "node --test --test-concurrency=1 test/googleAuth.integration.test.js",
     "test:planning": "node --test test/planning.test.js",
     "test:media": "node --test test/resourceMedia.test.js",
     "test:release:integration": "node scripts/runReleaseIntegration.mjs",
@@ -18,7 +21,6 @@
     "docs:erd:check": "node scripts/generateCoreErd.mjs --check",
     "db:migrate": "node scripts/deployCanonicalMigrations.mjs",
     "db:status": "prisma migrate status",
-    "db:push": "prisma db push",
     "db:guard": "node prisma/applyBookingGuard.js",
     "db:deploy": "npm run db:migrate && npm run db:status && node prisma/seedAdmin.js",
     "db:seed:admin": "node prisma/seedAdmin.js",
@@ -45,7 +47,7 @@
     "demo:local": "node scripts/startLocalDemo.mjs",
     "test:operations-report": "cross-env LOG_FORMAT=dev node --test test/operationsReport.test.js test/resourceCare.test.js test/monitoringLimits.test.js",
     "test:operations-report:integration": "cross-env LOG_FORMAT=dev node --test test/operationsReport.integration.test.js",
-    "test:required": "npm run test:planning && npm run test:core && npm run test:release-security && npm run test:assistant && npm run test:operations-report && npm run test:loyalty && npm run test:chatgpt-bridge && npm run test:media",
+    "test:required": "npm run test:planning && npm run test:core && npm run test:release-security && npm run test:google-auth && npm run test:assistant && npm run test:operations-report && npm run test:loyalty && npm run test:chatgpt-bridge && npm run test:media",
     "test:release-security": "cross-env LOG_FORMAT=dev node --test test/releaseSecurity.test.js test/metricsAccess.test.js test/emailTemplate.test.js",
     "test:batch7": "cross-env LOG_FORMAT=dev node --test test/batch7.production-demo-hardening.integration.test.js",
     "test:batch8": "cross-env LOG_FORMAT=dev node --test test/batch8.smart-monitoring.integration.test.js",
@@ -70,7 +72,11 @@
     "test:chatgpt-bridge": "node --test test/chatgptBridgeNetwork.test.js test/chatgptBridgeTime.test.js test/localBridgeGateway.test.js",
     "test:chatgpt-bridge:prepare": "node scripts/prepareChatgptBridgeTest.mjs",
     "test:chatgpt-bridge:integration": "node --test --test-concurrency=1 test/chatgptBridge.integration.test.js test/chatgptBridgeEvents.integration.test.js",
-    "chatgpt-bridge:package": "node scripts/buildChatgptBridgePlugin.mjs"
+    "chatgpt-bridge:package": "node scripts/buildChatgptBridgePlugin.mjs",
+    "demo:resources": "node scripts/seedGraduationResources.mjs",
+    "demo:monitoring": "node scripts/runDemoMonitoring.mjs",
+    "demo:monitoring:verify": "node scripts/verifyDemoMonitoring.mjs",
+    "test:demo-monitoring": "node --test test/demoMonitoring.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1138.0",
@@ -85,6 +91,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-rate-limit": "^7.4.1",
+    "google-auth-library": "^11.3.3",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",

@@ -20,8 +20,6 @@ export type DirectoryUser = {
   role: UserRole;
   isActive: boolean;
   phone?: string | null;
-  organization?: string | null;
-  department?: string | null;
   deletedAt?: string | null;
   _count?: { bookings: number };
 };

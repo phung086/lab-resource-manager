@@ -9,7 +9,7 @@ Ngày đối chiếu: 03/10/2026. Code: PR #22, commit `66e744473c940515548048d4
 | Phần | Code hiện tại | Sau khi cấu hình |
 | --- | --- | --- |
 | VNPAY | Tạo checkout, nhận IPN có chữ ký, return hiển thị, đối soát ngoại lệ | Có thể thử merchant sandbox; cần HTTPS công khai cho IPN |
-| VietQR | Tạo QR, chưa có xác nhận chuyển tiền tự động | Không tự đánh dấu đã trả tiền sau khi quét/chuyển khoản |
+| VietQR | QR theo đơn và xác nhận báo có qua SePay | Cần tài khoản liên kết và webhook HTTPS. Xem [README](../README.md#chuyển-khoản-vietqr-qua-sepay). |
 | Ảnh/video | S3-compatible upload, HEAD xác minh metadata, gallery, xóa | Có thể nối R2/S3 và kiểm PUT/HEAD/GET/DELETE thực |
 | Email OTP khách | Nodemailer SMTP và fail-closed khi gửi lỗi | Có thể gửi OTP thật sau khi SMTP/sender hoạt động |
 | Email duyệt lịch/nhắc lịch/sự cố | Có hàm/template email nhưng không có caller nghiệp vụ đang hoạt động | Cần nối sự kiện, worker/outbox, retry và template VI/EN |
@@ -318,7 +318,7 @@ Khoản thuê, tiền cọc, phí vận chuyển và tiền COD là các nghĩa 
 - Booking đã hủy nhận success muộn vào manual_review, không khôi phục booking.
 - Sau kiểm sandbox, lưu bằng chứng provider, txnRef/amount/status; che secret/token, không ghi toàn URL checkout vào tài liệu công khai.
 
-VietQR hiện chỉ hỗ trợ tạo QR, providerAvailability báo confirmation NOT_CONFIGURED; QR không chứng minh chuyển tiền. VNPAY QueryDr/refund chưa tích hợp đầy đủ; thao tác resolve reconciliation nội bộ không hoàn tiền qua ngân hàng. `vnpayMode` hiện còn cố định SANDBOX: trước production cần chỉnh hiển thị theo môi trường, dùng merchant production được cấp và nghiệm thu live riêng. Đổi endpoint trong env một mình không chứng nhận sẵn sàng thu tiền thực.
+VietQR xác nhận chuyển tiền khi webhook SePay hợp lệ khớp giao dịch. Xem [cấu hình SePay](../README.md#chuyển-khoản-vietqr-qua-sepay). VNPAY QueryDr/refund chưa tích hợp đầy đủ; thao tác resolve reconciliation nội bộ không hoàn tiền qua ngân hàng. `vnpayMode` hiện còn cố định SANDBOX: trước production cần chỉnh hiển thị theo môi trường, dùng merchant production được cấp và nghiệm thu live riêng. Đổi endpoint trong env một mình không chứng nhận sẵn sàng thu tiền thực.
 
 ## 7. Vận chuyển thiết bị: cấu hình nhà cung cấp và phát triển luồng
 

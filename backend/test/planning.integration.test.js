@@ -44,6 +44,40 @@ test('bundle atomic creation, retry idempotency and current policy snapshot', as
   const changed = await http.post('/api/planning/bundles').set(auth('owner')).send({ ...input, title: 'Changed request' });
   assert.equal(changed.status, 409);
 });
+test('a reviewed bundle can book a room and equipment using their respective fulfillment modes', async () => {
+  const room = await resource(), equipment = await resource();
+  await prisma.resource.update({ where: { id: room.id }, data: { category: 'ROOM' } });
+  const input = payload([room.id, equipment.id]);
+  const review = await http.post('/api/planning/review').set(auth('owner')).send(input.plan);
+  assert.equal(review.status, 200, JSON.stringify(review.body));
+  const created = await http.post('/api/planning/bundles').set(auth('owner')).send(input);
+  assert.equal(created.status, 200, JSON.stringify(created.body));
+  const byResource = new Map(created.body.bookings.map(booking => [booking.resourceId, booking]));
+  assert.equal(byResource.get(room.id).fulfillmentSnapshot.mode, 'ROOM_SELF_SERVICE');
+  assert.equal(byResource.get(equipment.id).fulfillmentSnapshot.mode, 'LAB_PICKUP');
+});
+
+test('repeat draft reads the owner’s historical resource group without carrying time, price or contact', async () => {
+  const a = await resource(), b = await resource();
+  const input = payload([a.id, b.id]);
+  const created = await http.post('/api/planning/bundles').set(auth('owner')).send(input);
+  assert.equal(created.status, 200, JSON.stringify(created.body));
+  const booking = created.body.bookings[0];
+  const path = `/api/bookings/${booking.id}/repeat-draft`;
+  assert.equal((await http.get(path).set(auth('owner'))).status, 409);
+  for (const row of created.body.bookings) {
+    assert.equal((await http.post(`/api/bookings/${row.id}/cancel`).set(auth('owner')).send({ reason: 'Repeat draft integration test' })).status, 200);
+  }
+  const draft = await http.get(path).set(auth('owner'));
+  assert.equal(draft.status, 200, JSON.stringify(draft.body));
+  assert.equal(draft.headers['cache-control'], 'no-store');
+  assert.deepEqual(Object.keys(draft.body), ['resources']);
+  assert.deepEqual(new Set(draft.body.resources.map(row => row.id)), new Set(input.plan.resourceIds));
+  assert.deepEqual(Object.keys(draft.body.resources[0]).sort(), ['code','id','laboratory','laboratoryId','name']);
+  assert.equal((await http.get(path).set(auth('peer'))).status, 404);
+  assert.equal((await http.get(path).set(auth('staff'))).status, 403);
+  assert.equal(await prisma.booking.count({ where: { resourceId: { in: input.plan.resourceIds } } }), 2);
+});
 test('last-resource failure rolls back first booking, group, fee and audit', async () => {
   const resources = [await resource(),await resource()].sort((a,b) => a.id.localeCompare(b.id));
   await prisma.resource.update({ where: { id: resources[1].id }, data: { operationalStatus: 'BROKEN' } });

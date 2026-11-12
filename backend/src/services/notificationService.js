@@ -2,6 +2,7 @@ import { localize } from '../locales/index.js';
 import crypto from "crypto";
 
 import { prisma } from "../db.js";
+import { settlementProviders } from './paymentProviders.js';
 
 export const BOOKING_UPCOMING_REMINDER_MINUTES = Number(process.env.BOOKING_UPCOMING_REMINDER_MINUTES || 30);
 export const RETURN_REMINDER_MINUTES = Number(process.env.RETURN_REMINDER_MINUTES || 15);
@@ -37,7 +38,7 @@ function reminderSchedule(booking) {
 
 export async function scheduleBookingReminders(tx, booking, now = new Date()) {
   if (booking.status !== "CONFIRMED" && booking.status !== "CHECKED_OUT") return;
-  if (booking.feeAmountVnd > 0 && !await tx.paymentTransaction.findFirst({ where: { bookingId: booking.id, userId: booking.requestedById, status: 'success', amount: booking.feeAmountVnd, currency: 'VND', provider: { in: ['vnpay','vietqr'] }, reconciliationStatus: 'none', paidAt: { not: null } } })) return;
+  if (booking.feeAmountVnd > 0 && !await tx.paymentTransaction.findFirst({ where: { bookingId: booking.id, userId: booking.requestedById, status: 'success', amount: booking.feeAmountVnd, currency: 'VND', provider: { in: settlementProviders }, reconciliationStatus: 'none', paidAt: { not: null } } })) return;
   if (booking.endAt <= now) return;
 
   for (const definition of reminderSchedule(booking)) {
@@ -108,7 +109,7 @@ export async function dispatchDueNotifications(client = prisma, now = new Date()
     const bookingId = reminder.messageParams?.bookingId;
     const booking = typeof bookingId === 'string' ? await client.booking.findUnique({ where: { id: bookingId } }) : null;
     const active = booking && ['CONFIRMED','CHECKED_OUT'].includes(booking.status) && booking.endAt > now && (reminder.type !== 'BOOKING_UPCOMING' || (booking.status === 'CONFIRMED' && booking.startAt > now));
-    const paid = active && (booking.feeAmountVnd === 0 || await client.paymentTransaction.findFirst({ where: { bookingId, userId: booking.requestedById, status: 'success', amount: booking.feeAmountVnd, currency: 'VND', provider: { in: ['vnpay','vietqr'] }, reconciliationStatus: 'none', paidAt: { not: null } } }));
+    const paid = active && (booking.feeAmountVnd === 0 || await client.paymentTransaction.findFirst({ where: { bookingId, userId: booking.requestedById, status: 'success', amount: booking.feeAmountVnd, currency: 'VND', provider: { in: settlementProviders }, reconciliationStatus: 'none', paidAt: { not: null } } }));
     if (paid) reminderCount += (await client.notification.updateMany({ where: { id: reminder.id, sentAt: null }, data: { sentAt: now } })).count;
     else await client.notification.deleteMany({ where: { id: reminder.id, sentAt: null } });
   }

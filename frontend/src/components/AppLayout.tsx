@@ -2,16 +2,19 @@ import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar.tsx";
-import { Header } from "./Header.tsx";
+import { Header, type HeaderNotice } from "./Header.tsx";
 import { ProjectFooter } from "./features/ProjectFooter";
+import { HandoverReminder } from "./features/operations/HandoverReminder";
 import { KeyRound } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.tsx";
 import "../styles/home-structure.css";
 import { PasswordChangeForm } from './features/accounts/PasswordChangeForm';
 import { AI_ASSISTANT_ENABLED } from "../config/featureFlags";
 import { AssistantLauncher } from './features/assistant/AssistantLauncher';
-import { MaintenanceNoticeToast } from './features/monitoring/MaintenanceNoticeToast';
+import type { SearchableResource } from '../utils/resourceSearch';
 const LaboratoryAssistant = React.lazy(() => import("./features/assistant/LaboratoryAssistant"));
+const DESKTOP_NAVIGATION = "(min-width: 1100px)";
+const NAVIGATION_PREFERENCE = "lrm.navigation.expanded";
 
 export interface AppLayoutProps {
   activeTab: string;
@@ -24,16 +27,20 @@ export interface AppLayoutProps {
     quotaUsed?: number;
     quotaTotal?: number;
     passwordResetRequired?: boolean;
+    passwordLoginEnabled?: boolean;
   } | null;
   locale: string;
   onLocaleChange: (locale: string) => void;
-  notifications?: Array<{ id: string | number; readAt?: string | null }>;
+  notifications?: HeaderNotice[];
   notificationUnreadCount?: number | null;
   incidents?: Array<{ id: string | number; status?: string }>;
   incidentOpenCount?: number;
   conflictsCount?: number;
   loading?: boolean;
+  searchResources?: readonly SearchableResource[];
+  searchResourcesReady?: boolean;
   onRefresh?: () => void;
+  selectionControl?: React.ReactNode;
   onLogout?: () => void;
   onPasswordChanged?: () => void;
   onAssistantPrefill?: (slot: { resourceId: string; startAt: string; endAt: string; title?: string; purpose?: string; purposeCode?: string }) => void;
@@ -52,27 +59,39 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   incidentOpenCount,
   conflictsCount = 0,
   loading = false,
+  searchResources,
+  searchResourcesReady,
   onRefresh,
+  selectionControl,
   onLogout,
   onPasswordChanged,
   onAssistantPrefill,
   children
 }) => {
   const { tr } = useLocale();
-  const [navigationPinned, setNavigationPinned] = useState(() => {
-    try { return localStorage.getItem('lrm.navigation.pinned') !== 'false' && window.innerWidth >= 1100; } catch { return false; }
+  const [desktopNavigation, setDesktopNavigation] = useState(() => window.matchMedia(DESKTOP_NAVIGATION).matches);
+  const [navigationExpanded, setNavigationExpanded] = useState(() => {
+    try {
+      const saved = localStorage.getItem(NAVIGATION_PREFERENCE) ?? localStorage.getItem("lrm.navigation.pinned");
+      return saved !== "false";
+    } catch { return true; }
   });
-  function pinNavigation(pinned: boolean) {
-    setNavigationPinned(pinned);
-    try { localStorage.setItem('lrm.navigation.pinned', String(pinned)); } catch { /* Storage can be unavailable. */ }
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const mobileMenuOpen = !desktopNavigation && navigationOpen;
+
+  function changeNavigationExpanded(expanded: boolean) {
+    setNavigationExpanded(expanded);
+    try { localStorage.setItem(NAVIGATION_PREFERENCE, String(expanded)); } catch { /* Storage can be unavailable. */ }
   }
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 1100px)');
-    const resize = () => { if (!media.matches) setNavigationPinned(false); };
+    const media = window.matchMedia(DESKTOP_NAVIGATION);
+    const resize = () => {
+      setDesktopNavigation(media.matches);
+      setNavigationOpen(false);
+    };
     media.addEventListener('change', resize);
     return () => media.removeEventListener('change', resize);
   }, []);
-  const [navigationOpen, setNavigationOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantMounted, setAssistantMounted] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -175,7 +194,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const unreadCount = notificationUnreadCount === null ? null : notificationUnreadCount ?? notifications.filter((n) => !n.readAt).length;
 
   return (
-    <div className="app-shell-2026 workspace-shell lab-spectrum" data-workspace-role={user?.role} data-workspace-view={activeTab}>
+    <div className="app-shell-2026 workspace-shell lab-spectrum lab-studio" data-workspace-role={user?.role} data-workspace-view={activeTab}>
       <a className="skip-link" href="#workspace-main">{translate("ui.skip_to_main_content_a75d7c33")}</a>
       {/* Primary navigation */}
       <Sidebar
@@ -188,24 +207,29 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         incidentOpenCount={incidentOpenCount}
         conflictsCount={conflictsCount}
         locale={locale}
-        pinned={navigationPinned}
-        onPinnedChange={pinNavigation}
-        expanded={navigationOpen}
-        onExpandedChange={setNavigationOpen}
+        desktop={desktopNavigation}
+        desktopExpanded={navigationExpanded}
+        onDesktopExpandedChange={changeNavigationExpanded}
+        mobileOpen={mobileMenuOpen}
+        onMobileOpenChange={setNavigationOpen}
       />
 
       {/* 2. Main Work Area with Header */}
-      <div className="main-content-column-2026" inert={navigationOpen}>
+      <div className="main-content-column-2026" inert={mobileMenuOpen}>
         <Header
-          showSearch={activeTab !== 'smart_calendar'}
+          showSearch={activeTab !== 'smart_calendar' && activeTab !== 'resources'}
+          searchResources={searchResources}
+          searchResourcesReady={searchResourcesReady}
           title={currentTitle}
           user={user}
           locale={locale}
           onLocaleChange={onLocaleChange}
           notificationsCount={unreadCount}
+          notifications={notifications}
           loading={loading}
           onRefresh={onRefresh}
-          onOpenNotifications={() => handleSelectTab("escalations")}
+          selectionControl={selectionControl}
+          onOpenNotifications={id => navigateFromShell('escalations', id ? { notification: id } : undefined)}
           onOpenChangePassword={() => setChangePasswordOpen(true)}
           onOpenProfile={() => handleSelectTab("profile")}
           onOpenHome={() => navigateFromShell("home")}
@@ -213,18 +237,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           onLogout={onLogout}
         />
 
+        {user?.role === 'CUSTOMER' && !user.passwordResetRequired && !changePasswordOpen && <HandoverReminder
+          key={user.id} onOpen={id => navigateFromShell('bookings', { booking: id })} />}
+
         <main id="workspace-main" tabIndex={-1} className="main-body-container-2026">
-          {AI_ASSISTANT_ENABLED && ['support','payments','monitoring','resources','maintenance'].includes(activeTab) && !navigationOpen && !changePasswordOpen && <div className="assistant-inline-access"><AssistantLauncher inline open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} /></div>}
           {children}
-          <MaintenanceNoticeToast role={user?.role || ''} actorId={user?.id}/>
         </main>
         <ProjectFooter variant="workspace" role={user?.role} onNavigate={navigateFromShell} />
       </div>
 
-      {AI_ASSISTANT_ENABLED && !['support','payments','monitoring','resources','maintenance'].includes(activeTab) && !navigationOpen && !changePasswordOpen && <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} />}
+      {AI_ASSISTANT_ENABLED && !mobileMenuOpen && !changePasswordOpen && <AssistantLauncher open={assistantOpen} onClick={() => assistantOpen ? setAssistantOpen(false) : openAssistant()} />}
 
       {AI_ASSISTANT_ENABLED && assistantMounted && <React.Suspense fallback={assistantOpen ? <p className="assistant-loading" role="status">{translate("ui.opening_assistant_9a8f8008")}</p> : null}>
-        <LaboratoryAssistant actorRole={user?.role} isOpen={assistantOpen && !navigationOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />
+        <LaboratoryAssistant actorRole={user?.role} isOpen={assistantOpen && !mobileMenuOpen && !changePasswordOpen} workspaceTab={activeTab} onClose={() => setAssistantOpen(false)} onPrefill={slot => onAssistantPrefill?.(slot)} onNavigate={navigateFromShell} />
       </React.Suspense>}
 
       <BaseModal2026
@@ -239,7 +264,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           {(!user?.passwordResetRequired || passwordSuccess) && <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={passwordBusy}>{tr("ui.close_5d54c2a1")}</button>}
         </>}
       >
-        <PasswordChangeForm email={user?.email} onBusyChange={setPasswordBusy} onSuccess={() => { setPasswordSuccess(true); onPasswordChanged?.(); }} />
+        <PasswordChangeForm email={user?.email} passwordLoginEnabled={user?.passwordLoginEnabled} onBusyChange={setPasswordBusy} onSuccess={() => { setPasswordSuccess(true); onPasswordChanged?.(); }} />
       </BaseModal2026>
     </div>
   );

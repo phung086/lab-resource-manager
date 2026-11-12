@@ -1,3 +1,6 @@
+import { WorkspaceHero } from "./WorkspaceHero";
+import { ExpandableCard } from "../../base/ExpandableCard";
+import { StatusPill } from '../resources/ResourceStatusPill';
 import { useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -18,9 +21,9 @@ import {
   CircleAlert,
 } from "lucide-react";
 import { useLocale } from "../../../providers/LocaleProvider";
-import { BookingStatusBadge } from "../../BookingStatusBadge";
 import { formatVietnamDateTime } from "../../../utils/timezone";
 import { EmptyState, Notices, SectionTitle } from "./HomeComponents";
+import { CustomerAgenda } from "./CustomerAgenda";
 import { PaymentHoldNotice } from "../payments/PaymentHoldNotice";
 import { resourceImageProps } from "../../../utils/resourceImage";
 import { ownBookings, upcomingBookings } from "./homeSelectors";
@@ -69,12 +72,7 @@ export function CustomerHome(props: RoleHomeProps) {
     (row) => row.status === "PENDING_APPROVAL" && !row.paymentDueAt,
   );
   const upcoming = upcomingBookings(rows);
-  const agenda = [...overdue, ...holds, ...upcoming, ...legacy]
-    .filter(
-      (row, index, all) =>
-        all.findIndex((other) => other.id === row.id) === index,
-    )
-    .slice(0, 5);
+  const agenda = [...overdue, ...holds, ...upcoming, ...legacy];
   const anchor = agenda[0];
   const state = overdue.length
     ? "overdue"
@@ -109,6 +107,9 @@ export function CustomerHome(props: RoleHomeProps) {
       minute: "2-digit",
       hourCycle: "h23",
     }).format(new Date(value));
+  const dateOnly = (value: string) => new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en-GB", {
+    timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric",
+  }).format(new Date(value));
   const date = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en-GB", {
     timeZone: "Asia/Ho_Chi_Minh",
     weekday: "long",
@@ -153,23 +154,57 @@ export function CustomerHome(props: RoleHomeProps) {
     });
   return (
     <div className="customer-hub discovery-studio">
-      <header className="hub-welcome">
-        <div className="discovery-personal-heading">
-          <span>{t("ui.hub.greeting", { name: user.fullName })}</span>
-          <h1 id="workspace-title">{t("ui.hub.title")}</h1>
-          <strong className="sr-only">{user.fullName}</strong>
-        </div>
-        <time>{date}</time>
-      </header>
+      <WorkspaceHero title={t("ui.hub.greeting", {name:user.fullName})} subtitle={date} role={user.role} onNavigate={onNavigate}/>
       <div className="hub-top-grid">
+        <details className="studio-finder"><summary id="hub-search-title"><Search size={18} aria-hidden="true"/>{t("ui.hub.findResource")}</summary>
+        <section className="hub-search" aria-labelledby="hub-search-title">
+          <form
+            className="home-finder"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSearch(query.trim(), category);
+            }}
+          >
+            <label className="hub-search-input journey-finder-field">
+              <span className="sr-only">
+                {t("ui.home.customer.searchPlaceholder")}
+              </span>
+              <Search size={16} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t("ui.home.customer.searchPlaceholder")}
+                maxLength={120}
+              />
+            </label>
+            <label>
+              <span className="sr-only">{t("ui.home.category.all")}</span>
+              <select
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+              >
+                <option value="">{t("ui.home.category.all")}</option>
+                {categories.map((value) => (
+                  <option key={value} value={value}>
+                    {t(CATEGORY_LABELS[value])}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="hub-button hub-button-search">
+              {t("ui.home.customer.search")}
+              <ArrowRight size={16} aria-hidden="true" />
+            </button>
+          </form>
+        </section>
+        </details>
         <section
           className="hub-focus"
           data-state={state}
+          data-has-session={Boolean(anchor)}
           aria-labelledby="hub-focus-title"
         >
-          <div className="hub-orbit" aria-hidden="true">
-            <FlaskConical strokeWidth={1} size={92} />
-          </div>
           <div className="hub-focus-status">
             <span className="hub-status-light" aria-hidden="true" />
             {t(
@@ -197,7 +232,7 @@ export function CustomerHome(props: RoleHomeProps) {
                 <time dateTime={anchor.endAt}>{time(anchor.endAt)}</time>
               </div>
               <p className="hub-session-date">
-                {formatVietnamDateTime(anchor.startAt)}
+                {dateOnly(anchor.startAt)}
               </p>
               <p className="hub-session-location">
                 <MapPin size={14} aria-hidden="true" />
@@ -250,52 +285,6 @@ export function CustomerHome(props: RoleHomeProps) {
             </button>
           </div>
         </section>
-        <section className="hub-search" aria-labelledby="hub-search-title">
-          <div className="hub-search-heading">
-            <Search size={21} aria-hidden="true" />
-            <h2 id="hub-search-title">{t("ui.hub.findResource")}</h2>
-          </div>
-          <p>{t("ui.home.customer.description")}</p>
-          <form
-            className="home-finder"
-            onSubmit={(event) => {
-              event.preventDefault();
-              onSearch(query.trim(), category);
-            }}
-          >
-            <label className="hub-search-input journey-finder-field">
-              <span className="sr-only">
-                {t("ui.home.customer.searchPlaceholder")}
-              </span>
-              <Search size={16} aria-hidden="true" />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t("ui.home.customer.searchPlaceholder")}
-                maxLength={120}
-              />
-            </label>
-            <label>
-              <span className="sr-only">{t("ui.home.category.all")}</span>
-              <select
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-              >
-                <option value="">{t("ui.home.category.all")}</option>
-                {categories.map((value) => (
-                  <option key={value} value={value}>
-                    {t(CATEGORY_LABELS[value])}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="hub-button hub-button-search">
-              {t("ui.home.customer.search")}
-              <ArrowRight size={16} aria-hidden="true" />
-            </button>
-          </form>
-        </section>
       </div>
       <section
         className="hub-metrics"
@@ -314,7 +303,7 @@ export function CustomerHome(props: RoleHomeProps) {
             </span>
             <strong>{count ?? (summary ? 0 : "—")}</strong>
             <span className="hub-metric-link">
-              {t("ui.hub.viewBookings")}
+              <span className="sr-only">{t("ui.hub.viewBookings")}</span>
               <ArrowRight size={13} aria-hidden="true" />
             </span>
           </button>
@@ -322,101 +311,7 @@ export function CustomerHome(props: RoleHomeProps) {
       </section>
       <div className="hub-body-grid">
         <div className="hub-main">
-          <section
-            className="hub-panel hub-agenda"
-            aria-labelledby="hub-agenda-title"
-          >
-            <header className="hub-panel-heading">
-              <h2 id="hub-agenda-title">{t("ui.hub.agenda")}</h2>
-              <button type="button" onClick={() => onNavigate("bookings")}>
-                {t("ui.view_all_44aeb8cb")}
-                <ArrowRight size={14} aria-hidden="true" />
-              </button>
-            </header>
-            {agenda.length ? (
-              <div className="hub-agenda-scroll">
-                <table>
-                  <caption className="sr-only">
-                    {t("ui.hub.agendaScope")}
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">{t("ui.resource_9a35ef53")}</th>
-                      <th scope="col">{t("ui.time_b295fd62")}</th>
-                      <th scope="col">{t("ui.hub.status")}</th>
-                      <th scope="col">
-                        <span className="sr-only">
-                          {t("ui.home.session.viewRecord")}
-                        </span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {agenda.map((row) => {
-                      const Icon = categoryIcon(
-                        row.resource?.category || undefined,
-                      );
-                      return (
-                        <tr key={row.id}>
-                          <td>
-                            <div className="hub-agenda-resource">
-                              <span>
-                                <Icon size={19} aria-hidden="true" />
-                              </span>
-                              <div>
-                                <strong>
-                                  {row.resource?.name || row.title}
-                                </strong>
-                                <small>{row.bookingCode || row.id}</small>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <time dateTime={row.startAt}>
-                              {formatVietnamDateTime(row.startAt)}
-                            </time>
-                            <small>
-                              {time(row.startAt)} – {time(row.endAt)}
-                            </small>
-                          </td>
-                          <td>
-                            <BookingStatusBadge
-                              status={row.status}
-                              paymentDueAt={row.paymentDueAt}
-                            />
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="hub-row-action"
-                              aria-label={t("ui.hub.openBooking", {
-                                name: row.resource?.name || row.title,
-                              })}
-                              onClick={() =>
-                                onNavigate("bookings", { booking: row.id })
-                              }
-                            >
-                              <ArrowRight size={16} aria-hidden="true" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <EmptyState
-                titleKey="ui.home.next.empty"
-                detail="ui.home.next.emptyHint"
-                action="ui.home.findSlot"
-                onAction={() => onCalendar()}
-              />
-            )}
-            {agenda.length > 0 && (
-              <p className="hub-scope-note">{t("ui.hub.agendaScope")}</p>
-            )}
-          </section>
+          <CustomerAgenda rows={agenda} onNavigate={onNavigate} onCalendar={onCalendar} />
           <section
             className="hub-panel hub-catalog"
             aria-labelledby="hub-catalog-title"
@@ -470,23 +365,7 @@ export function CustomerHome(props: RoleHomeProps) {
                           />
                         )}
                         <span>{t(`enum.category.${row.category}`)}</span>
-                      </div>
-                      <div className="hub-resource-copy">
-                        <h3>{row.name}</h3>
-                        <p>
-                          {row.laboratory?.name || t("ui.home.resource.noLab")}
-                        </p>
-                        <small>
-                          {t(`enum.operational.${row.operationalStatus}`)}
-                        </small>
-                        <footer>
-                          {row.rental && (
-                            <strong>
-                              {row.rental.hourlyRateVnd.toLocaleString("vi-VN")}{" "}
-                              {t("ui.rental.perHour")}
-                            </strong>
-                          )}
-                          <button
+                          <button className="hub-image-action"
                             type="button"
                             onClick={() => onCalendar(row.id)}
                             aria-label={t("ui.hub.resourceCalendar", {
@@ -496,6 +375,21 @@ export function CustomerHome(props: RoleHomeProps) {
                             <CalendarPlus size={17} aria-hidden="true" />
                             {t("ui.hub.book")}
                           </button>
+                      </div>
+                      <div className="hub-resource-copy">
+                        <h3>{row.name}</h3>
+                        <p>
+                          {row.laboratory?.name || t("ui.home.resource.noLab")}
+                        </p>
+                        <small title={t('ui.physical_state_c30af32d')}><StatusPill value={row.operationalStatus} label={t(`enum.operational.${row.operationalStatus}`)} /></small>
+                        <footer>
+                          {row.rental && (
+                            <strong>
+                              {row.rental.hourlyRateVnd.toLocaleString("vi-VN")}{" "}
+                              {t("ui.rental.perHour")}
+                            </strong>
+                          )}
+
                         </footer>
                       </div>
                     </article>
@@ -546,8 +440,7 @@ export function CustomerHome(props: RoleHomeProps) {
               <ArrowRight size={16} aria-hidden="true" />
             </button>
           </section>
-          <details className="hub-guide">
-            <summary>{t("ui.home.customer.stepsTitle")}</summary>
+          <ExpandableCard className="hub-guide" title={t("ui.home.customer.stepsTitle")} icon={CheckCircle2} tone="violet">
             <ol>
               {[
                 ["ui.home.steps.find", "ui.home.steps.findHint"],
@@ -563,7 +456,7 @@ export function CustomerHome(props: RoleHomeProps) {
                 </li>
               ))}
             </ol>
-          </details>
+          </ExpandableCard>
         </aside>
       </div>
     </div>

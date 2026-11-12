@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../db.js';
 import { cancelPendingBookingReminders, scheduleBookingReminders } from './notificationService.js';
 import { notifyBookingEvent } from './bookingEventService.js';
+import { settlementProviders } from './paymentProviders.js';
 
 export const PAYMENT_HOLD_MS = 15 * 60 * 1000;
 export const isPaymentHold = booking => booking?.status === 'PENDING_APPROVAL' && Boolean(booking.paymentDueAt);
@@ -10,7 +11,7 @@ export const effectivePaymentDeadline = booking => booking?.paymentDueAt
 const expiredHoldWhere = now => ({ status: 'PENDING_APPROVAL', paymentDueAt: { not: null }, OR: [{ paymentDueAt: { lte: now } }, { startAt: { lte: now } }] });
 export const settledBookingPaymentWhere = booking => ({
   bookingId: booking.id, userId: booking.requestedById, amount: booking.feeAmountVnd,
-  currency: 'VND', status: 'success', provider: { in: ['vnpay', 'vietqr'] },
+  currency: 'VND', status: 'success', provider: { in: settlementProviders },
   paidAt: { not: null }, reconciliationStatus: 'none'
 });
 

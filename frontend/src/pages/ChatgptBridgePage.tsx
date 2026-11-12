@@ -1,3 +1,4 @@
+import { PageHeading } from '../components/base/PageHeading';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Unplug, RefreshCw, MessageSquare, Clock3 } from 'lucide-react';
 import { useLocale } from '../providers/LocaleProvider';
@@ -35,8 +36,8 @@ export default function ChatgptBridgePage({ actorRole }: { actorRole: string }) 
   }
   if (actorRole !== 'ADMIN') return <p role="alert">{tr('api.FORBIDDEN')}</p>;
   return <section className="view-section chatgpt-connection" aria-busy={loading || busy}>
-    <header className="chatgpt-connection-heading"><div><h1>{tr('bridge.title')}</h1><p>{tr('bridge.subtitle')}</p></div>
-      <button className="btn btn-secondary" type="button" disabled={busy || loading} onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />{tr('ui.refresh_46140fa8')}</button></header>
+    <PageHeading className="chatgpt-connection-heading"><div><h1>{tr('bridge.title')}</h1><p>{tr('bridge.subtitle')}</p></div>
+      <button className="btn btn-secondary" type="button" disabled={busy || loading} onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />{tr('ui.refresh_46140fa8')}</button></PageHeading>
     {error && <p className="alert danger" role="alert">{tr(error)}</p>}
     {loading ? <p role="status">{tr('ui.loading_data_84c68bd5')}</p> : consent ? <section className="chatgpt-consent">
       <MessageSquare aria-hidden="true" size={32} /><h2>{tr('bridge.consentTitle', { client: consent.clientName })}</h2>

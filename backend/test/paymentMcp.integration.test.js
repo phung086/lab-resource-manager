@@ -32,11 +32,10 @@ Object.assign(process.env, {
   VNPAY_RETURN_URL: "http://127.0.0.1:15003/api/payments/vnpay/return",
   VNPAY_IPN_URL: "http://127.0.0.1:15003/api/payments/vnpay/ipn",
   VIETQR_ENABLED: "true",
-  VIETQR_BANK_ID: "970436",
+  VIETQR_BANK: "Vietcombank",
   VIETQR_ACCOUNT_NO: "000000000000",
   VIETQR_ACCOUNT_NAME: "TEST FIXTURE ONLY",
-  VIETQR_API_KEY: "",
-  VIETQR_CLIENT_ID: "",
+  SEPAY_WEBHOOK_API_KEY: "isolated-sepay-fixture-key",
 });
 const [{ createApp }, { prisma }, { config }] = await Promise.all([
   import("../src/app.js"),
@@ -549,7 +548,7 @@ test(
         assert.equal(generated.body.vietqr.amount, 25000);
         assert.match(
           generated.body.vietqr.qrUrl,
-          /https:\/\/img.vietqr.io\/image\//,
+          /https:\/\/vietqr\.app\/img\?/,
         );
         assert.equal(
           (await http.get("/api/payments/vnpay/ipn").query(callback(qr))).body

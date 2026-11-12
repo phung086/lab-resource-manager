@@ -31,7 +31,12 @@ export function occupiesWithTurnaround(booking, startAt, endAt, candidateMinutes
 }
 
 export function preparationBookingWhere(startAt, endAt) {
-  return { startAt: { lt: new Date(+endAt + 240 * 60000) }, endAt: { gt: new Date(+startAt - 240 * 60000) },
-    OR: [{ status: { in: ['PENDING_APPROVAL','CONFIRMED','CHECKED_OUT','RETURNED'] }, schedulingReleasedAt: null },
-      { status: { in: ['RETURNED','COMPLETED'] }, schedulingReleasedAt: { gt: new Date(+startAt - 240 * 60000) }, policySnapshot: { path: ['turnaroundMinutes'], gt: 0 } }] };
+  const earliestEnd = new Date(+startAt - 240 * 60000);
+  const latestStart = new Date(+endAt + 240 * 60000);
+  return { OR: [
+    { status: { in: ['PENDING_APPROVAL','CONFIRMED','CHECKED_OUT','RETURNED'] },
+      schedulingReleasedAt: null, startAt: { lt: latestStart }, endAt: { gt: earliestEnd } },
+    { status: { in: ['RETURNED','COMPLETED'] }, schedulingReleasedAt: { gt: earliestEnd, lt: latestStart },
+      policySnapshot: { path: ['turnaroundMinutes'], gt: 0 } }
+  ] };
 }

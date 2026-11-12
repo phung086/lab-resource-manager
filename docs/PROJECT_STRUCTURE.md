@@ -42,6 +42,7 @@ lab-resource-manager/
 │   ├── scripts/            # Local launcher and locale checks
 │   └── test_*.mjs, test-utils/
 ├── docs/                   # Maintained contracts, guides, context, ERD and backlog
+│   └── submission/        # Hồ sơ báo cáo Word/PDF tại mốc bàn giao
 ├── data/                   # Resource import template and labelled demo inventory
 ├── infra/prometheus/       # Metrics scrape configuration
 ├── firmware/               # Optional real telemetry adapter
@@ -66,6 +67,18 @@ Backend: route → middleware/service → Prisma. Authorization and business
 transactions stay on the backend; hiding a route never grants or denies authority.
 Prisma schema/migrations remain the persistence source; root SQL dumps are not
 an alternate schema. Do not create empty directories just to imitate a template.
+
+## Điểm sửa dùng chung
+
+- `frontend/src/utils/currency.ts` định dạng số tiền VND cho luồng báo giá,
+  thanh toán và hồ sơ. Các nhãn trạng thái giao dịch nằm trong
+  `frontend/src/utils/paymentValidation.ts`, với nội dung lấy từ catalog VI/EN.
+- `backend/src/services/telemetryService.js` dựng dữ liệu mẫu và lịch sử cho
+  API giám sát và dashboard. `monitoringAlertService.js` định nghĩa phần quan hệ
+  Prisma dùng chung khi đọc cảnh báo.
+- `backend/src/constants/resources.js` cung cấp danh sách trạng thái vật lý
+  dùng để tổng hợp dashboard. Trạng thái lịch, thanh toán và khả dụng có hợp
+  đồng riêng.
 
 Refer to [SRS](srs.md), [convention](convention.md),
 [frontend](FRONTEND_GUIDELINE.md), [backend](BACKEND_GUIDELINE.md),

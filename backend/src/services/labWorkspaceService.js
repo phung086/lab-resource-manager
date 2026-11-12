@@ -6,7 +6,6 @@ import { recordSystemAuditEvent } from "./systemAuditService.js";
 const fail = (status, code, message) => { throw new HttpError(status, message, undefined, code); };
 export const resourceScope = actor => actor.role === "ADMIN" ? {} : { laboratory: { staffAssignments: { some: { userId: actor.id } } } };
 const identity = { id: true, fullName: true };
-const activityInclude = { booking: { select: { id: true, title: true, startAt: true, endAt: true, status: true, requestedById: true, requestedBy: { select: identity }, resource: { select: { code: true, name: true } } } } };
 
 export async function assertWorkspaceResource(tx, actor, resourceId) {
   if (!["ADMIN", "LAB_STAFF"].includes(actor.role)) fail(403, "FORBIDDEN", "This operation requires LAB staff.");
@@ -57,15 +56,4 @@ export async function recordStock(actor, data) {
     await recordSystemAuditEvent(tx, { actor, action: "STOCK_MOVEMENT_RECORDED", targetType: "STOCK", targetId: movement.id, labId: resource.laboratoryId, resourceId: resource.id, beforeState: { balance: item.balance }, afterState: { balance, delta, unit: item.unit }, reason: data.reason });
     return movement;
   });
-}
-
-export async function listTeachingGroups(actor) {
-  if (actor.role !== "ADMIN") fail(403, "FORBIDDEN", "Only administrators can read the teaching archive.");
-  return prisma.teachingGroup.findMany({ include: { lecturer: { select: identity }, _count: { select: { members: true, activities: true } } }, orderBy: { createdAt: "desc" } });
-}
-export async function teachingGroupDetail(actor, groupId) {
-  if (actor.role !== "ADMIN") fail(403, "FORBIDDEN", "Only administrators can read the teaching archive.");
-  const group = await prisma.teachingGroup.findUnique({ where: { id: groupId }, include: { lecturer: { select: identity }, members: { include: { user: { select: identity } } }, activities: { include: activityInclude } } });
-  if (!group) fail(404, "NOT_FOUND", "Archive record not found.");
-  return group;
 }

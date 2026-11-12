@@ -125,7 +125,7 @@ SMTP thật chưa có nên gửi mail/OTP ngoài hệ thống vẫn BLOCKED.
    AVAILABLE nếu không có trạng thái cứng. Khoảng lịch được giải phóng, còn
    staff có **Hoàn tất kiểm tra** riêng; khách không ghi inspection đạt.
 5. CUSTOMER đặt thiết bị được phép giao tại nhà: chọn cách nhận, tỉnh/thành,
-   phường/xã, số nhà/đường và liên hệ. Giao nội bộ hiện0đ; chưa GHN. STAFF đúng
+   phường/xã, số nhà/đường và liên hệ. Phí giao tận nơi hiện 0 đ. GHN chưa tích hợp. STAFF đúng
    LAB thấy địa chỉ/contact snapshot, kiểm tra và bàn giao trong cửa sổ30 phút;
    khách không được self-check-in thiết bị. Nhận tại LAB có chỉ dẫn đến điểm nhận.
 6. Lịch đã paid/free có thông báo30 phút trước start và15 phút trước end. Khi

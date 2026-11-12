@@ -64,9 +64,9 @@ export function createApp() {
   );
   app.use(express.json({ limit: config.jsonBodyLimit }));
   app.use(morgan(config.logFormat, {
-    // VNPAY signs its GET callback query. Access logging that URL would persist
+      // Providers can sign their browser-return or GET callback query. Logging would persist
     // the one-time secure hash and provider evidence.
-    skip: (req) => /^\/api\/payments\/vnpay\/(?:ipn|return)(?:\?|$)/.test(req.originalUrl || req.url) ||
+      skip: (req) => /^\/api\/payments\/(?:vnpay\/(?:ipn|return)|sepay\/webhook)\/?(?:\?|$)/i.test(req.originalUrl || req.url) ||
       /^\/(?:oauth\/chatgpt|api\/chatgpt-bridge)(?:\/|\?|$)/.test(req.originalUrl || req.url)
   }));
   const ingressLimit = limit => rateLimit({

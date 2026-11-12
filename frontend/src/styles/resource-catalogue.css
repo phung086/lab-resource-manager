@@ -103,8 +103,48 @@
 .rental-price { display:flex; align-items:baseline; gap:8px; padding:12px 0; }
 .rental-price strong { font-size:1.6rem; font-variant-numeric:tabular-nums; }
 .rental-price span { font-size:.85rem; }
-.rental-tariff { margin:20px 0; overflow-x:auto; max-width:100%; min-width:0; }
-.rental-tariff table { width:100%; border-collapse:collapse; font-size:.9rem; }
-.rental-tariff caption { text-align:left; font-weight:650; padding-bottom:16px; }
-.rental-tariff th,.rental-tariff td { text-align:left; padding:14px 12px; border-bottom:1px solid var(--workspace-border,#e6e1ed); }
-.rental-tariff button { color:var(--workspace-primary,#6040ce); background:none; font:inherit; border:0; padding:8px; min-height:44px; cursor:pointer; }
+.rental-tariff {
+  --tariff-line:var(--public-line,var(--workspace-border,#dfe6f2));
+  --tariff-accent:var(--public-accent,var(--workspace-accent,#6040ce));
+  --tariff-tint:var(--public-accent-soft,var(--workspace-surface-muted,#f0f5ff));
+  --tariff-muted:var(--public-muted,var(--workspace-muted,#514b64));
+  container:tariffs / inline-size;
+  min-width:0;
+  margin-block:20px;
+}
+.rental-tariff-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+.rental-tariff-header h2 { margin:0; font-size:1.05rem; line-height:1.4; }
+.rental-tariff-switch { display:inline-flex; flex-wrap:wrap; gap:3px; padding:3px; border:1px solid var(--tariff-line); border-radius:11px; background:var(--tariff-tint); }
+.rental-tariff-switch button,.rental-tariff-select {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  min-height:44px; padding:6px 10px; border:1px solid transparent; border-radius:8px;
+  font:inherit; font-size:.875rem; font-weight:600; cursor:pointer;
+}
+.rental-tariff-switch button { color:var(--tariff-muted); background:transparent; }
+.rental-tariff-switch button[aria-pressed=true] { color:var(--tariff-accent); border-color:var(--tariff-line); background:var(--workspace-surface,#fff); }
+.rental-tariff-items { display:grid; grid-template-columns:minmax(0,1fr); gap:10px; padding:0; margin:0; list-style:none; }
+.rental-tariff-item { display:grid; align-content:start; gap:10px; min-width:0; padding:12px; border:1px solid var(--tariff-line); border-radius:13px; background:var(--workspace-surface,#fff); }
+.rental-tariff-identity { display:grid; gap:2px; min-width:0; overflow-wrap:anywhere; }
+.rental-tariff-identity strong { line-height:1.35; font-size:.9375rem; }
+.rental-tariff-identity span,.rental-tariff-facts dt { color:var(--tariff-muted); font-size:.75rem; }
+.rental-tariff-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 12px; margin:0; }
+.rental-tariff-facts dd { margin:1px 0 0; font-size:.875rem; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.rental-tariff-rate { color:var(--tariff-accent); font-weight:700; }
+.rental-tariff-select { justify-self:start; color:var(--tariff-accent); background:var(--tariff-tint); }
+.rental-tariff-select:hover { border-color:var(--tariff-accent); }
+.rental-tariff :is(.rental-tariff-switch button,.rental-tariff-select):focus-visible { outline:2px solid var(--tariff-accent); outline-offset:2px; }
+.rental-tariff .queue-pagination { margin-bottom:12px; padding-block:8px; border-top:0; border-bottom:1px solid var(--tariff-line); }
+.rental-tariff .queue-pagination button { padding-inline:8px; }
+.rental-tariff-empty { margin:0; padding:16px; border-radius:12px; background:var(--tariff-tint); color:var(--tariff-muted); }
+@container tariffs (min-width:30rem) {
+  .rental-tariff-items[data-view=grid] { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .rental-tariff-items[data-view=list] .rental-tariff-item { grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) auto; align-items:center; }
+}
+@container tariffs (min-width:46rem) {
+  .rental-tariff-items[data-view=grid] { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .rental-tariff-items[data-view=list] .rental-tariff-item { grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto; }
+}
+@container tariffs (max-width:29.99rem) {
+  .rental-tariff-items[data-view=list] .rental-tariff-item { grid-template-columns:minmax(0,1fr) auto; gap:6px 8px; }
+  .rental-tariff-items[data-view=list] .rental-tariff-select { grid-column:2; grid-row:1 / span 2; align-self:center; }
+}

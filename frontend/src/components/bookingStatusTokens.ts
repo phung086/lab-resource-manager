@@ -7,82 +7,82 @@ export const STATUS_CONFIG: Record<
 > = {
   PENDING_APPROVAL: {
     label: CANONICAL_BOOKING_STATUS_LABELS.PENDING_APPROVAL,
-    bg: "#fffbeb",
-    text: "#92400e",
-    border: "#fde68a"
+    bg: "var(--state-attention-bg, #fff4df)",
+    text: "var(--state-attention-ink, #875313)",
+    border: "var(--state-attention-line, #ebd5a6)"
   },
   CONFIRMED: {
     label: "ui.confirmed_e72d13e3",
-    bg: "#ecfdf5",
-    text: "#065f46",
-    border: "#a7f3d0"
+    bg: "var(--state-positive-bg, #e8f6ee)",
+    text: "var(--state-positive-ink, #17613d)",
+    border: "var(--state-positive-line, #bfe3cc)"
   },
   CHECKED_OUT: {
     label: "ui.in_use_a07a3647",
-    bg: "#eff6ff",
-    text: "#1e40af",
-    border: "#bfdbfe"
+    bg: "var(--state-info-bg, #eaf1ff)",
+    text: "var(--state-info-ink, #2357ab)",
+    border: "var(--state-info-line, #c7d8f5)"
   },
   RETURNED: {
     label: "ui.returned_fd3eb4fb",
-    bg: "#eef2ff",
-    text: "#3730a3",
-    border: "#c7d2fe"
+    bg: "var(--state-violet-bg, #f0ebfc)",
+    text: "var(--state-violet-ink, #6545a3)",
+    border: "var(--state-violet-line, #d9ccef)"
   },
   COMPLETED: {
     label: "ui.completed_b0484236",
-    bg: "#f1f5f9",
-    text: "#334155",
-    border: "#cbd5e1"
+    bg: "var(--state-neutral-bg, #f0f3f8)",
+    text: "var(--state-neutral-ink, #526176)",
+    border: "var(--state-neutral-line, #d9e0eb)"
   },
   REJECTED: {
     label: "ui.reject_b61a0ebc",
-    bg: "#fef2f2",
-    text: "#991b1b",
-    border: "#fecaca"
+    bg: "var(--state-danger-bg, #fcecef)",
+    text: "var(--state-danger-ink, #a3374b)",
+    border: "var(--state-danger-line, #eec7d0)"
   },
   CANCELLED: {
     label: "ui.cancelled_2f777a90",
-    bg: "#f8fafc",
-    text: "#475569",
-    border: "#e2e8f0"
+    bg: "var(--state-neutral-bg, #f0f3f8)",
+    text: "var(--state-neutral-ink, #526176)",
+    border: "var(--state-neutral-line, #d9e0eb)"
   },
   // Compatibility lowercase mappings
   pending: {
     label: "ui.pending_approval_6af96613",
-    bg: "#fffbeb",
-    text: "#92400e",
-    border: "#fde68a"
+    bg: "var(--state-attention-bg, #fff4df)",
+    text: "var(--state-attention-ink, #875313)",
+    border: "var(--state-attention-line, #ebd5a6)"
   },
   approved: {
     label: "ui.confirmed_e72d13e3",
-    bg: "#ecfdf5",
-    text: "#065f46",
-    border: "#a7f3d0"
+    bg: "var(--state-positive-bg, #e8f6ee)",
+    text: "var(--state-positive-ink, #17613d)",
+    border: "var(--state-positive-line, #bfe3cc)"
   },
   checked_out: {
     label: "ui.in_use_a07a3647",
-    bg: "#eff6ff",
-    text: "#1e40af",
-    border: "#bfdbfe"
+    bg: "var(--state-info-bg, #eaf1ff)",
+    text: "var(--state-info-ink, #2357ab)",
+    border: "var(--state-info-line, #c7d8f5)"
   },
   completed: {
     label: "ui.completed_b0484236",
-    bg: "#f1f5f9",
-    text: "#334155",
-    border: "#cbd5e1"
+    bg: "var(--state-neutral-bg, #f0f3f8)",
+    text: "var(--state-neutral-ink, #526176)",
+    border: "var(--state-neutral-line, #d9e0eb)"
   },
   rejected: {
     label: "ui.reject_b61a0ebc",
-    bg: "#fef2f2",
-    text: "#991b1b",
-    border: "#fecaca"
+    bg: "var(--state-danger-bg, #fcecef)",
+    text: "var(--state-danger-ink, #a3374b)",
+    border: "var(--state-danger-line, #eec7d0)"
   },
   cancelled: {
     label: "ui.cancelled_2f777a90",
-    bg: "#f8fafc",
-    text: "#475569",
-    border: "#e2e8f0"
+    bg: "var(--state-neutral-bg, #f0f3f8)",
+    text: "var(--state-neutral-ink, #526176)",
+    border: "var(--state-neutral-line, #d9e0eb)"
   }
 };
 

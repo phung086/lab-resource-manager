@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Headphones, Menu, X } from 'lucide-react';
 import { useLocale } from '../providers/LocaleProvider';
 import { LanguageToggle } from './base/LanguageToggle';
+import { ThemeToggle } from './base/ThemeToggle';
 import { ProjectBrand } from './base/ProjectBrand';
 import { ProjectFooter } from './features/ProjectFooter';
 import { publicPathForSection, readAppRoute } from '../workspaceRoutes.js';
@@ -25,7 +26,7 @@ export function PublicShell({ children, beforeMain, onRegister, onNavigate, user
     setMenuOpen(false);
     if (onNavigate && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); onNavigate(section); }
   }
-  return <div className="public-site lab-public project-public-shell lab-spectrum" id="dau-trang">
+  return <div className="public-site lab-public project-public-shell lab-spectrum lab-studio" id="dau-trang">
     <a className="public-skip" href="#noi-dung">{t('ui.skip_to_main_content_a75d7c33')}</a>
     <header className="public-header" onKeyDown={event => {
       if (event.key === 'Escape' && menuOpen) { setMenuOpen(false); menuButton.current?.focus(); }
@@ -35,12 +36,15 @@ export function PublicShell({ children, beforeMain, onRegister, onNavigate, user
       <nav id="public-nav" className={menuOpen ? 'is-open' : ''} aria-label={t('ui.main_navigation_84d2467a')}>
         {navigation.map(([section, key]) => <a key={section} href={publicPathForSection(section)} aria-current={readAppRoute(window.location).path === publicPathForSection(section) ? "page" : undefined} onClick={event => navigate(event, section)}>{t(key)}</a>)}
       </nav>
-      <div className="public-account-actions"><LanguageToggle />
+      <div className="public-account-actions"><LanguageToggle /><ThemeToggle />
         {userName ? <button type="button" className="public-login" onClick={onWorkspace}>{t('ui.workspace_970a97e3')}</button> : <a className="public-login" href="/login" onClick={event => navigate(event, 'dang-nhap')}>{t('ui.sign_in_9a402bdf')}</a>}
       </div>
     </header>
     {beforeMain}
     <main id="noi-dung" tabIndex={-1}>{children}</main>
-    <ProjectFooter variant="public" onPublicNavigate={onNavigate} onRegister={onRegister} />
+    <a className="public-contact-shortcut" href="#lien-he-lab" aria-label={t('ui.footer.labContact')} title={t('ui.footer.labContact')}>
+      <Headphones size={21} aria-hidden="true" />
+    </a>
+    <ProjectFooter variant="public" onPublicNavigate={onNavigate} onRegister={onRegister} signedIn={Boolean(userName)} />
   </div>;
 }

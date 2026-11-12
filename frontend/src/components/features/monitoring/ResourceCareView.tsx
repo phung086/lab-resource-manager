@@ -1,3 +1,4 @@
+import { PageHeading } from '../../base/PageHeading';
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw, Wrench, Activity, Search, ArrowRight, ShieldAlert, Box, Building2, Clock3 } from "lucide-react";
 import { useLocale } from "../../../providers/LocaleProvider";
@@ -49,7 +50,7 @@ export function ResourceCareView() {
   const { tr, locale } = useLocale(), request = useRef<AbortController | null>(null);
   const [data, setData] = useState<CareSnapshot | null>(null), [error, setError] = useState(""), [loading, setLoading] = useState(false);
   const [selectedId, setSelected] = useState(() => readRouteParams().get("resource") || "");
-  const [search, setSearch] = useState(""), [group, setGroup] = useState("ALL"), [telemetry, setTelemetry] = useState(false);
+  const [search, setSearch] = useState(""), [group, setGroup] = useState("ALL"), [telemetry, setTelemetry] = useState(()=>readRouteParams().get('view')==='sensors');
   const detailRef = useRef<HTMLElement>(null);
   const refresh = useCallback(async () => {
     if (request.current) return;
@@ -58,12 +59,19 @@ export function ResourceCareView() {
     catch (cause) { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "ui.care.failed"); }
     finally { if (request.current === controller) { request.current = null; setLoading(false); } }
   }, []);
-  useEffect(() => { void refresh(); const timer = setInterval(() => { if (!document.hidden) void refresh(); }, 5000); return () => { clearInterval(timer); request.current?.abort(); request.current = null; }; }, [refresh]);
+  useEffect(() => { if (telemetry) return; void refresh(); const timer = setInterval(() => { if (!document.hidden) void refresh(); }, 5000); return () => { clearInterval(timer); request.current?.abort(); request.current = null; }; }, [refresh, telemetry]);
   useEffect(() => {
-    const sync = () => setSelected(readRouteParams().get("resource") || "");
+    const sync = () => { const params = readRouteParams(); setSelected(params.get('resource') || ''); setTelemetry(params.get('view') === 'sensors'); };
     window.addEventListener("popstate", sync); window.addEventListener("lrm:route-change", sync);
     return () => { window.removeEventListener("popstate", sync); window.removeEventListener("lrm:route-change", sync); };
   }, []);
+  function changeView(sensors: boolean) {
+    const params = readRouteParams();
+    if (sensors) params.set('view', 'sensors');
+    else params.delete('view');
+    setTelemetry(sensors);
+    navigateApp(workspacePathForTab('monitoring', params), { notify: false });
+  }
   const rows = (data?.items || []).filter(r => (group === "ALL" || (group === "ROOM" ? r.category === "ROOM" : group === "DUE" ? r.care.due : group === "BROKEN" ? r.operationalStatus === "BROKEN" : r.category !== "ROOM")) && (r.code + " " + r.name + " " + (r.laboratory?.name || "")).toLocaleLowerCase(locale).includes(search.toLocaleLowerCase(locale)));
   const selected = data?.items.find(r => r.id === selectedId);
   const n = (value: number | null) => value == null ? "—" : value.toLocaleString(locale, { maximumFractionDigits: 2 });
@@ -77,10 +85,10 @@ export function ResourceCareView() {
     });
   }
   const cycleLabel = (resource: CareResource) => tr(!resource.care.configured ? "ui.care.notConfigured" : resource.care.due ? "ui.care.due" : resource.care.nearDue ? "ui.rental.nearDue" : "ui.care.withinInterval");
-  return <section className="monitor-workspace care-workspace care-studio" data-has-selection={Boolean(selected)} aria-labelledby="care-title">
-    <header className="monitor-heading"><div><h1 id="care-title">{tr("ui.care.title")}</h1><p>{tr("ui.careStudio.intro")}</p>{data && <small>{tr("ui.monitor.updatedAt")} {formatVietnamDateTime(data.generatedAt)}</small>}</div><button className="btn btn-secondary" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} aria-hidden="true"/>{tr("ui.refresh_46140fa8")}</button></header>
+  return <section className="monitor-workspace care-workspace care-studio" data-has-selection={Boolean(selected)} aria-labelledby={telemetry ? "live-monitor-title" : "care-title"}>
+    {!telemetry && <PageHeading className="monitor-heading"><div><h1 id="care-title">{tr("ui.care.title")}</h1><p>{tr("ui.careStudio.intro")}</p>{data && <small>{tr("ui.monitor.updatedAt")} {formatVietnamDateTime(data.generatedAt)}</small>}</div><button className="btn btn-secondary" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} aria-hidden="true"/>{tr("ui.refresh_46140fa8")}</button></PageHeading>}
     {error && <p role="alert" className="monitor-error">{tr(error)} {tr("ui.care.stale")}</p>}
-    <div className="care-tabs" role="group" aria-label={tr("ui.care.views")}><button type="button" aria-pressed={!telemetry} className={!telemetry ? "is-active" : ""} onClick={() => setTelemetry(false)}><Box size={17} aria-hidden="true"/>{tr("ui.care.assets")}</button><button type="button" aria-pressed={telemetry} className={telemetry ? "is-active" : ""} onClick={() => setTelemetry(true)}><Activity size={17} aria-hidden="true"/>{tr("ui.care.sensors")}</button></div>
+    <div className="care-tabs" role="group" aria-label={tr("ui.care.views")}><button type="button" aria-pressed={!telemetry} className={!telemetry ? "is-active" : ""} onClick={() => changeView(false)}><Box size={17} aria-hidden="true"/>{tr("ui.care.assets")}</button><button type="button" aria-pressed={telemetry} className={telemetry ? "is-active" : ""} onClick={() => changeView(true)}><Activity size={17} aria-hidden="true"/>{tr("ui.care.sensors")}</button></div>
     {telemetry ? <LiveMonitoringView/> : <>
       <div className="care-summary" aria-label={tr("ui.careStudio.snapshotSummary")}><span><strong>{data?.items.length ?? "—"}</strong>{tr("ui.care.assets")}</span><span><strong>{data?.items.filter(r => r.activeOperation).length ?? "—"}</strong>{tr("ui.care.running")}</span><span><strong>{data?.items.filter(r => r.care.due).length ?? "—"}</strong>{tr("ui.care.due")}</span><span><strong>{data?.items.filter(r => r.operationalStatus === "BROKEN").length ?? "—"}</strong>{tr("ui.care.BROKEN")}</span></div>
       <div className="monitor-filters"><label>{tr("ui.care.search")}<span className="care-search-field"><Search size={17} aria-hidden="true"/><input type="search" value={search} onChange={e => setSearch(e.target.value)}/></span></label><label>{tr("ui.care.filter")}<select value={group} onChange={e => setGroup(e.target.value)}>{["ALL","ROOM","MACHINE","DUE","BROKEN"].map(v => <option key={v} value={v}>{tr("ui.care."+v)}</option>)}</select></label></div>

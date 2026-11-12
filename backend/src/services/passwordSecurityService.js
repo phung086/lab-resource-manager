@@ -32,7 +32,7 @@ export async function requestPasswordOtp(actor, { targetUserId = actor.id, curre
   const challenge = await accountWrite(actor, async (tx, currentActor) => {
     const target = self ? currentActor : await managedTarget(tx, currentActor, targetUserId);
     if (!target.isActive || target.deletedAt) raise(failure("ACCOUNT_INACTIVE", 409));
-    if (self && !(await bcrypt.compare(currentPassword || "", target.passwordHash)))
+    if (self && target.passwordLoginEnabled !== false && !(await bcrypt.compare(currentPassword || "", target.passwordHash)))
       raise(failure("CURRENT_PASSWORD_INVALID", 400, { field: "currentPassword" }));
     const latest = await tx.passwordChallenge.findFirst({ where: { targetUserId }, orderBy: { createdAt: "desc" } });
     if (latest && now.getTime() - latest.createdAt.getTime() < COOLDOWN_MS)
@@ -90,11 +90,11 @@ export async function confirmPasswordOtp(actor, { targetUserId = actor.id, chall
       await tx.passwordChallenge.update({ where: { id: row.id }, data: { attempts, ...(attempts >= MAX_ATTEMPTS ? { consumedAt: now } : {}) } });
       return { error: failure(attempts >= MAX_ATTEMPTS ? "OTP_ATTEMPTS_EXCEEDED" : "OTP_INVALID", 400, { field: "otp" }) };
     }
-    if (self && !(await bcrypt.compare(currentPassword || "", target.passwordHash)))
+    if (self && target.passwordLoginEnabled !== false && !(await bcrypt.compare(currentPassword || "", target.passwordHash)))
       return { error: failure("CURRENT_PASSWORD_INVALID", 400, { field: "currentPassword" }) };
     if (await bcrypt.compare(newPassword, target.passwordHash))
       return { error: failure("PASSWORD_UNCHANGED", 400, { field: "newPassword" }) };
-    const saved = await tx.user.update({ where: { id: target.id }, data: { passwordHash: hash, passwordResetRequired: false, authVersion: { increment: 1 } } });
+    const saved = await tx.user.update({ where: { id: target.id }, data: { passwordHash: hash, passwordLoginEnabled:true, passwordResetRequired: false, authVersion: { increment: 1 } } });
     await tx.passwordChallenge.update({ where: { id: row.id }, data: { consumedAt: now } });
     await recordSystemAuditEvent(tx, { actor: currentActor, action: AUDIT_ACTIONS.ACCOUNT_CREDENTIAL_CHANGED, targetType: AUDIT_TARGET_TYPES.USER, targetId: target.id,
       reason: row.reason, beforeState: { credentialVersion: target.authVersion }, afterState: { credentialVersion: saved.authVersion },

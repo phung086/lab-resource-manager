@@ -98,10 +98,10 @@ try {
   await editForm.locator('[name=phone]').fill('wrong'); await editForm.locator('button[type=submit]').click();
   check(await editForm.locator('[name=phone]').evaluate(node => node === document.activeElement), 'Invalid contact focuses the phone field');
   await editForm.locator('[name=fullName]').fill('UI Customer Updated'); await editForm.locator('[name=phone]').fill('0912345678');
-  await editForm.locator('[name=organization]').fill('UI verification');
+  check(await editForm.locator('[name=organization]').count() === 0, 'Contact edit omits affiliation');
   await mutation(page, 'PATCH', '/users/' + created.id, () => editForm.locator('button[type=submit]').click());
   const edited = (await call('staff', 'GET', '/users/' + created.id)).body;
-  check(edited.fullName === 'UI Customer Updated' && edited.phone === '0912345678' && edited.organization === 'UI verification', 'Staff contact edits persist');
+  check(edited.fullName === 'UI Customer Updated' && edited.phone === '0912345678' && !Object.hasOwn(edited, 'organization'), 'Staff contact edits persist without affiliation');
   await page.locator('.users-dossier').getByRole('button', { name: label('account.users.changePassword'), exact: true }).click();
   const assisted = page.getByRole('dialog'), assistedForm = assisted.locator('form');
   await inspect(page, 'staff-password-dialog');

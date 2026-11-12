@@ -143,7 +143,7 @@ function bookingWindowWhere(startAt, endAt) {
   return preparationBookingWhere(startAt, endAt);
 }
 
-function availabilityInclude(startAt, endAt) {
+function availabilityInclude(startAt, endAt, includeCurrentCheckout = false) {
   return {
     pricingRules: true,
     careProfile: true,
@@ -151,7 +151,9 @@ function availabilityInclude(startAt, endAt) {
     media: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
     laboratory: { select: resourceLaboratorySelect },
     bookings: {
-      where: bookingWindowWhere(startAt, endAt),
+      where: includeCurrentCheckout
+        ? { OR: [bookingWindowWhere(startAt, endAt), { status: 'CHECKED_OUT', schedulingReleasedAt: null }] }
+        : bookingWindowWhere(startAt, endAt),
       select: { id: true, status: true, startAt: true, endAt: true, schedulingReleasedAt: true, policySnapshot: true }
     },
     maintenanceWindows: {
@@ -168,9 +170,11 @@ async function loadCanonicalResource(id, interval = currentInterval()) {
 function availabilityMatches(resource, requested, interval) {
   if (!requested) return true;
   const state = resourceAvailability(resource, interval).state;
+  const hasCurrentCheckout = interval.isCurrent && state === "IN_USE"
+    && resource.bookings.some(booking => booking.status === "CHECKED_OUT" && !booking.schedulingReleasedAt);
   if (requested === "AVAILABLE") return state === "AVAILABLE";
-  if (requested === "RESERVED") return state === "RESERVED";
-  return !["AVAILABLE", "RESERVED"].includes(state);
+  if (requested === "RESERVED") return state === "RESERVED" || hasCurrentCheckout;
+  return !["AVAILABLE", "RESERVED"].includes(state) && !hasCurrentCheckout;
 }
 
 router.get("/", async (req, res, next) => {
@@ -194,7 +198,7 @@ router.get("/", async (req, res, next) => {
           { laboratory: { name: { contains: search, mode: "insensitive" } } }
         ] } : {})
       },
-      include: availabilityInclude(interval.startAt, interval.endAt),
+      include: availabilityInclude(interval.startAt, interval.endAt, interval.isCurrent && Boolean(query.availability)),
       orderBy: [{ operationalStatus: "asc" }, { name: "asc" }],
       take: 250
     });

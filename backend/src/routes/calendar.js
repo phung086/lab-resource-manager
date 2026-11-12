@@ -369,7 +369,7 @@ router.get("/events", async (req, res, next) => {
           bookingCode: b.bookingCode
         });
       } else {
-        // Sanitized public/other student view: ZERO personal info leaked, no fabricated status
+        // Public and non-owner calendar views exclude private booking details.
         events.push({
           id: b.id,
           resourceId: b.resourceId,

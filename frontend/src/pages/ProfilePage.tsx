@@ -1,3 +1,4 @@
+import { PageHeading } from '../components/base/PageHeading';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, ChartNoAxesCombined, Check, ChevronDown, CircleCheck, KeyRound, LockKeyhole, Mail, MapPin, Save, ShieldCheck, UserRound } from 'lucide-react';
 import { useLocale } from '../providers/LocaleProvider';
@@ -61,7 +62,7 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
  const contactChanged = JSON.stringify(contact)!==JSON.stringify(contactFrom(profile)) || JSON.stringify(address)!==JSON.stringify(addressFrom(profile));
  const joinedAt = profile.createdAt && !Number.isNaN(Date.parse(profile.createdAt)) ? new Intl.DateTimeFormat(locale==='en'?'en-GB':'vi-VN',{dateStyle:'medium',timeZone:'Asia/Ho_Chi_Minh'}).format(new Date(profile.createdAt)) : null;
  return <section className="account-workspace" data-role={role} aria-labelledby="account-title">
-  <header className="account-heading"><h1 id="account-title">{tr('ui.roleProfile.'+role+'.title')}</h1><p>{tr('ui.roleProfile.'+role+'.hint')}</p></header>
+  <PageHeading className="account-heading"><h1 id="account-title">{tr('ui.roleProfile.'+role+'.title')}</h1><p>{tr('ui.roleProfile.'+role+'.hint')}</p></PageHeading>
   <div className="account-identity">
    <span className="account-initial" aria-hidden="true">{profile.fullName?.trim().slice(0,1).toUpperCase() || <UserRound size={28} />}</span>
    <div className="account-identity-name"><div><h2>{profile.fullName || profile.email}</h2><span className="account-role">{tr(roles[profile.role] || 'ui.users.roleRequired')}</span></div><p><Mail size={15} aria-hidden="true" />{profile.email}</p></div>
@@ -80,11 +81,11 @@ export function ProfilePage({ user, onUserUpdated }: { user: any; onUserUpdated:
      </form>
     </section>
     <section id="account-security-panel" hidden={section!=='security'} aria-labelledby="account-security-title"><header><h2 id="account-security-title">{tr('refine.security')}</h2><p>{tr('ui.profile.securityHint')}</p></header>
-     <dl className="account-assurance"><div><dt>{tr('ui.account_status_00a4b83c')}</dt><dd><span className="account-status" data-tone={profile.isActive?'success':'neutral'}>{tr(profile.isActive?'ui.active_767d67bb':'ui.inactive_50157a4c')}</span></dd></div><div><dt>{tr('ui.profile.passwordState')}</dt><dd><span className="account-status" data-tone={profile.passwordResetRequired?'warning':'success'}>{tr(profile.passwordResetRequired?'ui.password_change_required_e4691737':'ui.password_setup_complete_6805895a')}</span></dd></div></dl>
+     <dl className="account-assurance"><div><dt>{tr('ui.account_status_00a4b83c')}</dt><dd><span className="account-status" data-tone={profile.isActive?'success':'neutral'}>{tr(profile.isActive?'ui.active_767d67bb':'ui.inactive_50157a4c')}</span></dd></div><div><dt>{tr('ui.profile.passwordState')}</dt><dd><span className="account-status" data-tone={profile.passwordResetRequired?'warning':'success'}>{tr(profile.passwordLoginEnabled===false?'ui.google.passwordOptional':profile.passwordResetRequired?'ui.password_change_required_e4691737':'ui.password_setup_complete_6805895a')}</span></dd></div></dl>
      {profile.passwordResetRequired && <p className="account-warning" role="status">{tr('ui.your_temporary_password_is_the_c2cf7b9c')}</p>}
      <SessionSecurity />
      <h3 className="account-password-title"><KeyRound size={19} aria-hidden="true" />{tr('ui.profile.changePassword')}</h3>
-     <PasswordChangeForm email={profile.email} showSteps onBusyChange={value => { busyRef.current=value; setBusy(value?'security':''); }} onSuccess={result => { const next={...profile,...(result as {user?: object}).user}; setProfile(next); onUserUpdated(next); }} />
+     <PasswordChangeForm email={profile.email} passwordLoginEnabled={profile.passwordLoginEnabled} showSteps onBusyChange={value => { busyRef.current=value; setBusy(value?'security':''); }} onSuccess={result => { const next={...profile,...(result as {user?: object}).user}; setProfile(next); onUserUpdated(next); }} />
     </section>
     <section id="account-access-panel" hidden={section!=='access'} aria-labelledby="account-access-title"><header><h2 id="account-access-title">{tr('refine.access')}</h2><p>{tr('refine.accessNote')}</p></header><ProfileAccess role={role} roleLabel={tr(roles[profile.role])} certifications={profile.certifications} /></section>
     <section id="account-activity-panel" hidden={section!=='activity'} aria-labelledby="account-activity-title"><header><h2 id="account-activity-title">{tr('ui.profile.activityTitle')}</h2><p>{tr('ui.profile.activityHint')}</p></header><ProfileActivity summary={profile.bookingSummary} spending={profile.spending} /></section>

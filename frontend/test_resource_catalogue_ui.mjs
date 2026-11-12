@@ -55,10 +55,33 @@ try {
   await page.locator('.catalog-card').first().waitFor();
   const paidCard=page.locator('.catalog-card').filter({hasText:'Phòng kiểm thử A'});
   const zeroRateCard=page.locator('.catalog-card').filter({hasText:'Phòng kiểm thử B'});
+  const readStatusStyle = node => { const style=getComputedStyle(node); return [style.backgroundColor,style.color,style.borderRadius,style.fontSize,style.padding]; };
+  const publicStatusStyle = await paidCard.locator('.resource-status-pill').first().evaluate(readStatusStyle);
   check((await paidCard.innerText()).includes(vi['ui.confirmed_after_payment_2c477063']),'Paid catalogue resource explains payment before confirmation');
   check(!(await zeroRateCard.innerText()).includes(vi['ui.confirmed_after_payment_2c477063']),'Zero-rate catalogue resource does not claim payment is required');
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({width,height:1000});
+    const presentation = await paidCard.evaluate(card => {
+      const cover = card.querySelector('.catalog-card-visual').getBoundingClientRect();
+      const action = card.querySelector('.catalog-card-cta').getBoundingClientRect();
+      return { titleSize:parseFloat(getComputedStyle(card.querySelector('h3')).fontSize), priceSize:parseFloat(getComputedStyle(card.querySelector('.rental-card-price')).fontSize), actionOnImage:action.top>=cover.top && action.bottom<=cover.bottom, bg:getComputedStyle(card.querySelector('.catalog-card-cta')).backgroundColor };
+    });
+    check(presentation.actionOnImage,`Public booking action stays on image at ${width}`);
+    check(presentation.titleSize <= 16 && presentation.priceSize <= 16,`Public card typography stays compact at ${width}`);
+    check(presentation.bg === 'rgb(37, 99, 235)',`Public booking action uses the shared primary color at ${width}`);
+    check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Public catalogue does not overflow at ${width}`);
+    await paidCard.locator('summary').focus(); await page.keyboard.press('Enter');
+    check(await paidCard.locator('details').getAttribute('open') === '',`Public specifications open by keyboard at ${width}`);
+    await page.keyboard.press('Space');
+  }
+  await page.setViewportSize({width:1440,height:1000});
   await page.locator('.catalog-card').first().waitFor();
   check(await page.locator('.catalog-card').count() === 6, 'Public catalogue initially limits visible records');
+  await page.locator('.catalog-filters button').nth(2).click();
+  await page.locator('.catalog-availability-toggle input').check();
+  check(await page.locator('.catalog-card').count() === 2, 'Availability filter uses the current availability projection inside the selected category');
+  await page.locator('.catalog-filter-reset').click();
+  check(await page.locator('.catalog-card').count() === 6, 'Clearing facets restores the initial catalogue');
   await page.locator('.catalog-filters button').nth(1).click();
   check(await page.locator('.catalog-card').count() === 2, 'Public room filter selects only rooms');
   await page.locator('.catalog-search-label input').fill('qa-1');
@@ -80,6 +103,17 @@ try {
   check(await page.locator('.catalog-filters button').nth(1).getAttribute('aria-pressed') === 'true', 'Return retains public category');
   check(await page.locator('.catalog-card').count() === 1, 'Return retains public result');
   check(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth), 'Public explorer fits mobile');
+  const finder = page.locator('.catalog-toolbar .resource-finder');
+  const finderInput = finder.getByRole('combobox');
+  await finderInput.fill('phong kiem thu a');
+  await finder.getByRole('option').waitFor();
+  await finderInput.press('ArrowDown');
+  check(Boolean(await finderInput.getAttribute('aria-activedescendant')), 'Arrow keys select a suggestion from the loaded catalogue');
+  await finderInput.press('Enter');
+  await page.locator('.catalog-detail-heading').waitFor();
+  check(await page.locator('.catalog-detail-heading').innerText().then(text => text.includes('QA-1')), 'Enter opens the exact resource from a Vietnamese query without accents');
+  await page.locator('.catalog-detail-heading > button').click();
+  await page.waitForFunction(()=>document.activeElement?.getAttribute('role') === 'combobox');
   await page.setViewportSize({width:1440,height:1000});
   await page.goto(`${base}/login`);
   await page.locator("input[type=email]").fill(student.email);
@@ -89,6 +123,8 @@ try {
   await page.goto(`${base}/workspace/resources`);
   const cards = page.locator(".resource-catalogue-card"), groups = page.locator(".resource-catalogue-groups");
   await cards.first().waitFor();
+  const workspaceStatusStyle = await cards.locator('.resource-status-pill.status-available').first().evaluate(readStatusStyle);
+  check(JSON.stringify(publicStatusStyle) === JSON.stringify(workspaceStatusStyle),'Public and workspace resource states share the same presentation');
   const filterContrast = await page.locator('.catalogue-quick-filters').evaluate(group => {
     const rgb = value => value.match(/[\d.]+/g).map(Number);
     const luminance = color => color.slice(0,3).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
@@ -108,7 +144,8 @@ try {
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `No page overflow at ${width}`);
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
-  const positions = await cards.evaluateAll(elements => elements.slice(0, 4).map(el => ({ x: el.getBoundingClientRect().x, y: el.getBoundingClientRect().y })));
+  // Compare layout rows, independent of the intentional hover lift under the pointer.
+  const positions = await cards.evaluateAll(elements => elements.slice(0, 4).map(el => ({ x: el.offsetLeft, y: el.offsetTop })));
   check(positions[0].y === positions[1].y && positions[1].y === positions[2].y && positions[3].y > positions[0].y, "Three cards per row");
   await groups.getByRole("button", { name: /^Phòng/ }).click();
   check(await cards.count() === 2, "Rooms are separate");

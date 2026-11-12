@@ -277,13 +277,16 @@ model User {
   fullName                     String @default("")
   role                         Role
   passwordHash                 String
+  googleSubject                String?               @unique
+  passwordLoginEnabled         Boolean               @default(true)
   authVersion                  Int                   @default(0)
   authSessions                 AuthSession[]
   deletedAt                    DateTime?
   studentId                    String?
   department                   String?
   phone                        String?
-  customerType                 String                @default("INTERNAL")
+  // Historical affiliation data. Current account APIs do not read or write it.
+  customerType                 String?
   organization                 String?
   passwordResetRequired        Boolean               @default(false)
   defaultAddressLine           String?
@@ -1154,6 +1157,7 @@ model PaymentTransaction {
   cardType             String?
   vnpResponseCode      String?
   vnpTransactionNo     String?                     @unique
+  providerTransactionNo String?                    @map("walletTransactionNo")
   paymentUrl           String?                     @db.Text
   paymentUrlCreatedAt  DateTime?
   paymentUrlExpiresAt  DateTime?
@@ -1169,6 +1173,7 @@ model PaymentTransaction {
   user                 User                        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   reconciledBy         User?                       @relation("PaymentReconciledBy", fields: [reconciledById], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
+  @@unique([provider, providerTransactionNo], map: "payment_transactions_provider_walletTransactionNo_key")
   @@index([userId])
   @@index([bookingId])
   @@index([status])

@@ -1,9 +1,8 @@
-import { activeBookingStatuses } from "../utils/bookingOverlap.js";
 import { HttpError } from "../middleware/errors.js";
 import { assertCareReady } from "./resourceCareAccounting.js";
 import { expirePaymentHolds } from './bookingPaymentHoldService.js';
 import { assertBookingNotice } from './bookingNoticePolicy.js';
-import { occupiesWithTurnaround, turnaroundEnd } from './planning/policyModel.js';
+import { occupiesWithTurnaround, preparationBookingWhere, turnaroundEnd } from './planning/policyModel.js';
 
 export const maintenanceKinds = ["maintenance", "calibration"];
 export const maintenanceStatuses = ["scheduled", "in_progress", "completed", "cancelled"];
@@ -144,10 +143,8 @@ export async function getResourceAvailability(client, { resourceId, startAt, end
     client.booking.findMany({
       where: {
         resourceId,
-        OR: [{ status: { in: activeBookingStatuses() }, schedulingReleasedAt: null }, { status: { in: ['RETURNED','COMPLETED'] }, schedulingReleasedAt: { gt: new Date(+startAt - 240 * 60000) } }],
+        ...preparationBookingWhere(startAt, endAt),
         ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
-        startAt: { lt: new Date(+endAt + (selectedResource.laboratory?.labPolicy?.turnaroundMinutes || 0) * 60000) },
-        endAt: { gt: new Date(+startAt - 240 * 60000) }
       },
       orderBy: { startAt: "asc" }
     }),
@@ -241,8 +238,7 @@ export function buildBlockingIntervals({ resource = null, startAt = null, endAt 
       resourceId: booking.resourceId,
       bookingId: booking.id,
       startAt: toIso(booking.schedulingReleasedAt || booking.startAt),
-      endAt: toIso(turnaroundEnd(booking)),
-      label: booking.title
+      endAt: toIso(turnaroundEnd(booking))
     })),
     ...maintenanceWindows
       .filter((window) => BLOCKING_MAINTENANCE_STATUSES.includes(window.status))

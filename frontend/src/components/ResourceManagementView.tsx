@@ -1,12 +1,19 @@
 import { ResourceCategoryArt } from "./ResourceCategoryArt";
+import { ResourceFinder } from './features/resources/ResourceFinder';
+import { PageHeading } from "./base/PageHeading";
 import "../styles/resource-experience.css";
 import { HelpDisclosure } from "./base/HelpDisclosure";
+import { ExpandableCard } from "./base/ExpandableCard";
+import { StatusPill } from './features/resources/ResourceStatusPill';
 import type { LocaleMessage } from "../providers/LocaleProvider";
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
+  CalendarDays,
+  ShoppingCart,
+  Check,
   Edit3,
   Eye,
   FilterX,
@@ -30,7 +37,9 @@ import { ResourceTariffTable } from "./ResourceTariffTable";
 import { ResourcePricingEditor } from "./features/payments/ResourcePricingEditor";
 import { ResourceMediaEditor } from "./ResourceMediaEditor.tsx";
 import { ResourceStatusModal } from "./ResourceStatusModal.tsx";
+import { ResourceOperationsBoard, type BoardBooking } from "./features/resources/ResourceOperationsBoard";
 import { resourceSpecLabel } from "../utils/resourceSpecLabels";
+import { formatVietnamDateTime } from "../utils/timezone";
 import "../styles/resource-workspace.css";
 import "../styles/resource-discovery.css";
 import "../styles/resource-catalogue.css";
@@ -45,7 +54,6 @@ function groupForCategory(category: string): CatalogueGroup {
 const categories = ["ROOM", "EQUIPMENT", "MACHINE", "EXPERIMENT_KIT", "MATERIAL"];
 const subtypes = ["ROOM", "GPU_SERVER", "RASPBERRY_PI", "UAV", "CAMERA", "KIT", "MATERIAL", "OTHER"];
 const operationalStatuses = ["AVAILABLE", "IN_USE", "MAINTENANCE", "CALIBRATION", "BROKEN", "RETIRED", "OFFLINE"];
-
 const categoryLabels: Record<string, string> = {
   ROOM: "ui.room_6aec2ab4",
   EQUIPMENT: "enum.category.EQUIPMENT",
@@ -153,7 +161,10 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
   const [detailLoadingId, setDetailLoadingId] = useState("");
   const [detailError, setDetailError] = useState("");
   const [statusResource, setStatusResource] = useState<any | null>(null);
+  const [statusInitial, setStatusInitial] = useState("");
   const [retireResource, setRetireResource] = useState<any | null>(null);
+  const [boardBookings, setBoardBookings] = useState<BoardBooking[]>([]);
+  const [boardBookingsError, setBoardBookingsError] = useState("");
   const errorRef = useRef<HTMLDivElement>(null);
 
   const canManage = ["ADMIN", "LAB_STAFF"].includes(user.role);
@@ -191,6 +202,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
   const loadResourcesRef = useRef(loadResources);
   loadResourcesRef.current = loadResources;
   useEffect(() => {
+    setLoading(true);
     const timer = window.setTimeout(() => void loadResourcesRef.current(), filters.search ? 250 : 0);
     return () => { window.clearTimeout(timer); requestVersion.current += 1; };
   }, [filters.search, filters.laboratoryId, filters.category, filters.subtype, filters.operationalStatus, filters.classification, filters.availability]);
@@ -324,6 +336,37 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
     });
   }
 
+  useEffect(() => {
+    if (!managementMode || !canManage || managementSection !== "board") return;
+    const controller = new AbortController();
+    setBoardBookings([]);
+    setBoardBookingsError("");
+    async function load() {
+      try {
+        const rows: BoardBooking[] = [];
+        let page = 1;
+        let totalPages: number;
+        do {
+          const result = await apiRequest(`/bookings?page=${page}&pageSize=100&filter=CHECKED_OUT`, { signal: controller.signal });
+          rows.push(...result.items.map(({ resourceId, endAt }: BoardBooking) => ({ resourceId, endAt })));
+          totalPages = result.pagination.totalPages;
+          page += 1;
+        } while (!controller.signal.aborted && page <= totalPages);
+        if (!controller.signal.aborted) setBoardBookings(rows);
+      } catch (requestError: any) {
+        if (!controller.signal.aborted) setBoardBookingsError(requestError?.message || "ui.could_not_load_bookings_60c9a71f");
+      }
+    }
+    void load();
+    return () => controller.abort();
+  }, [managementMode, canManage, managementSection, user.id, user.role, resources]);
+
+  function requestBoardStatus(resource: any, targetStatus = "") {
+    if (!canManage || !canManageResource(resource) || resource.operationalStatus === "RETIRED") return;
+    setStatusResource(resource);
+    setStatusInitial(targetStatus);
+  }
+
   async function updateStatus(targetStatus: string, reason: string) {
     if (!statusResource) return;
     await apiRequest(`/resources/${statusResource.id}/operational-status`, {
@@ -332,6 +375,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
     });
     setNotice({ key: "ui.status_updated_for_4c792773", params: { value0: statusResource.code } });
     setStatusResource(null);
+    setStatusInitial("");
     await loadResources();
   }
 
@@ -348,17 +392,23 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       {detailError && <div className="alert danger resource-detail-error" role="alert">{tr(detailError)}</div>}
 
       {/* Workspace Header */}
-      <div className="workspace-header">
+      <PageHeading className="workspace-header">
         <div className="workspace-title-group">
           <h1 className="workspace-title">{managementMode ? tr(user.role === "ADMIN" ? "ui.resourceAdmin.title" : "ui.resourceAdmin.staffTitle") : tr("ui.experience.catalogTitle")}</h1>
           {browseMode && <p className="catalogue-studio-intro">{tr("ui.experience.catalogIntro")}</p>}
           {managementMode && <HelpDisclosure>{tr("ui.resources.managementDescription")}</HelpDisclosure>}
         </div>
         <div className="workspace-actions catalogue-quick-actions">
-          <label className="catalogue-quick-search">
+          {browseMode ? <ResourceFinder className="catalogue-quick-search" value={filters.search}
+            label={tr('ui.code_name_location_or_laboratory_30a6bca0')}
+            records={visibleResources.filter(resource=>resource.operationalStatus!=='RETIRED')} ready={!loading&&!error}
+            onChange={value=>setFilters({...filters,search:value})}
+            onSearch={()=>document.getElementById('workspace-catalog-results')?.focus()}
+            onPick={resource=>onViewDetails ? onViewDetails(resource.id,browseContext) : void openDetail(resource)}/>
+          : <label className="catalogue-quick-search">
             <span className="sr-only">{tr("ui.code_name_location_or_laboratory_30a6bca0")}</span>
             <span className="search-box"><Search size={16} aria-hidden="true" /><input type="search" maxLength={120} value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder={tr("ui.code_name_location_or_laboratory_30a6bca0")} aria-label={tr("ui.code_name_location_or_laboratory_30a6bca0")} /></span>
-          </label>
+          </label>}
           <div className="catalogue-quick-filters" role="group" aria-label={tr("ui.current_availability_f57c5e36")}>
             {[["", "ui.all_49c73a31"], ["AVAILABLE", "ui.available_now_d746228e"], ["RESERVED", "ui.currently_reserved_d9123964"], ["UNAVAILABLE", "ui.unavailable_567f82dd"]].map(([value, key]) => (
               <button key={value || "ALL"} type="button" aria-pressed={filters.availability === value} className={filters.availability === value ? "is-active" : ""} onClick={() => setFilters({ ...filters, availability: value })}>{tr(key)}</button>
@@ -382,10 +432,11 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
             </button>
           )}
         </div>
-      </div>
+      </PageHeading>
 
       {managementMode && <nav className="resource-management-sections" aria-label={tr("ui.resourceAdmin.sections")}>
         <button type="button" aria-pressed={managementSection === "directory"} onClick={() => setManagementSection("directory")}>{tr("ui.resourceAdmin.directory")}</button>
+        {canManage && <button type="button" aria-pressed={managementSection === "board"} onClick={() => setManagementSection("board")}>{tr("ui.resourceBoard.title")}</button>}
         <button type="button" aria-pressed={managementSection === "media"} onClick={() => setManagementSection("media")}>{tr("ui.resourceAdmin.media")}</button>
         {user.role === "ADMIN" && <button type="button" aria-pressed={managementSection === "pricing"} onClick={() => setManagementSection("pricing")}>{tr("ui.rental.pricing")}</button>}
       </nav>}
@@ -401,12 +452,16 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
 
       {/* Filters Panel — advanced facets; search and availability live in the header */}
       <div id="catalog-filters" hidden={!filtersOpen} className="queue-panel resource-filter-grid" aria-label={tr("ui.resource_filters_08961fcd")}>
-        <div className="resource-filter-grid-inner">
+        <div className="resource-filter-grid-inner resource-filter-sections">
+          <fieldset><legend>{tr('ui.resourceFinder.scopeGroup')}</legend>
           <label><span id="resource-filter-laboratoryId-label">{tr("ui.laboratory_eb85976f")}</span><select aria-labelledby="resource-filter-laboratoryId-label" value={filters.laboratoryId} onChange={(event) => setFilters({ ...filters, laboratoryId: event.target.value })}><option value="">{tr("ui.all_49c73a31")}</option>{laboratories.map((lab) => <option key={lab.id} value={lab.id}>{lab.code} - {lab.name}</option>)}</select></label>
           <label><span id="resource-filter-category-label">{tr("ui.resource_category_5fc170bb")}</span><select aria-labelledby="resource-filter-category-label" value={filters.category} onChange={(event) => { if (event.target.value) setCatalogueGroup(groupForCategory(event.target.value)); setFilters({ ...filters, category: event.target.value, classification: "ALL" }); }}><option value="">{tr("ui.all_49c73a31")}</option>{categories.map((value) => <option key={value} value={value}>{tr(categoryLabels[value])}</option>)}</select></label>
           <label><span id="resource-filter-classification-label">{tr("ui.classification_a077263e")}</span><select aria-labelledby="resource-filter-classification-label" value={filters.classification} onChange={(event) => { if (event.target.value === "UNRESOLVED") setCatalogueGroup("OTHER"); setFilters({ ...filters, classification: event.target.value, category: "" }); }}><option value="ALL">{tr("ui.all_49c73a31")}</option><option value="UNRESOLVED">{tr("ui.unclassified_10fe63fa")}</option></select></label>
+          </fieldset>
+          <fieldset><legend>{tr('ui.resourceFinder.conditionGroup')}</legend>
           <label><span id="resource-filter-subtype-label">{tr("ui.technical_subtype_f4ef03ac")}</span><select aria-labelledby="resource-filter-subtype-label" value={filters.subtype} onChange={(event) => setFilters({ ...filters, subtype: event.target.value })}><option value="">{tr("ui.all_49c73a31")}</option>{subtypes.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
           <label><span id="resource-filter-operationalStatus-label">{tr("ui.physical_status_e07deca7")}</span><select aria-labelledby="resource-filter-operationalStatus-label" value={filters.operationalStatus} onChange={(event) => setFilters({ ...filters, operationalStatus: event.target.value })}><option value="">{tr("ui.all_49c73a31")}</option>{operationalStatuses.map((value) => <option key={value} value={value}>{tr(statusLabels[value])}</option>)}</select></label>
+          </fieldset>
           <button type="button" className="btn btn-secondary" disabled={JSON.stringify(filters) === JSON.stringify(initialFilters)} onClick={() => setFilters(initialFilters)}>
             <FilterX size={16} aria-hidden="true" />
             {tr("ui.clear_filters_f8f509b1")}
@@ -416,7 +471,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
 
       {/* Results Bar */}
       <div className="attention-bar results-bar">
-        <span role="status" className="results-count">
+        <span id="workspace-catalog-results" role="status" tabIndex={-1} className="results-count">
           {loading ? tr("ui.searching_resources_5efc267e") : error ? tr("ui.could_not_load_results_e4fd179f") : translate("ui.matching_resources_f3d67a97", { value0: visibleResources.length })}
         </span>
         {browseMode && onViewSelection && selectedResourceIds.length > 0 && (
@@ -505,6 +560,20 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
                   {cover && <img key={cover.url} {...resourceImageProps(cover.url)} alt={cover.altText || cover.title || resource.name} onError={event => { event.currentTarget.hidden = true; }} />}
                   <button type="button" className="catalogue-cover-link" aria-label={`${tr("ui.resourceDiscovery.details")}: ${resource.name}`} onClick={() => onViewDetails ? onViewDetails(resource.id, browseContext) : openDetail(resource)}><Eye size={18} aria-hidden="true" /></button>
                   <span className="catalogue-cover-category">{resource.category ? tr(categoryLabels[resource.category]) : tr("ui.unclassified_10fe63fa")}</span>
+                <div className="resource-catalogue-actions catalogue-image-actions">
+                  {onViewCalendar && <button type="button" className="btn btn-secondary resource-catalogue-calendar" aria-label={`${tr("ui.view_resource_calendar_a11d4b1d")}: ${resource.name}`} onClick={() => onViewCalendar(resource.id, browseContext)}><CalendarDays size={16} aria-hidden="true" />{tr("ui.catalogue.calendar")}</button>}
+                  {onAddToSelection && (
+                    <button
+                      className={`btn ${isSelected ? 'btn-selected' : 'btn-primary'}`}
+                      aria-label={`${isSelected ? tr("ui.resourceDiscovery.alreadySelected") : tr("ui.resourceDiscovery.add")}: ${resource.name}`}
+                      onClick={() => onAddToSelection(resource)}
+                      disabled={isSelected || selectedResourceIds.length >= 30}
+                    >
+                      {isSelected ? <Check size={16} aria-hidden="true" /> : <ShoppingCart size={16} aria-hidden="true" />}
+                      {isSelected ? tr("ui.resourceDiscovery.selected") : selectedResourceIds.length >= 30 ? tr("ui.resourceSelection.limit") : tr("ui.resourceDiscovery.select")}
+                    </button>
+                  )}
+                </div>
                 </div>
                 <div className="resource-catalogue-body">
                   <div className="resource-catalogue-meta"><span>{resource.code}</span><span>{resource.category ? tr(categoryLabels[resource.category]) : tr("ui.unclassified_10fe63fa")}</span></div>
@@ -519,38 +588,18 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
                   </h2>
                   <strong className="rental-card-price">{resource.rental ? new Intl.NumberFormat("vi-VN").format(resource.rental.hourlyRateVnd) + " ₫ / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</strong>
                   <p className="resource-catalogue-lab">{resource.laboratory?.name || resource.location || tr("ui.not_assigned_ebe3cb5d")}</p>
-                  <details className="resource-catalogue-more"><summary>{tr("ui.catalogue.specifications")}</summary>
+                  <ExpandableCard className="resource-catalogue-more" title={tr("ui.catalogue.specifications")} icon={SlidersHorizontal} tone="teal">
                   {resource.description && <p className="resource-catalogue-description">{resource.description}</p>}
                   <dl className="resource-catalogue-highlights">
                     <div><dt>{tr(resource.category === "ROOM" ? "ui.catalogue.seats" : "ui.catalogue.quantity")}</dt><dd>{resource.capacity}</dd></div>
                     {highlights.map(([key, value]) => <div key={key}><dt>{resourceSpecLabel(key, tr)}</dt><dd>{String(value)}</dd></div>)}
                   </dl>
-                  </details>
+                  </ExpandableCard>
                   <dl className="resource-catalogue-status">
                     <div><dt>{tr("ui.current_availability_f57c5e36")}</dt><dd><StatusPill value={resource.availability?.state || "UNAVAILABLE"} /></dd></div>
                   </dl>
                 </div>
-                <div className="resource-catalogue-actions">
-                  <button
-                    className="btn btn-secondary"
-                    aria-label={`${tr("ui.view_details_f6f88b0f")}: ${resource.name}`}
-                    onClick={() => onViewDetails ? onViewDetails(resource.id, browseContext) : openDetail(resource)}
-                    disabled={detailLoadingId === resource.id}
-                  >
-                    {tr("ui.resourceDiscovery.details")}
-                  </button>
-                  {onViewCalendar && <button type="button" className="btn btn-ghost resource-catalogue-calendar" aria-label={`${tr("ui.view_resource_calendar_a11d4b1d")}: ${resource.name}`} onClick={() => onViewCalendar(resource.id, browseContext)}>{tr("ui.catalogue.calendar")}</button>}
-                  {onAddToSelection && (
-                    <button
-                      className={`btn ${isSelected ? 'btn-selected' : 'btn-primary'}`}
-                      aria-label={isSelected ? tr("ui.resourceDiscovery.alreadySelected") : tr("ui.resourceDiscovery.add")}
-                      onClick={() => onAddToSelection(resource)}
-                      disabled={isSelected || selectedResourceIds.length >= 30}
-                    >
-                      {isSelected ? tr("ui.resourceDiscovery.selected") : selectedResourceIds.length >= 30 ? tr("ui.resourceSelection.limit") : tr("ui.resourceDiscovery.select")}
-                    </button>
-                  )}
-                </div>
+
               </article>
             );
           })}
@@ -607,6 +656,21 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       )}
 
       </div>
+      {managementMode && canManage && managementSection === "board" && <div>
+        {notice && <div className="alert success" role="status">{translate(notice)}</div>}
+        {loading && <p role="status">{tr("ui.loading_148ded83")}</p>}
+        {error && <div className="alert danger" role="alert">{tr(error)}</div>}
+        {boardBookingsError && <div className="alert danger resource-board-error" role="alert">{tr(boardBookingsError)}</div>}
+        {!loading && !error && <ResourceOperationsBoard
+          resources={resources}
+          bookings={boardBookings}
+          statuses={operationalStatuses}
+          columnLabels={statusLabels}
+          canManage={canManageResource}
+          onOpen={openDetail}
+          onRequestStatus={requestBoardStatus}
+        />}
+      </div>}
       {managementMode && canManage && <div hidden={managementSection !== "media"}><ResourceMediaEditor resources={loading || error ? [] : resources} /></div>}
       {managementMode && user.role === "ADMIN" && <div hidden={managementSection !== "pricing"}><ResourcePricingEditor/></div>}
 
@@ -615,9 +679,10 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
         onChangeStatus={managementMode && detail && canManageResource(detail) && detail.operationalStatus !== "RETIRED" ? () => { closeDetail(); setStatusResource(detail); } : undefined} />
       <ResourceStatusModal
         isOpen={Boolean(statusResource)}
-        onClose={() => setStatusResource(null)}
+        onClose={() => { setStatusResource(null); setStatusInitial(""); }}
         resource={statusResource}
         statuses={operationalStatuses.filter((status) => status !== "RETIRED")}
+        initialStatus={statusInitial}
         onConfirm={updateStatus}
       />
       <ResourceStatusModal
@@ -632,8 +697,3 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
     </div>
   );
 };
-
-function StatusPill({ value }: { value: string }) {
-  const { tr } = useLocale();
-  return <span className={`resource-status-pill status-${String(value).toLowerCase()}`}>{tr(statusLabels[value]) || value}</span>;
-}

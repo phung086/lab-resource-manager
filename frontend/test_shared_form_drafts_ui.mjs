@@ -21,6 +21,12 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXE
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
+  async function restoreBookingDraft() {
+    const disclosure = page.locator('.booking-draft-disclosure');
+    await disclosure.waitFor();
+    if (!await disclosure.evaluate(node => node.open)) await disclosure.locator('summary').click();
+    await page.locator('#quick-booking-form .local-draft-notice button').first().click();
+  }
   const errors = [], requests = [];
   let pricingFailed = false;
   let historyMode = 'denied';
@@ -94,7 +100,7 @@ try {
   await page.reload();
   await page.locator('.planner-views button').nth(1).click();
   await page.locator('.planner-week-context button').click();
-  await page.locator('#quick-booking-form .local-draft-notice button').first().click();
+  await restoreBookingDraft();
   assert.equal(await page.locator('#booking-title').inputValue(),'Bản nháp lịch của khách hàng');
   assert.equal(await page.locator('#booking-purpose').inputValue(),'Thực hành thị giác máy tính');
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('lrm.form-draft.v1:student-qa:customer-booking')));
@@ -102,11 +108,11 @@ try {
   assert.equal(requests.filter(r=>r.method==='POST'&&['/support/sessions','/incidents'].includes(r.path)).length,2,'Only explicit user submissions were attempted');
   assert.equal(requests.filter(r=>r.method==='POST'&&r.path==='/bookings').length,0,'Restoring a booking never submits');
   await page.evaluate(async()=>{const store=await import('/src/utils/localDraftStore.ts');const key='lrm.form-draft.v1:student-qa:customer-booking';const value=JSON.parse(localStorage.getItem(key));value.draft.title='Bản nháp mới từ cửa sổ khác';value.savedAt=Date.now();store.writeLocalDraft(key,value);});
-  await page.locator('#quick-booking-form .local-draft-notice button').first().click();
+  await restoreBookingDraft();
   assert.equal(await page.locator('#booking-title').inputValue(),'Bản nháp mới từ cửa sổ khác','Mounted instances see latest shared draft');
   await page.evaluate(()=>{const key='lrm.form-draft.v1:student-qa:customer-booking';const value=JSON.parse(localStorage.getItem(key));value.draft.uncertain='true';localStorage.setItem(key,JSON.stringify(value));});
   await page.reload(); await page.locator('.planner-views button').nth(1).click();await page.locator('.planner-week-context button').click();
-  await page.locator('#quick-booking-form .local-draft-notice button').first().click();
+  await restoreBookingDraft();
   await page.getByText(vi['ui.resourceSelection.uncertain'],{exact:true}).first().waitFor();
   assert.deepEqual(errors,[]);
   for(const width of [1440,390]){await page.setViewportSize({width,height:1000}); await page.screenshot({path:`${screenshots}/booking-draft-${width}.png`,fullPage:true});}

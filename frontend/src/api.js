@@ -1,7 +1,23 @@
 import { getActiveLocale, hasMessage } from "./i18n.js";
 import { getAccessToken, getAuthUser, removeAuth, saveAuth } from './services/authStorage.js';
 
-const configuredApiBase = import.meta.env?.VITE_API_BASE_URL || `http://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:8000`;
+function resolveApiBase() {
+  const configured = import.meta.env?.VITE_API_BASE_URL;
+  const hostname = typeof window === "undefined" ? "localhost" : window.location.hostname;
+  if (!configured) return `http://${hostname}:8000`;
+  // The local launcher uses localhost. Match the page's loopback hostname so
+  // browser requests keep same-site authentication cookies on either local URL.
+  const loopback = ["localhost", "127.0.0.1"];
+  if (import.meta.env?.DEV && loopback.includes(hostname) && /^https?:\/\//i.test(configured)) {
+    const url = new URL(configured);
+    if (loopback.includes(url.hostname) && url.protocol === window.location.protocol) {
+      url.hostname = hostname;
+      return url.href;
+    }
+  }
+  return configured;
+}
+const configuredApiBase = resolveApiBase();
 const API_BASE_URL = `${configuredApiBase.replace(/\/$/, "")}${/\/api$/.test(configuredApiBase) ? "" : "/api"}`;
 
 export class ApiError extends Error {
@@ -53,7 +69,7 @@ export async function apiRequest(path, options = {}) {
         error.details = { ...error.details, retryAfterSeconds: seconds };
         window.dispatchEvent(new CustomEvent("lrm:rate-limited"));
       }
-      if (response.status === 401 && !["/auth/login", "/auth/register"].includes(path) &&
+      if (response.status === 401 && !["/auth/login", "/auth/register", "/auth/google"].includes(path) &&
           token === getAccessToken()) {
         clearSession();
         window.dispatchEvent(new CustomEvent("lrm:session-invalid"));

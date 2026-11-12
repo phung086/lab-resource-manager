@@ -1,7 +1,8 @@
+import { ProjectBrand } from "./base/ProjectBrand";
 import { translate } from "../i18n.js";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { isTabEnabled } from "../config/featureFlags";
-import { Activity, Bell, CalendarCheck, ChevronDown, ClipboardCheck, Clock, FlaskConical, Layers, LayoutDashboard, Menu, Pin, Search, Server, ShieldAlert, Sliders, Sparkles, Users, UserRound, Wrench, X, type LucideIcon } from "lucide-react";
+import { Activity, Bell, CalendarCheck, ChevronDown, ClipboardCheck, Clock, FlaskConical, Layers, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, Search, Server, ShieldAlert, Users, UserRound, Wrench, type LucideIcon } from "lucide-react";
 
 export interface SidebarProps {
   activeTab: string;
@@ -13,28 +14,67 @@ export interface SidebarProps {
   incidentOpenCount?: number;
   conflictsCount?: number;
   locale?: string;
-  pinned: boolean;
-  onPinnedChange: (pinned: boolean) => void;
-  expanded: boolean;
-  onExpandedChange: (open: boolean) => void;
+  desktop: boolean;
+  desktopExpanded: boolean;
+  onDesktopExpandedChange: (expanded: boolean) => void;
+  mobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
 }
 interface NavItem { id: string; labelKey: string; icon: LucideIcon; badge?: number }
+const hiddenIndicator = { top: 0, left: 0, width: 0, height: 0 };
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, notifications = [], notificationUnreadCount, incidentOpenCount, locale = "vi", expanded, onExpandedChange, pinned, onPinnedChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, notifications = [], notificationUnreadCount, incidentOpenCount, locale = "vi", desktop, desktopExpanded, onDesktopExpandedChange, mobileOpen, onMobileOpenChange }) => {
   const t = translate;
   const role = user?.role || "";
   const staff = ["ADMIN", "LAB_STAFF"].includes(role);
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>([]);
-  const [desktop, setDesktop] = useState(() => window.matchMedia('(min-width: 1100px)').matches);
   const panel = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const docked = desktop && pinned;
-  const closeMenu = () => {
-    onPinnedChange(false);
-    onExpandedChange(false);
+  const collapseTrigger = useRef<HTMLButtonElement>(null);
+  const docked = desktop && desktopExpanded;
+  const navigation = useRef<HTMLElement>(null);
+  const [indicator, setIndicator] = useState(hiddenIndicator);
+  useLayoutEffect(() => {
+    const nav = navigation.current;
+    if (!nav) return;
+    const update = () => {
+      const active = nav.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!active) { setIndicator(hiddenIndicator); return; }
+      const row = active.getBoundingClientRect();
+      const viewport = nav.getBoundingClientRect();
+      const next = {
+        top: row.top - viewport.top + nav.scrollTop - nav.clientTop,
+        left: row.left - viewport.left + nav.scrollLeft - nav.clientLeft,
+        width: row.width,
+        height: row.height
+      };
+      setIndicator(previous => previous.top === next.top && previous.left === next.left &&
+        previous.width === next.width && previous.height === next.height ? previous : next);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(nav);
+    // The scroll viewport can stay fixed when fonts, wrapping or badges resize its rows.
+    nav.querySelectorAll('.workspace-group-toggle, .sidebar-nav-item-2026').forEach(row => observer.observe(row));
+    return () => observer.disconnect();
+  }, [activeTab, query, collapsed, docked, mobileOpen, locale, role]);
+
+  function openNavigation() {
+    setQuery("");
+    if (desktop) {
+      onDesktopExpandedChange(true);
+      requestAnimationFrame(() => collapseTrigger.current?.focus({ preventScroll: true }));
+    } else {
+      onMobileOpenChange(true);
+    }
+  }
+
+  function closeNavigation() {
+    if (desktop) onDesktopExpandedChange(false);
+    else onMobileOpenChange(false);
     requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true }));
-  };
+  }
   const sections: { id: string; labelKey: string; items: NavItem[] }[] = [
     { id: "workspace", labelKey: "ui.workspace_970a97e3",  items: [
       { id: "home", labelKey: "ui.overview_120adc28",  icon: LayoutDashboard },
@@ -61,7 +101,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, 
   ];
   function allowed(id: string) {
     if (!isTabEnabled(id)) return false;
-    if (id === "teaching") return false;
     if (id === "logs") return staff;
     if (id === "users") return staff;
     if (["stock", "dashboard", "monitoring", "maintenance", "admin_management"].includes(id)) return staff;
@@ -70,27 +109,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, 
   const available = sections.map(section => ({ ...section, items: section.items.filter(item => allowed(item.id)) })).filter(section => section.items.length);
   const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase();
   const matching = available.map(section => ({ ...section, items: section.items.filter(item => normalize(`${t(item.labelKey)} ${item.id}`).includes(normalize(query.trim()))) })).filter(section => section.items.length);
-  const quickIds = role === "ADMIN"
-    ? ["home", "users", "admin_management", "dashboard"]
-    : role === "LAB_STAFF" ? ["home", "bookings", "smart_calendar", "stock"]
-      : ["home", "resources", "smart_calendar", "bookings"];
   const quickLabels: Record<string, string> = {
     home: "ui.overview_120adc28", resources: "ui.resources_eb706979",
     smart_calendar: "ui.calendar_be87b302", bookings: "ui.bookings_00f5b333",
-    users: "ui.navigation.accountsShort", admin_management: "ui.resources_eb706979",
+    users: "ui.navigation.accountsShort",
     dashboard: "ui.navigation.operationsShort", stock: "ui.navigation.stockShort"
   };
-  const quick = quickIds.flatMap(id => available.flatMap(section => section.items).filter(item => item.id === id));
+  const primaryIds = role === 'ADMIN' ? ['home', 'resources', 'bookings', 'dashboard'] : ['home', 'resources', 'smart_calendar', 'bookings'];
+  const quick = available.flatMap(section => section.items).filter(item => primaryIds.includes(item.id));
 
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 1100px)');
-    const update = () => { setDesktop(media.matches); setQuery(''); onExpandedChange(false); };
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, [onExpandedChange]);
-
-  useEffect(() => {
-    if (!expanded || docked) return;
+    if (!mobileOpen) return;
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -99,36 +128,49 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, 
       document.body.style.overflow = previousOverflow;
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     };
-  }, [expanded, docked]);
+  }, [mobileOpen]);
 
   function navigate(id: string) {
     onSelectTab(id);
-    onExpandedChange(false);
+    onMobileOpenChange(false);
     // The destination, including Home, always remains inside the signed-in shell.
     requestAnimationFrame(() => document.getElementById("workspace-main")?.focus({ preventScroll: true }));
   }
   function handleKeyDown(event: React.KeyboardEvent) {
     if (docked) return;
-    if (event.key === "Escape") { event.preventDefault(); closeMenu(); return; }
+    if (event.key === "Escape") { event.preventDefault(); closeNavigation(); return; }
     if (event.key !== "Tab") return;
     const controls = Array.from(panel.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input, [href], [tabindex="0"]') || []).filter(node => node.getClientRects().length);
     const first = controls[0], last = controls[controls.length - 1];
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   }
-  return <aside className={`sidebar-2026 workspace-navigation${docked ? " is-pinned" : ""}`}>
-    {!docked && <div className="workspace-rail" inert={expanded}>
+  const openLabel = t(desktop ? "ui.navigation.expand" : "ui.menu_99af6606");
+  const closeLabel = t(desktop ? "ui.navigation.collapse" : "ui.close_menu_704367c1");
+  const OpenIcon = desktop ? PanelLeftOpen : Menu;
+
+  return <aside className={`sidebar-2026 workspace-navigation${docked ? " is-expanded" : ""}`}>
+    {!docked && <div className="workspace-rail" inert={mobileOpen}>
       <button type="button" className="rail-brand" onClick={() => navigate("home")} aria-label={t("ui.lab_overview_50cafd5a")}><FlaskConical size={23} aria-hidden="true" /><span>{translate("ui.lab_7a62e3ac")}</span></button>
-      <button ref={trigger} type="button" className="rail-item rail-menu" aria-expanded={expanded} aria-controls="workspace-navigation-panel" onClick={() => { setQuery(""); onExpandedChange(true); }}><Menu size={21} aria-hidden="true" /><span>{translate("ui.menu_99af6606")}</span></button>
-      <nav className="rail-shortcuts" aria-label={t("ui.quick_navigation_ec400fed")}>{quick.map(item => <button key={item.id} type="button" data-quick-nav-id={item.id} className={`rail-item ${activeTab === item.id ? "is-active" : ""}`} title={t(item.labelKey)} aria-label={t(item.labelKey)} aria-current={activeTab === item.id ? "page" : undefined} onClick={() => navigate(item.id)}><item.icon size={20} aria-hidden="true" /><span>{t(quickLabels[item.id])}</span></button>)}</nav>
-      <button type="button" className="rail-item rail-profile" aria-label={t("ui.my_profile_700b5272")} onClick={() => navigate("profile")}><span className="rail-avatar">{user?.fullName?.charAt(0) || "U"}</span><span>{t("ui.profile_7f401d2e")}</span></button>
+      <button ref={trigger} type="button" className="rail-item rail-menu" aria-label={openLabel} title={openLabel} aria-expanded={mobileOpen} aria-controls="workspace-navigation-panel" onClick={openNavigation}>
+        <OpenIcon size={21} aria-hidden="true" /><span>{t("ui.menu_99af6606")}</span>
+      </button>
+      <nav className="rail-shortcuts" aria-label={t("ui.quick_navigation_ec400fed")}>{quick.map(item => <button key={item.id} type="button" data-quick-nav-id={item.id} className={`rail-item ${activeTab === item.id ? "is-active" : ""}`} title={t(item.labelKey)} aria-label={t(item.labelKey)} aria-current={activeTab === item.id ? "page" : undefined} onClick={() => navigate(item.id)}><item.icon size={20} aria-hidden="true" /><span>{t(quickLabels[item.id] || item.labelKey)}</span></button>)}</nav>
+      <button type="button" data-quick-nav-id="profile" className={`rail-item rail-profile${activeTab === 'profile' ? ' is-active' : ''}`} aria-current={activeTab === 'profile' ? 'page' : undefined} aria-label={t("ui.my_profile_700b5272")} onClick={() => navigate("profile")}><span className="rail-avatar">{user?.fullName?.charAt(0) || "U"}</span><span>{t("ui.profile_7f401d2e")}</span></button>
     </div>}
-    {(docked || expanded) && <>
-      {!docked && <div className="workspace-nav-scrim" onClick={closeMenu} aria-hidden="true" />}
+    {(docked || mobileOpen) && <>
+      {mobileOpen && <div className="workspace-nav-scrim" onClick={closeNavigation} aria-hidden="true" />}
       <div ref={panel} id="workspace-navigation-panel" className={`workspace-nav-panel${docked ? ' workspace-nav-desktop' : ''}`} role={docked ? undefined : "dialog"} aria-modal={docked ? undefined : true} aria-labelledby="workspace-menu-title" onKeyDown={handleKeyDown}>
-        <header className="workspace-nav-heading"><h2 id="workspace-menu-title">{t(desktop ? "ui.menu_99af6606" : "ui.your_workspace_901f6858")}</h2>{desktop && <button type="button" className="nav-close nav-pin" aria-pressed={docked} title={t("ui.pin_menu")} aria-label={t("ui.pin_menu")} onClick={() => { onPinnedChange(!docked); onExpandedChange(!docked ? false : true); }}><Pin size={18} aria-hidden="true" /></button>}<button type="button" className="nav-close" onClick={closeMenu} aria-label={t("ui.close_menu_704367c1")}><X size={20} aria-hidden="true" /></button></header>
+        <header className="workspace-nav-heading">
+          <ProjectBrand onNavigate={() => navigate("home")} />
+          <h2 className="sr-only" id="workspace-menu-title">{t(desktop ? "ui.menu_99af6606" : "ui.your_workspace_901f6858")}</h2>
+          <button ref={collapseTrigger} type="button" className="workspace-nav-toggle" onClick={closeNavigation} aria-label={closeLabel} title={closeLabel} aria-expanded="true" aria-controls="workspace-navigation-panel">
+            <PanelLeftClose size={19} aria-hidden="true" />
+          </button>
+        </header>
         <label className="workspace-nav-search"><Search size={18} aria-hidden="true" /><input value={query} onChange={event => setQuery(event.target.value)}  aria-label={t("ui.find_a_feature_a5650d64")} /></label>
-        <nav className="sidebar-nav-container-2026 workspace-menu-groups" aria-label={t("ui.main_navigation_84d2467a")}>
+        <nav ref={navigation} className="sidebar-nav-container-2026 workspace-menu-groups" aria-label={t("ui.main_navigation_84d2467a")}>
+          <span className="workspace-nav-indicator" aria-hidden="true" style={{ transform: `translate(${indicator.left}px, ${indicator.top}px)`, width: indicator.width, height: indicator.height, opacity: indicator.height ? 1 : 0 }} />
           {matching.map(section => <section key={section.id} className="workspace-menu-group"><button type="button" className="workspace-group-toggle" aria-expanded={query.trim() ? true : !collapsed.includes(section.id)} aria-controls={`nav-group-${section.id}`} onClick={() => setCollapsed(ids => ids.includes(section.id) ? ids.filter(id => id !== section.id) : [...ids, section.id])}><span>{t(section.labelKey)}</span><ChevronDown size={15} aria-hidden="true" /></button>
             {(query.trim() || !collapsed.includes(section.id)) && <ul id={`nav-group-${section.id}`}>{section.items.map(item => <li key={item.id}><button type="button" data-nav-id={item.id} className={`sidebar-nav-item-2026 ${activeTab === item.id ? "is-active" : ""}`} aria-current={activeTab === item.id ? "page" : undefined} onClick={() => navigate(item.id)}><item.icon size={18} aria-hidden="true" /><span>{t(item.labelKey)}</span>{Boolean(item.badge) && <span className="workspace-nav-count">{item.badge}</span>}</button></li>)}</ul>}
           </section>)}

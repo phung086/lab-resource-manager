@@ -26,3 +26,36 @@
 .payment-ledger .customer-payment-list button[aria-pressed=true] { background:#f1eaff; border-color:#8b6fc8; box-shadow:inset 4px 0 #7250c5; }
 @media(max-width:800px) { .payment-page .booking-checkout-order { grid-template-columns:1fr; }.checkout-banner-context { max-width:none; margin-left:0; flex-basis:100%; }.payment-page .checkout-banner { flex-wrap:wrap; padding:22px; }.payment-page .booking-checkout-summary,.payment-page .booking-checkout-status { padding:22px 18px; } }
 @media(max-width:420px) { .checkout-banner-icon { width:52px; height:52px; border-radius:15px; }.payment-page .checkout-banner { gap:14px; }.payment-page .booking-checkout-summary>dl { grid-template-columns:1fr; }.booking-checkout-summary>dl dt { border-bottom:0; padding-bottom:0; }.booking-checkout-summary>dl dd { padding-top:5px; } }
+.booking-checkout .payment-provider-choices {
+  display: grid;
+  gap: 8px;
+}
+
+.booking-checkout .payment-provider-choices > button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  text-align: start;
+  flex-wrap: wrap;
+}
+
+.booking-checkout .payment-provider-choices > button > svg {
+  flex-shrink: 0;
+}
+
+.booking-checkout .checkout-provider-state {
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+
+.bank-transfer-details { display: grid; gap: 12px; min-width: 0; }
+.bank-transfer-details dl { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 0; }
+.bank-transfer-details dd { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; overflow-wrap: anywhere; }
+.bank-transfer-details dd span { min-width: 0; }
+.bank-transfer-details dd button { flex-shrink: 0; }
+.bank-transfer-details dt { font-weight: 600; }

@@ -157,26 +157,19 @@
   border-radius: 30px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background:
-    radial-gradient(ellipse 60% 90% at 85% 15%, rgba(110, 231, 210, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 90% at 85% 15%, rgba(110, 231, 210, 0.20) 0%, transparent 55%),
     radial-gradient(ellipse 55% 85% at 12% 85%, rgba(196, 148, 244, 0.32) 0%, transparent 55%),
     linear-gradient(135deg, #42289b 0%, #2a1a5e 100%);
   box-shadow: 0 34px 70px -30px rgba(42, 26, 94, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.28);
   overflow: hidden; position: relative;
 }
-/* global.css inked this band for the old lavender paper; on deep violet it goes light.
-   spectrum.css pins :is(h2,p) ink at (0,3,1) — these (0,4,0) rules must outbid it. */
-.project-public-shell.lab-spectrum .landing-cta .landing-cta-title {
-  color: #fff;
-  background: linear-gradient(115deg, #ffffff 34%, #ddd2ff 64%, #a9f2e4 100%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.project-public-shell.lab-spectrum .landing-cta .landing-cta-desc { color: rgba(233, 229, 255, 0.86); }
+.project-public-shell .landing-cta .landing-cta-inner .landing-cta-title { color: #fff; }
+.project-public-shell .landing-cta .landing-cta-inner .landing-cta-desc { color: #f1ecff; }
 /* Aurora orb drifting behind the copy — depth without new DOM. */
 .landing-cta .landing-cta-inner::before {
   content: ''; position: absolute; width: 340px; height: 340px; right: -120px; top: -150px;
   border: 0; border-radius: 50%;
-  background: radial-gradient(circle, rgba(122, 231, 208, 0.5) 0%, rgba(122, 231, 208, 0.14) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(122, 231, 208, 0.28) 0%, rgba(122, 231, 208, 0.10) 45%, transparent 70%);
   filter: none;
   /* Static light field: the CTA does not need a continuous compositor layer. */
   pointer-events: none; z-index: -1;

@@ -1,7 +1,8 @@
+import { PageHeading } from './base/PageHeading';
 import '../styles/calendar-workspace.css';
 import '../styles/calendar-planner.css';
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, RefreshCw } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { ResourceSearchField } from './base/ResourceSearchField';
 import { apiRequest } from '../api.js';
 import { useLocale } from '../providers/LocaleProvider';
@@ -25,6 +26,7 @@ type Laboratory = { id: string; name: string; code: string };
 export function SmartCalendarView({ user, onOpenBooking, onPayment, initialResourceId = '', refreshKey = 0, selectedResourceIds = [], onAddToSelection, onViewSelection }: SmartCalendarViewProps) {
   const { tr, locale } = useLocale();
   const operator = ['ADMIN', 'LAB_STAFF'].includes(user?.role);
+  const [filtersOpen, setFiltersOpen] = useState(() => window.matchMedia('(min-width: 761px)').matches);
   const [view, setView] = useState<View>(operator ? 'day' : 'plan');
   const [date, setDate] = useState(getVietnamTodayDateString);
   const [planAnchor,setPlanAnchor]=useState(getVietnamTodayDateString),[duration,setDuration]=useState(60);
@@ -102,8 +104,8 @@ export function SmartCalendarView({ user, onOpenBooking, onPayment, initialResou
     const timer = setTimeout(() => setRevision(value => value+1),Math.min(...deadlines)-Date.now()+300);
     return () => clearTimeout(timer);
   }, [events]);
-  function openBooking(slot: any) {
-    const exact=resources.find(row=>row.id===slot.resourceId);
+  function openBooking(slot: any, exactResource?: PlannerResource) {
+    const exact = exactResource?.id === slot.resourceId ? exactResource : resources.find(row=>row.id===slot.resourceId);
     if (!exact) return;
     // Carry the exact loaded resource into the shared form, including deep links beyond the list cap.
     const context={...slot,resources:[exact]};
@@ -126,7 +128,7 @@ export function SmartCalendarView({ user, onOpenBooking, onPayment, initialResou
     })}</div>}
   </>;
   return <div className="calendar-workspace calendar-planner">
-    <header className="planner-heading"><div><h1>{tr(operator ? 'ui.planner.operationsTitle' : 'ui.planner.customerTitle')}</h1><p>{tr(operator ? 'ui.planner.operationsIntro' : 'ui.planner.customerIntro')}</p></div><span className="planner-timezone"><Clock size={15} />{tr('ui.calendarWorkspace.timezone')}</span></header>
+    <PageHeading className="planner-heading"><div><h1>{tr(operator ? 'ui.planner.operationsTitle' : 'ui.planner.customerTitle')}</h1><p>{tr(operator ? 'ui.planner.operationsIntro' : 'ui.planner.customerIntro')}</p></div><span className="planner-timezone"><Clock size={15} />{tr('ui.calendarWorkspace.timezone')}</span></PageHeading>
     <div className="planner-topline"><div className="planner-views" role="group" aria-label={tr('ui.calendar_view_6ff1148e')}>
       <button type="button" aria-pressed={view === (operator ? 'day' : 'plan')} onClick={() => {setView(operator ? 'day' : 'plan');setPage(0);}}><CalendarDays size={17} />{tr(operator ? 'ui.planner.dayView' : 'ui.planner.chooseSlot')}</button>
       {operator && <button type="button" aria-pressed={view === 'plan'} onClick={() => setView('plan')}>{tr('ui.planner.chooseSlot')}</button>}
@@ -134,14 +136,17 @@ export function SmartCalendarView({ user, onOpenBooking, onPayment, initialResou
       <button type="button" aria-pressed={view === 'month'} onClick={() => setView('month')}>{tr('ui.month_10276db1')}</button>
     </div><button type="button" className="btn btn-secondary" disabled={busy && !scopeError} onClick={() => setRevision(value=>value+1)}><RefreshCw size={16} />{tr('ui.refresh_calendar_5cd617b0')}</button></div>
     {(scopeError || resourceError) && <div className="alert danger" role="alert">{tr(scopeError || resourceError)} <button type="button" className="btn btn-secondary" onClick={() => setRevision(value=>value+1)}>{tr('ui.retry_c58d068c')}</button></div>}
-    <div className="planner-filters">
+    <div className="planner-filter-bar">
+    <div className="planner-filters" id="calendar-filters" hidden={!filtersOpen}>
       <label>{tr('ui.planner.laboratory')}<select value={lab} onChange={event=>{setLab(event.target.value);setPage(0);}}>{!operator && <option value="">{tr('ui.planner.allLabs')}</option>}{labs.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
       <label>{tr('ui.resource_category_5fc170bb')}<select value={group} onChange={event=>{setGroup(event.target.value);setPage(0);}}><option value="">{tr('ui.planner.allGroups')}</option>{RESOURCE_GROUPS.map(category=><option key={category} value={category}>{tr(`enum.category.${category}`)}</option>)}</select></label>
+    </div>
       <ResourceSearchField className="planner-resource-search" value={search} onChange={setSearch} onSearch={value=>{setQuery(value);setPage(0);}} label={tr('ui.planner.findResource')} placeholder={tr('ui.planner.searchPlaceholder')} allowEmpty/>
+      <button type="button" className="btn btn-secondary planner-filters-toggle" aria-expanded={filtersOpen} aria-controls="calendar-filters" onClick={() => setFiltersOpen(value => !value)}><SlidersHorizontal size={17} aria-hidden="true"/><span>{tr("refine.searchFilters")}</span></button>
     </div>
     {ready && operator && !labs.length && <p className="empty-state">{tr('ui.planner.noAssignedLabs')}</p>}
     {(view !== 'plan' || entry === 'time') && dateControls}
-    {view === 'plan' ? <BookingSlotPicker dateControls={dateControls} resources={resources} resourceId={resourceId} onResource={setResourceId} date={date} dateTitle={dateTitle} events={visibleEvents} busy={busy} scheduleError={scheduleError} onFilterTime={setTimeFilter} timeFilter={timeFilter} onBook={openBooking} entry={entry} onEntry={setEntry} duration={duration} onDuration={setDuration} rangeEnd={calendarTo} onChooseDate={changeDate} onRefresh={()=>setScheduleRevision(value=>value+1)} selectedResourceIds={selectedResourceIds} onAddToSelection={onAddToSelection} onViewSelection={onViewSelection}/> : <>
+    {view === 'plan' ? <BookingSlotPicker dateControls={dateControls} resources={resources} resourceId={resourceId} onResource={setResourceId} date={date} dateTitle={dateTitle} events={visibleEvents} busy={busy} scheduleError={scheduleError} onFilterTime={setTimeFilter} timeFilter={timeFilter} onBook={openBooking} entry={entry} onEntry={setEntry} duration={duration} onDuration={setDuration} rangeEnd={calendarTo} onChooseDate={changeDate} onRefresh={()=>setScheduleRevision(value=>value+1)} selectedResourceIds={selectedResourceIds} onAddToSelection={onAddToSelection} onViewSelection={onViewSelection} canRecover={user?.role === 'CUSTOMER'}/> : <>
       {view !== 'day' && <label className="planner-week-resource">{tr('ui.planner.singleResource')}<select value={resourceId} onChange={event=>setResourceId(event.target.value)}>{resources.map(row=><option key={row.id} value={row.id}>{row.name} ({row.code})</option>)}</select></label>}
       <div className="planner-legend"><span><i className="is-booked"/>{tr('ui.reserved_f20b6ee2')}</span><span><i className="is-mine"/>{tr('ui.your_booking_72ef015d')}</span><span><i className="is-maintenance"/>{tr('ui.maintenance_calibration_79fdebcb')}</span><span><i/>{tr('ui.planner.neutralLegend')}</span></div>
       {busy ? <p role="status" className="planner-empty">{tr('ui.loading_resource_calendar_08975674')}</p> : scheduleError ? <div className="alert danger" role="alert">{tr(scheduleError)}<button className="btn btn-secondary" type="button" onClick={()=>setRevision(value=>value+1)}>{tr('ui.retry_c58d068c')}</button></div> : view === 'day' ? <ResourceDayBoard resources={resources} events={events} date={date} page={Math.min(page,Math.max(0,Math.ceil(resources.length/12)-1))} onPage={setPage} onBook={row=>openBooking({resourceId:row.id,date})} onEvent={setSelectedEvent}/> : resource && <>

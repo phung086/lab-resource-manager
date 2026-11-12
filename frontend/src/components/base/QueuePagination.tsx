@@ -4,7 +4,7 @@ import { useLocale } from "../../providers/LocaleProvider";
 import type { QueuePagination as Pagination } from "../../types/queue";
 import "../../styles/queue-pagination.css";
 
-export function QueuePagination({ pagination, onPage, disabled = false, pageSizes, onPageSize }: { pagination: Pagination; onPage: (page: number) => void; disabled?: boolean; pageSizes?: number[]; onPageSize?: (size: number) => void }) {
+export function QueuePagination({ pagination, onPage, disabled = false, label, pageSizes, onPageSize }: { pagination: Pagination; onPage: (page: number) => void; disabled?: boolean; label?: string; pageSizes?: number[]; onPageSize?: (size: number) => void }) {
   const { t } = useLocale();
   const { page, pageSize, total, totalPages } = pagination;
   const previous = useRef<HTMLButtonElement>(null), next = useRef<HTMLButtonElement>(null);
@@ -20,7 +20,7 @@ export function QueuePagination({ pagination, onPage, disabled = false, pageSize
   // Nothing to page through: the empty state above carries the message, and a
   // "0–0 of 0" strip is noise.
   if (!total) return null;
-  return <nav className="queue-pagination" aria-label={t("ui.queue.pagination")} aria-busy={disabled}>
+  return <nav className="queue-pagination" aria-label={label ?? t("ui.queue.pagination")} aria-busy={disabled}>
     <p role="status" aria-live="polite">{t("ui.queue.range", { start: total ? (page - 1) * pageSize + 1 : 0, end: Math.min(page * pageSize, total), total })}</p>
     <div><button ref={previous} type="button" className="secondary-button" disabled={disabled || page <= 1} onClick={event => { if (!event.detail) keyboardPage.current = "previous"; onPage(page - 1); }}><ChevronLeft size={16} aria-hidden="true" />{t("ui.queue.previous")}</button>
       <span>{t("ui.queue.page", { page, pages: Math.max(1, totalPages) })}</span>

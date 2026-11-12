@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { normalizeAuth, validateAuth, authFailure, serverAuthFields } from './src/components/features/auth/authValidation.js';
-const valid = { email: ' learner+lab@school.edu.vn ', password: ' 12345678 ', fullName: ' Mai Phuong ', phone: '', studentId: '', department: '', organization: '', address: { provinceCode: '01', wardCode: '00001', addressLine: ' Building A ' } };
+const valid = { email: ' customer+lab@example.test ', password: ' 12345678 ' };
 test('empty and malformed login are rejected; normalized email and password bytes are preserved', () => {
   assert.deepEqual(Object.keys(validateAuth({ email: '', password: '' }, 'login')), ['email', 'password']);
   for (const email of ['broken', '.a@school.edu.vn', 'a..b@school.edu.vn', 'a @school.edu.vn']) assert.ok(validateAuth({ email, password: valid.password }, 'login').email);
   assert.deepEqual(validateAuth(valid, 'login'), {});
   const data = normalizeAuth(valid);
-  assert.equal(data.email, 'learner+lab@school.edu.vn'); assert.equal(data.fullName, 'Mai Phuong'); assert.equal(data.password, valid.password); assert.equal(valid.address.addressLine, ' Building A ');
+  assert.deepEqual(data, { email: 'customer+lab@example.test', password: valid.password });
 });
 test('current login compatibility and registration boundaries are distinct', () => {
   assert.equal(validateAuth({ ...valid, password: 'x'.repeat(129) }, 'login').password, undefined);
@@ -16,13 +16,15 @@ test('current login compatibility and registration boundaries are distinct', () 
   for (const length of [8, 128]) assert.equal(validateAuth({ ...valid, password: 'x'.repeat(length) }, 'register').password, undefined);
   assert.ok(validateAuth({ ...valid, password: '1234567' }, 'register').password);
   assert.deepEqual(validateAuth({ email: valid.email, password: valid.password }, 'register'), {});
-  assert.equal(validateAuth(valid, 'register').phone, undefined); // API phone is optional.
+  assert.equal(validateAuth(valid, 'register').phone, undefined);
   assert.equal(validateAuth({ ...valid, phone: 'x'.repeat(21) }, 'register').phone, undefined);
 });
 test('registration does not require personal contact or administrative address', () => {
   assert.deepEqual(validateAuth(valid, 'register'), {});
-  const errors = validateAuth({ ...valid, address: { provinceCode: '', wardCode: '', addressLine: 'a' } }, 'register');
+  const staleDraft = { ...valid, fullName: 'Old Draft', department: 'Legacy', address: { provinceCode: '', wardCode: '', addressLine: 'a' } };
+  const errors = validateAuth(staleDraft, 'register');
   assert.deepEqual(errors, {});
+  assert.deepEqual(normalizeAuth(staleDraft), normalizeAuth(valid));
 });
 test('credential errors stay generic, transport and availability failures remain distinct', () => {
   for (const code of ['AUTH_INVALID', 'AUTH_INVALID_CREDENTIALS']) assert.equal(authFailure({ code }, 'login'), 'api.AUTH_INVALID_CREDENTIALS');

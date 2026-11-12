@@ -14,7 +14,7 @@ Nhóm vận hành quan trọng thứ hai gồm cán bộ lab và quản trị vi
 
 ## Product Purpose
 
-Lab Resource Manager là web app nội bộ giúp phòng thí nghiệm quản lý việc tìm kiếm, đặt lịch tự xác nhận, sử dụng và bàn giao tài nguyên dùng chung như GPU server, Raspberry Pi, UAV, camera, phòng thực hành và thiết bị nghiên cứu.
+Lab Resource Manager là ứng dụng web giúp khách hàng tìm và đặt lịch sử dụng tài nguyên dùng chung như GPU server, Raspberry Pi, UAV, camera, phòng thực hành và thiết bị nghiên cứu. Mọi khách hàng dùng cùng một vai trò, điều kiện đặt lịch và quy tắc báo giá.
 
 Hai năng lực của sản phẩm là điều phối sử dụng và giám sát tài nguyên.
 Luồng chính: tìm tài nguyên → kiểm tra lịch/điều kiện → đặt lịch → xác nhận tự động →
@@ -25,13 +25,13 @@ Sản phẩm thành công khi người dùng có thể hoàn tất lifecycle nà
 
 ## Positioning
 
-Sản phẩm kết hợp booking theo policy, vận hành tài nguyên và observability trong một workflow thống nhất dành riêng cho phòng thí nghiệm đại học. Hệ thống không chỉ giữ lịch mà còn kiểm tra điều kiện sử dụng, hỗ trợ approval hoặc payment theo từng tài nguyên, theo dõi check-in/check-out và lưu audit trail xuyên suốt.
+Sản phẩm kết hợp đặt lịch theo chính sách, vận hành và giám sát tài nguyên phòng thí nghiệm. Hệ thống kiểm tra điều kiện sử dụng, xử lý thanh toán khi có phí, theo dõi bàn giao và hoàn trả, đồng thời lưu lịch sử thao tác.
 
 AI là lớp decision-support dựa trên dữ liệu thật, không thay thế business rules hay quyết định chịu trách nhiệm của con người. AI có thể gợi ý thiết bị phù hợp, đề xuất slot thay thế, giải thích xung đột, cảnh báo tình trạng thiết bị, hỗ trợ tra cứu SOP/tài liệu và hỗ trợ cán bộ lab ra quyết định.
 
 ## Operating Context
 
-- Sản phẩm được sử dụng hằng ngày trong môi trường đại học và phòng thí nghiệm, chủ yếu bằng tiếng Việt.
+- Khách hàng có thể tra cứu danh mục công khai và đăng ký tài khoản bằng email. Cán bộ LAB và quản trị viên vận hành hệ thống theo quyền được cấp.
 - Người đặt lịch cần so sánh tài nguyên, availability, điều kiện sử dụng và trạng thái yêu cầu của mình.
 - Cán bộ lab và admin xử lý bàn giao/hoàn trả, bảo trì, sự cố, người dùng và các ngoại lệ vận hành.
 - Booking hợp lệ tự xác nhận; staff xử lý bàn giao, đổi lịch và hỗ trợ. Giá thuê và thời lượng có cấu hình theo tài nguyên.
@@ -58,7 +58,7 @@ AI là lớp decision-support dựa trên dữ liệu thật, không thay thế 
 
 - Tên sản phẩm hiện tại: Lab Resource Manager.
 - Ngôn ngữ giao diện ưu tiên: tiếng Việt; English/i18n có thể được duy trì.
-- Sản phẩm phải mang cảm giác của một công cụ vận hành đáng tin cậy cho môi trường học thuật, không phải một bản trình diễn công nghệ.
+- Sản phẩm phục vụ công việc vận hành phòng thí nghiệm hằng ngày.
 
 ## Evidence on Hand
 
@@ -82,5 +82,5 @@ AI là lớp decision-support dựa trên dữ liệu thật, không thay thế 
 
 - Giao diện phải responsive và hỗ trợ sử dụng bằng bàn phím.
 - Các trạng thái, cảnh báo và hành động quan trọng không được truyền đạt chỉ bằng màu sắc.
-- Nội dung tiếng Việt phải rõ ràng, nhất quán và dễ hiểu với sinh viên, giảng viên, nghiên cứu viên và cán bộ lab.
+- Nội dung tiếng Việt phải rõ ràng, nhất quán và dễ hiểu với khách hàng và người vận hành LAB.
 - Các control, form, modal và bảng dữ liệu phải có nhãn, focus state và thông báo lỗi phù hợp cho công nghệ hỗ trợ.

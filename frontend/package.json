@@ -57,6 +57,8 @@
     "test:ui:workspace-refresh": "node test_workspace_refresh_ui.mjs",
     "test:ui:payment-checkout": "node test_payment_checkout_ui.mjs",
     "test:ui:support-payment-experience": "node test_support_payment_experience_ui.mjs",
+    "test:ui:bookings": "node test_booking_records_ui.mjs",
+    "test:ui:google-auth": "node test_google_sign_in_ui.mjs",
     "test:ui:operations-workbench": "node test_operations_workbench_ui.mjs",
     "test:ui:resource-care-experience": "node test_resource_care_experience_ui.mjs",
     "test:ui:resource-profile-journey": "node test_resource_profile_journey_ui.mjs",

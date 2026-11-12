@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiRequest } from "../api.js";
 import type { QueuePage } from "../types/queue";
 
 export function useQueuePage<T, S>(path: string, filter: string, actorKey: string, pageSize = 20, recordId?: string | null) {
   const key = `${path}:${filter}:${actorKey}:${pageSize}:${recordId || ""}`;
   const [position, setPosition] = useState({ key, page: 1 });
-  const [revision, setRevision] = useState(0);
+  const [{ revision, quiet }, setRefresh] = useState({ revision: 0, quiet: false });
+  const refresh = useCallback(() => setRefresh(previous => ({ revision: previous.revision + 1, quiet: false })), []);
+  const refreshQuietly = useCallback(() => setRefresh(previous => ({ revision: previous.revision + 1, quiet: true })), []);
   const page = position.key === key ? position.page : 1;
   // Reset stored position as well, so returning to an earlier filter starts at page one.
   if (position.key !== key) setPosition({ key, page: 1 });
-  const requestKey = `${key}:${page}:${revision}`;
+  const pageKey = `${key}:${page}`;
+  const requestKey = `${pageKey}:${revision}`;
   const [state, setState] = useState<{ key: string; scopeKey?: string; data?: QueuePage<T, S>; error?: string }>({ key: "" });
   useEffect(() => {
     const controller = new AbortController();
@@ -32,12 +35,12 @@ export function useQueuePage<T, S>(path: string, filter: string, actorKey: strin
     queueMicrotask(() => { if (!controller.signal.aborted) void load(); });
     return () => controller.abort();
   }, [path, filter, actorKey, pageSize, recordId, key, page, requestKey]);
-  const current = state.key === requestKey ? state : undefined;
+  const current = state.key === requestKey || (quiet && state.key.startsWith(`${pageKey}:`) && state.data) ? state : undefined;
   return {
     data: current?.data, items: current?.data?.items || [],
     pagination: current?.data?.pagination || (!current && state.scopeKey === key ? state.data?.pagination : undefined),
     loading: !current, error: current?.error || "", page,
     setPage: (value: number) => setPosition({ key, page: value }),
-    refresh: () => setRevision(value => value + 1)
+    refresh, refreshQuietly
   };
 }

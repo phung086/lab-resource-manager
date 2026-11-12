@@ -1,89 +1,102 @@
+---
+name: LAB Resource Manager
+description: Một hệ LAB Studio cho workspace, public, đăng nhập/đăng ký, modal và assistant.
+colors:
+  studio-primary: "#2563eb"
+  studio-primary-hover: "#1d4ed8"
+  studio-wash: "#edf3ff"
+  studio-canvas: "#f5f7fc"
+  studio-ink: "#202c47"
+  studio-muted: "#596980"
+  studio-line: "#dfe6f2"
+  studio-control-line: "#aebed6"
+  studio-soft: "#fbfdff"
+  studio-selected: "#e6efff"
+  studio-selected-ink: "#2456a0"
+  surface: "#ffffff"
+typography:
+  studio-heading: {fontFamily: "Onest, sans-serif", fontSize: "27px", fontWeight: 600, lineHeight: 1.35, letterSpacing: "-.025em"}
+  studio-hero: {fontFamily: "Onest, sans-serif", fontSize: "28px", fontWeight: 600, lineHeight: 1.35}
+  studio-body: {fontFamily: "Onest, sans-serif", fontSize: "14px", fontWeight: 400, lineHeight: 1.65}
+  studio-control: {fontFamily: "Onest, sans-serif", fontSize: "13px", fontWeight: 500, lineHeight: 1.5}
+  public-display: {fontFamily: "Onest, sans-serif", fontSize: "clamp(38px, 4.4vw, 62px)", fontWeight: 500, lineHeight: 1.12, letterSpacing: "-.035em"}
+  auth-heading: {fontFamily: "Onest, sans-serif", fontSize: "28px", fontWeight: 500, lineHeight: 1.35}
+  modal-heading: {fontFamily: "Onest, sans-serif", fontSize: "21px", fontWeight: 500, lineHeight: 1.4}
+  mono: {fontFamily: "JetBrains Mono, ui-monospace, monospace"}
+rounded: {studio-panel: "16px", studio-control: "10px", studio-hero: "18px", public-glass: "28px", modal: "18px"}
+spacing: {compact: "12px", section: "24px", hero: "28px"}
+components:
+  studio-primary: {backgroundColor: "{colors.studio-primary}", textColor: "{colors.surface}", rounded: "{rounded.studio-control}"}
+  studio-primary-hover: {backgroundColor: "{colors.studio-primary-hover}"}
+  studio-secondary: {backgroundColor: "{colors.surface}", rounded: "{rounded.studio-control}"}
+  studio-input: {rounded: "{rounded.studio-control}"}
+  studio-panel: {textColor: "{colors.studio-ink}", rounded: "{rounded.studio-panel}"}
+  studio-heading: {backgroundColor: "transparent", textColor: "{colors.studio-ink}"}
+  public-glass: {textColor: "{colors.studio-ink}", rounded: "{rounded.public-glass}"}
+  studio-modal: {backgroundColor: "{colors.surface}", textColor: "{colors.studio-ink}", rounded: "{rounded.modal}"}
+---
 # Design System: LAB Resource Manager
 
-## Direction — approved 25/10/2026; liquid-glass amendment 28/10/2026
+## Overview
 
-Light, subtly multicolored, with violet, mint and peach. This replaces the earlier
-single-violet, flat cream-paper direction at the user's request. Preserve IBM Plex
-Sans/Mono, the LAB identity, real resource images and all business contracts.
+**Creative North Star: "LAB Studio: rõ tác vụ, chiều sâu nhẹ"**
 
-### Liquid glass amendment (28/10, user request)
+Studio dùng xanh dương, trắng và nền xanh/lavender nhạt cho mọi nhóm màn. Workspace, public, authentication, shared modal và assistant cùng palette nhưng giữ bố cục, ảnh và vật liệu phù hợp tác vụ. Public vẫn có ảnh, glass, floating card, marquee và motion hiện có; mở rộng Studio không đồng nghĩa xóa các đặc trưng này.
 
-The landing page leads with a full-bleed hero banner: the real LAB photograph
-fills the banner, a translucent spectrum veil sits over it, and the headline,
-subtitle and CTAs live inside a large liquid-glass panel (backdrop blur 22px +
-saturation, ≥.66 white backing so ink text keeps AA). A process marquee runs
-along the banner's bottom edge — real capabilities only (rooms, equipment,
-booking, hold, handover, return, telemetry, maintenance, support); it pauses on
-hover, when the tab is hidden, and renders as a static wrapped list under
-reduced motion. Landing sections sit on aurora washes (violet/mint/peach
-radials) with translucent glass cards; the CTA band is deep violet glass.
-Signed-in dashboards adopt glass mastheads, notices and trends panels; queues,
-tickets and data tables stay solid for legibility. `styles/liquid-glass.css`
-(loaded last) owns this layer; `@supports` fallbacks raise backing opacity
-where backdrop-filter is unavailable. The flat-paper rule now applies to
-business surfaces only, not to the landing and dashboard mastheads.
+**Key Characteristics:**
 
-The public entrance invites discovery. Signed-in workspaces prioritize the next
-real task. Decoration belongs to the surrounding canvas and page headings; data,
-forms, errors and booking states remain legible on solid surfaces.
+- Một hệ tương tác cho ADMIN, LAB_STAFF và CUSTOMER, không thêm role từ ảnh tham khảo.
+- Panel bo mềm, chiều sâu nổi/lõm nhẹ, ảnh LAB hiện có và từng bố cục theo tác vụ.
+- Dữ liệu/metric từ server; không thêm avatar, trend, chart hay telemetry hư cấu.
 
-## Implementation
+Nguồn: `frontend/src/styles/lab-studio.css`, các shell và component thật. Main giữ global → spectrum → liquid-glass → lab-motion → feedback-visibility → lab-workflows rồi studio. AppLayout/PublicShell, AuthLogin/Register và assistant portal dùng lab-studio; BaseModal2026 dùng lab-studio-modal. Phạm vi là mọi nhóm màn đang bật, không chỉ home/workspace. Xem `docs/CURRENT_STATE.md` cho kiểm chứng giao diện; chưa chứng minh DB E2E hoặc người dùng đã duyệt thị giác.
 
-`frontend/src/styles/spectrum.css` is the shared visual layer, imported after
-`global.css` in `main.jsx`. Both PublicShell and AppLayout opt in with `lab-spectrum`.
-Feature CSS retains structural behavior; scoped selectors stabilize the presentation
-when lazy route styles load. Do not concatenate another historical theme into global.css.
+## Colors
 
-## Color
+Primary/hover dùng cho action; wash/selected/selected-ink cho tab và vùng chọn; canvas/surface/soft cho nền dữ liệu. Ink/muted/line/control-line giữ hierarchy và nhận diện trường nhập. Public, auth, modal và secondary workbench dùng cùng hướng xanh; gradient/veil giữ màu phụ nhẹ theo source, không còn hợp đồng loại public/auth khỏi Studio.
 
-- Ink #252b43; secondary #586176; lines #dce0eb; canvas #f5f6fc.
-- Violet #6040ce / wash #eee9ff: primary action, selected navigation, booking.
-- Mint #146b65 / wash #e5f5f0: discovery and resource-related accents.
-- Peach #994526 / wash #fff0e5: supporting task groups.
-- Soft static gradients combine these washes on canvas and mastheads.
-- Existing success/warning/error state pairs keep their semantic meaning. An overdue
-  booking retains an urgent surface; decorative category colors are not statuses.
+**The Semantic Status Rule.** Màu trang trí, nhóm catalogue và lane board không thay canonical role/category/status; luôn giữ nhãn và ý nghĩa cảnh báo, thanh toán, lỗi.
 
-## Type and spacing
+## Typography
 
-Keep local IBM Plex Sans with Vietnamese subsets. Mono is for identifiers and data.
-Page titles 26–38px; public display 38–66px, tracking no tighter than -.035em.
-Body 14–17px; supporting text at least 12px. Headings balance, paragraphs wrap naturally.
-Group controls closely; separate tasks with 20–24px. Cards 12–16px radius, controls
-10–12px. Soft offset shadows establish depth; no hard offset blocks or gradient text.
+Giữ Onest và JetBrains Mono tự host, weight 400/500/600/700, unicode-range VI/Latin. Workspace heading 27px/mobile 23px, hero 28px/mobile 24px, body 14px, bảng/control chủ yếu 13px. Public display theo token/mobile 38px; auth heading 28px/mobile 25px; modal 21px/mobile 19px. Auth/modal/assistant input 16px, workspace input thường 14px và mobile 16px. Mono dành cho mã. Các nhãn 10–11px hiện có không thành scale nội dung mới.
 
-## Task hierarchy
+## Layout
 
-Customer home: split search studio with existing LAB illustration, five category
-shortcuts, resource gallery alongside a personal booking panel. Instructions are
-progressively disclosed below the gallery and timeline. On mobile the personal
-panel comes before the gallery, after search. Booking urgency keeps semantic colors.
-`discovery-home.css` owns this composition. Desktop navigation starts expanded at
-240px, honoring an explicitly saved collapsed preference. Staff places the workflow
-queue before shift context; admin uses separate people and operational health columns.
-Catalogue: title before the full-width search/filter row. Calendar retains resource-
-first two-step selection with date controls inside step two, and the existing time-first mode.
-Public hero: clear headline, concise explanation, discovery CTA, secondary process
-link and existing LAB illustration. No invented usage figures or decorative KPIs.
+Desktop từ 1100px dùng thanh bên 104px khi thu gọn và 264px khi mở rộng. Nút ở rail mở rộng thanh bên ngay trong bố cục, nút cạnh logo thu gọn lại. Dưới 1100px brand chuyển lên header và menu mở dạng trượt với focus trap. Heading và action workspace wrap theo không gian, không ép mọi route vào dashboard giống nhau.
+WorkspaceHero dùng ảnh LAB và ba lối đi theo role. Customer hiển thị hero → metrics; phiên có anchor ưu tiên trước agenda/resource body. Finder/empty session ở sau body; native details/summary giữ form. Staff/admin giữ queue/chart riêng. Directory, catalogue ALL + ROOM/EQUIPMENT/OTHER và năm category canonical được giữ. Lịch đặt dùng lưới thẻ hồ sơ, bộ lọc trạng thái và phân trang server. Hồ sơ đã chọn nằm cạnh lưới trên desktop và nối bên dưới trên mobile.
+Public giữ glass hero cùng ảnh/veil/floating/marquee và các route service/catalogue. AuthIdentity dùng ảnh LAB trang trí sẵn có bên cạnh form; mobile thu gọn thành banner ảnh80×92, header một hàng và giữ locale ở header thay cho bộ trùng trong form. Shared modal giữ editor trước summary, draft disclosure, focus/close contract; assistant portal có skin riêng nhưng dùng cùng type/control. Calendar có disclosure bộ lọc nâng cao.
 
-## Motion and accessibility
+## Elevation & Depth
 
-One 650ms arrival on the masthead/content, then short hover/press responses on
-interactive items. No endless background animation added. Respect reduced motion;
-keep keyboard focus, labels, disabled states and status text. Input caret, selection,
-link underline offset and scrollbar colors follow the palette. Mobile stacks discovery
-controls and keeps 44px control targets; existing navigation/dialog behavior remains.
+Panel dùng cặp bóng sáng/tối nhẹ; search/selected/session dùng inset. Secondary workbench và tab dùng cùng palette, trạng thái giữ màu cục bộ. Header có blur nhẹ/hairline; public glass chuyển nền kính xanh sáng mà giữ blur/saturation và fallback/reduced motion gốc. Auth có chiều sâu trên khung split và input inset. Modal dùng backdrop blur 5px, bóng nổi và vùng heading/body/footer phân cấp; assistant giữ panel portal rõ ràng. Không tăng tương phản/bóng đồng loạt chỉ để tạo cảm giác nổi.
 
-## Verification boundary
+## Shapes
 
-See docs/CURRENT_STATE.md for the current checks and limits. A visual refresh is not
-certification of every business workflow, every screen or production deployment.
+Panel 16px, control 10px, hero/modal 18px; public glass giữ 28px. Auth, search, tab và responsive có ngoại lệ theo source. Modal mobile 16px. Không áp một loại radius hoặc một mẫu card lên mọi vùng.
 
-## Resource collection — 26/10/2026
+## Components
 
-Resource browse uses colored category surfaces and a three/two/one-column collection.
-Actual media wins; missing media uses abstract category SVG artwork, never a fictional
-asset photograph. Detail places persistent gallery beside identity and booking actions;
-mobile reads identity, gallery, actions, details. Gallery studio is opt-in. Motion answers
-selection, media changes and panel switches; reduced motion disables it. Hovering or
-focusing section buttons never changes content. New styles are in resource-experience.css.
+- Primary xanh/chữ trắng, hover đậm hơn; secondary trắng. Workspace focus ring 2px/offset 3px; auth/modal input ring 2px/offset 2px. Search wrapper giữ một vòng focus, input bên trong trong suốt và không lồng viền.
+- Navigation/tab giữ aria-current/aria-pressed. Support/materials/care/resource detail/account/inbox dùng token Studio và inset chọn; bảng không đổi dữ liệu/cột/thao tác thật.
+- Directory dùng chữ đầu từ tên/email thật. Metrics lấy summary server, chart dùng nguồn hiện có; thiếu dữ liệu vẫn báo thật.
+- Hành động trong hồ sơ lịch đặt mở BookingActionModal, kiểm canOpenBookingAction và tải lại sau khi API xác nhận. PENDING_PAYMENT và HISTORY là bộ lọc nhóm trên các trạng thái hiện có.
+- Modal/assistant giữ drafts, validation, VI/EN, RBAC và focus. Ảnh hiện có không chứng minh lab vật lý/production; giữ lỗi media/fallback. Action hero Studio phản hồi ngắn; public giữ zoom/marquee/pause/hover/visibility và reduced-motion fallback.
+
+## Do's and Don'ts
+
+### Do:
+
+- **Do** áp Studio theo opt-in surface/portal và kiểm cascade khi route lazy tải.
+- **Do** giữ bố cục theo tác vụ, ba role chuẩn, ảnh và dữ liệu/permission thật.
+- **Do** giữ server paging, xác nhận hành động, VI/EN, drafts, bàn phím và focus.
+
+### Don't:
+
+- **Don't** loại public/auth/modal/assistant khỏi hệ thống hoặc xóa glass/motion chỉ để đồng màu.
+- **Don't** bịa avatar/metric/trend, đổi API/RBAC/category/status hoặc bật lại feature đang ẩn.
+- **Don't** coi build, fixture hay screenshot là DB E2E hoặc duyệt thiết kế cuối.
+
+## Action depth — 05/11/2026
+
+CTA cobalt có cạnh đáy 4px, highlight và bóng màu; hover nâng 3px, active lún 3px. Dashboard dùng cobalt/teal/indigo cho ba lối đi. Secondary có cạnh 3px, tab chọn nền cobalt. Disabled bỏ bóng và chuyển động; reduced-motion giữ màu/độ nổi tĩnh. Đây là yêu cầu tăng độ nổi của người dùng, thay quy tắc action phẳng trước đó.

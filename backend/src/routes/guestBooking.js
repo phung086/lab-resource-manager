@@ -41,7 +41,6 @@ const completeSchema = z.object({
   otpCode: z.string().trim().regex(/^\d{6}$/),
   fullName: z.string().trim().min(2).max(255),
   phone: z.string().trim().min(9).max(20),
-  organization: z.string().trim().max(255).optional(),
   address: addressSchema,
   booking: bookingSchema
 }).strict();

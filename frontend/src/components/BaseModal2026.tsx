@@ -56,6 +56,7 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
       const eventDialog = e.target instanceof Element ? e.target.closest('[role="dialog"]') : null;
       if (eventDialog && eventDialog !== dialogRef.current?.parentElement) return;
       if (e.key === "Escape") {
+        if (CSS.supports("selector(select:open)") && dialogRef.current?.querySelector("select:open")) return;
         e.preventDefault();
         if (dismissibleRef.current) onCloseRef.current();
         return;
@@ -106,7 +107,7 @@ export const BaseModal2026: React.FC<BaseModal2026Props> = ({
       aria-modal="true"
       aria-label={title || translate("ui.dialog_f750f1ee")}
     >
-      <div ref={dialogRef} tabIndex={-1} className={`modal-container-2026 ${maxWidth} mx-4 flex flex-col`}>
+      <div ref={dialogRef} tabIndex={-1} className={`modal-container-2026 lab-studio-modal ${maxWidth} mx-4 flex flex-col`}>
         {/* Modal Header */}
         {(title || Icon) && (
           <div className="modal-heading-2026 flex items-center justify-between">

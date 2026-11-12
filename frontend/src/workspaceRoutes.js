@@ -2,7 +2,7 @@
 export const WORKSPACE_ROUTES = Object.freeze({
   home: 'overview', resources: 'resources', smart_calendar: 'calendar', bookings: 'bookings',
   dashboard: 'operations', maintenance: 'maintenance', incidents: 'incidents',
-  stock: 'materials', teaching: 'teaching', admin_management: 'resource-management',
+  stock: 'materials', admin_management: 'resource-management',
   users: 'users', profile: 'profile', escalations: 'notifications',
   monitoring: 'monitoring', payments: 'payments', support: 'support', chatgpt_bridge: 'chatgpt-bridge',
   logs: 'audit-logs'
@@ -14,7 +14,7 @@ export const PUBLIC_ROUTES = Object.freeze({
 const OLD_WORKSPACE_ROUTES = Object.freeze({
   planning: 'bookings', 'tong-quan': 'home', 'tai-nguyen': 'resources', 'lich-dat': 'smart_calendar', booking: 'bookings',
   'van-hanh': 'dashboard', 'bao-tri': 'maintenance', 'su-co': 'incidents', 'kho-vat-tu': 'stock',
-  'lop-hoc-phan': 'teaching', 'quan-ly-tai-nguyen': 'admin_management', 'nguoi-dung': 'users',
+  'quan-ly-tai-nguyen': 'admin_management', 'nguoi-dung': 'users',
   'ho-so': 'profile', 'thong-bao': 'escalations', telemetry: 'monitoring', 'thanh-toan': 'payments'
 });
 const OLD_PUBLIC_ROUTES = Object.freeze({

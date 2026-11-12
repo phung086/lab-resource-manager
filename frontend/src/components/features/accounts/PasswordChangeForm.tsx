@@ -7,9 +7,9 @@ import { passwordServerFields, safePasswordFailure, validatePasswordCode, valida
 import '../../../styles/account-security.css';
 
 type Challenge = { challengeId: string; maskedEmail: string; expiresAt: string; resendAfter: string };
-type Props = { email?: string; targetId?: string; showSteps?: boolean; onSuccess?: (result: unknown) => void; onBusyChange?: (busy: boolean) => void };
+type Props = { email?: string; targetId?: string; showSteps?: boolean; passwordLoginEnabled?:boolean; onSuccess?: (result: unknown) => void; onBusyChange?: (busy: boolean) => void };
 
-export function PasswordChangeForm({ email, targetId, showSteps = false, onSuccess, onBusyChange }: Props) {
+export function PasswordChangeForm({ email, targetId, showSteps = false, passwordLoginEnabled = true, onSuccess, onBusyChange }: Props) {
   const { tr } = useLocale(), id = useId(), formRef = useRef<HTMLFormElement>(null), busyRef = useRef(false), requestRef = useRef<AbortController | null>(null), mountedRef = useRef(true);
   const assisted = Boolean(targetId);
   const [draft, setDraft] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -38,11 +38,11 @@ export function PasswordChangeForm({ email, targetId, showSteps = false, onSucce
     setDraft(current => ({ ...current, [field]: value })); setErrors(current => { const next = { ...current }; delete next[field]; return next; }); setError('');
   }
   useEffect(()=>{ if(error && !busy) errorRef.current?.focus(); },[error,busy]);
-  function editDetails() { pendingFocus.current = assisted ? 'newPassword' : 'currentPassword'; setChallenge(null); setOtp(''); setErrors({}); setError(''); }
+  function editDetails() { pendingFocus.current = assisted || !passwordLoginEnabled ? 'newPassword' : 'currentPassword'; setChallenge(null); setOtp(''); setErrors({}); setError(''); }
   async function submit(event: React.FormEvent) {
     event.preventDefault(); if (busyRef.current || success) return;
     if (!challenge && cooldownSeconds > 0) return;
-    const invalid: Record<string,string> = challenge ? validatePasswordCode(otp) : { ...validatePasswordDraft(draft, assisted), ...(assisted && (reason.trim().length < 5 || reason.trim().length > 500) ? { reason: 'account.security.reasonInvalid' } : {}) };
+    const invalid: Record<string,string> = challenge ? validatePasswordCode(otp) : { ...validatePasswordDraft(draft, assisted, passwordLoginEnabled), ...(assisted && (reason.trim().length < 5 || reason.trim().length > 500) ? { reason: 'account.security.reasonInvalid' } : {}) };
     setErrors(invalid); setError('');
     if (Object.keys(invalid).length) { focus(Object.keys(invalid)[0]); return; }
     if (expired) { setErrors({ otp: 'api.OTP_EXPIRED' }); focus('otp'); return; }
@@ -68,7 +68,7 @@ export function PasswordChangeForm({ email, targetId, showSteps = false, onSucce
     } finally { busyRef.current = false; if (mountedRef.current) { setBusy(false); onBusyChange?.(false); } }
   }
   const fields = [
-    ...(!assisted ? [{ name: 'currentPassword' as const, label: 'ui.current_password_7f06b3a5' }] : []),
+    ...(!assisted && passwordLoginEnabled ? [{ name: 'currentPassword' as const, label: 'ui.current_password_7f06b3a5' }] : []),
     { name: 'newPassword' as const, label: 'ui.new_password_8f6cace3' },
     { name: 'confirmPassword' as const, label: 'ui.confirm_new_password_7a0fe0f4' }
   ];

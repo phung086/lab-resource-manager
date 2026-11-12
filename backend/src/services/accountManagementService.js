@@ -7,7 +7,7 @@ import { enqueueRegistrationEmail } from "./emailAutomationService.js";
 
 export const staffCustomerSelect = Object.freeze({
   id: true, email: true, fullName: true, role: true, isActive: true,
-  deletedAt: true, phone: true, organization: true, createdAt: true,
+  deletedAt: true, phone: true, createdAt: true,
 });
 const selectFor = actor => actor.role === ADMIN ? safeUserSelect : staffCustomerSelect;
 

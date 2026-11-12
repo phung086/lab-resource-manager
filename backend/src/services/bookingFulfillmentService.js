@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { HttpError } from '../middleware/errors.js';
@@ -12,9 +13,27 @@ import { notifyBookingEvent } from './bookingEventService.js';
 import { cancelPendingBookingReminders } from './notificationService.js';
 import { recordSystemAuditEvent } from './systemAuditService.js';
 import { bookingRoomAccessCode } from './bookingRoomAccessCode.js';
-import { lockPaymentBooking } from './bookingPaymentHoldService.js';
+import { lockPaymentBooking, settledBookingPaymentWhere } from './bookingPaymentHoldService.js';
 
 export const HANDOVER_EARLY_MINUTES = 30;
+const MISSED_HANDOVER_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+
+export async function listHandoverReminders(db, customerId, now = new Date()) {
+  const bookings = await db.booking.findMany({
+    where: {
+      requestedById: customerId, status: 'CONFIRMED', actualStartAt: null, outcome: null,
+      startAt: { lt: now }, endAt: { gt: new Date(+now - MISSED_HANDOVER_LOOKBACK_MS) },
+      OR: [
+        { fulfillmentSnapshot: { equals: Prisma.AnyNull } },
+        { fulfillmentSnapshot: { path: ['mode'], equals: 'LAB_PICKUP' } },
+        { fulfillmentSnapshot: { path: ['mode'], equals: 'ROOM_SELF_SERVICE' } }
+      ]
+    },
+    orderBy: [{ endAt: 'desc' }, { id: 'asc' }], take: 5,
+    select: { id: true, startAt: true, endAt: true, resource: { select: { name: true, category: true } } }
+  });
+  return bookings.map(booking => ({ ...booking, expired: booking.endAt <= now }));
+}
 export const fulfillmentInputSchema = z.object({
   mode: z.enum(['LAB_PICKUP', 'HOME_DELIVERY']),
   address: z.object({ addressLine: z.string().trim().min(5).max(300), provinceCode: z.string().regex(/^\d+$/), wardCode: z.string().regex(/^\d+$/) }).strict().optional()
@@ -43,10 +62,7 @@ export function assertHandoverWindow(booking, now = new Date()) {
 }
 export async function assertBookingPaid(tx, booking) {
   if (booking.feeAmountVnd === 0) return;
-  const paid = await tx.paymentTransaction.findFirst({ where: {
-    bookingId: booking.id, userId: booking.requestedById, status: 'success', currency: 'VND',
-    amount: booking.feeAmountVnd, paidAt: { not: null }, provider: { in: ['vnpay', 'vietqr'] }, reconciliationStatus: 'none'
-  } });
+  const paid = await tx.paymentTransaction.findFirst({ where: settledBookingPaymentWhere(booking), select: { id: true } });
   if (!paid) throw new HttpError(409, 'Lịch đặt cần thanh toán đủ phí trước khi nhận tài nguyên.', undefined, 'BOOKING_PAYMENT_REQUIRED');
 }
 export async function assertHandoverReady(tx, booking, now) {

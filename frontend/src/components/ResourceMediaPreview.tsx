@@ -4,9 +4,10 @@ import { ImageOff, Play } from "lucide-react";
 import { resourceImageProps } from '../utils/resourceImage';
 
 /** Mount with the media URL as key so a replacement asset gets a fresh load state. */
-export function ResourceMediaPreview({ kind, url, alt, size = 'detail' }: { kind: "IMAGE" | "VIDEO"; url: string; alt: string; size?: 'card' | 'detail' }) {
+export function ResourceMediaPreview({ kind, url, alt, size = 'detail', fallback }: { kind: "IMAGE" | "VIDEO"; url: string; alt: string; size?: 'card' | 'detail'; fallback?: React.ReactNode }) {
   const { tr, t } = useLocale();
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [requested, setRequested] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -30,5 +31,8 @@ export function ResourceMediaPreview({ kind, url, alt, size = 'detail' }: { kind
   return kind === "VIDEO"
     ? requested ? <video ref={videoRef} controls playsInline preload="none" src={url} aria-label={alt} onError={() => setFailed(true)} />
       : <button type="button" className="resource-video-start" onClick={() => setRequested(true)}><Play size={32} aria-hidden="true" /><strong>{tr('ui.media.playVideo')}</strong><span>{alt}</span><small>{tr('ui.media.videoOnDemand')}</small></button>
-    : <img {...resourceImageProps(url, size)} alt={alt} onError={() => setFailed(true)} />;
+    : size === 'card' ? <span className="resource-media-frame">
+        {!loaded && <span className="resource-media-pending" aria-hidden="true">{fallback || <ImageOff size={36} />}</span>}
+        <img {...resourceImageProps(url, size)} alt={alt} onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
+      </span> : <img {...resourceImageProps(url, size)} alt={alt} onError={() => setFailed(true)} />;
 }

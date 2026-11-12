@@ -87,6 +87,80 @@
 .users-status.is-inactive { background:#f5e2e7; color:#962d3f; }
 .users-status-warning { display:inline-flex; align-items:center; font-size:.72rem; color:#7a3614; background:#fff1d6; padding:3px 8px; border-radius:6px; font-weight:500; }
 
+/* === Directory card grid (accounts as cards, not rows) === */
+.users-workspace .users-table.users-card-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:14px;
+  background:transparent;
+  border:0;
+  border-radius:0;
+  overflow:visible;
+  padding:0;
+  margin:0;
+}
+.users-workspace .users-card-grid > li { min-width:0; display:flex; }
+.users-workspace .users-card-grid .users-account.users-account-card {
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  grid-template-areas:"avatar main" "meta meta";
+  align-items:start;
+  justify-content:stretch;
+  gap:10px 12px;
+  width:100%;
+  height:100%;
+  padding:16px;
+  background:var(--color-surface,#fff);
+  border:1px solid var(--color-border,#e6e1ed);
+  border-radius:14px;
+  box-shadow:0 1px 2px rgba(40,35,56,.05);
+  transition:border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.users-workspace .users-card-grid .users-account.users-account-card:hover {
+  border-color:#c9bce4;
+  box-shadow:0 6px 18px rgba(40,35,56,.09);
+  transform:translateY(-1px);
+}
+.users-workspace .users-card-grid .users-account.users-account-card.is-selected {
+  border-color:var(--color-primary,#7258c7);
+  box-shadow:0 0 0 1px var(--color-primary,#7258c7), 0 6px 18px rgba(40,35,56,.09);
+}
+.users-workspace .users-card-grid .users-account-card .users-avatar {
+  grid-area:avatar;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  background:#e7e1f7;
+  color:#3d2a82;
+  font-size:.9rem;
+  font-weight:650;
+  letter-spacing:.02em;
+}
+.users-workspace .users-card-grid .users-account-card .users-avatar[data-tone="1"] { background:#e0eaf7; color:#1f4a82; }
+.users-workspace .users-card-grid .users-account-card .users-avatar[data-tone="2"] { background:#e6f2ed; color:#276249; }
+.users-workspace .users-card-grid .users-account-card .users-avatar[data-tone="3"] { background:#fff1d6; color:#7a3614; }
+.users-workspace .users-card-grid .users-account-card .users-avatar[data-tone="4"] { background:#f5e2e7; color:#962d3f; }
+.users-workspace .users-card-grid .users-account-card .users-account-main { grid-area:main; }
+.users-workspace .users-card-grid .users-account-card .users-account-role { align-self:start; }
+.users-workspace .users-card-grid .users-account-card .users-account-meta {
+  grid-area:meta;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  padding-top:10px;
+  border-top:1px solid var(--color-border,#e6e1ed);
+}
+.users-workspace .users-card-grid .users-account-card .users-account-email { display:inline-flex; align-items:center; gap:5px; }
+.users-workspace .users-card-grid .users-account-card .users-account-email svg { width:12px; height:12px; }
+.users-workspace .users-card-grid .users-account-card.is-inactive { opacity:.72; background:var(--color-surface-muted,#faf8fd); }
+@media(max-width:1050px) { .users-workspace .users-table.users-card-grid { grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); } }
+@media(max-width:600px) { .users-workspace .users-table.users-card-grid { grid-template-columns:1fr; gap:12px; } .users-workspace .users-card-grid .users-account.users-account-card { padding:14px; } }
+
 /* === Dossier (selected account) === */
 .users-dossier-head { display:grid; gap:10px; padding-bottom:18px; border-bottom:1px solid var(--color-border,#e6e1ed); margin-bottom:18px; position:relative; }
 .users-dossier-eyebrow { font-size:.7rem; text-transform:uppercase; letter-spacing:.12em; color:var(--color-text-secondary,#625b70); margin:0; font-weight:600; }
@@ -129,7 +203,7 @@
 .users-labs li span { display:inline-flex; align-items:center; gap:8px; }
 .users-labs li small { display:inline-block; margin-left:6px; font-size:.7rem; padding:2px 6px; border-radius:4px; background:#f5e2e7; color:#962d3f; }
 
-/* === Field group pattern (Identity / Contact / Affiliation / Access) === */
+/* === Field group pattern (Identity / Contact / Access) === */
 .users-field-group { border:0; padding:0; margin:0 0 16px; display:grid; gap:14px; }
 .users-field-group-title { display:inline-flex; align-items:center; gap:8px; padding:0; margin:0 0 4px; font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--color-text-secondary,#625b70); width:100%; }
 .users-field-group-icon { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; background:var(--color-surface-muted,#f5f2fa); color:var(--color-text-secondary,#625b70); }

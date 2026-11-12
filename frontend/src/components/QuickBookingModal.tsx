@@ -552,8 +552,11 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>{tr('ui.agreed_fee_e147e0c0')}{createdBooking.feeAmountVnd.toLocaleString('vi-VN')} {tr('ui.vnd_789721c8')}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>{tr('ui.view_booking_payment_3a007567')}</button>}</div>}
         </div>
       ) : (
-        <form onChangeCapture={()=>{draftDirty.current=true;}} ref={formRef} id="quick-booking-form" onSubmit={handleSubmit} className="booking-form booking-workspace booking-compose" noValidate>
+        <form onChangeCapture={()=>{draftDirty.current=true;}} ref={formRef} id="quick-booking-form" onSubmit={handleSubmit} className={`booking-form booking-workspace booking-compose${reviewing ? " is-reviewing" : ""}`} noValidate>
+          <div className="booking-compose-editor">
+          {durableDraft.backup && <details className="booking-draft-disclosure"><summary>{tr("ui.formDraft.saved")}</summary>
           <LocalDraftNotice disabled={isSubmitting} store={durableDraft} onRestore={value=>{restoredPurpose.current=value.purposeCode;setResourceId(value.resourceId);setSelectedDate(value.selectedDate);setStartTime(value.startTime);setEndTime(value.endTime);setTitle(value.title);setPurpose(value.purpose);setPurposeCode(value.purposeCode);setReview(null);if(value.uncertain==='true'){setSubmissionUncertain(true);setErrorMessage('ui.resourceSelection.uncertain');}}}/>
+          </details>}
           <ol className="booking-compose-steps" aria-label={tr('ui.bookingStudio.steps')}><li aria-current={!reviewing ? 'step' : undefined}><span>1</span>{tr('ui.bookingStudio.details')}</li><li aria-current={reviewing ? 'step' : undefined}><span>2</span>{tr('ui.bookingReview.title')}</li></ol>
           {reviewing && <section className="booking-review" aria-labelledby="booking-review-heading">
             <h3 id="booking-review-heading" tabIndex={-1} ref={reviewHeading}>{tr('ui.bookingReview.title')}</h3>
@@ -577,7 +580,8 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             </div>
           )}
 
-          {errorMessage && timeIsValid && resourceId && !submissionUncertain && <BookingAvailabilityHelp key={quoteKey} resourceId={resourceId} startAt={vietnamTimeToIso(selectedDate, startTime)} endAt={vietnamTimeToIso(selectedDate, endTime)} purposeCode={purposeCode} onChoose={(date, start, end) => { setSelectedDate(date); setStartTime(start); setEndTime(end); setReview(null); setErrorMessage(''); }}/>}
+          {['ui.booking_conflict_this_time_slot_13af8e52', 'ui.this_resource_has_maintenance_or_2b9a78e7'].some(key => key === errorMessage)
+            && timeIsValid && resourceId && !submissionUncertain && <BookingAvailabilityHelp key={quoteKey} resourceId={resourceId} startAt={vietnamTimeToIso(selectedDate, startTime)} endAt={vietnamTimeToIso(selectedDate, endTime)} purposeCode={purposeCode} onChoose={(date, start, end) => { setSelectedDate(date); setStartTime(start); setEndTime(end); setReview(null); setErrorMessage(''); }}/>}
           <fieldset className="booking-edit-fields" hidden={reviewing} disabled={isSubmitting} aria-label={tr('ui.bookingReview.edit')}>
           <fieldset className="booking-contact" disabled={isSubmitting || contactLoading}><legend>{tr('ui.customer.contactTitle')}</legend>
             {contactLoading && <p role="status">{tr('ui.loading_42d77f3a')}</p>}
@@ -743,7 +747,8 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           <p className="booking-review-note">{tr("ui.rental.quickConfirm")}</p>
           <LabPolicySummary policy={{...currentPolicy, maxBookingMinutes: currentResource?.maxBookingMinutes ?? currentPolicy?.maxBookingMinutes}} requiresApproval={currentResource ? effectiveRequiresApproval : undefined} />
           </fieldset>
-          <aside className="booking-compose-summary" aria-label={tr('ui.bookingStudio.summary')}>
+          </div>
+          <aside hidden={reviewing} className="booking-compose-summary" aria-label={tr('ui.bookingStudio.summary')}>
             <div className="booking-summary-art"><ResourceCategoryArt category={currentResource?.category} /></div>
             <div className="booking-summary-content"><span className="slot-ticket-code">{currentResource?.code}</span><h3>{currentResource?.name || tr('ui.choose_a_resource_1ba6fed9')}</h3>
             <dl className="booking-summary-time"><div><dt>{tr('ui.booking_date_502b0188')}</dt><dd>{selectedDate || '—'}</dd></div><div><dt>{tr('ui.time_b295fd62')}</dt><dd>{startTime}–{endTime}</dd></div></dl>

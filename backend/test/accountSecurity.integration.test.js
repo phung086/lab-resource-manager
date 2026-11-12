@@ -87,7 +87,8 @@ test("staff manages every CUSTOMER without needing LAB assignment, never staff/a
 });
 
 test("contact validation identifies wrong fields and registered email/password cannot be edited",async()=>{
- const edited=await call("patch","/users/"+customer.id,"staff",{fullName:"Updated Customer",phone:"0901234567",organization:"LAB Client"});assert.equal(edited.status,200);
+ assert.equal((await call("patch","/users/"+customer.id,"staff",{organization:"Legacy field"})).status,400);
+ const edited=await call("patch","/users/"+customer.id,"staff",{fullName:"Updated Customer",phone:"0901234567"});assert.equal(edited.status,200);
  const invalid=await call("patch","/users/"+customer.id,"staff",{phone:"abc"});err(invalid,400,"VALIDATION_ERROR");assert.ok(invalid.body.error.details.fieldErrors.phone);
  for(const body of [{email:"attacker@security.test"},{password:newPassword},{role:"ADMIN"},{}])err(await call("patch","/users/"+customer.id,"staff",body),400,"VALIDATION_ERROR");
  const saved=await prisma.user.findUniqueOrThrow({where:{id:customer.id}});assert.equal(saved.email,customer.email);assert.equal(saved.phone,"0901234567");

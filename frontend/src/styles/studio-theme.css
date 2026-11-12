@@ -1,0 +1,640 @@
+.studio-language .segmented-btn-2026 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 36px;
+  padding-inline: 8px;
+}
+.studio-language-flag {
+  display: block;
+  flex: none;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px #7184a039;
+}
+.studio-theme-toggle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #c9d6ea;
+  border-radius: 10px;
+  background: #f5f8fd;
+  color: #35517d;
+  cursor: pointer;
+}
+.studio-theme-toggle:hover { background: #e6efff; color: #1d4ed8; }
+.studio-theme-toggle:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  .app-shell-2026.workspace-shell.lab-spectrum.lab-studio .header-right-2026 { gap: 3px; }
+  .studio-language .segmented-btn-2026 { gap: 4px; padding-inline: 5px; }
+  .studio-language-flag { width: 14px; height: 10px; }
+  .project-public-shell .public-account-actions { gap: 6px; }
+}
+
+@media (max-width: 760px) {
+  .app-shell-2026.workspace-shell.lab-spectrum.lab-studio .header-2026:has([data-has-search="true"]) {
+    .header-left-2026 { flex: 0 0 auto; }
+    .project-header-tools { display: flex; flex: none; margin: 0; }
+    .project-header-shortcut { display: none; }
+    .header-right-2026 { margin-inline-start: auto; }
+  }
+}
+
+@media (max-width: 390px) {
+  .app-shell-2026.workspace-shell.lab-spectrum.lab-studio .header-2026:has([data-has-search="true"]) {
+    flex-wrap: wrap;
+    .header-right-2026 { width: 100%; justify-content: flex-end; }
+  }
+}
+@media (max-width: 420px) {
+  .app-shell-2026.workspace-shell.lab-spectrum.lab-studio {
+    .header-2026 { padding-inline: 57px 8px; gap: 4px; }
+    .header-2026:has([data-has-search="true"]) { flex-wrap: wrap; }
+    .header-right-2026 { gap: 2px; }
+    .resource-finder .resource-finder-toggle { width: 36px; height: 36px; }
+    .studio-mobile-brand .project-brand > span { font-size: 18px; }
+    .header-right-2026 :is(.header-icon-btn-2026, .header-notification-btn-2026, .user-avatar-btn-2026, .studio-theme-toggle) {
+      min-width: 36px;
+      width: auto;
+      padding-inline: 5px;
+    }
+    .user-avatar-btn-2026 .dropdown-arrow { display: none; }
+    .header-notification-btn-2026 { gap: 2px; }
+    .header-notification-btn-2026 .notification-counter-pill { min-width: 18px; padding-inline: 4px; }
+  }
+}
+@media (max-width: 350px) {
+  .app-shell-2026.workspace-shell.lab-spectrum.lab-studio .header-2026 { flex-wrap: wrap; }
+  .app-shell-2026.workspace-shell.lab-spectrum.lab-studio .header-right-2026 {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --studio-night-canvas: #111a29;
+  --studio-night-surface: #182437;
+  --studio-night-raised: #202f46;
+  --studio-night-control: #152135;
+  --studio-night-ink: #edf3ff;
+  --studio-night-muted: #b9c8dc;
+  --studio-night-line: #354862;
+  --studio-night-control-line: #6b819d;
+  --studio-night-link: #9abaff;
+  --studio-night-focus: #9fc4ff;
+  --studio-night-shadow: 0 10px 28px #080e1c70;
+  --canvas: var(--studio-night-canvas);
+  --bg: var(--studio-night-canvas);
+  --surface-base: var(--studio-night-canvas);
+  --surface: var(--studio-night-surface);
+  --surface-card: var(--studio-night-surface);
+  --surface-strong: var(--studio-night-raised);
+  --surface-raised: var(--studio-night-raised);
+  --surface-modal: var(--studio-night-surface);
+  --surface-subtle: var(--studio-night-raised);
+  --text-primary: var(--studio-night-ink);
+  --text-secondary: var(--studio-night-muted);
+  --text-muted: var(--studio-night-muted);
+  --line: var(--studio-night-line);
+  --line-strong: var(--studio-night-control-line);
+  --line-focus: var(--studio-night-focus);
+  --neutral-0: var(--studio-night-surface);
+  --neutral-25: var(--studio-night-surface);
+  --neutral-50: var(--studio-night-control);
+  --neutral-100: var(--studio-night-raised);
+  --neutral-200: var(--studio-night-line);
+  --neutral-300: var(--studio-night-control-line);
+  --neutral-500: var(--studio-night-muted);
+  --neutral-600: var(--studio-night-muted);
+  --neutral-800: var(--studio-night-ink);
+  --neutral-900: var(--studio-night-ink);
+  --blue-50: #233b60;
+  --blue-100: #263f69;
+  --blue-600: var(--studio-night-link);
+  --blue-700: #bfd3ff;
+  --blue-800: #d6e4ff;
+  --accent: var(--studio-night-link);
+  --accent-subtle: #233b60;
+  --emerald-50: #173b32;
+  --emerald-700: #9de8be;
+  --amber-50: #3e3023;
+  --amber-800: #f8ce8d;
+  --red-50: #442a39;
+  --red-700: #ffb5c1;
+  background: var(--studio-night-canvas);
+  color: var(--studio-night-ink);
+}
+
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) {
+  --workspace-paper: var(--studio-night-canvas);
+  --workspace-paper-dark: var(--studio-night-control);
+  --workspace-surface: var(--studio-night-surface);
+  --workspace-surface-muted: var(--studio-night-raised);
+  --workspace-ink: var(--studio-night-ink);
+  --workspace-text: var(--studio-night-ink);
+  --workspace-muted: var(--studio-night-muted);
+  --workspace-text-muted: var(--studio-night-muted);
+  --workspace-border: var(--studio-night-line);
+  --workspace-accent: var(--studio-night-link);
+  --workspace-accent-hover: #c5d7ff;
+  --workspace-accent-soft: #263f69;
+  --workspace-accent-tint: #233650;
+  --workspace-primary: #3169dc;
+  --text-primary: var(--studio-night-ink);
+  --text-secondary: var(--studio-night-muted);
+  --text-muted: var(--studio-night-muted);
+  --surface-subtle: var(--studio-night-raised);
+  --border-color: var(--studio-night-line);
+  --lab-ink: var(--studio-night-ink);
+  --lab-ink-secondary: var(--studio-night-muted);
+  --studio-shadow: var(--studio-night-shadow);
+  --studio-inset: inset 0 0 0 1px var(--studio-night-line);
+  --surface-booking: #1b2c46;
+  --surface-operation: #1b3235;
+  --surface-account: #292944;
+  --surface-attention: #392e26;
+  --surface-support: #1c3146;
+  --state-positive-bg: #173b32; --state-positive-ink: #a4e7be; --state-positive-line: #3f765d;
+  --state-info-bg: #233d64; --state-info-ink: #b7d4ff; --state-info-line: #4b6b97;
+  --state-attention-bg: #443323; --state-attention-ink: #ffd391; --state-attention-line: #866742;
+  --state-danger-bg: #462a39; --state-danger-ink: #ffbec9; --state-danger-line: #875068;
+  --state-violet-bg: #342d50; --state-violet-ink: #dfccff; --state-violet-line: #70608f;
+  --state-neutral-bg: #25334a; --state-neutral-ink: #d1dbeb; --state-neutral-line: #516681;
+  color: var(--studio-night-ink);
+}
+
+:root[data-theme="dark"] :is(body, .app-shell-2026.workspace-shell.lab-studio, .project-public-shell.lab-studio, .auth-screen.lab-studio) {
+  background: var(--studio-night-canvas);
+  color: var(--studio-night-ink);
+}
+
+:root[data-theme="dark"] :is(.workspace-shell.lab-studio, .project-public-shell.lab-studio) :is(.header-2026, .public-header, .workspace-nav-panel, .public-header nav.is-open) {
+  background: var(--studio-night-surface);
+  border-color: var(--studio-night-line);
+  box-shadow: 0 3px 16px #080e1c38;
+}
+:root[data-theme="dark"] .lab-studio :is(.project-brand, .project-brand > span, .header-title-2026) { color: var(--studio-night-ink); }
+:root[data-theme="dark"] .lab-studio :is(.project-brand > span > span, .header-telemetry-row-2026, .workspace-group-toggle span, .public-header nav a, .workspace-menu-group .sidebar-nav-item-2026) { color: var(--studio-night-muted); }
+:root[data-theme="dark"] .lab-studio :is(.project-brand > svg, .public-header nav a[aria-current], .workspace-nav-toggle, .rail-menu, .public-menu) { color: var(--studio-night-link); }
+:root[data-theme="dark"] .workspace-shell.lab-studio .workspace-menu-group .sidebar-nav-item-2026.is-active {
+  background: #2b4270 !important;
+  color: var(--studio-night-ink) !important;
+  box-shadow: none !important;
+}
+:root[data-theme="dark"] .workspace-shell.lab-studio .workspace-menu-group .sidebar-nav-item-2026.is-active svg { color: var(--studio-night-link) !important; }
+:root[data-theme="dark"] .lab-studio :is(.avatar-letter-circle, .rail-avatar, .workspace-nav-count, .studio-theme-toggle) {
+  background: var(--studio-night-raised);
+  border-color: var(--studio-night-control-line);
+  color: var(--studio-night-link);
+}
+:root[data-theme="dark"] .studio-theme-toggle:hover { background: #2c4162; color: var(--studio-night-ink); }
+:root[data-theme="dark"] .studio-language { background: var(--studio-night-control); border-color: var(--studio-night-control-line); }
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) .studio-language .segmented-btn-2026 { color: var(--studio-night-muted); }
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) .studio-language .segmented-btn-2026:is(:hover, [aria-pressed=true]) {
+  background: #2b4270;
+  color: var(--studio-night-ink);
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) :is(h1, h2, h3, h4, legend, .lab-page-heading h1, .lab-page-heading .workspace-title) {
+  color: var(--studio-night-ink) !important;
+}
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) :is(.lab-page-heading p, .home-data-scope, .home-time-note) { color: var(--studio-night-muted) !important; }
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) :is(input:not([type=checkbox], [type=radio], [type=file], [type=range]), select, textarea) {
+  border-color: var(--studio-night-control-line);
+  background: var(--studio-night-control);
+  color: var(--studio-night-ink);
+  box-shadow: none;
+}
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) :is(input, textarea)::placeholder { color: #a6b8d1; }
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) select option {
+  background: var(--studio-night-surface);
+  color: var(--studio-night-ink);
+}
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) :is(button, a, input, select, textarea, summary):focus-visible { outline-color: var(--studio-night-focus); }
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) :is(.resource-search, .resource-finder-field, .workspace-nav-search, .catalogue-quick-search .search-box, .hub-search-input, .catalog-search-input) {
+  background: var(--studio-night-control);
+  border-color: var(--studio-night-control-line);
+  box-shadow: none;
+  color: var(--studio-night-ink);
+}
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) :is(.btn-secondary, .secondary-button, .public-secondary, .landing-hero-cta-secondary) {
+  background: var(--studio-night-raised);
+  border-color: var(--studio-night-control-line);
+  color: var(--studio-night-ink);
+  box-shadow: none;
+}
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) :is(.btn-secondary, .secondary-button, .public-secondary):hover:not(:disabled) { background: #2c4162; }
+:root[data-theme="dark"] .workspace-shell.lab-studio :is(.btn-secondary, .secondary-button) {
+  background: var(--studio-night-raised) !important;
+  border-color: var(--studio-night-control-line) !important;
+  color: var(--studio-night-ink);
+  box-shadow: none !important;
+}
+:root[data-theme="dark"] .workspace-shell.lab-studio :is(.btn-secondary, .secondary-button):hover:not(:disabled) {
+  background: #2c4162 !important;
+  color: var(--studio-night-ink);
+}
+
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) :is(.home-panel, .home-command-panel, .home-trends, .hub-panel, .hub-metric, .ops-console, .ops-queue, .ops-queue-head, .ops-focus-card, .resource-catalogue-card, .resource-catalogue-actions, .resource-profile-hero, .resource-detail-sidebar, .maintenance-queue, .maintenance-dossier, .incident-queue, .incident-dossier, .materials-register, .materials-dossier, .materials-stat, .account-card, .account-content, .users-dossier, .support-chat, .support-queue, .payment-dossier, .monitor-upcoming, .monitor-alerts, .users-account-card, .studio-finder, .resource-editor, .planner-selection-stage, .planner-slot-panel, .operation-card, .home-attention-card, table) {
+  background: var(--studio-night-surface);
+  border-color: var(--studio-night-line);
+  color: var(--studio-night-ink);
+  box-shadow: none;
+}
+:root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) :is(th, .ops-rail, .resource-management-sections, .booking-view-switch, .account-navigation) {
+  background: var(--studio-night-raised);
+  border-color: var(--studio-night-line);
+  color: var(--studio-night-muted);
+  box-shadow: none;
+}
+:root[data-theme="dark"] .lab-studio :is(td, .materials-section-heading, .materials-ledger, .user-menu-divider) { border-color: var(--studio-night-line); }
+:root[data-theme="dark"] .lab-studio :is(.planner-views, .account-navigation, .rental-view-switch, .resource-management-sections) button[aria-pressed=true] {
+  background: #2b4270;
+  color: var(--studio-night-ink);
+  border-color: var(--studio-night-control-line);
+  box-shadow: none;
+}
+:root[data-theme="dark"] .lab-studio .calendar-planner {
+  --planner-accent: var(--studio-night-link); --planner-soft: var(--studio-night-raised);
+  --planner-ink: var(--studio-night-ink); --planner-muted: var(--studio-night-muted); --planner-line: var(--studio-night-line);
+}
+:root[data-theme="dark"] .lab-studio .materials-workspace {
+  --materials-ink: var(--studio-night-ink); --materials-muted: var(--studio-night-muted);
+  --materials-border: var(--studio-night-line); --materials-accent: var(--studio-night-link);
+}
+:root[data-theme="dark"] .lab-studio .studio-hero { background: var(--studio-night-raised); box-shadow: var(--studio-night-shadow); }
+:root[data-theme="dark"] .lab-studio .studio-hero::before { background: linear-gradient(100deg, #132139fa 8%, #14243ae8 52%, #14243a75); }
+:root[data-theme="dark"] .lab-studio .studio-hero-copy > p { color: var(--studio-night-muted); }
+:root[data-theme="dark"] .lab-studio .studio-hero-refresh { background: var(--studio-night-raised); color: var(--studio-night-ink); }
+:root[data-theme="dark"] .lab-studio .hub-focus { background: var(--surface-booking) !important; border: 1px solid var(--studio-night-line) !important; color: var(--studio-night-ink) !important; }
+:root[data-theme="dark"] .lab-studio .hub-focus :is(h2, p, .hub-session-time, .hub-focus-status) { color: var(--studio-night-ink) !important; }
+:root[data-theme="dark"] .lab-studio .hub-focus[data-state=overdue] { background: var(--state-danger-bg) !important; }
+:root[data-theme="dark"] .lab-studio .hub-focus[data-state=payment] { background: var(--state-attention-bg) !important; }
+
+:root[data-theme="dark"] .lab-studio :is(.ops-brief, .ops-brief-group, .ops-brief-feedback) {
+  background: var(--studio-night-surface); color: var(--studio-night-ink); border-color: var(--studio-night-line);
+}
+:root[data-theme="dark"] .lab-studio :is(.ops-brief-mark, .ops-brief-refresh, .ops-brief-group-heading, .ops-brief-row:hover, .ops-brief-open:hover) {
+  background: var(--studio-night-raised); color: var(--studio-night-link); border-color: var(--studio-night-control-line);
+}
+:root[data-theme="dark"] .lab-studio .ops-brief-group[data-empty=false][data-tone=amber] .ops-brief-group-heading,
+:root[data-theme="dark"] .lab-studio .ops-brief-priority {
+  background: var(--state-attention-bg); color: var(--state-attention-ink); border-color: var(--state-attention-line);
+}
+:root[data-theme="dark"] .lab-studio .ops-brief-group[data-empty=false][data-tone=red] .ops-brief-group-heading {
+  background: var(--state-danger-bg); color: var(--state-danger-ink);
+}
+:root[data-theme="dark"] .lab-studio .ops-brief :is(.ops-brief-row strong, .ops-brief-open) { color: var(--studio-night-link); }
+:root[data-theme="dark"] .lab-studio .ops-brief :is(.ops-brief-header p, .ops-brief-controls label, .ops-brief-empty, .ops-brief-row small) { color: var(--studio-night-muted); }
+:root[data-theme="dark"] .lab-studio .ops-brief .ops-brief-next { color: var(--state-attention-ink); }
+:root[data-theme="dark"] .lab-studio .ops-brief-feedback[role=alert] { color: var(--state-danger-ink); }
+
+:root[data-theme="dark"] .lab-studio .workspace-popover {
+  --popover-ink: var(--studio-night-ink); --popover-muted: var(--studio-night-muted);
+  --popover-tint: var(--studio-night-raised); --popover-accent: var(--studio-night-link);
+  background: var(--studio-night-surface) !important;
+  box-shadow: var(--studio-night-shadow);
+}
+:root[data-theme="dark"] .lab-studio .workspace-popover :is(.header-notices-items button, .header-selection-panel li, .user-menu-profile-header, .user-menu-avatar-large) {
+  background: var(--studio-night-raised); color: var(--studio-night-ink); border-color: var(--studio-night-line);
+}
+:root[data-theme="dark"] .lab-studio .header-selection-panel.workspace-popover :is(li, li small, p) { background: var(--studio-night-raised); color: var(--studio-night-muted); }
+:root[data-theme="dark"] .lab-studio .workspace-popover .user-menu-item-btn.item-logout { color: var(--state-danger-ink); }
+:root[data-theme="dark"] .lab-studio .workspace-popover .user-menu-item-btn.item-logout:hover { background: var(--state-danger-bg); }
+
+@supports (appearance: base-select) and selector(::picker(select)) {
+  :root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) select:not([multiple], [size])::picker(select) {
+    background: var(--studio-night-surface); color: var(--studio-night-ink); border-color: var(--studio-night-control-line);
+    box-shadow: var(--studio-night-shadow);
+  }
+  :root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) select:not([multiple], [size]) option:enabled:hover { background: #2b3e5a; color: var(--studio-night-ink); }
+  :root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) select:not([multiple], [size]) option:checked { background: #2b4270; color: var(--studio-night-ink); }
+  :root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) select option:focus-visible { outline-color: var(--studio-night-focus); }
+  :root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) select option::checkmark { color: var(--studio-night-link); }
+}
+
+:root[data-theme="dark"] .project-public-shell.lab-studio :is(.announcement-strip, .landing-hero-glass, .landing-hero-floating-card, .landing-hero-marquee-chip, .landing-benefits, .landing-features, .landing-roles, .landing-process, .landing-schedule, .landing-cta, .public-page-heading, .service-landing, .catalog-card, .catalog-card-body, .catalog-detail, .catalog-detail-heading, .catalog-sidebar, .landing-feature-card, .landing-role-card, .landing-process-card, .landing-schedule-card) {
+  --service-ink: var(--studio-night-ink); --service-muted: var(--studio-night-muted); --service-line: var(--studio-night-line);
+  background: var(--studio-night-surface);
+  color: var(--studio-night-ink);
+  border-color: var(--studio-night-line);
+  box-shadow: none;
+}
+:root[data-theme="dark"] .project-public-shell.lab-studio .landing-hero-glass { background: #182437ed; box-shadow: var(--studio-night-shadow); }
+:root[data-theme="dark"] .project-public-shell.lab-studio :is(.landing-hero-title-accent, .landing-section-eyebrow) { color: var(--studio-night-link); }
+:root[data-theme="dark"] .project-public-shell.lab-studio :is(.landing-hero-subtitle, .landing-feature-card p, .landing-role-card p, .landing-page p, .public-page-heading p, .catalog-card-body p) { color: var(--studio-night-muted); }
+:root[data-theme="dark"] .project-public-shell.lab-studio :is(.landing-hero-floating-title, .catalog-card-body .catalog-card-name, .rental-card-price) { color: var(--studio-night-ink); }
+:root[data-theme="dark"] .project-public-shell.lab-studio :is(.announcement-strip-label, .announcement-strip-number, .landing-hero-floating-icon) { background: var(--studio-night-raised); color: var(--studio-night-link); border-color: var(--studio-night-line); }
+
+:root[data-theme="dark"] :is(.auth-screen.lab-studio, .lab-studio-modal, .lab-assistant.lab-studio) {
+  background: var(--studio-night-surface);
+  border-color: var(--studio-night-line);
+  box-shadow: var(--studio-night-shadow);
+}
+:root[data-theme="dark"] .auth-screen.lab-studio :is(.auth-split-grid, .auth-panel-identity, .auth-panel-form, .auth-form-panel) {
+  background: var(--studio-night-surface);
+  border-color: var(--studio-night-line) !important;
+  box-shadow: none !important;
+}
+:root[data-theme="dark"] .auth-screen.lab-studio .auth-panel-identity { background: var(--studio-night-raised); }
+:root[data-theme="dark"] :is(.auth-screen.lab-studio, .lab-studio-modal, .lab-assistant.lab-studio) :is(label, p, small, .modal-subtitle-2026, .identity-brand, .identity-journey) { color: var(--studio-night-muted); }
+
+:root[data-theme="dark"] .lab-assistant.lab-studio {
+  --line: var(--studio-night-line);
+  color: var(--studio-night-ink);
+  > header,
+  :is(.lab-assistant-content, .assistant-bottom) {
+    background: var(--studio-night-surface);
+    border-color: var(--studio-night-line);
+  }
+  :is(.assistant-compose, .assistant-context-disclosure, .assistant-capabilities, .assistant-suggestions button, .assistant-connection-actions button, .assistant-next-actions button) {
+    background: var(--studio-night-control);
+    border-color: var(--studio-night-control-line);
+    color: var(--studio-night-link);
+    box-shadow: none;
+  }
+  :is(.assistant-suggestions, .assistant-connection-actions, .assistant-next-actions) button:hover:not(:disabled) { background: var(--studio-night-raised); }
+  :is(.assistant-compose textarea, .assistant-question) { color: var(--studio-night-ink); }
+  .assistant-question { background: var(--studio-night-raised); }
+  :is(.assistant-language, .assistant-compose button[type=submit]:disabled) { background: var(--studio-night-control); color: var(--studio-night-muted); }
+  :is(.assistant-minimize, .assistant-new, details > summary, .assistant-footer button, .assistant-retry) { color: var(--studio-night-link); }
+  :is(.assistant-minimize, .assistant-new):hover { background: var(--studio-night-raised); }
+  :is(.assistant-context-disclosure summary span, .assistant-delivery, .assistant-evidence ul, .assistant-busy, .assistant-footer > span, .assistant-next-actions > span, .assistant-human-status span, .assistant-human-transcript time) { color: var(--studio-night-muted); }
+}
+
+:root[data-theme="dark"] :is(.workspace-shell, .project-public-shell) .project-footer.project-footer-refined {
+  --footer-ink: var(--studio-night-ink);
+  --footer-muted: var(--studio-night-muted);
+  --footer-glass-edge: #8eadd746;
+  --footer-glass-light: #a9c6ff20;
+  background: #151f30;
+  border-color: var(--studio-night-line);
+  color: var(--studio-night-muted);
+}
+:root[data-theme="dark"] .lab-studio .project-footer-refined :is(a, .project-footer-identity p, .project-footer-help p, summary, .project-footer-baseline) {
+  color: var(--footer-muted);
+  border-color: var(--studio-night-line);
+}
+:root[data-theme="dark"] .lab-studio .project-footer-refined .project-footer-help { background: var(--studio-night-raised); border-color: var(--studio-night-line); }
+:root[data-theme="dark"] .lab-studio .project-footer-refined :is(.project-footer-help h2 svg, .project-footer-links h2 svg, a.project-footer-action) { color: var(--studio-night-link); }
+:root[data-theme="dark"] .lab-studio .project-footer-refined a.project-footer-action { background: var(--studio-night-control); }
+
+:root[data-theme="dark"] .app-shell-2026.workspace-shell.lab-spectrum.lab-studio {
+  .workspace-nav-heading .project-brand > span,
+  .workspace-nav-user strong { color: var(--studio-night-ink); }
+  .workspace-nav-heading .project-brand > span > span,
+  .workspace-group-toggle span,
+  .workspace-nav-user div > span,
+  .workspace-menu-group .sidebar-nav-item-2026 { color: var(--studio-night-muted); }
+  .workspace-nav-user { border-color: var(--studio-night-line); }
+  .workspace-nav-heading .project-brand > svg,
+  .header-notification-btn-2026,
+  .skip-link { color: var(--studio-night-link); }
+  .notification-counter-pill { background: #ab314d; color: #fff; }
+  :is(.header-icon-btn-2026, .project-header-shortcut, .workspace-nav-toggle, .avatar-letter-circle, .rail-avatar, .workspace-nav-count) {
+    background: var(--studio-night-raised);
+    color: var(--studio-night-link);
+    border-color: var(--studio-night-control-line);
+    box-shadow: none;
+  }
+  .resource-finder .resource-finder-control {
+    background: var(--studio-night-control);
+    border-color: var(--studio-night-control-line);
+    box-shadow: none;
+  }
+  .resource-finder .resource-finder-control input[type="search"] {
+    color: var(--studio-night-ink);
+    caret-color: var(--studio-night-link);
+  }
+  .resource-finder .resource-finder-control input[type="search"]::placeholder {
+    color: var(--studio-night-muted);
+    opacity: 1;
+  }
+  .resource-finder :is(.resource-finder-panel, .resource-finder-thumbnail) {
+    background: var(--studio-night-surface);
+    border-color: var(--studio-night-line);
+    color: var(--studio-night-ink);
+  }
+  .resource-finder :is(.resource-finder-submit, .resource-finder-clear, .resource-finder-all, .resource-finder-option[aria-selected=true], .resource-finder-option:hover) {
+    background: var(--studio-night-raised);
+    color: var(--studio-night-link);
+  }
+  .resource-finder :is(.resource-finder-icon, .resource-finder-record small, .resource-finder-empty) { color: var(--studio-night-muted); }
+  .lab-home :is(.hub-panel, .hub-metric, .home-panel, .home-command-panel, .home-attention-card, .ops-queue-head) {
+    background: var(--studio-night-surface);
+    border-color: var(--studio-night-line);
+    box-shadow: var(--studio-night-shadow);
+  }
+  .lab-home .hub-metric.tone-violet { background: var(--surface-account); }
+  .lab-home .hub-metric.tone-teal { background: var(--surface-operation); }
+  .lab-home .hub-metric.tone-peach { background: var(--surface-attention); }
+  .lab-home .hub-metric.tone-rose { background: var(--state-danger-bg); }
+  .lab-home :is(.hub-metric-label, .hub-panel p, .home-notices p, .home-notices time, .ops-console-sub, .home-people-register small) { color: var(--studio-night-muted); }
+  .lab-home :is(.home-text-button, .home-notice-list a, .hub-panel > header button) { color: var(--studio-night-link); }
+  .lab-home :is(.home-people-register button, .home-queue-register button, .home-incident-register button) { color: var(--studio-night-ink); }
+  .lab-home :is(.home-people-register button, .home-queue-register button, .home-incident-register button):hover { background: var(--studio-night-raised); }
+  .lab-home .ops-queue > header { background: var(--studio-night-surface); }
+  :is(.empty-state, .inbox-workspace .inbox-search, .support-chat-empty p, .inbox-stack time, .inbox-stack-card p) {
+    color: var(--studio-night-muted);
+  }
+  .empty-state { background: var(--studio-night-surface); border-color: var(--studio-night-line); }
+}
+
+:root[data-theme="dark"] .project-public-shell.lab-public.lab-spectrum.lab-studio {
+  :is(.public-auth-page, .public-skip) { background: var(--studio-night-canvas); color: var(--studio-night-ink); }
+  :is(.public-header nav a, .announcement-strip-step, .landing-hero-floating-subtitle, .landing-section-subtitle, .landing-role-feature, .landing-workflow p, .catalog-sidebar-note, .benefits-caption p) { color: var(--studio-night-muted); }
+  :is(.public-header nav a[aria-current], .public-header nav a:hover, .public-back-link, .public-page-heading a, .project-brand > svg) { color: var(--studio-night-link); }
+  :is(.landing-workflow-card, .benefits-caption, .catalog-card-bottom, .landing-hero-cta-secondary, .catalog-card-specifications, .catalog-card-cta.btn-secondary) {
+    background: var(--studio-night-raised); color: var(--studio-night-ink); border-color: var(--studio-night-line); box-shadow: none;
+  }
+  .public-account-actions .segmented-btn-2026[aria-pressed=true] {
+    background: #2b4270; color: var(--studio-night-ink); box-shadow: none;
+  }
+}
+
+:root[data-theme="dark"] .auth-screen.lab-studio {
+  :is(.auth-identity-footer, .auth-access-caption, .text-slate-400, .auth-divider span, label) { color: var(--studio-night-muted); }
+  :is(.auth-switch-link, .identity-brand svg, .auth-input-wrap svg, .auth-input-icon, .password-toggle) { color: var(--studio-night-link); }
+  .auth-language { background: var(--studio-night-control); border-color: var(--studio-night-control-line); }
+  .auth-language button[aria-pressed=true] { background: #2b4270; color: var(--studio-night-ink); }
+  .identity-journey li > svg { background: var(--studio-night-control); border-color: var(--studio-night-line); box-shadow: none; color: var(--studio-night-link); }
+}
+
+:root[data-theme="dark"] .app-shell-2026.workspace-shell.lab-spectrum.lab-studio[data-workspace-view] {
+  .lab-page-heading h1,
+  .lab-page-heading .workspace-title { color: var(--studio-night-ink) !important; }
+  .lab-page-heading :is(p, .catalogue-studio-intro) { color: var(--studio-night-muted) !important; }
+
+  :is(.home-trends, .home-panel.home-notices, .inbox-stack, .inbox-detail, .planner-resource-picker, .incident-queue-heading, .incident-detail, .maintenance-queue-heading, .maintenance-detail, .materials-dossier, .support-request, .schedule-waitlist, .operations-empty) {
+    background: var(--studio-night-surface);
+    border-color: var(--studio-night-line);
+    color: var(--studio-night-ink);
+    box-shadow: none;
+  }
+  .maintenance-cycles { background: var(--surface-operation); border-color: var(--state-positive-line); }
+  .lab-home .home-control-room :is(.home-command-panel, .home-command-aside .home-command-panel) { background: var(--studio-night-surface); border-color: var(--studio-night-line); }
+  .lab-home .home-quick-link { color: var(--studio-night-ink); background: var(--studio-night-raised); }
+  .lab-home .home-priority-copy strong { color: var(--studio-night-ink); }
+  :is(.help-disclosure > summary, .booking-status-legend > summary, .planner-timezone, .planner-legend, .planner-empty, .planner-filters label, .planner-views button, .planner-entry button, .sort-control, .materials-section-heading p, .materials-register > p, .support-queue p, .support-connection, .hub-resource-copy p, .home-priority-copy small, .home-priority-copy strong span, .hub-help p, .inbox-stack-card-top time, .inbox-stack-copy p, .inbox-toolbar button) {
+    color: var(--studio-night-muted);
+  }
+  :is(.planner-entry button[aria-selected=true], .planner-entry button[aria-pressed=true], .planner-views button[aria-pressed=true]) { color: var(--studio-night-ink); }
+  :is(.results-count, .planning-workspace > summary, .inbox-search, .rental-view-switch button) { color: var(--studio-night-ink); }
+  .inbox-toolbar button[aria-pressed=true] { background: #2b4270; color: var(--studio-night-ink); }
+}
+
+:root[data-theme="dark"] .project-public-shell.lab-public.lab-spectrum.lab-studio {
+  :is(.announcement-strip-static, .announcement-strip-static li, .benefits-summary p, .landing-schedule-card p) { color: var(--studio-night-muted); }
+  :is(.benefits-captions, .landing-workflow-step, .catalog-facet, .rental-view-switch button) {
+    background: var(--studio-night-raised);
+    color: var(--studio-night-ink);
+    border-color: var(--studio-night-line);
+    box-shadow: none;
+  }
+  .public-page-heading a,
+  .public-auth-page > a { color: var(--studio-night-link); }
+}
+
+:root[data-theme="dark"] .auth-screen.lab-studio :is(.auth-google-divider, .auth-panel-form > .text-center, .auth-form-content form .text-xs) {
+  color: var(--studio-night-muted);
+}
+
+.auth-google-divider { color: #596a84; }
+.inbox-stack .inbox-stack-card-top time { color: #526784; }
+.app-shell-2026.workspace-shell.lab-spectrum.lab-studio .inbox-toolbar button[aria-pressed=true] span { background: #174da7; color: #fff; }
+
+:root[data-theme="dark"] {
+  .session-notice {
+    background: var(--studio-night-raised);
+    border-color: var(--studio-night-control-line);
+    box-shadow: var(--studio-night-shadow);
+  }
+  .session-notice .btn-primary { background: #1d4ed8 !important; border-color: #1d4ed8 !important; }
+}
+
+:root[data-theme="dark"] .app-shell-2026.workspace-shell.lab-spectrum.lab-studio[data-workspace-view] {
+  :is(.home-trends header p, .home-trends-axis span, .home-trends-total span, .home-trends button, .ops-queue-sub, .home-register-summary dt, .home-empty p, .home-incident-register small, .home-queue-register button small, .inbox-stack-heading p, .inbox-stack-controls span, .inbox-empty p, .incident-queue-heading p, .incident-get-started p, .planner-resource-picker > header span, .account-workspace > p, .support-queue p) {
+    color: var(--studio-night-muted);
+  }
+  :is(.home-trends-data summary, .home-queue-register button strong) { color: var(--studio-night-link); }
+  :is(.home-trends button[aria-pressed=true], .rental-view-switch button[aria-pressed=true]) {
+    background: #263f69;
+    color: var(--studio-night-ink);
+    box-shadow: none;
+  }
+}
+
+:root[data-theme="dark"] .project-public-shell.lab-public.lab-spectrum.lab-studio {
+  :is(.benefits-caption-body, .catalog-filters button, .catalog-availability-toggle span, .catalog-filter-toggle) { color: var(--studio-night-muted); }
+  :is(.benefits-caption-eyebrow, .catalog-filter-toggle:hover) { color: var(--studio-night-link); }
+}
+
+:root[data-theme="dark"] .auth-screen.lab-studio .auth-google-error {
+  background: var(--state-danger-bg);
+  border-color: var(--state-danger-line);
+  color: var(--state-danger-ink);
+}
+
+:root[data-theme="dark"] .app-shell-2026.workspace-shell.lab-spectrum.lab-studio[data-workspace-view] {
+  :is(.account-content > section, .account-loyalty, .monitor-main > .card, .monitor-queue, .attention-bar, .operations-refresh-btn, .home-trends-period) {
+    background: var(--studio-night-surface);
+    color: var(--studio-night-ink);
+    border-color: var(--studio-night-line);
+    box-shadow: none;
+  }
+  .home-trends .home-trends-period { background: var(--studio-night-control); }
+  .home-trends .home-trends-period button[aria-pressed=true] { background: #263f69; color: var(--studio-night-ink); }
+  .inbox-toolbar button span { background: var(--studio-night-control); color: var(--studio-night-ink); }
+  .account-workspace {
+    --account-accent: var(--studio-night-link);
+    --account-muted: var(--studio-night-muted);
+    --account-line: var(--studio-night-line);
+  }
+  :is(.account-navigation, .operations-report-period) button:is([aria-pressed=true], :hover) {
+    background: #2b4270;
+    color: var(--studio-night-ink);
+    border-color: var(--studio-night-control-line);
+    box-shadow: none;
+  }
+  :is(.account-loyalty :is(dt, p, small), .account-identity-name p, .account-identity-meta small, .monitor-upcoming .monitor-empty, .monitor-workspace .lab-page-heading small, .monitor-queue p, .operations-report-header p, .operations-report-period button[aria-pressed=false]:not(:hover), .maintenance-queue-heading p, .materials-empty p, .users-empty p, .users-directory-count, .users-filters label, .account-field label) {
+    color: var(--studio-night-muted);
+  }
+  :is(.monitor-upcoming a, .monitor-queue :is(li strong, dd a), .account-loyalty-tier span, .account-loyalty-progress strong) { color: var(--studio-night-link); }
+  .maintenance-cycles :is(header, details) { color: var(--state-positive-ink); }
+  .users-workspace .users-card-grid .users-account.users-account-card {
+    background: var(--studio-night-surface);
+    border-color: var(--studio-night-line);
+    box-shadow: none;
+  }
+  .users-workspace .users-card-grid .users-account.users-account-card:is(.is-selected, :hover) { background: var(--studio-night-raised); }
+  .users-workspace .users-account-name { color: var(--studio-night-ink); }
+  .users-workspace .users-account-email { color: var(--studio-night-muted); }
+  .users-workspace .users-status.is-active { background: var(--state-positive-bg); color: var(--state-positive-ink); }
+  .users-workspace .users-status.is-inactive { background: var(--state-danger-bg); color: var(--state-danger-ink); }
+  :is(.incident-summary-card > span, .queue-pagination :is(p, span), .materials-stat :is(span, small), .account-access-explanation, .account-empty p, .account-security-form :is(p, small), .session-security p) {
+    color: var(--studio-night-muted);
+  }
+  :is(.incident-summary-card > strong, .materials-stat strong, .operations-report-summary dd) { color: var(--studio-night-ink); }
+  .materials-stat.is-ok strong { color: var(--state-positive-ink); }
+  .materials-stat.is-warn strong { color: var(--state-attention-ink); }
+  .materials-stat.is-alert strong { color: var(--state-danger-ink); }
+  :is(.operations-report-summary dt, .operations-report-ranking-heading > span, .operations-report-resource small, .operations-report-footer) {
+    color: var(--studio-night-muted);
+  }
+  :is(.operations-report-disclosure, .account-text-link) { color: var(--studio-night-link); }
+  .account-role { background: var(--state-info-bg); color: var(--state-info-ink); }
+
+  .workspace-rail .rail-menu,
+  .calendar-planner :is(.planner-steps, .planner-step-context, .planner-resource-card, .planner-board),
+  .ops-lane-pager .queue-pagination { background: var(--studio-night-surface); border-color: var(--studio-night-line); }
+  .calendar-planner .planner-resource-card:is(:focus-within, .is-selected) { border-color: var(--studio-night-focus); }
+  .calendar-planner :is(.planner-resource-card-meta, .planner-resource-card-copy p) { color: var(--studio-night-muted); }
+  .calendar-planner :is(.planner-filter-bar select, .planner-step, .planner-resource-search .resource-finder-control) {
+    background: var(--studio-night-control);
+    border-color: var(--studio-night-control-line);
+    color: var(--studio-night-ink);
+  }
+  .calendar-planner .planner-step.is-active { background: var(--state-info-bg); color: var(--state-info-ink); }
+  .calendar-planner .planner-step-index { background: var(--studio-night-raised); color: var(--studio-night-ink); }
+  .calendar-planner .planner-step.is-active .planner-step-index { background: #245dcc; color: #fff; }
+  .calendar-planner {
+    --planner-accent: var(--studio-night-link);
+    --planner-ink: var(--studio-night-ink);
+    --planner-muted: var(--studio-night-muted);
+    --planner-line: var(--studio-night-line);
+    --planner-soft: var(--studio-night-raised);
+    --planner-surface: var(--studio-night-surface);
+  }
+  .calendar-planner :is(.planner-axis, .planner-resource-group > h3, .planner-lane-track, .planner-past, .planner-date-controls) { background: var(--studio-night-control); border-color: var(--studio-night-line); }
+  .calendar-planner .planner-service-window { background: var(--studio-night-raised); }
+  .calendar-planner .planner-lane { border-color: var(--studio-night-line); }
+  .calendar-planner .planner-pagination { color: var(--studio-night-muted); }
+  .calendar-planner .planner-pagination button:not(:disabled) { color: var(--studio-night-link); }
+  .resource-browse-studio .workspace-header .btn-secondary { color: var(--studio-night-ink); }
+  .session-security dt { color: var(--studio-night-muted); }
+  .support-page {
+    --support-ink: var(--studio-night-ink);
+    --support-muted: var(--studio-night-muted);
+    --support-line: var(--studio-night-line);
+    --support-accent: var(--studio-night-link);
+  }
+  .support-page :is(.support-queue-row, .support-compose) { background: var(--studio-night-surface); }
+  .support-page .support-queue-row:is(.is-selected, :hover) { background: var(--studio-night-raised); }
+  .support-page .support-queue-row small { color: var(--studio-night-muted); }
+  .support-page .support-connection.is-error { background: var(--state-danger-bg); border-color: var(--state-danger-line); color: var(--state-danger-ink); }
+}
+
+:root[data-theme="dark"] .project-public-shell.lab-public.lab-spectrum.lab-studio .catalog-filters button[aria-pressed=true] {
+  background: #263f69;
+  color: var(--studio-night-ink);
+  border-color: var(--studio-night-control-line);
+  box-shadow: none;
+}

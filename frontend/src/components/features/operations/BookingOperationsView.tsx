@@ -1,14 +1,15 @@
+import { PageHeading } from '../../base/PageHeading';
 import { CustomerBookingCard } from "./CustomerBookingCard";
 import "../../../styles/my-schedule.css";
 import { BookingWaitlist } from '../planning/BookingWaitlist';
 import { BookingStatusLegend } from '../../BookingStatusLegend';
-import { navigateApp, readRouteParams, workspacePathForTab } from '../../../workspaceRoutes.js';
+import { navigateApp, readRouteParams, resourceSelectionPath, workspacePathForTab } from '../../../workspaceRoutes.js';
 import { apiRequest } from "../../../api.js";
 import type { LocaleMessage } from "../../../providers/LocaleProvider";
 import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
-import { AlertCircle, ClipboardList, History, RefreshCw, X, Clock, FileText, CalendarPlus, CreditCard, PackageCheck, Timer } from "lucide-react";
+import { AlertCircle, ClipboardList, History, RefreshCw, X, Clock, CalendarPlus, RotateCcw } from "lucide-react";
 import { BookingActionModal } from "../../BookingActionModal.js";
 import { BaseModal2026 } from "../../BaseModal2026.js";
 import { BookingOperationCard } from "./BookingOperationCard.js";
@@ -35,6 +36,7 @@ import { formatVietnamDateTime } from "../../../utils/timezone.js";
 import { BookingStatusBadge } from "../../BookingStatusBadge.js";
 import { BookingRescheduleModal } from "./BookingRescheduleModal";
 import { PaymentHoldNotice } from '../payments/PaymentHoldNotice';
+import '../../../styles/booking-records.css';
 
 export interface BookingOperationsViewProps {
   user: { id: string; role: string; fullName: string };
@@ -42,9 +44,10 @@ export interface BookingOperationsViewProps {
   onPayment?: (booking: BookingRecord) => void;
 }
 
-type FilterKey = 'ALL' | 'PENDING_PAYMENT' | 'PENDING_APPROVAL' | 'CONFIRMED' | 'CHECKED_OUT' | 'RETURNED' | 'HISTORY';
+type FilterKey = 'ALL' | 'ACTION_REQUIRED' | 'PENDING_PAYMENT' | 'PENDING_APPROVAL' | 'CONFIRMED' | 'CHECKED_OUT' | 'RETURNED' | 'HISTORY';
 const FILTER_LABELS: Record<FilterKey, string> = {
   ALL: "ui.all_49c73a31",
+  ACTION_REQUIRED: "ui.customerBooking.actionRequired",
   PENDING_PAYMENT: 'ui.paymentHold.pending',
   PENDING_APPROVAL: "ui.pending_approval_6af96613",
   CONFIRMED: "ui.awaiting_handover_de28611f",
@@ -56,7 +59,8 @@ const routeParams = () => readRouteParams();
 
 function initialFilter(isStaff: boolean): FilterKey {
   const value = routeParams().get("filter");
-  return Object.hasOwn(FILTER_LABELS, value || "") ? value as FilterKey : isStaff ? "CONFIRMED" : "ALL";
+  if (value && Object.hasOwn(FILTER_LABELS, value) && !(isStaff && value === 'ACTION_REQUIRED')) return value as FilterKey;
+  return isStaff ? "CONFIRMED" : "ACTION_REQUIRED";
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -79,6 +83,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   const [selectedError, setSelectedError] = useState("");
   const [selectionRevision, setSelectionRevision] = useState(0);
   const dossierRef = useRef<HTMLDivElement>(null);
+  const quietDetail = useRef(false);
   const focusDetail = useRef(Boolean(routeParams().get('booking')));
   const [routeAction, setRouteAction] = useState(() => routeParams().get("action") || "");
   const [error, setError] = useState("");
@@ -92,10 +97,27 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   const [queuePageSize, setQueuePageSize] = useState(20);
 
   const queue = useQueuePage<BookingRecord, BookingQueueSummary>("/bookings", filter, `${user.id}:${user.role}`, queuePageSize);
-  const { items: bookings, loading } = queue;
+  const { items: bookings, loading, refreshQuietly } = queue;
   const loadError = queue.error;
 
   const loadBookings = () => { setError(""); queue.refresh(); setSelectionRevision(value => value + 1); };
+  useEffect(() => {
+    if (isStaff) return;
+    const refreshCustomerBookings = () => {
+      if (document.visibilityState !== 'visible') return;
+      refreshQuietly();
+      if (selectedBookingId) {
+        quietDetail.current = true;
+        setSelectionRevision(value => value + 1);
+      }
+    };
+    const timer = window.setInterval(refreshCustomerBookings, 30_000);
+    document.addEventListener('visibilitychange', refreshCustomerBookings);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshCustomerBookings);
+    };
+  }, [isStaff, refreshQuietly, selectedBookingId]);
 
   useEffect(() => { setFilter(initialFilter(isStaff)); }, [isStaff]);
 
@@ -116,7 +138,8 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
   useEffect(() => {
     if (!selectedBookingId) { setSelectedRecord(null); setSelectedError(""); setSelectedLoading(false); return; }
     const controller = new AbortController();
-    setSelectedLoading(true);
+    if (!quietDetail.current) setSelectedLoading(true);
+    quietDetail.current = false;
     setSelectedError("");
     void apiRequest(`/bookings/${encodeURIComponent(selectedBookingId)}`, { signal: controller.signal })
       .then((record: BookingRecord) => { if (!controller.signal.aborted) setSelectedRecord(record); })
@@ -131,7 +154,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
     if (focusDetail.current && selectedRecord?.id === selectedBookingId && !selectedLoading) {
       focusDetail.current = false;
       dossierRef.current?.focus({ preventScroll: true });
-      if (window.matchMedia("(max-width: 1000px)").matches) dossierRef.current?.scrollIntoView({ block: "start" });
+      if (window.matchMedia("(max-width: 1099px)").matches) dossierRef.current?.scrollIntoView({ block: "start" });
     }
   }, [selectedRecord, selectedBookingId, selectedLoading]);
 
@@ -190,6 +213,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
 
   const counts = queue.data ? {
     ...queue.data.summary.byStatus,
+    ACTION_REQUIRED: queue.data.summary.actionRequired || 0,
     PENDING_PAYMENT: queue.data.summary.pendingPayment || 0,
     PENDING_APPROVAL: (queue.data.summary.byStatus.PENDING_APPROVAL || 0) - (queue.data.summary.pendingPayment || 0),
     ALL: queue.data.summary.total,
@@ -262,29 +286,38 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
 
   const filters: FilterKey[] = isStaff
     ? ["CONFIRMED", "CHECKED_OUT", "RETURNED", "HISTORY", "ALL"]
-    : ["ALL", "CONFIRMED", "CHECKED_OUT", "RETURNED", "HISTORY"];
+    : ["ACTION_REQUIRED", "ALL", "CONFIRMED", "CHECKED_OUT", "RETURNED", "HISTORY"];
   // Existing pending records remain accessible without presenting approval as the new workflow.
   if (filter === 'PENDING_PAYMENT' || (counts?.PENDING_PAYMENT || 0) > 0) filters.push('PENDING_PAYMENT');
   if (filter === 'PENDING_APPROVAL' || (counts?.PENDING_APPROVAL || 0) > 0) filters.push('PENDING_APPROVAL');
+  const primaryFilters: FilterKey[] = ['ACTION_REQUIRED', 'ALL', 'HISTORY'];
+  const statusFilters = filters.filter(key => !primaryFilters.includes(key));
+  const refreshControl = <button type="button" className="operations-refresh-btn" onClick={loadBookings} disabled={loading}>
+    <RefreshCw size={15} className={loading ? "animate-spin" : ""} aria-hidden="true" />{tr("ui.refresh_b4c61340")}
+  </button>;
+  const filterButtons = (keys: FilterKey[]) => <nav className="operations-filter-row" aria-label={tr("ui.booking_workflow_filters_65688e95")}>
+    {keys.map(key => (
+      <button key={key} type="button" className={`operations-filter-btn${filter === key ? " is-active" : ""}`}
+        aria-pressed={filter === key} onClick={() => selectFilter(key)}>
+        <span>{tr(FILTER_LABELS[key])}</span><strong>{counts ? counts[key] || 0 : "—"}</strong>
+      </button>
+    ))}
+  </nav>;
 
   return (
-    <div className={`operations-view${!isStaff ? " my-schedule" : ""}${selectedBookingId ? " has-selection" : ""}`} data-testid="operations-view">
+    <div className={`operations-view booking-records-view${!isStaff ? " my-schedule" : ""}${selectedBookingId ? " has-selection" : ""}`} data-testid="operations-view">
       {isStaff && <BookingWaitlist/>}
-      <header className="operations-header">
+      <PageHeading className="operations-header">
         <div className="operations-header-group">
           <h1>{isStaff ? tr("ui.bookings_and_handover_3e0e5754") : tr("ui.my_bookings_094ca2d9")}</h1>
           {!isStaff && <p>{tr("ui.mySchedule.intro")}</p>}
         </div>
-        {!isStaff && <button type="button" className="btn btn-primary schedule-new" onClick={() => navigateApp(workspacePathForTab("smart_calendar"))}><CalendarPlus size={18} aria-hidden="true" />{tr("ui.mySchedule.new")}</button>}
-        <button type="button" className="operations-refresh-btn" onClick={loadBookings} disabled={loading}>
-          <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-          {tr("ui.refresh_b4c61340")}
-        </button>
-      </header>
-      {!isStaff && <nav className="schedule-priorities" aria-label={tr('ui.mySchedule.quickGroups')}>
-        {([{ key: 'PENDING_PAYMENT', icon: CreditCard, title: 'ui.paymentHold.pending', hint: 'ui.mySchedule.paymentHint', tone: 'payment' }, { key: 'CONFIRMED', icon: PackageCheck, title: 'ui.awaiting_handover_de28611f', hint: 'ui.mySchedule.handoverHint', tone: 'ready' }, { key: 'CHECKED_OUT', icon: Timer, title: 'ui.in_use_a07a3647', hint: 'ui.mySchedule.returnHint', tone: 'active' }] as const).map(item => <button key={item.key} type="button" data-tone={item.tone} aria-pressed={filter === item.key} onClick={() => selectFilter(item.key)}><item.icon size={25} aria-hidden="true" /><span><strong>{tr(item.title)}</strong><small>{tr(item.hint)}</small></span><b>{counts ? counts[item.key] || 0 : '—'}</b></button>)}
-      </nav>}
-      <BookingStatusLegend />
+        {isStaff ? refreshControl : <div className="customer-booking-header-actions">
+          <button type="button" className="btn btn-primary schedule-new" onClick={() => navigateApp(workspacePathForTab("smart_calendar"))}><CalendarPlus size={18} aria-hidden="true" />{tr("ui.mySchedule.new")}</button>
+          {refreshControl}
+        </div>}
+      </PageHeading>
+      {isStaff && <BookingStatusLegend />}
 
       {(error || loadError) && (
         <div className="operations-alert danger" role="alert">
@@ -304,26 +337,21 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
         </div>
       )}
 
-      <nav className="operations-filter-row" aria-label={tr("ui.booking_workflow_filters_65688e95")}>
-        {filters.map((key) => (
-          <button
-            key={key}
-            type="button"
-            className={`operations-filter-btn${filter === key ? " is-active" : ""}`}
-            aria-pressed={filter === key}
-            onClick={() => selectFilter(key)}
-          >
-            <span>{tr(FILTER_LABELS[key])}</span>
-            <strong>{counts ? counts[key] || 0 : "—"}</strong>
-          </button>
-        ))}
-      </nav>
+      {isStaff ? filterButtons(filters) : <div className="customer-booking-filters">
+        {filterButtons(primaryFilters)}
+        <label>{tr('ui.customerBooking.statusFilter')}
+          <select value={statusFilters.includes(filter) ? filter : ''} onChange={event => selectFilter(event.target.value as FilterKey || 'ALL')}>
+            <option value="">{tr(FILTER_LABELS.ALL)}</option>
+            {statusFilters.map(key => <option value={key} key={key}>{tr(FILTER_LABELS[key])}{counts ? ` (${counts[key] || 0})` : ''}</option>)}
+          </select>
+        </label>
+      </div>}
 
       <div className="operations-layout">
         {/* Left: Queue */}
         <div className="operations-queue-col">
           <div className="operations-queue-header">
-            <span className="operations-queue-title">{tr(isStaff ? "ui.home.staff.queueTitle" : "ui.mySchedule.list")}</span>
+            <span className="operations-queue-title">{tr("ui.mySchedule.list")}</span>
           </div>
 
           {loading ? (
@@ -342,16 +370,17 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
           ) : bookings.length === 0 ? (
             <div className="operations-empty">
               <ClipboardList size={22} className="empty-icon" />
-              <strong>{tr("ui.no_bookings_in_this_group_1391cc5e")}</strong>
-              <span>{tr("ui.choose_another_group_to_view_00eb6689")}</span>
-              {!isStaff && <button type="button" className="btn btn-primary" onClick={() => navigateApp(workspacePathForTab("smart_calendar"))}>{tr("ui.mySchedule.new")}</button>}
+              <strong>{tr(filter === 'ACTION_REQUIRED' ? 'ui.customerBooking.noAction' : 'ui.no_bookings_in_this_group_1391cc5e')}</strong>
+              {filter === 'ACTION_REQUIRED'
+                ? <button type="button" className="btn btn-secondary" onClick={() => selectFilter('ALL')}>{tr('ui.customerBooking.seeAll')}</button>
+                : <span>{tr("ui.choose_another_group_to_view_00eb6689")}</span>}
             </div>
           ) : (
             <>
               <div className="operations-list">
                 {bookings.map((booking) => {
-                  const Card = isStaff ? BookingOperationCard : CustomerBookingCard;
-                  return <Card key={booking.id} booking={booking} busy={busyId === booking.id} isSelected={selectedBookingId === booking.id} onSelect={selectBooking} />;
+                  const props = { booking, busy: busyId === booking.id, isSelected: selectedBookingId === booking.id, onSelect: selectBooking };
+                  return isStaff ? <BookingOperationCard key={booking.id} {...props} /> : <CustomerBookingCard key={booking.id} {...props} onPayment={onPayment} asOf={queue.data?.summary.asOf} />;
                 })}
               </div>
             </>
@@ -363,7 +392,7 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
         </div>
 
         {/* Right: Dossier */}
-        <div className="operations-dossier-col" ref={dossierRef} tabIndex={-1} role="region" aria-label={tr("ui.booking_identity_4e5a6b7c")} aria-busy={selectedLoading}>
+        {selectedBookingId && <div className="operations-dossier-col" ref={dossierRef} tabIndex={-1} role="region" aria-label={tr("ui.booking_identity_4e5a6b7c")} aria-busy={selectedLoading}>
           {selectedError && <div className="operations-alert danger" role="alert">{translate(selectedError)}<button type="button" className="btn" onClick={() => setSelectionRevision(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></div>}
           {selectedBooking ? (
             <BookingDossier
@@ -378,31 +407,16 @@ export const BookingOperationsView: React.FC<BookingOperationsViewProps> = ({ us
               onAction={(action) => setActionState({ action, booking: selectedBooking })}
               onOpenHistory={() => openHistory(selectedBooking)}
             />
-          ) : (
-            <div className="operations-dossier-empty">
-              <FileText size={40} />
-              <strong>{tr(selectedLoading ? "ui.loading_data_84c68bd5" : "ui.select_a_booking_to_view_its_details_1e3b7f1a")}</strong>
-              {!selectedLoading && (
-                <>
-                  <p>{tr("ui.operations.dossierHint")}</p>
-                  {bookings.length > 0 && (
-                    <div className="operations-queue-snapshot" role="status">
-                      {bookings.slice(0, 4).map(row => (
-                        <button key={row.id} type="button" onClick={() => selectBooking(row)}>
-                          <BookingStatusBadge status={row.status} />
-                          <strong>{row.title}</strong>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
+          ) : selectedLoading ? (
+            <div className="operations-dossier-empty" role="status">
+              <RefreshCw size={24} className="animate-spin" aria-hidden="true" />
+              <strong>{tr("ui.loading_data_84c68bd5")}</strong>
             </div>
-          )}
-        </div>
+          ) : null}
+        </div>}
       </div>
 
-      {!isStaff && <div className="schedule-waitlist"><BookingWaitlist/></div>}
+      {!isStaff && <div className="schedule-waitlist"><BookingWaitlist/><BookingStatusLegend /></div>}
 
       {/* Action modal */}
       {actionState && (
@@ -525,6 +539,13 @@ function BookingDossier({ booking, user, isStaff, busy, onClose, onAction, onOpe
 
       {isOwner && onPayment && Boolean(booking.feeAmountVnd) && <BookingPaymentSummary key={`payment-${booking.id}`} booking={booking} user={user} onPayment={onPayment} />}
       {isOwner && <BookingAccessPanel key={`access-${booking.id}`} bookingId={booking.id} status={booking.status} category={booking.resource?.category} onChanged={onRescheduled} />}
+      {isOwner && !isStaff && ['COMPLETED','CANCELLED','REJECTED'].includes(booking.status) && (
+        <div className="operations-dossier-section">
+          <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => navigateApp(resourceSelectionPath({ repeat: booking.id }))}>
+            <RotateCcw size={16} aria-hidden="true" />{tr('ui.customerBooking.repeat')}
+          </button>
+        </div>
+      )}
 
       {/* Identity */}
       <details className="operations-dossier-section">

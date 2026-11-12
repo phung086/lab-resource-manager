@@ -15,6 +15,7 @@ import { apiRequest } from "../api.js";
 import { useLocale } from "../providers/LocaleProvider";
 import { translate } from "../i18n.js";
 import { ResourceGallery } from "../components/ResourceGallery";
+import { StatusPill } from '../components/features/resources/ResourceStatusPill';
 import { ResourceUsageGuide } from "../components/ResourceUsageGuide";
 import { LabPolicySummary } from "../components/LabPolicySummary";
 import { ResourceSpecifications } from "../components/ResourceSpecifications";
@@ -446,17 +447,13 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
             <div className="resource-sidebar-status">
               <div className="resource-status-row">
                 <span className="resource-state-label">{tr("ui.physical_state_c30af32d")}</span>
-                <span className={`resource-status-pill status-${String(resource.operationalStatus).toLowerCase()}`}>
-                  {tr(operationalLabels[resource.operationalStatus]) || resource.operationalStatus}
-                </span>
+                <StatusPill value={resource.operationalStatus} label={tr(operationalLabels[resource.operationalStatus]) || resource.operationalStatus} />
               </div>
               <div className="resource-status-row">
                 <span className="resource-state-label">{tr("ui.current_availability_f57c5e36")}</span>
-                <span className={`resource-status-pill status-${String(resource.availability?.state || "unavailable").toLowerCase()}`}>
-                  {resource.availability?.state
+                <StatusPill value={resource.availability?.state || 'UNAVAILABLE'} label={resource.availability?.state
                     ? tr(availabilityLabels[resource.availability.state]) || tr("ui.not_bookable_cc51bab6")
-                    : tr("ui.not_bookable_cc51bab6")}
-                </span>
+                    : tr("ui.not_bookable_cc51bab6")} />
               </div>
               {!resource.category && (
                 <span className="resource-status-pill status-unresolved">{tr("ui.unclassified_10fe63fa")}</span>
@@ -488,7 +485,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
               {onViewSelection && (
                 <button
                   type="button"
-                  className="btn btn-ghost"
+                  className="btn btn-secondary"
                   onClick={onViewSelection}
                 >
                   {tr("ui.resourceDiscovery.viewSelection")}

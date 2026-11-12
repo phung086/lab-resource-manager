@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Calendar, Mail, Phone, ShieldCheck, X } from 'lucide-react';
+import { Calendar, Mail, Phone, ShieldCheck, X } from 'lucide-react';
 import { useLocale } from '../../../providers/LocaleProvider';
 import { roleLabels, DirectoryUser } from './accountDirectory.contract';
 
@@ -50,10 +50,6 @@ export function AccountDetailPanel(props: AccountDetailPanelProps) {
         <div className="users-detail-card users-detail-card-contact">
           <dt><Phone size={14} aria-hidden="true" />{tr('ui.users.detail.phone')}</dt>
           <dd>{props.user.phone || <span className="users-detail-missing">{tr('ui.users.detail.notProvided')}</span>}</dd>
-        </div>
-        <div className="users-detail-card users-detail-card-affiliation">
-          <dt><Building2 size={14} aria-hidden="true" />{tr('ui.users.detail.affiliation')}</dt>
-          <dd>{props.user.organization || <span className="users-detail-missing">{tr('ui.users.detail.notProvided')}</span>}</dd>
         </div>
         <div className="users-detail-card users-detail-card-activity">
           <dt><Calendar size={14} aria-hidden="true" />{tr('ui.users.detail.bookings')}</dt>

@@ -78,8 +78,7 @@ ${diagram(extensionNames)}
 
 Stock movements record receipts, issues and admin adjustments. A maintenance-linked
 issue must remain in the same laboratory. Teaching groups retain historical
-academic records; their runtime mutations are retired under ADR-033. They grant
-CUSTOMER no operator privileges.
+academic records. The runtime routes are retired under ADR-033 and ADR-047.
 ## Approved human support extension
 
 ${diagram(supportNames)}

@@ -66,13 +66,14 @@ test('stock scope, initialization, retries and concurrent issues preserve the ba
   assert.equal(await prisma.systemAuditEvent.count({ where: { resourceId: material.id, action: 'STOCK_MOVEMENT_RECORDED' } }), 3);
 });
 
-test('retired teaching workspace keeps a private ADMIN archive and rejects new mutations', async () => {
+test('retired teaching workspace keeps historical rows without an application route', async () => {
   group = await prisma.teachingGroup.create({ data: { id: id(), code: marker, name: 'Historical group', term: '2026-1', lecturerId: users.lecturer.id } });
   activity = await prisma.teachingActivity.create({ data: { id: id(), groupId: group.id, bookingId: booking.id, learningGoal: 'Historical learning goal' } });
   await prisma.teachingMembership.create({ data: { groupId: group.id, userId: users.student.id } });
-  for (const name of ['student','lecturer','staff']) assert.equal((await call('get', '/lab-workspace/groups', name)).status,403);
+  for (const name of ['student','lecturer','staff','admin']) assert.equal((await call('get', '/lab-workspace/groups', name)).status,404);
   const archive = await call('get', '/lab-workspace/groups/'+group.id, 'admin');
-  assert.equal(archive.status,200); assert.equal(archive.body.activities[0].id,activity.id);
+  assert.equal(archive.status,404);
+  assert.equal((await prisma.teachingActivity.findUnique({where:{id:activity.id}})).groupId,group.id);
   assert.equal((await call('post','/lab-workspace/groups','admin',{code:'NEW'})).status,404);
   assert.equal((await call('post','/lab-workspace/groups/'+group.id+'/members','admin',{email:users.student.email})).status,404);
   assert.equal((await call('patch','/lab-workspace/groups/'+group.id+'/activities/'+activity.id,'admin',{decision:'ENDORSED',feedback:'No longer active'})).status,404);

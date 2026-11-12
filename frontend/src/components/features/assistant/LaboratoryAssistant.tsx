@@ -1,3 +1,4 @@
+import { formatVnd } from '../../../utils/currency';
 import { LocaleScope, useLocale } from '../../../providers/LocaleProvider';
 import { useEffect, useRef, useState } from 'react';
 import { submitChatOnEnter } from '../../../utils/chatKeyboard';
@@ -12,6 +13,7 @@ import { askChatgptBridge, type BridgeRequest } from '../../../services/chatgptB
 import { reviewBridgeProposal, type BridgeProposal, type BridgeSupportDraft } from '../../../services/chatgptBridgeProposals';
 import CustomerSupportChat from '../support/CustomerSupportChat';
 import { supportApi } from '../../../services/support';
+import { LanguageToggle } from '../../base/LanguageToggle';
 import './assistant.css';
 
 type Slot = { resourceId: string; startAt: string; endAt: string; resourceName?: string; resourceCode?: string; title?: string; purpose?: string; purposeCode?: string };
@@ -28,7 +30,7 @@ export default function LaboratoryAssistant(props: Props) {
 }
 
 function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspaceTab, actorRole }: Props) {
-  const { locale, tr, changeLocale, loadingLocale, localeError } = useLocale();
+  const { locale, tr, localeError } = useLocale();
   const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
   const panel = useRef<HTMLElement>(null), content = useRef<HTMLDivElement>(null), contextFields = useRef<HTMLDetailsElement>(null);
   const questionInput = useRef<HTMLTextAreaElement>(null), resourceInput = useRef<HTMLSelectElement>(null), latestTurn = useRef<HTMLElement>(null);
@@ -206,14 +208,17 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
   }
   if (!isOpen && !humanMode) return null;
 
-  return createPortal(<section id="lab-assistant-panel" lang={locale} hidden={!isOpen} className={`lab-assistant${messages.length ? ' has-conversation' : ''}`} ref={panel} role="dialog" aria-modal="false" aria-labelledby="lab-assistant-title"
-    onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); dismiss(); } }}>
+  return createPortal(<section id="lab-assistant-panel" lang={locale} hidden={!isOpen} className={`lab-assistant lab-studio${messages.length ? ' has-conversation' : ''}`} ref={panel} role="dialog" aria-modal="false" aria-labelledby="lab-assistant-title"
+    onKeyDown={event => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      if (CSS.supports('selector(select:open)') && event.currentTarget.querySelector('select:open')) return;
+      dismiss();
+    }}>
     <header>
       <span className="assistant-avatar" aria-hidden="true">{humanMode ? <Headphones size={21} /> : <RobotMascot />}</span>
       <div className="assistant-heading"><h2 id="lab-assistant-title">{tr(humanMode ? 'support.handoff' : 'assistant.title')}</h2><p>{tr(humanMode ? 'support.message' : 'assistant.subtitle')}</p></div>
-      <div className="assistant-language" role="group" aria-label={tr('assistant.changeLanguage')}>
-        {['vi', 'en'].map(value => <button type="button" key={value} disabled={!!loadingLocale} aria-pressed={locale === value} onClick={() => void changeLocale(value)}>{value.toUpperCase()}</button>)}
-      </div>
+      <LanguageToggle className="assistant-language" labelKey="assistant.changeLanguage" />
       {!humanMode && <button type="button" className="assistant-new" disabled={busy || !messages.length} onClick={() => void newConversation()} aria-label={tr('assistant.newConversation')} title={tr('assistant.newConversation')}><Plus size={19} aria-hidden="true" /></button>}
       <button type="button" className="assistant-minimize" onClick={() => dismiss()} aria-label={tr('assistant.minimize')}><X size={19} aria-hidden="true" /></button>
     </header>
@@ -261,7 +266,7 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
               <strong>{proposal.kind === 'BOOKING' ? proposal.resourceName : tr('support.handoff')}</strong>
               {proposal.kind === 'BOOKING' ? <>
                 <p><time dateTime={proposal.startAt}>{time(proposal.startAt)}</time> → <time dateTime={proposal.endAt}>{time(proposal.endAt)}</time></p>
-                <small>{new Intl.NumberFormat(locale === 'en' ? 'en-GB' : 'vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(proposal.quote.amountVnd)}</small>
+                <small>{formatVnd(proposal.quote.amountVnd, locale)}</small>
               </> : <small>{proposal.laboratoryName}</small>}
               <button type="button" className="secondary-button" disabled={busy || humanMode} onClick={() => review(proposal)}>{tr('bridge.reviewProposal')}</button>
             </div>)}

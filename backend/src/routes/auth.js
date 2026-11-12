@@ -14,6 +14,7 @@ import { forgetAssistantSession } from "../assistant/assistantService.js";
 import { enqueueRegistrationEmail } from "../services/emailAutomationService.js";
 import { signUserToken, extendSession, sessionInfo } from "../services/authTokens.js";
 import { requestPasswordOtp, confirmPasswordOtp } from "../services/passwordSecurityService.js";
+import { createGoogleAuthRouter } from './googleAuth.js';
 
 const router = express.Router();
 router.use((_req, res, next) => { res.set("Cache-Control", "no-store"); next(); });
@@ -42,12 +43,14 @@ const registerSchema = z.object({
 const changePasswordSchema = z.object({
   challengeId: z.string().uuid(),
   otp: z.string().regex(/^\d{6}$/),
-  currentPassword: z.string().min(8).max(128),
+  currentPassword: z.string().max(128).optional(),
   newPassword: z.string().min(8).max(128)
 }).strict().refine((value) => value.currentPassword !== value.newPassword, {
   message: "New password must be different from the current password",
   path: ["newPassword"]
 });
+
+router.use('/google', createGoogleAuthRouter(authRateLimit));
 
 /**
  * Returns a safe public representation of a user.
@@ -80,7 +83,6 @@ router.post("/register", authRateLimit, async (req, res, next) => {
           fullName: "",
           role: CUSTOMER, // Canonical uppercase
           passwordHash,
-          customerType: "EXTERNAL",
           passwordResetRequired: false,
           isActive: true
         }
@@ -119,9 +121,8 @@ router.post("/login", authRateLimit, async (req, res, next) => {
 
     // Real password verification — always required
     const isValid = await bcrypt.compare(data.password, user?.passwordHash || absentAccountHash);
-    // A guest's initial phone-based credential is usable only inside the
-    // email-verified setup session, never as proof of identity at login.
-    if (!user || !isValid || (user.customerType === "EXTERNAL" && user.passwordResetRequired)) {
+    // An account awaiting password setup must finish its verified setup flow.
+    if (!user || !isValid || user.passwordLoginEnabled === false || user.passwordResetRequired) {
       throw new HttpError(401, "Email or password is incorrect", undefined, "AUTH_INVALID_CREDENTIALS");
     }
 
@@ -175,7 +176,7 @@ router.post("/logout-all", requireAuth, async (req, res, next) => {
 
 router.post("/password-otp/request", authRateLimit, requireAuth, async (req, res, next) => {
   try {
-    const data = z.object({ currentPassword: z.string().min(8).max(128) }).strict().parse(req.body);
+    const data = z.object({ currentPassword: z.string().max(128).optional() }).strict().parse(req.body);
     res.json(await requestPasswordOtp(req.user, { ...data, locale: req.locale }));
   } catch (error) { next(error); }
 });

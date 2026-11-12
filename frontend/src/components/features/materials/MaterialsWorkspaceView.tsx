@@ -1,5 +1,7 @@
+import { PageHeading } from '../../base/PageHeading';
 import { HelpDisclosure } from "../../base/HelpDisclosure";
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowDownToLine, ArrowUpFromLine, ClipboardCheck, ExternalLink } from 'lucide-react';
 import { apiRequest } from '../../../api.js';
 import { useLocale } from '../../../providers/LocaleProvider';
 import { navigateApp, readRouteParams, workspacePathForTab } from '../../../workspaceRoutes.js';
@@ -35,13 +37,25 @@ export function MaterialsWorkspaceView({ user, maintenance = [] }: { user: { rol
   const historyLoading = ledger.resourceId !== selected || rawHistoryLoading;
   const historyError = ledger.resourceId === selected ? rawHistoryError : '';
   const update = (field: keyof MaterialDraft, value: string) => { setDrafts(previous => ({ ...previous, [selected]: { ...(previous[selected] || emptyMaterialDraft()), [field]: value, ...(field === 'kind' ? { maintenanceId: '' } : {}) } })); setErrors(previous => ({ ...previous, [field]: undefined })); setSubmitError(''); setNotice(''); };
-  const select = useCallback((id: string) => {
+  const select = useCallback((id: string, focusDossier = true) => {
     if (busyRef.current) return;
     setSelected(id); setErrors({}); setSubmitError(''); setNotice('');
     const params = readRouteParams(); if (id) params.set('resource', id); else params.delete('resource');
     navigateApp(workspacePathForTab('stock', params), { notify: false });
-    if (id && window.matchMedia('(max-width: 900px)').matches) requestAnimationFrame(() => { dossierRef.current?.scrollIntoView({ block: 'start' }); dossierRef.current?.focus({ preventScroll: true }); });
+    if (id && focusDossier && window.matchMedia('(max-width: 900px)').matches) requestAnimationFrame(() => { dossierRef.current?.scrollIntoView({ block: 'start' }); dossierRef.current?.focus({ preventScroll: true }); });
   }, []);
+  function chooseMovement(row: Material, kind: 'RECEIPT' | 'ISSUE' | 'ADJUSTMENT') {
+    if (busyRef.current) return;
+    select(row.id, false);
+    setDrafts(previous => {
+      const current = previous[row.id] || emptyMaterialDraft();
+      return current.kind === kind ? previous : { ...previous, [row.id]: { ...current, kind, maintenanceId: '' } };
+    });
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ block: 'nearest' });
+      formRef.current?.querySelector<HTMLInputElement>('[name="quantity"]')?.focus({ preventScroll: true });
+    });
+  }
   async function submit(event: React.FormEvent) {
     event.preventDefault(); if (busyRef.current) return;
     const result = validateMaterialMovement(draft, item, user.role, maintenance); setErrors(result.errors); setSubmitError(''); setNotice('');
@@ -64,12 +78,17 @@ export function MaterialsWorkspaceView({ user, maintenance = [] }: { user: { rol
   const valid = validateMaterialMovement(draft, item, user.role, maintenance);
   const fieldError = (field: keyof MaterialDraft) => errors[field] ? <span className="materials-field-error" id={`material-${field}-error`}>{t(errors[field]!)}</span> : null;
   const attrs = (field: keyof MaterialDraft) => ({ id: `material-${field}`, name: field, 'aria-invalid': Boolean(errors[field]), 'aria-describedby': errors[field] ? `material-${field}-error` : undefined });
-  const labels: Record<keyof MaterialDraft, string> = { kind: 'ui.movement_8296d601', quantity: 'ui.quantity_bdb17c5e', unit: 'ui.unit_6af0c374', reference: 'ui.receipt_or_count_reference_462a5a35', reason: 'ui.reason_and_recipient_or_department_782a5850', maintenanceId: 'ui.issue_for_maintenance_220c2978' };
+  const labels: Record<keyof MaterialDraft, string> = { kind: 'ui.movement_8296d601', quantity: 'ui.quantity_bdb17c5e', unit: 'ui.unit_6af0c374', reference: 'ui.receipt_or_count_reference_462a5a35', reason: 'ui.stock.reasonAndRecipient', maintenanceId: 'ui.issue_for_maintenance_220c2978' };
   return <section className="materials-workspace" aria-labelledby="materials-title">
-    <header className="materials-heading"><div><h1 id="materials-title">{t('ui.materials_inventory_2b570ac6')}</h1><HelpDisclosure>{t('ui.receive_against_a_reference_issue_6e507385')}</HelpDisclosure></div><button className="secondary-button" disabled={loading || busy} onClick={() => setRevision(value => value + 1)}>{t('ui.refresh_46140fa8')}</button></header>
+    <PageHeading className="materials-heading"><div><h1 id="materials-title">{t('ui.materials_inventory_2b570ac6')}</h1><HelpDisclosure>{t('ui.receive_against_a_reference_issue_6e507385')}</HelpDisclosure></div>
+      <div className="materials-heading-actions">
+        <a className="materials-catalogue-link" href={workspacePathForTab('admin_management')}>{t('ui.materials.manageCatalogue')}<ExternalLink size={15} aria-hidden="true" /></a>
+        <button className="secondary-button" disabled={loading || busy} onClick={() => setRevision(value => value + 1)}>{t('ui.refresh_46140fa8')}</button>
+      </div>
+    </PageHeading>
     {listError && <div className="alert danger" role="alert">{t(listError)} <button className="secondary-button" disabled={loading || busy} onClick={() => setRevision(value => value + 1)}>{t('ui.materials.retry')}</button></div>}
     {rows.length > 0 && <div className="materials-overview" role="group" aria-label={t('ui.materials.overview')}>
-      <div className="materials-stat"><span>{t('ui.materials_inventory_2b570ac6')}</span><strong>{rows.length}</strong><small>{t('ui.materials.totalHint')}</small></div>
+      <div className="materials-stat"><span>{t('ui.materials_inventory_2b570ac6')}</span><strong>{rows.length}</strong><small>{t(user.role === 'ADMIN' ? 'ui.materials.allLabsHint' : 'ui.materials.totalHint')}</small></div>
       <div className="materials-stat is-ok"><span>{t('ui.materials.counted')}</span><strong>{initialized}</strong><small>{t('ui.materials.countedHint')}</small></div>
       <div className="materials-stat is-warn"><span>{t('ui.not_counted_1f853a6b')}</span><strong>{rows.length - initialized}</strong><small>{t('ui.materials.uncountedHint')}</small></div>
       <div className="materials-stat is-alert"><span>{t('ui.materials.depleted')}</span><strong>{depleted}</strong><small>{t('ui.materials.depletedHint')}</small></div>
@@ -80,7 +99,28 @@ export function MaterialsWorkspaceView({ user, maintenance = [] }: { user: { rol
         <div className="materials-toolbar"><label>{t('ui.materials.search')}<input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label><label>{t('ui.materials.balanceFilter')}<select value={filter} onChange={event => setFilter(event.target.value)}><option value="all">{t('ui.materials.all')}</option><option value="initialized">{t('ui.materials.counted')}</option><option value="uninitialized">{t('ui.not_counted_1f853a6b')}</option></select></label></div>
         {loading && <p role="status">{t('ui.loading_inventory_c6e34310')}</p>}
         {!loading && !rows.length && !listError && <div className="materials-empty">{t('ui.no_materials_in_your_assigned_638a41b2')}</div>}
-        {rows.length > 0 && <><div className="materials-table-scroll"><table><thead><tr><th scope="col">{t('ui.materials.material')}</th><th scope="col">{t('ui.recorded_balance_a69afd19')}</th></tr></thead><tbody>{visible.map(row => <tr key={row.id} className={row.id === selected ? 'is-selected' : ''}><td><button disabled={busy} className="materials-row-button" aria-pressed={row.id === selected} onClick={() => select(row.id)}><span className="materials-code">{row.code}</span><strong>{row.name}</strong><span className="materials-open">{t('ui.materials.viewRecord')} →</span></button></td><td>{row.stockItem ? <><strong className={`materials-balance${row.stockItem.balance === 0 ? ' is-zero' : ''}`}>{row.stockItem.balance.toLocaleString()}</strong><span className="materials-unit">{row.stockItem.unit}</span></> : <span className="materials-uninitialized">{t('ui.not_counted_1f853a6b')}</span>}</td></tr>)}</tbody></table></div>{!visible.length && <p className="materials-empty">{t('ui.materials.noMatches')}</p>}<HelpDisclosure>{t('ui.materials.unitNote')}</HelpDisclosure></>}
+        {rows.length > 0 && <>
+          <div className="materials-table-scroll"><table>
+            <thead><tr><th scope="col">{t('ui.materials.material')}</th><th scope="col">{t('ui.recorded_balance_a69afd19')}</th></tr></thead>
+            <tbody>{visible.map(row => <tr key={row.id} className={row.id === selected ? 'is-selected' : ''}>
+              <td><button disabled={busy} className="materials-row-button" aria-pressed={row.id === selected} onClick={() => select(row.id)}>
+                <span className="materials-code">{row.code}</span><strong>{row.name}</strong><span className="materials-open">{t('ui.materials.viewRecord')} →</span>
+              </button></td>
+              <td>{row.stockItem ? <>
+                <strong className={`materials-balance${row.stockItem.balance === 0 ? ' is-zero' : ''}`}>{row.stockItem.balance.toLocaleString()}</strong>
+                <span className="materials-unit">{row.stockItem.unit}</span>
+              </> : <>
+                <span className="materials-uninitialized">{t('ui.not_counted_1f853a6b')}</span>
+                <button type="button" className="materials-row-receipt" disabled={busy}
+                  aria-label={t('ui.materials.receiveFor', { name: row.name })} onClick={() => chooseMovement(row, 'RECEIPT')}>
+                  {t('ui.receipt_baac5c24')}
+                </button>
+              </>}</td>
+            </tr>)}</tbody>
+          </table></div>
+          {!visible.length && <p className="materials-empty">{t('ui.materials.noMatches')}</p>}
+          <HelpDisclosure>{t('ui.materials.unitNote')}</HelpDisclosure>
+        </>}
       </section>
       <aside className="materials-dossier" ref={dossierRef} tabIndex={-1} aria-label={t('ui.materials.record')}>
         {!selected ? <div className="materials-empty"><h2>{t('ui.materials.record')}</h2><p>{t('ui.select_a_material_to_inspect_add32751')}</p>
@@ -88,6 +128,19 @@ export function MaterialsWorkspaceView({ user, maintenance = [] }: { user: { rol
         </div> : !item ? <div className="materials-empty"><p role={loading ? 'status' : 'alert'}>{t(loading ? 'ui.loading_inventory_c6e34310' : 'ui.materials.unavailable')}</p><button className="secondary-button" onClick={() => select('')}>{t('ui.materials.close')}</button></div> : <>
           <div className="materials-section-heading"><div><p className="materials-code">{item.code}</p><h2>{item.name}</h2></div><button className="materials-close" disabled={busy} onClick={() => select('')}>{t('ui.materials.close')}</button></div>
           <div className="materials-balance-card"><span>{t('ui.recorded_balance_a69afd19')}</span>{item.stockItem ? <p><strong>{item.stockItem.balance.toLocaleString()}</strong> {item.stockItem.unit}</p> : <p>{t('ui.no_opening_balance_record_the_aaf229d8')}</p>}</div>
+          <div className="materials-movement-actions" role="group" aria-label={t('ui.record_movement_17b93ee3')}>
+            <button type="button" disabled={busy} aria-pressed={draft.kind === 'RECEIPT'} onClick={() => chooseMovement(item, 'RECEIPT')}>
+              <ArrowDownToLine size={17} aria-hidden="true" />{t('ui.receipt_baac5c24')}
+            </button>
+            {item.stockItem && <>
+              <button type="button" disabled={busy} aria-pressed={draft.kind === 'ISSUE'} onClick={() => chooseMovement(item, 'ISSUE')}>
+                <ArrowUpFromLine size={17} aria-hidden="true" />{t('ui.issue_d121ba48')}
+              </button>
+              {user.role === 'ADMIN' && <button type="button" disabled={busy} aria-pressed={draft.kind === 'ADJUSTMENT'} onClick={() => chooseMovement(item, 'ADJUSTMENT')}>
+                <ClipboardCheck size={17} aria-hidden="true" />{t('ui.count_adjustment_e6596ca2')}
+              </button>}
+            </>}
+          </div>
           <form ref={formRef} noValidate onSubmit={submit} className="materials-form">
             <h3>{t('ui.record_movement_17b93ee3')}</h3>
             {Object.values(errors).some(Boolean) && <div className="materials-error-summary" role="alert"><strong>{t('ui.materials.correctFields')}</strong><ul>{Object.entries(errors).filter(([, value]) => value).map(([field, key]) => <li key={field}><button type="button" onClick={() => formRef.current?.querySelector<HTMLElement>(`[name="${field}"]`)?.focus()}>{t(key!)}</button></li>)}</ul></div>}

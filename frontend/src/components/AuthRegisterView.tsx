@@ -6,6 +6,7 @@ import { AuthIdentity } from './AuthIdentity';
 import { normalizeAuth } from './features/auth/authValidation.js';
 import { useAuthDraft, useAuthForm } from './features/auth/useAuthForm';
 import { AuthErrorSummary, AuthFieldError } from './features/auth/AuthFeedback';
+import { GoogleSignIn } from './features/auth/GoogleSignIn';
 export interface AuthRegisterViewProps {
   onRegisterSuccess: (user: any) => void; onSwitchToLogin: () => void;
   locale?: string; onLocaleChange?: (locale: string) => void;
@@ -22,7 +23,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({ onRegisterSu
     catch (cause) { feedback.failure(cause); }
     finally { feedback.busy.current = false; setLoading(false); }
   }
-  return <div className="auth-screen min-h-screen w-full flex items-center justify-center font-sans"><div className="auth-split-grid relative">
+  return <div className="auth-screen lab-studio min-h-screen w-full flex items-center justify-center font-sans"><div className="auth-split-grid relative">
     <AuthIdentity registration />
     <div className="auth-panel auth-panel-form flex flex-col justify-between">
       <div className="auth-form-content my-auto w-full mx-auto"><h1 className="text-2xl font-bold font-heading">{tr('ui.create_an_account_aa096410')}</h1><p className="text-xs text-slate-400 mt-1">{tr('ui.customer.registrationHint')}</p>
@@ -32,6 +33,7 @@ export const AuthRegisterView: React.FC<AuthRegisterViewProps> = ({ onRegisterSu
           <div className="flex flex-col gap-1"><label htmlFor="register-password">{tr('ui.password_e985d714')}</label><div className="relative"><Lock size={16} className="auth-input-icon" /><input id="register-password" {...feedback.attrs('password','register-password-hint')} type={showPassword?'text':'password'} autoComplete="new-password" required minLength={8} maxLength={128} value={draft.password} onChange={event => setDraft({...draft,password:event.target.value})} className="auth-form-input has-icon password-input w-full" /><button type="button" className="password-toggle" aria-label={tr(showPassword?'ui.hide_password_edd2eb31':'ui.show_password_acfb0b77')} aria-pressed={showPassword} onClick={()=>setShowPassword(value=>!value)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div><span id="register-password-hint" className="text-xs text-slate-400">{tr('ui.customer.passwordHint')}</span><AuthFieldError id="register-password" error={feedback.errors.password} /></div>
           <button type="submit" disabled={loading} className="auth-submit-button mt-2 flex items-center justify-center gap-2">{tr(loading?'ui.creating_account_b67f21a2':'ui.create_account_cb84eafd')}<ArrowRight size={16}/></button>
         </form>
+        <GoogleSignIn mode="register" disabled={loading} busyRef={feedback.busy} onBusyChange={setLoading} onAuthenticated={user=>{clearDraft();onRegisterSuccess(user);}} />
       </div>
       <div className="text-center pt-3 border-t"><span>{tr('ui.already_have_a_lab_account_007025ab')}</span><button type="button" className="auth-switch-link ml-1" onClick={onSwitchToLogin}>{tr('ui.sign_in_b1912c20')}</button></div>
     </div>

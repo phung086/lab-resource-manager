@@ -5,7 +5,7 @@ import { localize, normalizeLocale } from '../locales/index.js';
 import { assistantTools } from './toolHandlers.js';
 import { RequestGate, ModelCircuitBreaker, assertNotAborted, abortReason, withinSignal, closeWithin } from './assistantRuntime.js';
 import { buildAssistantSummary, renderAssistantSummary } from './assistantSummary.js';
-import { providerAvailability } from '../services/paymentProviders.js';
+import { paymentProviders, providerAvailability } from '../services/paymentProviders.js';
 import { AssistantConversationStore, CONVERSATION_LIMITS } from './assistantConversation.js';
 import { planWithModel, summarizeWithModel, validateModelPlan, modelInputFits } from './assistantModel.js';
 import { quickReplyKey } from './quickReplies.js';
@@ -257,7 +257,7 @@ export function createAssistantService({ settings = config, clientFactory = real
           summary = [{ key: 'assistant.introduction' }];
         } else if (paymentIntent(normalized)) {
           const providers = settings.paymentsEnabled ? paymentAvailability() : {};
-          const readiness = !settings.paymentsEnabled ? 'disabled' : providers.vnpay || providers.vietqr ? 'ready' : 'unconfigured';
+          const readiness = !settings.paymentsEnabled ? 'disabled' : paymentProviders.some(method => providers[method]) ? 'ready' : 'unconfigured';
           summary = [{ key: `assistant.payment.${readiness}` }, { key: 'assistant.payment.conditions' }];
           actions.push({ type: 'OPEN_BOOKINGS', labelKey: 'assistant.viewBookings' });
         } else if (needsTimeWindow(data, normalized)) {

@@ -16,6 +16,23 @@
 .receipt-review>svg { flex-shrink:0; }
 .receipt-review p { margin:6px 0 0; font-size:13px; line-height:1.7; }
 .receipt-disclaimer { font-size:12px; line-height:1.75; color:#635875; }
+.payment-receipt-page {
+  display:grid;
+  gap:16px;
+  width:min(100%, 760px);
+  min-width:0;
+  margin-inline:auto;
+}
+.payment-receipt-actions { display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; }
+.payment-receipt-page > :is(.payment-receipt, .payment-receipt-status) {
+  display:grid;
+  gap:18px;
+  padding:clamp(16px, 4vw, 32px);
+  background:var(--workspace-surface, #fff);
+  border:1px solid var(--workspace-border, #dfe6f2);
+  border-radius:16px;
+}
+.payment-receipt-status > :is(h1,p) { margin:0; }
 @media(max-width:480px) { .payment-receipt dl { grid-template-columns:1fr; }.payment-receipt dt { padding-bottom:0; border:0; }.payment-receipt dd { padding-top:4px; }.receipt-total { padding:22px 12px; } }
 @media print {
   .payment-receipt .receipt-heading { display:flex; }

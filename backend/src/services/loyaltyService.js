@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { Prisma } from '@prisma/client';
 import { ADMIN, CUSTOMER } from "../constants/roles.js";
 import { HttpError } from "../middleware/errors.js";
 import { recordSystemAuditEvent } from "./systemAuditService.js";
+import { settlementProviders } from './paymentProviders.js';
 
 export const DEFAULT_LOYALTY_POLICY = Object.freeze({
   id: "SYSTEM", enabled: false, plusThreshold: 1500000, priorityThreshold: 5000000,
@@ -53,7 +55,7 @@ export async function getVerifiedSpend(client, userId) {
     FROM payment_transactions p JOIN bookings b ON b.id = p."bookingId"
     WHERE p."userId" = ${userId} AND b."requestedById" = ${userId}
       AND p.status = 'success' AND p.currency = 'VND' AND p."paidAt" IS NOT NULL
-      AND p.provider IN ('vnpay', 'vietqr') AND p."reconciliationStatus" = 'none'
+      AND p.provider IN (${Prisma.join(settlementProviders)}) AND p."reconciliationStatus" = 'none'
       AND b.status NOT IN ('CANCELLED', 'REJECTED')
       AND p.amount > 0 AND p.amount <= 2000000000 AND p.amount = b."feeAmountVnd"
   `;

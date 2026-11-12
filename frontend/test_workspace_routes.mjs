@@ -8,6 +8,14 @@ test('retired planning URL preserves booking context in the normal booking flow'
   assert.equal(readAppRoute('/workspace/planning').tab, 'bookings');
 });
 
+test('retired academic workspace has no route or authentication return destination', () => {
+  assert.equal(Object.hasOwn(WORKSPACE_ROUTES, 'teaching'), false);
+  for (const path of ['/workspace/teaching', '/workspace/lop-hoc-phan']) {
+    assert.equal(readAppRoute(path).kind, 'not-found');
+    assert.equal(safeReturnTo(path), '');
+  }
+});
+
 test('every public and workspace screen has a unique English path', () => {
   const paths = [...Object.values(PUBLIC_ROUTES), ...Object.keys(WORKSPACE_ROUTES).map(workspacePathForTab)];
   assert.equal(new Set(paths).size, paths.length);
@@ -24,7 +32,7 @@ test('legacy hash and Vietnamese paths retain exact resource and booking context
   assert.equal(readAppRoute('/workspace/booking?booking=b-2&action=check-out').canonicalUrl, '/workspace/bookings?booking=b-2&action=check-out');
   assert.equal(readAppRoute('/#dang-nhap').canonicalUrl, '/login');
   assert.equal(readAppRoute('/dang-nhap').canonicalUrl, '/login');
-  assert.equal(readRouteParams('/#/workspace/lop-hoc-phan?group=a%26b').get('group'), 'a&b');
+  assert.equal(readRouteParams('/#/workspace/bookings?booking=a%26b').get('booking'), 'a&b');
   assert.equal(readAppRoute('/resources#noi-dung').canonicalUrl, '/resources#noi-dung');
   assert.equal(readAppRoute('/workspace/calendar?resource=one#workspace-main').tab, 'smart_calendar');
 });

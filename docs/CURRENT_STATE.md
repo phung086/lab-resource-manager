@@ -1,5 +1,707 @@
 # Trạng thái dự án hiện tại
 
+## Bản đồ và liên hệ trên trang công khai — 12/11/2026
+
+- Footer hiển thị địa điểm khuôn viên Đại học Phenikaa trên đường Nguyễn Trác,
+  phường Dương Nội, Hà Nội. Bản đồ tải khi người dùng bấm Hiện bản đồ và có
+  liên kết chỉ đường. Nút ở mép phải đưa người dùng tới kênh hỗ trợ của LAB.
+- Phần landing dùng lại bố cục trước lượt tinh chỉnh thẻ và quy trình.
+  Dropdown hồ sơ có nền cho từng dòng và chỉ báo ở mục hồ sơ, mật khẩu.
+- Kiểm tra Edge ở 320, 390 và 1440 px cho đường dẫn hỗ trợ, bản đồ thật và
+  cấu hình địa chỉ thử. Kiểm tra menu hồ sơ bằng fixture đạt sáu cấu hình.
+
+## Tinh chỉnh từng khu vực trên landing — 12/11/2026
+
+- Tinh chỉnh khối Tài nguyên theo nhu cầu, quy trình bốn bước, footer công
+  khai và menu hồ sơ bằng CSS. Hero, marquee, nội dung và điều hướng dùng
+  cấu trúc hiện có. Footer vẫn hiển thị đồng hồ trong suốt theo giây.
+- Edge 390 px chế độ Tối: khối tài nguyên từ 1.224 xuống 732 px, khối
+  quy trình từ 1.320 xuống 1.003 px và footer từ 741 xuống 669 px.
+  Kiểm tra thêm 320–1440 px, VI/EN, Sáng/Tối, reduced motion, bàn phím và
+  đồng hồ. Kiểm tra riêng menu hồ sơ bằng fixture đạt sáu cấu hình.
+- Frontend `test:required` đạt. Kịch bản popover tổng hợp dừng tại bước
+  mở/chọn bộ lọc trước khi tới menu hồ sơ ở cả bản trước và sau. Bài kiểm
+  tra riêng menu hồ sơ, thông báo và danh sách chọn đã chạy tới cuối.
+
+## Tổng quan khách hàng và tìm kiếm nhanh — 12/11/2026
+
+- Tổng quan có dải chọn bảy ngày theo giờ Việt Nam trong khối Lịch sử dụng.
+  Mặc định giữ thứ tự ưu tiên cũ, hiển thị tối đa năm phiên và mở hồ sơ từ
+  từng dòng. Ngày lọc theo giờ bắt đầu, phiên qua nửa đêm hiển thị ngày kết
+  thúc. Xem tất cả mở danh sách lịch đặt đầy đủ.
+- Header mở tìm tài nguyên từ nút kính lúp, có gợi ý hiện hành và Esc trả
+  focus về nút mở. Giao diện tối/sáng dùng cùng bố cục và cuộn trang bình
+  thường ở 320 px. Phạm vi lần này là UI, API và quyền nghiệp vụ giữ nguyên.
+- `test:required` và build đạt. Kiểm tra Edge bằng fixture ở 320–1440 px,
+  VI/EN, sáng/tối, gồm lọc theo ngày, lịch qua nửa đêm, bàn phím, tìm và mở
+  hồ sơ, badge 99 và tràn ngang. Kiểm thử popover và 65 kiểm tra danh mục đạt.
+  API local readiness trả 200. Browser fixture kiểm tra UI và điều hướng.
+
+## Rà mã nguồn và hồ sơ báo cáo — 12/11/2026
+
+Checkout `codex/claude-qa-20261021` / HEAD `322e77b`, gồm thay đổi có sẵn
+trong working tree. Rà tên tệp, điểm gọi, cấu hình và bản sao theo SHA-256.
+So sánh các khối lặp trong 401 tệp JS/TS/CSS dưới `frontend/src` và
+`backend/src`. Loại 82 tệp, tổng 26.873.595 byte, gồm 78 đầu ra tạm và
+hai ảnh minh họa không còn điểm dùng kèm hai tệp mô tả nguồn. Giữ cặp
+`BookingKanbanBoard.tsx` và `test_booking_kanban_ui.mjs` chưa được Git
+theo dõi để bảo toàn phần việc đang có. Test chính hiện tại dùng hồ sơ lịch đặt.
+
+Các màn báo giá, thanh toán và hồ sơ dùng chung `formatVnd` theo VI/EN.
+Checkout và sổ thanh toán chia sẻ khóa nhãn trạng thái. API giám sát và
+dashboard dùng chung serializer mẫu/lịch sử và quan hệ Prisma của cảnh báo.
+Dashboard dùng danh sách trạng thái vật lý chuẩn. Gỡ alias npm `db:push`
+khỏi package backend. Lượt này không sửa schema/migration, không seed,
+reset hoặc ghi dữ liệu nghiệp vụ trên DB demo. Giữ app và hai container local
+đang chạy.
+
+- Frontend `test:required` đạt 94 ca, đồng bộ 4.122 khóa VI/EN, lint không
+  có lỗi, typecheck và build đạt. Còn ba cảnh báo lint tại modal trạng
+  thái và hai provider. Vite cảnh báo gói chính vượt 500 kB sau thu gọn.
+- Backend `test:required` đạt 158 ca, lint và `docs:erd:check` đạt.
+  `node scripts/runReleaseIntegration.mjs` trên PostgreSQL 16 riêng đạt
+  287 ca trong 25 nhóm, không lỗi, không bỏ qua. Instance tạm đã dừng.
+- Chrome đạt 16 kịch bản checkout với fixture. Edge đạt sáu biến thể hồ
+  sơ lịch đặt. Danh mục đạt 65 kiểm tra với fixture. Edge mở danh mục
+  công khai thật, `GET /api/resources` và API readiness trả HTTP 200.
+- [Kế hoạch](GRADUATION_PLAN.md), [lý do chọn đề tài](PROJECT_DIRECTION.md)
+  và [cấu trúc](PROJECT_STRUCTURE.md) đã cập nhật. Bản Word/PDF nằm trong
+  `docs/submission/`. SRS dùng liên kết tới hợp đồng trợ lý hiện hành.
+
+Trước khi báo cáo, tổng duyệt theo runbook bằng ba vai trò. Kiểm chứng thêm
+trên thiết bị thật và tích hợp bên ngoài nếu có điều kiện. Các ca browser
+dùng fixture và DB cô lập không xác nhận giao dịch qua cổng hoặc tải production.
+
+## Giao diện sáng, tối và đồng hồ footer — 11/11/2026
+
+- Bộ chuyển VI/EN có cờ Việt Nam và Vương quốc Anh. Chế độ Sáng/Tối dùng
+  chung cho trang công khai và khu làm việc, theo thiết lập hệ điều hành
+  ban đầu và ghi nhớ lựa chọn trên trình duyệt. Bảng, bộ lọc, menu, hộp thoại
+  và nhãn trạng thái dùng màu dành cho chế độ tối.
+- Đồng hồ footer cập nhật giờ, phút và giây theo múi giờ dùng để đặt lịch.
+  Mặt kính lấy màu từ nền footer, phần hiển thị chỉ có chữ số.
+- Gate frontend, bài kiểm tra đổi giao diện và sáu ca menu/hộp thoại qua
+  Edge đạt. Rà 46 tổ hợp tuyến/vai trò ở 1440 và 375 px, VI/EN, cả sáng
+  và tối. Kiểm tra bổ sung các màn chính ở 320 px. Tương phản tự động
+  áp dụng cho chữ trên nền màu, lớp kính được kiểm tra trực quan.
+
+## Menu chọn và menu thanh trên — 11/11/2026
+
+- Trình chọn một giá trị dùng kiểu LAB Studio cho cả nút và danh sách,
+  với hàng đang chọn, dấu kiểm, focus bàn phím và cuộn danh sách dài.
+  Danh sách đổi hướng gần mép màn hình, nhãn dài xuống dòng và bộ lọc lịch
+  dùng hết chiều rộng trên mobile. Trình duyệt thiếu picker tùy biến tiếp
+  tục dùng control gốc.
+- Tài khoản, thông báo và giỏ chọn dùng cùng kiểu panel, có giới hạn
+  theo khung nhìn. Escape đóng picker trước khi đóng hộp thoại.
+  Kiểm thử giao diện dùng dữ liệu cô lập ở 1440/390 px, VI/EN.
+
+## Điểm nhanh vận hành và kho vật tư — 11/11/2026
+
+- Tổng quan Admin có khối Điểm nhanh vận hành theo LAB, mặc định thu gọn.
+  Số tổng lấy từ PostgreSQL. Mở từng nhóm để xem tối đa ba hồ sơ. Nhóm quá hạn trả ưu tiên lượt có
+  lịch đã xác nhận trên cùng tài nguyên trong 24 giờ tới. Hai nhóm còn lại
+  là sự cố mức cao/nghiêm trọng đang mở và bảo trì/hiệu chuẩn có cửa sổ
+  giao với 24 giờ tới. Hồ sơ mở ở màn nghiệp vụ hiện có. API chỉ đọc,
+  cán bộ LAB chỉ đọc phạm vi phân công. Các khối tổng quan cũ vẫn có đủ.
+- Kho hiện rõ thao tác nhập lần đầu ngay ở danh sách và các thao tác hợp lệ
+  trong hồ sơ. Phiếu đầu cần số lượng, đơn vị, mã chứng từ và lý do. Chức năng
+  xuất kho, điều chỉnh kiểm kê của Admin và sổ giao dịch dùng nghiệp vụ hiện có.
+  Cơ sở dữ liệu demo có hai bản ghi `MATERIAL` và cả hai chưa ghi số dư;
+  tài nguyên mượn trả được theo dõi ở lịch và bàn giao. Không thêm số dư demo.
+- Điểm nhanh đọc dữ liệu hệ thống trực tiếp, chưa có phần diễn giải AI riêng.
+  Gate bắt buộc frontend/backend và lint backend đạt. 21 ca tích hợp qua
+  PostgreSQL test riêng đạt. Edge kiểm tra Tổng quan ở 390/1440 px cho cả
+  VI/EN, kiểm tra nút nhập/xuất và quyền điều chỉnh bằng dữ liệu UI cô lập.
+
+## Luồng đặt thiết bị cho khách hàng — 11/11/2026
+
+- Màn chọn giờ hiện phương án khi khung khách chọn giao với lịch, bảo trì
+  hoặc thời gian chuẩn bị. Tìm giờ khác, tìm tài nguyên thay thế và theo dõi
+  giờ dùng các API lập kế hoạch hiện có. Chọn tài nguyên thay thế chỉ mở
+  biểu mẫu với khung giờ và mục đích đã chọn. Đặt lịch vẫn qua kiểm tra,
+  báo giá và xác nhận riêng.
+- “Lịch đặt của tôi” mặc định mở nhóm “Cần xử lý”. API tính tổng và phân trang
+  trên các lịch của chính khách, gồm giữ chỗ còn hạn thanh toán, lịch đã mở
+  giờ nhận tại LAB, và tài nguyên chưa trả. Trang cập nhật khi quay lại tab
+  và mỗi 30 giây khi tab hiện. Biên lai vẫn lấy từ hồ sơ giao dịch đã xác minh.
+- Lịch lịch sử của khách có “Đặt lại bộ tài nguyên”. API chỉ trả danh sách
+  tài nguyên từ lịch hoặc nhóm lịch thuộc khách. Bản nháp riêng không chép
+  ngày giờ, liên hệ, phương thức nhận hay giá cũ. Khách chọn giờ mới, kiểm
+  tra giá rồi xác nhận. Bản nháp nhóm nhận tại LAB, dùng khóa gửi lại khi
+  kết quả lần gửi trước chưa rõ. Báo giá giao diện hết hạn sau 60 giây.
+
+Đợt này tập trung vào trải nghiệm khách đặt lịch. Quy tắc hoàn trả trước
+giờ thuộc quyết định nghiệp vụ riêng. Gate frontend/backend và lint backend
+đạt. 28 ca tích hợp PostgreSQL riêng đạt, gồm quyền mở bản nháp, trạng thái
+được đặt lại, tổng nhóm cần xử lý và các chuyển trạng thái. Edge trên UI
+5173 kiểm tra hành trình mới bằng dữ liệu cô lập ở VI 1440 px và EN 390 px
+cùng sáu biến thể lịch đặt theo vai trò. API 8000 và UI 5173 trả HTTP 200.
+Các kiểm thử không tạo lịch trên DB demo và không gửi giao dịch qua cổng.
+
+## Rà điều kiện nghiệp vụ — 11/11/2026
+
+Checkout `codex/claude-qa-20261021` / HEAD `322e77b`. Đã tái hiện và sửa
+năm lỗi trên API: nhóm đặt nhiều tài nguyên có phòng không tạo được sau bước
+duyệt; phản hồi xung đột làm lộ tiêu đề lịch của khách khác; thời gian chuẩn
+bị sau khi trả quá muộn bị bỏ sót trong lịch và kiểm tra giờ trống; bảo trì
+có thể bắt đầu khi thiết bị chưa trả; thao tác hỗ trợ đang chờ có thể ghi
+sau khi phiên bị vô hiệu hóa bằng đăng xuất tất cả. Thêm ca hồi quy cho
+từng lỗi, dùng PostgreSQL test riêng. Không sửa migration hay dữ liệu demo.
+
+Bộ bắt buộc frontend/backend, backend lint và 134 ca tích hợp đạt. Các suite
+chạy gồm đặt lịch nhóm, vận hành, bàn giao, giữ chỗ/IPN, Google, tài khoản
+khách, workspace, hỗ trợ, sự cố/thông báo và giám sát. Giao dịch qua cổng,
+Google/SMTP bên ngoài, phần cứng và tải sản xuất chưa được xác minh ở lượt này.
+
+ADR-037/FR-OPS-08 hiện vẫn giải phóng lịch khi trả sớm. Ca demo ROOM
+14:00–17:30 có check-in của khách lúc 15:40, trả và hoàn tất do ADMIN ghi
+lúc 16:10; không có tự trả của khách. Cần chốt quy tắc thay thế trước khi
+đổi: giữ lịch qua giờ kết thúc đã đặt và thời gian chuẩn bị; tách giờ trả
+thực tế khỏi giữ chỗ; phòng tự phục vụ chờ chủ lịch khai báo rời phòng
+rồi cán bộ kiểm tra; thiết bị do cán bộ xác nhận khi thực nhận. Sau khi
+chốt, đối chiếu cả ràng buộc PostgreSQL, mọi API lịch và nút thao tác, giữ
+nguyên lịch sử những khung đã giải phóng theo quy định cũ.
+
+## Nhắc nhận tài nguyên và bộ lọc danh mục — 11/11/2026
+
+Workspace CUSTOMER hiển thị cảnh báo từ `GET /bookings/handover-reminders`
+cho lịch tại LAB đã bắt đầu còn `CONFIRMED`, có nhãn riêng khi hết giờ nhận
+trong 24 giờ gần nhất. API chỉ trả lịch của chủ tài khoản và không thay đổi
+trạng thái. Giao diện tải lại khi quay lại tab và mỗi 30 giây lúc tab hiển thị.
+Bộ lọc hiện tại `RESERVED` bao gồm phòng có bàn giao chưa kết thúc và đang
+`IN_USE`, giữ nguyên trạng thái trả về. `UNAVAILABLE` vẫn chứa tài nguyên
+đặt `IN_USE` thủ công mà không có lịch đang sử dụng.
+
+Menu chọn dùng chung giữ điều khiển gốc, có kiểu danh sách mới trên trình
+duyệt hỗ trợ. Chuông mở xem nhanh và điều hướng vào chi tiết hoặc inbox.
+Đồng bộ khay tài nguyên, mục mở rộng lịch và thẻ lịch khách. API local trả
+`DEMO-FLOW-ROOM` với bộ lọc đang có lịch đặt. Gate frontend/backend, backend
+lint và 15 ca PostgreSQL cô lập đạt. Chrome/Edge kiểm tra fixture tiếng Việt
+và Anh, desktop/mobile, gồm mở menu bằng bàn phím và điều hướng thông báo.
+
+## Tương phản trang chủ và đồng hồ footer — 11/11/2026
+
+Sửa màu chữ khối CTA trên nền tím sau khi theme Studio ghi đè. Thay nhãn giờ
+và ghi chú minh họa ở footer bằng đồng hồ 24 giờ theo múi giờ đặt lịch LAB,
+cập nhật từ đồng hồ thiết bị mỗi giây và đồng bộ lại khi mở tab. Chrome local
+ở Việt 1440 px và Anh 390 px xác nhận đồng hồ chạy và đúng múi giờ khi trình
+duyệt đặt giờ New York. Qua nửa đêm, ngày đổi cùng giờ. Tương phản tối thiểu
+vùng mô tả CTA lần lượt 9,22:1 và 5,55:1. Gate frontend đạt.
+
+## Hoạt ảnh trang chủ và bảng giá — 11/11/2026
+
+Dải hướng dẫn và video trang chủ tự chạy khi nhìn thấy, dừng khi rê chuột
+hoặc focus, và có phương án tĩnh cho chế độ giảm chuyển động. Video có nút
+phát/thử lại khi cần. Bảng giá dùng chung có lưới và danh sách, tối đa 12 mục
+mỗi trang với điều hướng phía trên, giữ giá và hành động chọn từ nguồn hiện có.
+Chrome trên dữ liệu local kiểm tra trang công khai ở Việt 1440 px và Anh 390 px,
+gồm đổi kiểu xem, phân trang, mở chi tiết và độ rộng trang. Playwright đạt 28
+kiểm tra hoạt ảnh và 65 kiểm tra danh mục với dữ liệu kiểm thử cô lập.
+
+## Chuẩn bị demo hướng dẫn — 11/11/2026
+
+UI local 5173, API 8000 và PostgreSQL sẵn sàng. Migration hiện hành có 39
+bản. Danh mục có 87 tài nguyên sau khi ADMIN tạo phòng mẫu miễn phí
+`DEMO-FLOW-ROOM` trên LAB 1 qua API. Danh mục gồm 60 đơn vị mẫu có nguồn
+thông số hãng. Lịch `Demo 11/11 - Ban giao va hoan tra` đã xác nhận cho
+CUSTOMER từ 14:00 đến 17:30, cửa sổ bàn giao mở lúc 13:30. CUSTOMER và
+LAB_STAFF đã mở cùng hồ sơ trên Chrome. Khách thứ hai bị chặn đặt trùng
+và không đọc được hồ sơ của chủ lịch.
+
+Chrome kiểm tra đăng nhập và 17 màn hình theo ba vai trò trên API local.
+`test:required` frontend và backend đạt, backend lint/ERD đạt. PostgreSQL
+test riêng qua 13 ca nhận/trả, Chrome với API test riêng qua 15 kiểm tra.
+Trên stack local, cán bộ chạy/dừng mô phỏng qua UI Việt 1440 px và mở hồ
+sơ nguồn Windows ở Anh 390 px. API xác nhận chặn chạy trùng và chặn
+CUSTOMER, mẫu dừng tăng sau khi kết thúc, trạng thái vật lý giữ nguyên.
+Nguồn Windows có số đo đã lưu. Phân tích giám sát trả bằng chứng và
+`UNCONFIGURED` cho mô hình. Đã mở lại hồ sơ hoàn tất và biên lai VNPAY
+đã lưu trong Chrome. Khung 10:00–10:30 ngày 12/11 qua preflight giá 0 đ.
+
+[Runbook demo toàn dự án](GRADUATION_DEMO_RUNBOOK.md) hướng dẫn ADMIN
+thiết lập tài nguyên và quyền, rồi CUSTOMER tự đặt lịch trong buổi demo.
+Lịch buổi chiều đang ở trạng thái đã xác nhận để trình diễn. Luồng nhận/trả
+đầy đủ chạy trên DB test. Lượt này chưa thực hiện giao dịch Sandbox mới.
+
+## Một nhóm khách hàng — 11/11/2026
+
+Đăng ký, Google và đặt nhanh bằng OTP dùng cùng vai trò `CUSTOMER`.
+Giao diện và API hồ sơ, quản lý tài khoản, đặt nhanh bỏ trường phân loại
+và đơn vị. Route học phần cũ trả 404. Quyền vận hành của `LAB_STAFF`,
+quản trị của `ADMIN` và các điều kiện an toàn theo tài nguyên vẫn áp dụng.
+Checkout hiển thị “Phí giao tận nơi” theo snapshot, hiện 0 đ theo ADR-037.
+
+Migration `20261111000100_retire_customer_affiliation_default` đã áp dụng
+trên PostgreSQL demo local. Các cột và bản ghi cũ được giữ để bảo toàn lịch
+sử. Hai tài khoản mẫu dùng tên hiển thị khách hàng và giữ email đăng nhập.
+
+`test:required` frontend/backend, backend lint và ERD check đạt. PostgreSQL
+test riêng đạt 59 ca về tài khoản, OTP, học phần đã ngừng, thanh toán và
+quyền. Hai khách từng có phân loại khác nhau nhận cùng báo giá 50.000 đ
+và cùng trạng thái giữ chỗ trong ca kiểm thử. Chrome trên UI 5173/API 8000
+đã kiểm tra đăng ký, đăng nhập, hồ sơ, đặt nhanh và form cán bộ LAB ở
+1440/390 px, tiếng Việt/Anh. 16 ca checkout dùng phản hồi kiểm thử riêng.
+Ảnh kiểm tra tại OS Temp/`lab-equal-access-20261111`. Chưa phát sinh giao
+dịch với cổng thanh toán hoặc thử trên điện thoại thật trong lượt này.
+
+## VNPAY và chuyển khoản VietQR — 12/11/2026
+
+Hai phương thức checkout hiện hành là VNPAY và VietQR. Đã gỡ tích hợp thử
+nghiệm MoMo/ZaloPay khỏi checkout, route, cấu hình, bản dịch và bộ kiểm thử
+hiện hành. Giữ lịch sử migration đã áp dụng và khả năng đọc giao dịch cũ.
+
+VietQR tạo mã theo từng giao dịch. Webhook SePay xác thực báo có bằng API
+key, so khớp tài khoản, ngân hàng, nội dung và số tiền; lưu ID báo có để
+chống trùng. Dùng chung transaction xác nhận lịch, thông báo và biên nhận với
+VNPAY. Hết hạn giữ chỗ thì giải phóng lịch và đưa khoản đến muộn vào đối soát.
+
+`test:required` frontend/backend, backend lint và ERD check đạt.
+Payment hold đạt 19 test nodes trên PostgreSQL 16 riêng. Checkout Chrome đạt
+14 kịch bản dùng fixture, gồm VietQR VI desktop và EN mobile. Đã giải mã ảnh
+VietQR do SePay trả với tài khoản mẫu và đối chiếu ngân hàng, số tài khoản,
+số tiền VND và mã đơn.
+
+API local trả `PAYMENT_NOT_CONFIGURED` cho VietQR. Bước tiếp theo là liên kết
+tài khoản được hỗ trợ, cấu hình webhook HTTPS theo README và nghiệm thu một
+khoản báo có thật.
+
+## Rà tệp thừa — 10/11/2026
+
+Đã đối chiếu tên tệp với nguồn, cấu hình build, script và test hiện hành.
+Danh sách dọn có 83 tệp (26.881.294 byte): 50 đầu ra và probe trong
+`frontend/.tmp-qa/`, 22 ảnh trong `Temp/lab-ui-polish-20261030/`, 6 ảnh
+`customer-journey-*.png` ở gốc, hai ảnh minh họa không còn caller cùng
+sidecar (`ai-lab-command-center`, `lab-overview-photo`) và component
+`BookingKanbanBoard.tsx` đã được thay bằng thẻ hồ sơ lịch đặt. Lệnh xóa theo
+danh sách bị cơ chế duyệt tự động chặn (`blocked by policy`). Kiểm tra lại thấy
+83 tệp vẫn còn. Bản gốc của hero/poster đang có bản tối ưu, nguồn giảng viên,
+test, cấu hình, migration và dữ liệu không thuộc danh sách dọn.
+
+## Danh mục và giám sát đồ án — 09/11/2026
+
+Checkout `codex/claude-qa-20261021` / HEAD `322e77b`. Giữ các thay đổi UI
+đang có. Phạm vi là giám sát và dữ liệu trình diễn trên stack local hiện hữu.
+
+- Danh mục có 86 tài nguyên. 60 đơn vị DEMO26 (10 model × 6) có thông số tham
+  chiếu 10 trang hãng, hai LAB và chính sách đặt lịch thật. Tồn kho và giá là
+  giả định demo. Chạy lại seed tạo 0, giữ 60. API preflight CUSTOMER báo sẵn
+  sàng và trả giá 10.000 đ cho ba tài nguyên mẫu (Pi 5, Uno R3, DS1054Z) trong
+  khung một giờ. Phép kiểm tra này không tạo lịch hay giao dịch.
+- Trong **Giám sát thiết bị → Nguồn cảm biến → Phòng thực hành giám sát**,
+  ADMIN và LAB_STAFF đúng phạm vi chọn nguồn, chạy/dừng và xem tiến độ.
+  Worker ghi tối đa 60 mẫu cách khoảng 5 giây, tối đa 6 phiên đồng thời. Kịch bản
+  có nhãn SIMULATED, dùng ngưỡng đã lưu và gắn nguồn, run, mẫu, cảnh báo, sự cố.
+  Profile ROOM dùng nhiệt/ẩm. COMPUTE dùng nhiệt/tải/RAM. Các chuỗi số đo phục
+  vụ kiểm thử quy trình, chưa hiệu chuẩn theo phần cứng.
+- Máy Windows là nguồn EXTERNAL riêng DEMO-HOST-PC, không mở đặt lịch. Bộ
+  thu xác thực qua nguồn và đã lưu 3 mẫu online CPU/RAM/đĩa, 1 mẫu ngắt kết nối.
+  Nhiệt độ và GPU chưa có số đo. Lệnh chạy lại nằm trong README.
+- Giao diện giữ LAB Studio, dùng tím nhẹ cho mô phỏng, teal cho nguồn đo,
+  amber cho cảnh báo. Hồ sơ tách số đo, trạng thái kết nối, trạng thái vật lý,
+  biểu đồ theo thời gian và lịch sử cảnh báo. Mascot còn hoạt động trong shell.
+- Phần giải thích AI lấy tối đa 12 mẫu và 8 cảnh báo thật trong phạm vi được
+  cấp quyền. Kết quả chỉ hỗ trợ đọc dữ liệu. Backend local hiện thiếu key/model,
+  API trả UNCONFIGURED và vẫn trả bằng chứng. Chưa xác minh câu trả lời của
+  nhà cung cấp AI trực tiếp, camera phần cứng hoặc dự báo hỏng hóc.
+
+Kiểm chứng trên API8000 và PostgreSQL local: chặn chạy trùng và CUSTOMER,
+dừng phiên không sinh mẫu mới. Một chu kỳ do LAB_STAFF được phân công khởi chạy
+đã lưu 60 mẫu, 6 mẫu offline không có nhiệt/CPU, 3 cảnh báo kết thúc. Cán bộ
+xác nhận cảnh báo nghiêm trọng qua API, sự cố vẫn được lưu và trạng thái vật
+lý không đổi. Sau lần chạy này đã sửa quy tắc: offline hoặc thiếu chỉ số không
+được tự đóng cảnh báo của chỉ số đó. Cần mẫu online mới chứng minh phục hồi.
+Suite Batch 8 chạy trên PostgreSQL 16 riêng, qua 12 ca, gồm mất kết nối → thiếu
+chỉ số → số đo bình thường và từ chối xác nhận cảnh báo ngoài LAB.
+
+Kiểm thử UI Chrome trên 5173: staff VI 1440px chạy/dừng qua API thật, EN
+390px chọn và đọc hồ sơ Windows, không tràn ngang, mascot hiện. Dùng phiên
+đã ký và lưu DB để vào UI, không kiểm tra form mật khẩu trong hai ca này.
+Bốn ca fixture VI/EN × desktop/mobile kiểm tra UI và trạng thái thiếu cấu
+hình AI. Ảnh thực ở OS Temp/lab-monitoring-live-20261109. FE và BE
+`test:required` qua, BE lint và 12 test bổ sung qua. Hai cảnh báo lint FE
+có sẵn và cảnh báo chunk chính 501 kB vẫn còn. Locale VI/EN đồng bộ 4225 khóa.
+
+Trình diễn từ stack local: mở Phòng thực hành giám sát, chạy kịch bản tăng
+nhiệt, xem ngưỡng và mẫu đã lưu, xác nhận cảnh báo rồi mở sự cố. Chạy bộ thu
+Windows song song nếu muốn đối chiếu nguồn EXTERNAL. Xem README để tái lập
+kiểm chứng. Không có thay đổi schema hoặc migration trong phạm vi giám sát.
+
+Rà vận hành ngày 10/11: worker quét mỗi 15 giây cho nguồn EXTERNAL đang hoạt
+động có mẫu online quá hạn. Mỗi đợt có một cảnh báo và một thông báo cho từng
+ADMIN hoặc cán bộ LAB được phân công. Ngưỡng ưu tiên tài nguyên, LAB rồi mặc
+định 15 phút. Mẫu online mới còn hạn đóng cảnh báo, bỏ đánh dấu chưa đọc và
+lưu giờ phục hồi. Mẫu phát lại, mẫu cũ và offline giữ cảnh báo đang mở.
+
+Đã ngắt đột ngột bộ thu Windows khi màn hình giám sát đóng. Backend phát hiện
+`STALE`, tạo một thông báo chưa đọc cho staff. Staff xác nhận, khởi động lại
+bộ thu tạo mẫu thật, cảnh báo kết thúc và trạng thái vật lý giữ nguyên. Trong
+Chrome VI 1440px và EN 390px, nút trong thông báo mở đúng hồ sơ Windows, chọn
+đúng nguồn và chỉ tải lịch sử nguồn đó. Với cùng 86 tài nguyên, JSON một lượt
+đọc tổng quan giảm từ 194.290 xuống 32.865 byte trước nén (83%).
+
+Batch 8 qua 14 ca trên DB riêng, gồm quét đồng thời, chống phát lại, phân quyền
+theo LAB, phục hồi và xử lý sự cố theo quy trình. FE/BE `test:required`, BE
+lint và đồng bộ 4241 khóa VI/EN qua. Chrome chạy/dừng mô phỏng bằng API thật
+và bốn ca fixture VI/EN desktop/mobile đạt. Bộ thu Windows chạy theo phiên
+demo, cần khởi động lại sau khi bị ngắt đột ngột. AI local vẫn `UNCONFIGURED`.
+
+Sidebar: nền mục đang chọn đo lại khi các hàng đổi chiều cao và khớp khung nút.
+Chrome VI/EN desktop và mobile xác nhận icon/chữ giữa hàng khi nhãn phía trên
+xuống dòng hoặc danh sách cuộn.
+
+## Sửa cấu hình chạy làm ẩn chatbot — 09/11/2026
+
+Lượt tinh gọn trước khởi động Vite trực tiếp, thiếu VITE_ENABLE_AI_ASSISTANT
+và các cờ của dev-local, khiến mascot không được mount. Đã dừng đúng tiến
+trình Vite đó và chạy lại node scripts/dev-local.mjs trên 5173, dùng backend
+chung 8000 hiện có; không sửa DB hay bỏ feature flag. Launcher chính bật lại
+trợ lý/thanh toán theo cấu hình local của dự án. Không dùng Vite trần để kiểm
+workspace cần feature flags.
+
+Edge fixture ba vai trò ở 1440/390: đúng một mascot trong viewport, bấm mở
+panel, Escape đóng và mascot còn hiển thị. Ảnh OS Temp/lab-mascot-restored.
+API trợ lý trong test cố ý trả 503; chưa chứng minh provider trả lời thật.
+Các kiểm tra của lượt tinh gọn trước không chứng minh tính năng bị tắt khi đó.
+
+
+## Tinh gọn tổng quan và rà mã giao diện — 09/11/2026
+
+Áp dụng UI/UX Pro Max, Design Taste và Impeccable theo hướng giữ LAB Studio.
+Tổng quan bỏ tiêu đề/mô tả tìm kiếm trùng trong disclosure, bỏ giờ bắt đầu
+lặp trong dòng ngày và bảng lịch, giữ khoảng giờ riêng. Bốn ô thống kê giữ
+nhãn/count/action nhưng bỏ chữ “Xem lịch” lặp về mặt thị giác (vẫn có tên
+truy cập). Giảm cỡ giờ phiên, tăng tương phản mã hồ sơ và focus; khối hỗ trợ
+chuyển từ gradient tím/hồng sang nền dịu cùng hệ token. Không đổi API/nghiệp vụ.
+
+Đã gỡ CSS Kanban lịch đặt không còn caller, CSS vòng trang trí/tiêu đề thừa;
+tách dot/count của ResourceOperationsBoard thành class riêng để bảng trạng
+thái tài nguyên đang dùng không phụ thuộc giao diện đã nghỉ. Thêm ignore
+cho /Temp/ và /frontend/.tmp-qa/ để không đưa ảnh thử/session cục bộ vào Git.
+
+Kiểm chứng: frontend test:required đạt (hai warning lint sẵn có, bundle >500KB);
+Chrome fixture trước/sau ở 1440/1024/390, 8 trạng thái tổng quan; catalogue 61
+kiểm tra, booking records 6 biến thể và system presentation 30 tình huống đạt.
+Ảnh nằm ngoài repo tại OS Temp/lab-distill-before, lab-distill-after,
+lab-distill-system, lab-distill-catalogue. Fixture không chứng minh DB/provider
+thật. Impeccable detector: img qua resourceImageProps là cảnh báo tĩnh giả;
+viền/transition còn lại thuộc bề mặt hiện có, chưa đổi rộng chỉ để hết cảnh báo.
+
+Dọn file CHƯA hoàn tất: automatic approval review chặn lệnh xóa theo allowlist
+với lý do “blocked by policy”; không file nào bị xóa/move. Nhóm đã rà gồm
+Temp/, frontend/.tmp-qa/, BookingKanbanBoard.tsx và test_booking_kanban_ui.mjs
+đã thay bằng booking records, ảnh ai-lab-command-center/lab-overview-photo
+không còn caller và bản gốc hero/poster đã có bản tối ưu. Giữ metadata xuất xứ
+cho ảnh đang dùng khi xử lý tiếp. Các file này hiện vẫn trên đĩa; ignore không
+đồng nghĩa đã xóa. Bước tiếp theo là xử lý việc xóa qua luồng được phép;
+giữ migrations, dữ liệu, cấu hình, test đang dùng và ảnh runtime.
+
+
+## Tách bước chọn tài nguyên khỏi danh mục — 09/11/2026
+
+Tinh chỉnh khám phá tài nguyên theo mẫu người dùng: footer public/workspace có
+bốn cột khi đủ rộng và khối hướng dẫn có liên kết thật. Danh mục public nhóm bộ
+lọc theo loại, LAB và khả dụng hiện tại, có thể thu gọn trên mobile. Workspace
+nhóm các bộ lọc nâng cao hiện có theo phạm vi và kỹ thuật/vận hành. ResourceFinder
+gợi ý tối đa năm kết quả từ danh mục đã tải, có mở hồ sơ bằng bàn phím và tìm
+tiếng Việt không dấu. Màn danh mục và lịch chỉ hiện ô tìm kiếm tại chỗ. Không
+cần endpoint tìm nhanh mới. Chrome kiểm tra public và workspace desktop/mobile
+với API thật, có 65 kiểm tra UI catalogue trên fixture. Ảnh OS Temp/lab-ui-discovery-20261109.
+
+Màn Lịch dùng thẻ gọn với ảnh nhỏ, mã, phòng LAB và giờ phục vụ. Lưới tối
+đa ba cột theo chiều rộng vùng chọn, chín mục mỗi trang, một cột trên
+điện thoại. Tài nguyên tạm ngừng nhận lịch chỉ mời xem lịch. Mô tả dài
+nằm trong chi tiết, danh mục giữ ảnh lớn, giá và thao tác chọn tài nguyên.
+
+Edge fixture kiểm ba cột, phân trang, xem chi tiết, đổi VI/EN, focus sau
+khi chuyển bước và mobile. Catalogue fixture đạt 61 kiểm tra và frontend
+`test:required` đạt. Ảnh ở OS Temp/lab-calendar-picker-after. Không thay API
+hay điều kiện xác minh giờ.
+
+## VNPAY mở thẳng biên lai — 09/11/2026
+
+Return xác thực chữ ký rồi chuyển về trang thanh toán với mã biên lai của
+đúng giao dịch. Trang hiển thị biên lai có thể in khi API xác nhận quyền và
+thanh toán thành công. Nếu còn chờ IPN, kiểm tra lại mỗi 5 giây tối đa một
+phút, sau đó có nút làm mới. Không tạo biên lai từ dữ liệu Return.
+
+Test bắt buộc frontend/backend đạt. PostgreSQL riêng đạt 17/17, gồm Return
+không cập nhật giao dịch và API biên lai chặn tài khoản khác. Chrome đạt
+11 ca fixture desktop/mobile, gồm mở ngay, chờ rồi mở, lỗi và sai quyền.
+Backend local đã nạp route mới. Chưa tạo giao dịch VNPAY mới để kiểm xuyên
+cổng thật. Ảnh fixture ở OS Temp/lab-vnpay-receipt-after.
+
+## Kiểm tra VNPAY qua ngrok local — 09/11/2026
+
+Ban đầu tunnel trỏ cổng 3000 và một IPN hợp lệ bị 502. Người dùng đã đổi
+tunnel về backend 8000. Kiểm lại qua HTTPS, readiness đạt và IPN không chữ
+ký trả RspCode 97. Giao dịch Sandbox mới có mã VNPAY trong LAB, thanh toán
+`success` và lịch `CONFIRMED`. Đối soát giao dịch cũ qua Merchant Sandbox.
+Không phát lại callback hoặc chỉnh trạng thái dữ liệu nghiệp vụ.
+
+ERR_NGROK_6024 vẫn xuất hiện ở trình duyệt mới do màn cảnh báo gói miễn
+phí. Edge sạch đã kiểm **Visit Site** trên đường readiness, sau đó cùng
+profile tới được Return API và bị từ chối đúng khi thiếu chữ ký.
+
+Giữ quyền xác nhận thanh toán ở IPN. Test PostgreSQL riêng đạt 17/17,
+gồm Return 303 chỉ điều hướng, IPN đúng hạn xác nhận và IPN đến muộn
+chuyển đối soát. Hai ca lịch test cố định giờ Việt Nam trong khung hiển
+thị để kết quả không phụ thuộc giờ chạy. Provider/gateway unit đạt 5/5.
+
+## Thanh bên mở rộng trực tiếp — 09/11/2026
+
+Từ 1100px, nút Menu mở trực tiếp thanh bên 104 → 264px và nút cạnh logo
+thu gọn lại. Tùy chọn desktop giữ qua tải lại và đổi kích thước. Dưới
+1100px vẫn dùng menu trượt, đóng bằng nút thu gọn, Escape hoặc bấm nền.
+Đã kiểm Edge trước/sau bằng HTTP fixture cho ba vai trò, VI/EN ở 1440/390px,
+gồm bàn phím, focus, reload, thay breakpoint và các lối tắt. Gate frontend
+`test:required` đạt. Ảnh kiểm tra ở OS Temp/lab-sidebar-after.
+
+## Hồ sơ lịch đặt và xác thực Google — 08/11/2026
+
+Checkout `codex/claude-qa-20261021`, nền `322e77b`. Màn Lịch đặt và bàn
+giao dùng lưới thẻ giống danh bạ, hiển thị mã, tài nguyên, thời gian và
+trạng thái. Bộ lọc, số đếm và phân trang lấy từ server. Hồ sơ chi tiết mở
+khi chọn thẻ, trả focus khi đóng. Các thao tác bàn giao, trả, lịch sử và
+thanh toán tiếp tục nằm trong hồ sơ. Kiểm tra giao diện bằng
+`npm run test:ui:bookings` thay kiểm tra board trước đây.
+
+Hai màn đăng nhập/đăng ký có Google Identity Services. Backend xác minh
+token và nonce, tạo CUSTOMER hoặc liên kết tài khoản cũ bằng mật khẩu hiện
+tại, rồi cấp phiên LAB chuẩn. Migration bổ sung `20261108000100_google_sign_in`
+đã áp dụng qua launcher local và trên PostgreSQL test riêng. Google-only
+có thể đặt mật khẩu bằng OTP email.
+
+Đã đạt `test:required` ở frontend/backend, backend lint, ERD check, 12 ca
+Google unit và 8 ca tích hợp PostgreSQL/SMTP loopback với token ký riêng cho
+test. Edge đạt 6 biến thể thẻ lịch đặt cho ba vai trò và 6 kịch bản UI xác
+thực, gồm desktop/mobile VI/EN. Màn chưa cấu hình dùng API local thật. Các
+callback Google và dữ liệu lịch đặt dùng fixture kiểm thử. API local
+8000 trả `enabled:false`. Bước còn lại để xác minh đăng nhập Google thật
+là đặt Web Client ID và đăng ký origin theo README rồi kiểm tra với tài
+khoản Google. Frontend lint còn hai cảnh báo sẵn có ở ResourceStatusModal
+và LocaleProvider. Dừng ở phạm vi lịch đặt và Google.
+
+## Khôi phục mascot chatbot — 08/11/2026
+
+Người dùng yêu cầu giữ con chatbot nổi. Đã khôi phục AssistantLauncher nổi
+góc phải dưới trên workspace, gỡ nút inline vừa áp dụng ở lượt đồng bộ.
+Giữ panel, phiên chat, feature flag và hành vi ẩn khi menu/modal mật khẩu mở.
+Không sửa backend/model hoặc tạo phản hồi giả. Kiểm browser fixture desktop/mobile
+ba vai trò: chỉ một mascot, mở panel và đóng bằng Escape, không tràn ngang;
+chưa xác minh phản hồi mô hình ngoài. Thay đổi này thay quyết định inline ở dưới.
+
+## Đồng bộ danh mục và mẫu tương tác toàn hệ thống — 08/11/2026
+
+Yêu cầu mới thay rail đủ mục bằng bốn lối tắt chính theo vai trò và Hồ sơ;
+menu mở rộng vẫn giữ toàn bộ mục hợp lệ. Giữ chiều rộng 104/264px. Danh mục
+công khai đổi sang ba cột desktop, ảnh lớn, tên/giá gọn, nút lịch/đặt trên ảnh,
+thông số mở rộng; giữ tìm kiếm, nhóm, bảng giá, chi tiết và luồng đặt khách.
+Hiện khả dụng lấy từ availability; trạng thái vật lý ghi riêng trong thông số.
+
+Rà các họ màn public/private và gom trình bày vào StatusBadge, ResourceStatusPill,
+status-badge.css và system-consistency.css (import sau layer Studio). Badge đặt
+lịch, chú giải, tài nguyên trong danh mục/hồ sơ/tổng quan dùng bộ màu ngữ nghĩa
+chung. Các nhãn payment/support/incident/maintenance/account và nút chính/phụ
+được chuẩn hóa qua selector đúng thành phần; không trộn enum hoặc sửa nghiệp vụ.
+Tổng quan khách hàng dùng lại NotificationStack cho chưa đọc, mở về inbox; không
+tự đánh dấu khi xem. Trợ lý giữ mascot/panel nhưng nút mở nằm trong luồng trang
+trên workspace, tránh che thẻ hoặc thao tác. Mở rộng dùng chung cả public/private.
+
+Kiểm chứng: test:required đạt. Browser fixture danh mục 61 kiểm tra (gồm so
+presentation public/workspace, nút trên ảnh, free/paid, keyboard/mobile); header
+và disclosure kiểm 3 vai trò × VI/EN × desktop/mobile; workflow board 27 kiểm tra,
+support/payment 17 trường hợp; resource profile journey đạt. System presentation
+đạt 30 nhóm màn/tình huống, home command đạt 8 trạng thái. Public 5173/API8000
+đã xem thực tế bằng browser ở 1440/390, ảnh nạp, không pageerror/tràn ngang,
+không gửi POST nghiệp vụ. Ảnh trong OS Temp/lab-consistency-live và các thư mục
+fixture được harness trả về. Script test_catalog_profile_ui cũ dừng ở preflight
+do thiếu UX_DEMO_PASSWORD và trỏ stack riêng; thay bằng profile journey fixture.
+Chưa kiểm luồng ghi database/ngân hàng/SMTP thật; không commit/push/deploy/reset.
+Dừng ở lượt đồng bộ này; thay đổi Claude và dữ liệu hiện có được giữ.
+
+## Thanh bên, thẻ mở rộng và cụm thông báo — 08/11/2026
+
+Áp dụng tương tác từ ảnh tham chiếu vào UI LAB hiện có. Rail desktop rộng
+104px (trước 84), menu ghim 264px (trước 232), có chuyển động thu/mở và
+thu gọn trực tiếp bằng một lần bấm. Giữ mọi mục theo quyền, Hồ sơ chỉ xuất
+hiện ở đáy rail; nhãn quản lý tài nguyên phân biệt với danh mục thiết bị.
+ExpandableCard dùng native details cho thông số tài nguyên và hướng dẫn
+đặt lịch, có icon, màu theo ngữ cảnh, xoay chevron, mở bằng Enter/Space,
+giảm chuyển động theo hệ điều hành. Không giấu hành động nghiệp vụ bắt buộc.
+
+Trang thông báo có cụm chưa đọc xếp lớp nằm trong luồng trang, chuyển thẻ
+chủ động, mở bản ghi và đánh dấu đã đọc qua API hiện tại. Không tự chuyển,
+không tự đánh dấu khi chỉ xem, không bật toast toàn cục trở lại. Giữ tìm
+kiếm/bộ lọc/danh sách/chi tiết và liên kết lịch. Sửa màu số đếm filter đang
+chọn; chuyển nút trợ lý ở inbox vào luồng trang để không đè nội dung.
+
+Gate test:required và i18n sync 4145 key VI/EN đạt; backend projection không
+đổi. Test browser mới đạt 3 vai trò × 2 ngôn ngữ × desktop/mobile, gồm đọc
+lỗi/thử lại, unread badge, reload, bộ lọc và thao tác bàn phím. Header/menu
+đạt, catalogue 50 kiểm tra và vòng đời refresh 3 tình huống đạt. Test danh
+mục dùng tọa độ layout để không coi hiệu ứng hover nâng thẻ là lệch hàng.
+Đã xem ảnh tại OS Temp/lab-disclosures-inbox và lab-header-navigation.
+Chỉ dùng HTTP fixture, chưa kiểm thao tác ghi notification trên database
+thật. Không commit/push/deploy/reset; dừng ở nhóm tương tác vừa yêu cầu.
+
+## Header, nhắc thanh toán và menu thu gọn — 08/11/2026
+
+Checkout `codex/claude-qa-20261021`, nền `322e77b`; giữ các thay đổi Claude.
+Danh sách tài nguyên đã chọn chuyển từ khay nổi dưới màn hình lên icon giỏ
+ở header, có số lượng, danh sách xem nhanh và nút mở trang chọn đặt. Đóng
+bằng Escape, click ngoài hoặc chuyển trang. Gỡ toast toàn cục phát lại các
+thông báo chưa đọc; sự kiện lịch sử vẫn nằm trong inbox và chuông header.
+Checkout/ledger tải lại dữ liệu chung khi snapshot thanh toán thay đổi;
+giao dịch success/refunded không còn hiện đồng hồ chờ thanh toán dù booking
+read còn chậm. Không suy diễn kết quả ngân hàng hoặc thay trạng thái booking.
+
+Sidebar bỏ đường nhóm xuyên nền chọn, chữ đậm; rail thu gọn dùng cùng tập
+mục theo quyền với menu mở rộng và cuộn được. Sửa z-index nút trợ lý inline
+để không đè hộp giỏ trên mobile. Đổi selector test phiên cũ sang tiêu đề hiện tại.
+File chính: App/AppLayout/Header/Sidebar/ResourceSelectionTray, BookingCheckout,
+PaymentsPage, assistant-widget.css, lab-studio.css và test_header_navigation_ui.mjs.
+
+Kiểm chứng: test:required đạt; build sau sửa lớp hiển thị đạt. Edge fixture
+header/menu đạt CUSTOMER/LAB_STAFF/ADMIN × VI/EN × 1440/390, gồm thêm tài
+nguyên cập nhật badge, không tràn ngang/che popover, đủ 9/15/15 mục, mở inbox,
+polling thành công cập nhật tổng quan, đọc lỗi và booking read chậm. Checkout
+7 trạng thái và vòng đời refresh 3 tình huống đạt. Đã xem ảnh mobile và menu
+trong OS Temp/lab-header-navigation. Không có lệnh ghi nghiệp vụ trong fixture;
+chưa thử giao dịch ngân hàng thật. Dừng ở phạm vi header/thông báo/menu;
+phần tổng quan rộng hơn chờ yêu cầu lượt tiếp theo.
+
+## Danh mục, hồ sơ tài nguyên và sidebar — 08/11/2026
+
+Tiếp tục UI Claude theo ảnh người dùng gửi. Thẻ danh mục tăng tỷ lệ ảnh,
+chuyển xem lịch và chọn đặt lên ảnh, giảm cỡ tên và giá, thu gọn khoảng cách.
+Hồ sơ đưa gallery trước phần thông tin, giữ các tab và hành động hiện có,
+thêm mảng màu nhẹ và đồng bộ độ nổi của nút trong phạm vi tài nguyên.
+Sidebar có nền chọn trượt theo mục, đường nhóm và một viền focus tìm kiếm.
+Phần code trong ảnh tham chiếu không đủ rõ để chép, hiệu ứng được dựng từ
+hành vi nhìn thấy và cấu trúc điều hướng hiện tại.
+
+Gate test:required đạt. Browser fixture danh mục đạt 50 kiểm tra, lượt mở
+rộng kiểm nút trên ảnh, cỡ chữ, mobile và focus đạt 56 kiểm tra. Hành trình
+hồ sơ đạt desktop/mobile, CUSTOMER/LAB_STAFF, VI/EN, gallery, history và
+error/retry. Ảnh trong OS Temp/lab-product-final. Chưa nghiệm thu bằng thao
+tác ghi dữ liệu thật. Thông báo và tổng quan dành cho lượt cải thiện tiếp
+theo theo yêu cầu làm từng phần của người dùng.
+
+## Bảng vận hành tài nguyên và lưới tài khoản — 08/11/2026
+
+Tiếp nối phần UI đang dở trên `codex/claude-qa-20261021` (nền `322e77b`).
+Bảng quản trị nhóm phòng và thiết bị theo trạng thái vật lý. Khả dụng theo lịch
+được ghi riêng và số đếm phản ánh tập tài nguyên đang hiển thị. Đồng hồ dùng
+hạn trả theo lịch của lượt đã bàn giao trong phạm vi quyền xem của người dùng.
+Kéo thẻ hoặc mở nút đổi trạng thái đều qua hộp thoại xác nhận hiện có.
+Lưới tài khoản giữ ảnh đại diện chữ cái và hiển thị email, vai trò, trạng thái.
+
+`test:required` và i18n sync đạt. Edge kiểm hai màn ở 1440 và 390 px, cả VI
+và EN, bằng API fixture cô lập. Kiểm kéo thẻ, mở hộp thoại bằng Enter, hủy
+không gửi lệnh ghi và không tràn ngang toàn trang. Test Kanban đặt lịch đạt
+27 kiểm tra fixture. API local trả readiness với database ready.
+Chưa kiểm luồng ghi trạng thái trên database dùng chung. Nếu cần nghiệm thu
+end-to-end, chạy luồng đó với tài nguyên kiểm thử được chỉ định.
+
+## Tương tác nổi rõ — 05/11/2026
+
+Theo yêu cầu mới, tăng màu và độ nổi của action toàn hệ Studio. CTA có
+cạnh đáy 4px, highlight, hover nâng 3px và nhấn lún 3px; secondary nâng nhẹ.
+Dashboard phân màu cobalt/teal/indigo theo lối đi; tab chọn và icon action rõ hơn.
+Áp dụng cả public/auth/modal; disabled và reduced-motion được kiểm riêng.
+Không đổi nghiệp vụ/RBAC/API. Runtime frontend được khởi động lại vì5173 đóng.
+Test required PASS, system-presentation30 trường hợp PASS (API fixture),
+auth6 captures không overflow. Browser xác nhận hover/active và reduce đều PASS;
+đã sửa cascade để active thắng hover. Evidence OS Temp/lab-tactile-*.
+Mốc này tăng tương tác, không tuyên bố đã loại bỏ mọi vấn đề thẩm mỹ.
+Bước tiếp theo: đối chiếu phản hồi người dùng với bản tương tác đang chạy.
+
+
+## LAB Studio — thiết kế theo ba bảng tham chiếu mới, 04/11/2026
+
+User đã cho phép thiết kế lại toàn bộ màn theo hơi hướng3ảnh mới, dùng TasteSkill
+và Claude frontend-design, không sao chép hoàn toàn, không giản lược/quá tay;
+giữ nghiệp vụ, dọn file rác; yêu cầu tiếp theo là tiếp tục toàn bộ màn, không
+dừng ở workspace. Đây thay thế
+checkpoint giữ nguyên toàn bộ trình bày trước đó. Đã đọc governance/FE contracts,
+kiểm checkout/diff và browser thật trước/sau; giữ các thay đổi đang có.
+
+Phạm vi đã triển khai:
+- Workspace ba role canonical ADMIN/LAB_STAFF/CUSTOMER, không tạo LECTURER/
+  STUDENT từ mockup. Shared shell có brand ở sidebar desktop, header/search gọn,
+  mobile một thanh menu/brand/locale/account. PageHeading hiện có được dùng cho
+  các workbench; gallery, lịch, Kanban, hồ sơ và biểu mẫu giữ bố cục nghiệp vụ.
+- `lab-studio.css` là presentation cuối sau Spectrum/Liquid Glass/
+  motion/feedback/lab-workflows. Palette primary#2563eb, hover#1d4ed8,
+  canvas#f5f7fc, ink#202c47, muted#596980; chiều sâu nổi/chìm nhẹ, Onest và
+  JetBrains Mono giữ nguyên. Studio đã mở rộng sang public, đăng nhập/đăng ký,
+  shared modal và assistant portal; public giữ ảnh, veil, glass, floating card,
+  marquee/pause/reduced-motion. Mỗi nhóm giữ layout phục vụ tác vụ riêng.
+- Public catalogue/detail/schedule/process và footer dùng nền xanh/lavender/
+  sage nhẹ; auth có ảnh LAB trang trí, input rõ. Mobile auth thu gọn identity
+  thành banner ảnh80×92, header một hàng; field/CTA thấy trong390×960. Locale
+  trùng trong form mobile được ẩn, vẫn có bộ chuyển ở shared header.
+- Workbench hồ sơ, inbox, hỗ trợ, thanh toán, vật tư, bảo trì, care và quản trị
+  tài nguyên được đồng bộ token/tab/focus. Loại viền kép ở các search wrapper
+  và nền teal tối của quick filter. Không đổi màu ngữ nghĩa lỗi/cảnh báo.
+  BaseModal giữ focus/trap/validation; assistant chỉ thêm opt-in trình bày.
+- WorkspaceHero tái sử dụng ảnh minh họa LAB có sẵn, với3điều hướng thật theo
+  role, không coi ảnh là bằng chứng tài sản của cơ sở. Customer có metrics thật
+  từ summary; phiên có anchor/thanh toán/quá hạn/đang dùng đứng trước body khám
+  phá. Finder thu gọn qua native disclosure, giữ form và query/category context.
+- Staff queue có rail100px desktop, reflow tên tài nguyên/người đặt/thời gian;
+  tablet1100 trở xuống chuyển layout một cột, mobile giữ hàng dễ đọc.
+- Giữ directory avatar grid, server paging, payment-hold queue riêng theo
+  ADR-036, guard và ActionModal trước mutation trên Kanban; không sửa backend,
+  schema, statuses, RBAC hoặc tạo thành công giả. Không thêm KPI/chart/portrait
+  giả theo ảnh mẫu. Hiệu ứng phản hồi, keyboard/focus, VI/EN/draft vẫn được giữ.
+
+Dọn45file không còn cần ở checkout:44PNG QA cũ trong frontend/screenshots và
+1stylesheet lab-saas.css không có runtime import. Đã chuyển sang OS Temp:
+C:/Users/Admin/AppData/Local/Temp/lab-studio-archived-output để có thể phục hồi.
+Không xóa assets runtime, test, config, migration, token/credential hoặc data.
+
+Kiểm chứng:
+- `npm run test:required` PASS (lint/typecheck/i18n/build,2warning lint có sẵn).
+- Kanban27checks PASS, catalogue50 PASS, customer accessibility24states VI/EN
+  desktop/mobile PASS, bao gồm contrast/validation/draft/review.
+- Workspace-command8scenarios confirmed/hold/overdue/legacy/empty/failure/
+  staff/admin ×1440/1024/390 PASS; thêm assertion phiên có anchor đứng trước
+  body và thao tác mở finder mới. Mọi API của các UI suites này bị intercept:
+  không phải DB E2E và không tạo nghiệp vụ thật.
+- Live read-only sweep98captures VI cho49tổ hợp role/route,30EN,28affected
+  recaptures và6home recaptures không document overflow/pageerror. Backend
+  support/presence POST bị chặn có chủ đích trong sweep.
+- Lượt toàn hệ thống: `test:required` exit0 tại lab-studio-all-final-required.log
+  (2warning lint cũ); sweep all-final98VI + english30EN không overflow/pageerror.
+  all-auth6 và all-assistant6 xác nhận auth/mobile và panel trợ lý mở rộng context
+  cho3role; không gửi câu hỏi hay thay đổi nghiệp vụ thật.
+- Isolated UI: checkout7scenarios PASS, support/payment17 PASS, system
+  presentation30 PASS (profile sections/inbox/selection/workbenches/bridge/
+  lỗi đọc/public/404), shared form drafts PASS và modal accessibility24states
+  VI/EN PASS, contrast/unnamed controls không có finding. Shared-drafts test
+  mở native disclosure trước restore; vẫn kiểm whitelist và không tự submit.
+  Các suite intercept toàn bộ API, không chứng minh DB/auth/SMTP/bank E2E.
+- Review độc lập Taste/Impeccable đã chấm2finding chính resolved, disposition
+  ship chỉ cho các finding đó; không thay thế nghiệm thu của người dùng.
+- Review toàn màn phát hiện P2 auth/mobile ảnh đẩy form xuống; đã sửa và review
+  xác nhận resolved/ship cho auth và assistant. Chưa có duyệt thị giác từ user.
+Evidence ở OS Temp/lab-saas-refactor-20261104: studio.json, studio-final.json,
+studio-homes.json, english.json và screenshots. Logs/fixtures bổ sung:
+lab-studio-required.log, lab-studio-a11y.log, lab-studio-catalogue.log,
+lab-studio-workspace.log và lab-studio-workspace-states.
+Lượt toàn màn: all-screens.json, all-final.json, all-auth.json,
+all-assistant.json, english.json cùng thư mục evidence trên; fixtures ở OS Temp
+lab-studio-all-{modals,payments,drafts,support-payments,account-inbox}.
+DESIGN.md và .impeccable/design.json đã phản ánh phạm vi mới. Diff-check PASS.
+
+Claude Desktop không chạy tại inventory mới; áp dụng skill frontend-design của
+Claude và TasteSkill tại checkout, không tuyên bố đã giao task cho Claude app.
+Không push/commit/deploy/reset/seed hoặc mutate booking/payment/support thật.
+Bước tiếp: người dùng xem bản đang chạy và chỉ ra chi tiết cần chỉnh; giữ hệ
+Studio đã ghi ở DESIGN.md, không mở thêm role/module hoặc redesign business.
+
 ## Hoàn thành lượt Claude đang dở — 31/10/2026
 
 Theo yêu cầu tiếp quản, giữ diff Claude trên codex/claude-qa-20261021 @0de99b6;

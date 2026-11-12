@@ -18,9 +18,9 @@ This Software Requirements Specification (SRS) defines the users, system boundar
 
 ### 1.2 Scope
 
-Lab Resource Manager is a web application for discovering and operating shared university laboratory resources. Its primary workflow covers resource discovery, availability review, booking, approval where required, handover, return, and operational history. Supporting capabilities include account and laboratory administration, maintenance, notifications, incident handling, monitoring, and reporting.
+Lab Resource Manager is a web application for discovering and operating shared laboratory resources. Its primary workflow covers resource discovery, availability review, booking, approval where required, handover, return, and operational history. Supporting capabilities include account and laboratory administration, maintenance, notifications, incident handling, monitoring, and reporting.
 
-External quick booking, pricing/payment, and AI assistance are incremental or supporting capabilities. They must not override core authorization, booking rules, physical resource status, or human approval. Real payment-provider settlement and physical hardware verification require their own external configuration and evidence.
+Guest quick booking, pricing/payment, and AI assistance are supporting capabilities. Core authorization, booking rules, physical resource status, and human approval take precedence. Real payment-provider settlement and physical hardware verification require their own external configuration and evidence.
 
 ### 1.3 Definitions and conventions
 
@@ -54,7 +54,7 @@ At a high level, the system supports:
 3. Booking requests, policy checks, approval, cancellation, handover, return, and completion.
 4. Resource operation, maintenance windows, incident records, notifications, audit history, and dashboards.
 5. Persisted telemetry and alert workflows when a real configured source supplies data.
-6. Optional external-customer quick booking, purpose-based pricing, and payment-provider integration when configured.
+6. Guest quick booking, resource and purpose-based pricing, and payment-provider integration when configured.
 7. AI-assisted explanation and lookup as decision support only.
 
 ### 2.3 User classes
@@ -109,15 +109,17 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | ID | Requirement |
 |---|---|
 | FR-AUTH-01 | The system shall authenticate users using persisted account credentials. |
-| FR-AUTH-02 | Public self-registration shall create only the canonical `CUSTOMER` role using email and password only; contact details are collected when booking. |
+| FR-AUTH-02 | Public self-registration shall create only the canonical `CUSTOMER` role using email and password or configured Google sign-in. Booking contact details are collected when booking. |
 | FR-AUTH-03 | For each protected request, the backend shall verify the current database user exists and is active before authorizing the operation. |
 | FR-AUTH-04 | An `ADMIN` shall be able to manage user roles, activation, and laboratory assignments. |
 | FR-AUTH-07 | ADMIN shall manage all accounts; LAB_STAFF shall create/read/edit contact/deactivate/soft-remove all CUSTOMER accounts only, without acquiring global LAB permissions. |
-| FR-AUTH-08 | All password changes shall require a one-use, expiring OTP delivered to the immutable registered email; self changes also require the current password. Failure to deliver shall fail closed. |
+| FR-AUTH-08 | All password changes shall require a one-use, expiring OTP delivered to the immutable registered email. Self changes also require the current password when a local password is enabled. Failure to deliver shall fail closed. |
 | FR-AUTH-09 | Credential, activation and role changes shall invalidate earlier authentication versions; removal shall retain history and block while bookings/support remain open. |
 | FR-AUTH-05 | The system shall not treat client-side route hiding or client-provided user/role/laboratory identifiers as authorization. |
-| FR-AUTH-06 | When external quick booking is enabled, the system shall verify the configured email OTP flow before creating/reusing an external account and proceeding with booking. The account shall retain role `CUSTOMER` and may carry `customerType=EXTERNAL`. |
+| FR-AUTH-06 | Guest quick booking shall verify an email OTP before completing the reservation. New guest accounts have role `CUSTOMER`. Access to an existing account requires normal authentication. |
 | FR-AUTH-10 | Internal JWTs shall bind to persisted revocable sessions with issuer/audience/expiry checks, idle and absolute deadlines. Background reads shall not extend idle expiry; logout revokes the current session and logout-all invalidates earlier credential versions (ADR-043). |
+| FR-AUTH-11 | Google sign-in shall verify the signed ID token and nonce on the server and identify linked accounts by Google subject. First linking to an existing account shall require its current password. Account state and privileges remain authoritative in LAB. |
+| FR-AUTH-12 | Customers share one role. Account and booking contracts shall exclude school, department and organization affiliation. Booking eligibility and prices follow resource rules, purpose and applicable transaction policies. |
 
 ### 4.2 Resource catalogue and administration
 
@@ -186,7 +188,7 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | ID | Requirement |
 |---|---|
 | FR-EXT-01 | Rental tariffs and per-resource duration limits shall be persisted and publicly visible. The server calculates integer VND from the configured rate and accepted duration, verifies the quote version and preserves the booking price snapshot. |
-| FR-EXT-02 | A browser return from a payment provider shall not settle a transaction. Only a valid, verified server callback matching configured merchant and transaction data may update payment state. |
+| FR-EXT-02 | A browser return from a payment provider shall not settle a transaction. Only a valid, verified server callback matching the configured merchant or issued bank recipient and transaction data may update payment state. |
 | FR-EXT-03 | Payment unavailability shall remain visible; the system shall not fabricate a successful payment or require payment as a canonical booking status. |
 | FR-EXT-04 | AI assistance may search, explain, summarize, or recommend using available data but shall not override authorization, operational state, policy, booking rules, or human approval. |
 
@@ -259,7 +261,7 @@ Requirement status shall be assessed against current code and verification artif
 - LAB-MAINT-01: Preview affected bookings, reject overlaps, require reasons for
   schedule/status changes, and preserve closed jobs. Resource physical state is
   verified separately; completing maintenance does not certify safe operation.
-- LAB-TEACH-01 (retired by ADR-033): course-group screens and mutations are no longer active. Preserve existing tables/history in an ADMIN-only read archive.
+- LAB-TEACH-01 (retired by ADR-033 and ADR-047): preserve historical tables and records at the database layer. Runtime screens and API routes are retired.
 - LAB-MEDIA-01: Show image/video details with truthful loading/unavailable states;
   fail clearly when storage is unconfigured. Reference media is labeled.
 
@@ -304,9 +306,8 @@ Implementation and verification boundaries are recorded in
   and disclose deferred monitoring without fabricated health data.
 
 See ADR-025 and `CURRENT_STATE.md` for the implemented
-boundary and verification evidence. The 2026-10-05 conversation extension and
-remaining provider checks are recorded in `AI_ASSISTANT_MCP.md` and
-`artifacts/assistant-api-preparation-20261005/REPORT.md` at the repository root.
+boundary and verification evidence. The conversation extension and remaining
+provider checks are recorded in [AI_ASSISTANT_MCP](AI_ASSISTANT_MCP.md).
 
 ## Appendix D. Actor permissions and operational use cases (2026-10-03)
 
@@ -338,7 +339,7 @@ Every permission is enforced by the server; navigation visibility is only a UX a
 | Read system audit events | Global | Assigned labs | No |
 | Manually edit/delete system audit events | No | No | No |
 
-Historical academic records remain accessible only to ADMIN through the read archive. CUSTOMER never inherits academic review or operator privileges.
+Historical course-group records are retained at the database layer. Customer permissions follow the booking and account ownership rules.
 
 ### Use cases and acceptance paths
 
@@ -373,10 +374,19 @@ scope and monitoring provenance remain authoritative. See the
 - LAB-REPORT-02: Separate approved schedules, actual handover/return intervals,
   planned maintenance and current open incidents. Disclose the period/basis and
   do not represent planned time as measured hardware runtime or repair duration.
-- LAB-SIM-01: A synthetic preview must be explicit and isolated. The new CLI
-  scenario does not ingest data or create persisted alerts/incidents. A simulator
-  connected to ingestion requires a separate labelled demo environment and
-  verification before it is presented as an integrated capability.
+  - LAB-SIM-01: A synthetic preview must be explicit and isolated. The earlier
+    rule preview does not ingest data or create persisted alerts/incidents.
+    User-approved 2026-11-09 local graduation demonstration now permits a bounded
+    labelled scenario in lab_resources_local_demo only: persist SIMULATED samples,
+    threshold alerts and incidents with run provenance. Public telemetry ingestion
+    must still reject simulated sources; physical operational state and actual
+    booking usage remain authoritative and unchanged by the generator. The
+    60-unit inventory is demonstrative; manufacturer specifications have source
+    URLs, while quantities and rates are demo assumptions. ADMIN and assigned
+    LAB_STAFF start and stop bounded runs through the workspace. The separate
+    Windows collector ingests measured CPU/RAM/disk usage through source
+    authentication. The optional assistant may explain saved samples and alert
+    history with explicit provenance and human review of any suggestions.
 
 This local continuation adds the operational report and isolated rule preview.
 It does not activate predictive ML, hardware, provider AI or another numbered Batch.
@@ -421,7 +431,7 @@ See CURRENT_STATE for the actual run scope and limits.
   It contains the account email/name and password-use/setup guidance; no plaintext
   password, password hash, OTP, bearer token or invented reset link is included.
   Account reuse and rejected/rolled-back registration create no welcome email.
-- LAB-MAIL-02: A verified successful VNPAY IPN atomically enqueues one payment
+- LAB-MAIL-02: A verified VNPAY IPN or VietQR settlement atomically enqueues one payment
   receipt per payment. Include amount, payment/provider references, booking,
   equipment/LAB, scheduled Vietnam time and booking status at settlement time.
   Invalid/failed callbacks and browser Return never create payment receipts.

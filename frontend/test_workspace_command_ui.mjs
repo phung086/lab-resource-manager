@@ -262,6 +262,11 @@ try {
           });
       }
       if (role === "CUSTOMER") {
+        if (["hold", "overdue", "confirmed", "legacy"].includes(scenario)) {
+          const priority = await page.locator(".hub-focus").boundingBox();
+          const body = await page.locator(".hub-body-grid").boundingBox();
+          assert.ok(priority && body && priority.y < body.y, "Active session stays before discovery body");
+        }
         assert.equal(await page.locator(".hub-metric").count(), 4);
         assert.equal(
           await page.locator(".hub-category-shortcuts button").count(),
@@ -323,6 +328,8 @@ try {
           assert.match(page.url(), /booking=qa-booking-0/);
           await page.goBack();
           await page.locator(".hub-focus").waitFor();
+          if (await page.locator(".studio-finder:not([open])").count())
+            await page.locator(".studio-finder>summary").click();
           await page.locator(".hub-search input").fill("GPU");
           await page.locator(".hub-search select").selectOption("EQUIPMENT");
           await page.locator(".hub-search button[type=submit]").click();

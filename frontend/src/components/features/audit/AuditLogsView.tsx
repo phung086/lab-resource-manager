@@ -1,3 +1,4 @@
+import { PageHeading } from '../../base/PageHeading';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale } from "../../../providers/LocaleProvider";
 import { QueuePagination } from "../../base/QueuePagination";
@@ -77,12 +78,12 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ actorRole }) => {
   const targetTypeOptions = useMemo(() => AUDIT_TARGET_TYPE_OPTIONS, []);
 
   return <section className="card audit-workspace" aria-labelledby="audit-logs-title" aria-busy={loading}>
-    <header className="audit-workspace-heading">
+    <PageHeading className="audit-workspace-heading">
       <div>
         <h1 id="audit-logs-title">{tr("ui.audit_logs_883aea8a")}</h1>
         <p className="audit-workspace-subtitle">{tr("ui.audit.subtitle", { role: actorRole })}</p>
       </div>
-    </header>
+    </PageHeading>
 
     <HelpDisclosure>
       <p>{tr("ui.audit.help")}</p>

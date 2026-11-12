@@ -1,3 +1,5 @@
+import { formatVnd } from '../utils/currency';
+import { PageHeading } from '../components/base/PageHeading';
 import { SelectedBundle } from '../components/features/planning/SelectedBundle';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, CalendarClock, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
@@ -60,7 +62,6 @@ export function SelectionPage({ userId, items, onRemove, onBrowse, onDetails, on
   const draftKey = (id: string) => timeDraftKey(progressRef.current.drafts[id]);
   const slot = useMemo(() => activeResource ? { resourceId: activeResource.id } : null, [activeResource]);
   const modalResources = useMemo(() => activeResource ? [activeResource] : [], [activeResource]);
-  const money = (amount: number) => new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
   const write = useCallback((change: (value: Progress) => Progress, required = false) => {
     if (!hasStoredSession() || getStoredUser()?.id !== userId) {
       if (required) throw new Error('api.UNAUTHORIZED');
@@ -118,13 +119,13 @@ export function SelectionPage({ userId, items, onRemove, onBrowse, onDetails, on
     } finally { if (!controller.signal.aborted) {listBusy.current=false;setChecking(false);setCheckClock(Date.now());} }
   }
   return <section className="resource-selection" aria-labelledby="selection-heading">
-    <header className="selection-heading">
+    <PageHeading className="selection-heading">
       <div><button type="button" className="btn btn-secondary" onClick={onBrowse}><ArrowLeft size={16} aria-hidden="true" />{tr('ui.resourceSelection.continue')}</button>
         <h1 id="selection-heading">{tr('ui.resourceDiscovery.viewSelection')}</h1>
         <p>{tr(together ? 'planning.atomicHint' : 'ui.resourceSelection.independent')}</p>
       </div>
       <div className="selection-progress" role="status">{tr('ui.resourceSelection.progress', { saved, total: items.length })}</div>
-    </header>
+    </PageHeading>
     {items.length > 1 && <label className="selection-time-panel selection-bundle-toggle"><input type="checkbox" checked={together} onChange={event => { let recovery: string[] | undefined; try { recovery = JSON.parse(sessionStorage.getItem(`lrm:bundle-request:${userId}`) || 'null')?.plan?.resourceIds; } catch { /* Keep the existing uncertain fence. */ } if (!bundleIds.length || recovery) setBundleIds(recovery || items.filter(item => !['saved','pending','uncertain'].includes(progress.results[item.id]?.status)).map(item => item.id)); setTogether(event.target.checked); }}/>{tr('planning.bookTogether')}</label>}
     {bundleIds.length > 0 && <div hidden={!together}><SelectedBundle onPending={(ids, uncertain) => { for (const id of ids) recordResult(id, { status: uncertain ? 'uncertain' : 'failed' }, true); }} ids={bundleIds} onSaved={rows => { for (const row of rows) recordResult(row.resourceId, { status: 'saved', bookingId: row.id, bookingStatus: row.status, feeAmountVnd: row.feeAmountVnd }); onConfirmed(); }}/></div>}
     <div hidden={together}>
@@ -140,7 +141,7 @@ export function SelectionPage({ userId, items, onRemove, onBrowse, onDetails, on
           <div className="selection-resource"><button type="button" className="selection-name" onClick={() => onDetails(item.id)}>{item.name || item.code}</button><p>{item.code} · {item.laboratoryName}</p>
             {draft && <p className="selection-draft-time"><CalendarClock size={15} aria-hidden="true"/>{draft.date} · {draft.start}–{draft.end}</p>}
             {!blocked&&<p className={`selection-check-result ${fresh&&checked.status==='ready'?'is-ready':''}`} role="status">{checked?.status==='error'?tr(checked.message||'api.API_REQUEST_FAILED'):tr(!checked?'ui.planner.notChecked':checked.status==='paused'?'ui.planner.checkPaused':!fresh?'ui.planner.checkStale':checked.status==='ready'?'ui.planner.checkReady':'ui.planner.checkUnavailable')}</p>}
-            {result?.status === 'saved' && <div className="selection-result" role="status"><CheckCircle2 size={18} aria-hidden="true" /><div>{tr('ui.resourceSelection.saved', { id: result.bookingId || '', status: tr(result.bookingStatus === 'CONFIRMED' ? 'ui.confirmed_e72d13e3' : (result.feeAmountVnd || 0) > 0 ? 'ui.paymentHold.pending' : 'ui.pending_approval_6af96613') })}{typeof result.feeAmountVnd === 'number' && <p>{tr('ui.resourceSelection.fee', { amount: money(result.feeAmountVnd) })}</p>}</div></div>}
+            {result?.status === 'saved' && <div className="selection-result" role="status"><CheckCircle2 size={18} aria-hidden="true" /><div>{tr('ui.resourceSelection.saved', { id: result.bookingId || '', status: tr(result.bookingStatus === 'CONFIRMED' ? 'ui.confirmed_e72d13e3' : (result.feeAmountVnd || 0) > 0 ? 'ui.paymentHold.pending' : 'ui.pending_approval_6af96613') })}{typeof result.feeAmountVnd === 'number' && <p>{tr('ui.resourceSelection.fee', { amount: formatVnd(result.feeAmountVnd, locale) })}</p>}</div></div>}
             {result?.status === 'failed' && <p role="alert" className="selection-error">{tr(result.message || 'ui.could_not_create_the_booking_ead473e4')}</p>}
             {(result?.status === 'uncertain' || result?.status === 'pending') && <div className="selection-error" role="status"><AlertCircle size={18} aria-hidden="true" /><span>{tr(result.status === 'pending' ? 'ui.submitting_abf01d43' : 'ui.resourceSelection.uncertain')}</span></div>}
             {resourceError?.id === item.id && <p role="alert" className="selection-error">{tr(resourceError.message)}</p>}
@@ -152,7 +153,7 @@ export function SelectionPage({ userId, items, onRemove, onBrowse, onDetails, on
         </li>;
       })}
     </ol>}
-    {activeResource && <div className="selection-quote" role="status">{liveQuote ? tr('ui.resourceSelection.quote', { name: activeResource.name, amount: money(liveQuote.amountVnd) }) : tr('ui.resourceSelection.quotePending', { name: activeResource.name })}</div>}
+    {activeResource && <div className="selection-quote" role="status">{liveQuote ? tr('ui.resourceSelection.quote', { name: activeResource.name, amount: formatVnd(liveQuote.amountVnd, locale) }) : tr('ui.resourceSelection.quotePending', { name: activeResource.name })}</div>}
     </div>
     {activeResource && <QuickBookingModal key={activeResource.id} isOpen onClose={() => setActiveResource(null)} resources={modalResources} initialSlot={slot} initialDraft={initialDraft} onDraftChange={draftChanged} onQuoteChanged={quoteChanged}
       onAttempt={() => recordResult(activeResource.id, { status: 'pending' }, true)}

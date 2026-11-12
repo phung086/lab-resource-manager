@@ -213,6 +213,16 @@ router.patch("/:id", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
         if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
       }
 
+      // The booked interval can end while the borrower still has the resource.
+      // Use the same resource lock as checkout and return before starting work.
+      if (nextStatus !== fresh.status && ["in_progress", "completed"].includes(nextStatus)) {
+        const checkedOut = await tx.booking.findFirst({
+          where: { resourceId: nextResourceId, status: "CHECKED_OUT" },
+          select: { id: true }
+        });
+        if (checkedOut) throw new HttpError(409, "Receive the resource before maintenance", undefined, "RESOURCE_RETURN_REQUIRED");
+      }
+
       await ensureNoBookingConflictTx(tx, {
         resourceId: nextResourceId,
         startAt: nextStartAt,

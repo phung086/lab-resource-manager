@@ -1,3 +1,4 @@
+import { PageHeading } from "../../base/PageHeading";
 import { LocalDraftNotice } from '../../base/LocalDraftNotice';
 import { HelpDisclosure } from "../../base/HelpDisclosure";
 import React, { useState, useId, useEffect, useRef } from "react";
@@ -476,7 +477,7 @@ export const IncidentManagementView: React.FC<Props> = ({
     <div className="incidents-workspace operations-workbench" data-role={user?.role} data-has-selection={Boolean(selectedId)}>
       <LocalDraftNotice disabled={busyId !== null} store={reportBackup} onRestore={value=>{setFormDraftState({resourceId:value.resourceId,severity:value.severity as IncidentSeverity,category:value.category,title:value.title,description:value.description});setShowReport(true);}}/>
       {/* ── Page header ── */}
-      <div className="incident-heading">
+      <PageHeading className="incident-heading">
         <div className="incident-heading-text">
           <h1>{tr("ui.roleIncident."+(user?.role || "CUSTOMER")+".title")}</h1>
           <HelpDisclosure><p>{tr('ui.workbench.incidentIntro')}</p>{tr("ui.roleIncident."+(user?.role || "CUSTOMER")+".hint")}</HelpDisclosure>
@@ -490,7 +491,7 @@ export const IncidentManagementView: React.FC<Props> = ({
           <Plus size={16} />
           {tr("ui.report_an_incident_0527866e")}
         </button>
-      </div>
+      </PageHeading>
 
       {/* ── Error banner ── */}
       {(serverError || queue.error) && (

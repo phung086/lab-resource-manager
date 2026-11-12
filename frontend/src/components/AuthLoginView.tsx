@@ -8,19 +8,17 @@ import { login } from "../api.js";
 import { normalizeAuth } from "./features/auth/authValidation.js";
 import { useAuthDraft, useAuthForm } from "./features/auth/useAuthForm";
 import { AuthErrorSummary } from "./features/auth/AuthFeedback";
+import { GoogleSignIn } from './features/auth/GoogleSignIn';
+import { LanguageToggle } from './base/LanguageToggle';
 
 export interface AuthLoginViewProps {
   onLogin: (user: any) => void;
   onSwitchToRegister: () => void;
-  locale?: string;
-  onLocaleChange?: (loc: string) => void;
 }
 
 export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   onLogin,
-  onSwitchToRegister,
-  locale = "vi",
-  onLocaleChange
+  onSwitchToRegister
 }) => {
   const { tr } = useLocale();
   const formId = useId();
@@ -51,39 +49,14 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   }
 
   return (
-    <div className="auth-screen min-h-screen w-full flex items-center justify-center font-sans">
+    <div className="auth-screen lab-studio min-h-screen w-full flex items-center justify-center font-sans">
       <div className="auth-split-grid">
         {/* Left Column: Product Identity & Scope */}
         <AuthIdentity />
         <div className="auth-panel auth-panel-form flex flex-col justify-between">
           {/* Header & Language Switch */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-medium">{tr("ui.account_access_34b777ad")}</span>
-
-            <div className="auth-language flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onLocaleChange && onLocaleChange("vi")}
-                aria-pressed={locale === "vi"}
-                className={`text-xs px-2.5 py-1 rounded-md border transition-all ${
-                  locale === "vi"
-                    ? "bg-blue-600 border-blue-500 text-white font-semibold"
-                    : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
-                }`}
-              >
-                 {translate("ui.vi_dc7b94e1")} </button>
-              <button
-                type="button"
-                onClick={() => onLocaleChange && onLocaleChange("en")}
-                aria-pressed={locale === "en"}
-                className={`text-xs px-2.5 py-1 rounded-md border transition-all ${
-                  locale === "en"
-                    ? "bg-blue-600 border-blue-500 text-white font-semibold"
-                    : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
-                }`}
-              >
-                 {translate("ui.en_69374b09")} </button>
-            </div>
+          <div className="flex items-center justify-end">
+            <LanguageToggle className="auth-language" />
           </div>
 
           {/* Form Content */}
@@ -92,7 +65,8 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
               <h1 className="text-2xl font-bold font-heading text-white tracking-tight">
                 {tr("ui.sign_in_70d8f8fd")}</h1>
               <p className="text-xs text-slate-400 mt-1.5">
-                {tr("ui.use_your_laboratory_account_to_02c1b4ab")}</p>
+                {tr("ui.auth.signInHint")}</p>
+              <p className="auth-access-caption">{tr("ui.account_access_34b777ad")}</p>
             </div>
 
             <AuthErrorSummary feedback={feedback} />
@@ -175,11 +149,12 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
                 <ArrowRight size={15} aria-hidden="true" />
               </button>
             </form>
+            <GoogleSignIn disabled={isLoading} busyRef={feedback.busy} onBusyChange={setIsLoading} onAuthenticated={user=>{clearDraft();onLogin(user);}} />
           </div>
 
           {/* Switch to Register */}
           <div className="text-center pt-4 border-t border-white/10 text-xs text-slate-400">
-            <span>{tr("ui.need_a_student_account_e21eee22")}</span>
+            <span>{tr("ui.auth.needAccount")}</span>
             <button
               type="button"
               onClick={onSwitchToRegister}

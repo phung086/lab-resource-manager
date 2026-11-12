@@ -31,8 +31,6 @@ const addressSchema = z.object({
 const updateOwnProfileSchema = z.object({
   fullName: z.string().trim().min(2).max(255).optional(),
   phone: z.string().trim().max(20).refine(value => !value || /^(?:0\d{9}|\+[1-9]\d{7,14})$/.test(value)).optional(),
-  organization: z.string().trim().max(160).optional().nullable(),
-  customerType: z.enum(["INTERNAL", "EXTERNAL"]).optional(),
   address: addressSchema.optional()
 }).strict();
 
@@ -100,7 +98,7 @@ async function buildProfileResponse(user) {
 }
 
 /**
- * GET /me — Current user profile with Open LAB identity, default address,
+ * GET /me — Current user profile with contact information, default address,
  * persisted spending totals, and LAB loyalty signals. No mockStore fallback.
  */
 router.get("/me", requireAuth, async (req, res, next) => {
@@ -120,8 +118,6 @@ router.patch("/me", requireAuth, async (req, res, next) => {
     const update = {
       ...(data.fullName !== undefined ? { fullName: data.fullName } : {}),
       ...(data.phone !== undefined ? { phone: data.phone || null } : {}),
-      ...(data.organization !== undefined ? { organization: data.organization || null } : {}),
-      ...(data.customerType !== undefined ? { customerType: data.customerType } : {}),
       ...addressData(verifiedAddress)
     };
     const user = await prisma.user.update({ where: { id: req.user.id }, data: update });
@@ -159,11 +155,7 @@ const createUserSchema = z.object({
   fullName: z.string().trim().min(2).max(255),
   role: z.enum(CANONICAL_ROLES).default("CUSTOMER"),
   isActive: z.boolean().default(true),
-  studentId: z.string().trim().max(50).optional(),
-  department: z.string().trim().max(100).optional(),
-  phone: phoneSchema.optional(),
-  organization: z.string().trim().max(160).optional(),
-  customerType: z.enum(["INTERNAL", "EXTERNAL"]).default("INTERNAL")
+  phone: phoneSchema.optional()
 }).strict();
 
 router.post("/", requireAuth, requireRole(ADMIN, LAB_STAFF), accountLimit, async (req, res, next) => {
@@ -313,8 +305,7 @@ router.get("/:id", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, 
 
 const editAccountSchema = z.object({
   fullName: z.string().trim().min(2).max(255).optional(),
-  phone: phoneSchema.optional(),
-  organization: z.string().trim().max(160).optional().nullable()
+  phone: phoneSchema.optional()
 }).strict().refine(value => Object.keys(value).length > 0, { message: "Specify a field to update" });
 const reasonSchema = z.object({ reason: z.string().trim().min(5).max(500) }).strict();
 const assistedConfirmSchema = z.object({ challengeId: z.string().uuid(), otp: z.string().regex(/^\d{6}$/),
@@ -324,7 +315,6 @@ router.patch("/:id", requireAuth, requireRole(ADMIN, LAB_STAFF), accountLimit, a
   try {
     const data = editAccountSchema.parse(req.body);
     if (data.phone === "") data.phone = null;
-    if (data.organization === "") data.organization = null;
     res.json(await editAccount(req.user, req.params.id, data));
   } catch (error) { next(error); }
 });

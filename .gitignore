@@ -44,3 +44,7 @@ frontend/baseline_results.json
 frontend/.impeccable/
 frontend/probe_*_tmp.mjs
 frontend/src/.ui_b*_tmp.mjs
+
+# Local design captures, probes and ephemeral browser sessions
+/Temp/
+/frontend/.tmp-qa/

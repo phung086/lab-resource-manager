@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 
 import { HttpError } from "../middleware/errors.js";
 import { serializeTelemetrySource } from "./telemetryIdentityService.js";
+import { SOURCE_STALE_RULE, resolveStaleSourceAlert } from './monitoringAlertService.js';
 
 export const TELEMETRY_STATES = Object.freeze({
   HEALTHY: "HEALTHY",
@@ -111,10 +112,10 @@ function normalizeSignals(signals, source) {
 }
 
 export function evaluateTelemetryConditions(sample, thresholds) {
-  const conditions = [];
   if (sample.online === false) {
-    conditions.push({ ruleCode: "SOURCE_OFFLINE", severity: "WARNING", message: "Telemetry source explicitly reported offline" });
+    return [{ ruleCode: "SOURCE_OFFLINE", severity: "WARNING", message: "Telemetry source explicitly reported offline" }];
   }
+  const conditions = [];
   if (sample.temperatureC != null && sample.temperatureC >= thresholds.temperatureCriticalC) {
     conditions.push({
       ruleCode: "TEMPERATURE_CRITICAL",
@@ -155,6 +156,15 @@ export function evaluateTelemetryConditions(sample, thresholds) {
     });
   }
   return conditions;
+}
+
+function canResolveAlert(ruleCode, sample) {
+  if (!sample.online || ruleCode === SOURCE_STALE_RULE) return false;
+  if (ruleCode.startsWith('TEMPERATURE_')) return sample.temperatureC != null;
+  if (ruleCode.startsWith('HUMIDITY_')) return sample.humidityPercent != null;
+  const metric = ['cpuPercent', 'gpuPercent', 'gpuMemoryPercent', 'ramPercent', 'diskPercent']
+    .find(key => ruleCode.startsWith(`${key.toUpperCase()}_`));
+  return !metric || sample[metric] != null;
 }
 
 async function reconcileAlerts(tx, { source, sample, thresholdResolution, now }) {
@@ -246,11 +256,13 @@ async function reconcileAlerts(tx, { source, sample, thresholdResolution, now })
       activeDedupeKey: { not: null },
       ...(activeKeys.length ? { activeDedupeKey: { notIn: activeKeys } } : {})
     },
-    select: { id: true }
+    select: { id: true, ruleCode: true }
   });
-  if (obsolete.length) {
+  // Losing a reading must not close a previously observed condition.
+  const resolvedIds = obsolete.filter(alert => canResolveAlert(alert.ruleCode, sample)).map(alert => alert.id);
+  if (resolvedIds.length) {
     await tx.monitoringAlert.updateMany({
-      where: { id: { in: obsolete.map((row) => row.id) } },
+      where: { id: { in: resolvedIds } },
       data: {
         activeDedupeKey: null,
         status: "RESOLVED",
@@ -262,8 +274,15 @@ async function reconcileAlerts(tx, { source, sample, thresholdResolution, now })
   return alerts;
 }
 
-export async function persistTelemetrySample(tx, { source, payload, now = new Date() }) {
-  if (source.kind === "SIMULATED") throw new HttpError(410, "Scenario simulator has been removed", undefined, "TELEMETRY_SOURCE_INACTIVE");
+export async function persistTelemetrySample(tx, { source, payload, now = new Date(), localDemoRun = false }) {
+  // Public ingestion never supplies localDemoRun. Only the guarded local runner may do so.
+  if (source.kind === "SIMULATED") {
+    let localDatabase = false;
+    try { const url = new URL(process.env.DATABASE_URL); localDatabase = ['localhost','127.0.0.1','postgres'].includes(url.hostname) && url.pathname === '/lab_resources_local_demo'; } catch { /* fail closed */ }
+    if (!localDemoRun || process.env.DEMO_MODE !== 'true' || process.env.NODE_ENV === 'production' || !localDatabase) throw new HttpError(403, 'Local simulation is disabled', undefined, 'TELEMETRY_SOURCE_INACTIVE');
+    const run = payload.simulationRunId && await tx.monitoringSimulationRun.findUnique({where:{id:payload.simulationRunId}});
+    if (!run || run.sourceId !== source.id || run.activeSourceId !== source.id || run.status !== 'RUNNING' || source.resource?.specs?.environment !== 'LOCAL_DEMO') throw new HttpError(403, 'Active local demo run required', undefined, 'FORBIDDEN');
+  }
   if (source.kind !== "SIMULATED" && payload.simulationRunId) throw new HttpError(403, "External sources cannot submit simulated runs", undefined, "FORBIDDEN");
   const sampledAt = validateTelemetryTimestamp(payload.timestamp, now);
   if (payload.labId && payload.labId !== source.laboratoryId) {
@@ -327,10 +346,41 @@ export async function persistTelemetrySample(tx, { source, payload, now = new Da
   });
 
   const thresholdResolution = resolveMonitoringThresholds(source.resource);
+  if (isNewest && source.kind === 'EXTERNAL') {
+    await resolveStaleSourceAlert(tx, { source, sample, now, staleMinutes: thresholdResolution.values.staleMinutes });
+  }
   const alerts = isNewest
     ? await reconcileAlerts(tx, { source, sample, thresholdResolution, now })
     : [];
   return { sample, alerts, replayed: false };
+}
+
+export function serializeTelemetryWithHistory(resource, now = new Date()) {
+  const samples = resource.telemetrySamples;
+  return {
+    ...serializeTelemetry(resource, samples[0] || null, now),
+    history: samples.map(sample => serializeTelemetrySample(sample, sample.telemetrySource))
+  };
+}
+
+function serializeTelemetrySample(sample, source) {
+  return {
+    id: sample.id,
+    origin: sample.origin,
+    simulationRunId: sample.simulationRunId,
+    sourceId: sample.sourceId,
+    source: source?.code || sample.source,
+    sampledAt: sample.sampledAt,
+    online: sample.online,
+    temperatureC: sample.temperatureC,
+    humidityPercent: sample.humidityPercent,
+    cpuPercent: sample.cpuPercent,
+    gpuPercent: sample.gpuPercent,
+    gpuMemoryPercent: sample.gpuMemoryPercent,
+    ramPercent: sample.ramPercent,
+    diskPercent: sample.diskPercent,
+    signals: sample.verifiedSignals || []
+  };
 }
 
 export function serializeTelemetry(resource, sample, now = new Date()) {
@@ -350,21 +400,9 @@ export function serializeTelemetry(resource, sample, now = new Date()) {
       ? serializeTelemetrySource(source, now, thresholdResolution.values.staleMinutes)
       : null,
     latestTelemetry: sample ? {
-      id: sample.id,
+      ...serializeTelemetrySample(sample, source),
       origin: sample.origin || "EXTERNAL",
-      simulationRunId: sample.simulationRunId || null,
-      sourceId: sample.sourceId,
-      source: source?.code || sample.source,
-      sampledAt: sample.sampledAt,
-      online: sample.online,
-      temperatureC: sample.temperatureC,
-      humidityPercent: sample.humidityPercent,
-      cpuPercent: sample.cpuPercent,
-      gpuPercent: sample.gpuPercent,
-      gpuMemoryPercent: sample.gpuMemoryPercent,
-      ramPercent: sample.ramPercent,
-      diskPercent: sample.diskPercent,
-      signals: sample.verifiedSignals || []
+      simulationRunId: sample.simulationRunId || null
     } : null,
     thresholds: thresholdResolution,
     monitoring: derived,

@@ -12,8 +12,6 @@ export type DirectoryUser = {
   role: UserRole;
   isActive: boolean;
   phone?: string | null;
-  organization?: string | null;
-  department?: string | null;
   _count?: { bookings: number };
 };
 
@@ -43,8 +41,8 @@ export function UserDirectoryList(props: UserDirectoryListProps) {
   return (
     <section className="users-directory" aria-label={tr('ui.users.directory.eyebrow')}>
       <header className="users-directory-head">
-        <p className="users-directory-eyebrow">{tr('ui.users.directory.eyebrow')}</p>
         <h3 className="users-directory-title">{tr('ui.users.directory.title')}</h3>
+        <p className="users-directory-caption">{tr('ui.users.directory.eyebrow')}</p>
         <p className="users-directory-count">
           <strong>{filtered.length}</strong>
           <span>{tr('ui.users.directory.of', { total: props.total })}</span>
@@ -98,21 +96,24 @@ export function UserDirectoryList(props: UserDirectoryListProps) {
           <p>{tr(props.total === 0 ? 'ui.users.directory.emptyBody' : 'ui.users.directory.emptyFilteredBody')}</p>
         </div>
       ) : (
-        <ul className="users-table" role="listbox" aria-busy={props.busy}>
+        <ul className="users-table users-card-grid" role="listbox" aria-busy={props.busy}>
           {filtered.map((row) => (
             <li key={row.id} role="option" aria-selected={props.selectedId === row.id}>
               <button
                 type="button"
-                className={'users-account' + (props.selectedId === row.id ? ' is-selected' : '') + (!row.isActive ? ' is-inactive' : '')}
+                className={'users-account users-account-card' + (props.selectedId === row.id ? ' is-selected' : '') + (!row.isActive ? ' is-inactive' : '')}
                 onClick={() => props.onSelect(row.id)}
               >
+                <span className="users-avatar" data-tone={row.id.charCodeAt(0) % 5} aria-hidden="true">{(row.fullName || row.email).trim().split(/\s+/).slice(-2).map(part => part[0]).join('').toUpperCase()}</span>
                 <span className="users-account-main">
-                  <strong className="users-account-name">{row.fullName}</strong>
+                  <strong className="users-account-name">{row.fullName || row.email.split("@")[0]}</strong>
                   <span className="users-account-email"><Mail size={12} aria-hidden="true" />{row.email}</span>
                 </span>
-                <span className={'users-account-role users-role-' + row.role.toLowerCase()}>{tr(roleLabels[row.role])}</span>
-                <span className={'users-status' + (row.isActive ? ' is-active' : ' is-inactive')}>
-                  {tr(row.isActive ? 'ui.users.statusActive' : 'ui.users.statusInactive')}
+                <span className="users-account-meta">
+                  <span className={'users-account-role users-role-' + row.role.toLowerCase()}>{tr(roleLabels[row.role])}</span>
+                  <span className={'users-status' + (row.isActive ? ' is-active' : ' is-inactive')}>
+                    {tr(row.isActive ? 'ui.users.statusActive' : 'ui.users.statusInactive')}
+                  </span>
                 </span>
               </button>
             </li>

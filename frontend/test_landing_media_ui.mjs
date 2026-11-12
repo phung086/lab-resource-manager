@@ -33,8 +33,21 @@ try {
       return unavailable ? route.abort('connectionrefused') : route.continue();
     });
     await page.goto(base);
+    const strip = page.locator('.announcement-strip');
+    const ticker = strip.locator('.announcement-strip-ticker');
+    const tickerState = () => ticker.evaluate(track => getComputedStyle(track).animationPlayState);
+    await ticker.waitFor();
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('.announcement-strip-ticker')).animationPlayState === 'running');
+    await strip.hover();
+    check(await tickerState() === 'paused', `${locale}: guidance pauses on hover`);
+    await page.mouse.move(0, 0);
+    check(await tickerState() === 'running', `${locale}: guidance resumes after hover`);
+    await strip.focus();
+    check(await tickerState() === 'paused', `${locale}: guidance pauses on keyboard focus`);
+    await strip.blur();
+    check(await strip.getByRole('button').count() === 0, `${locale}: guidance has no pause button`);
     const control = page.locator('.benefits-video-control');
-    await control.scrollIntoViewIfNeeded();
+    await page.locator('.benefits-video-viewport').scrollIntoViewIfNeeded();
     check(await page.locator('html').getAttribute('lang') === locale, `${locale}: requested language is active`);
     await page.waitForFunction(() => document.querySelector('.benefits-video')?.error);
     const failedRequests = mediaRequests;
@@ -46,26 +59,20 @@ try {
     await expectAdvancing(page);
     check(mediaRequests > failedRequests, `${locale}: resume reloads a failed source`);
 
-    await control.click();
+    await page.locator('.benefits-video-viewport').hover();
     await page.waitForFunction(() => document.querySelector('.benefits-video')?.paused);
     const pausedTime = await page.locator('.benefits-video').evaluate(video => video.currentTime);
     await page.waitForTimeout(300);
     check(await page.locator('.benefits-video').evaluate(video => video.currentTime) === pausedTime, `${locale}: pause holds the frame`);
-    await control.click();
+    await page.mouse.move(0, 0);
+    await expectAdvancing(page);
+    check(await control.count() === 0, `${locale}: healthy playback has no pause button`);
+    await page.locator('.benefits-captions').focus();
+    await page.waitForFunction(() => document.querySelector('.benefits-video')?.paused);
+    await page.locator('.benefits-captions').blur();
     await expectAdvancing(page);
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale}: no horizontal overflow`);
 
-    // A shared pause must not leave the earlier media failure blocking resume.
-    unavailable = true;
-    await page.reload();
-    await control.scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => document.querySelector('.benefits-video')?.error);
-    await page.locator('.landing-motion-toggle').click();
-    check(await page.locator('.landing-motion-toggle').getAttribute('aria-pressed') === 'true', `${locale}: shared motion is paused after media failure`);
-    await control.scrollIntoViewIfNeeded();
-    unavailable = false;
-    await control.click();
-    await expectAdvancing(page);
     await context.close();
   }
 

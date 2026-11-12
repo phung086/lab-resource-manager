@@ -223,8 +223,8 @@
  .workspace-shell.lab-spectrum .home-control-room { grid-template-columns:minmax(0,1fr); }
 }
 @media(min-width:1100px) {
- .workspace-shell.lab-spectrum:has(.workspace-navigation.is-pinned) { grid-template-columns:240px minmax(0,1fr); }
- .workspace-shell.lab-spectrum .workspace-navigation.is-pinned { width:240px; }
+ .workspace-shell.lab-spectrum:has(.workspace-navigation.is-expanded) { grid-template-columns:240px minmax(0,1fr); }
+ .workspace-shell.lab-spectrum .workspace-navigation.is-expanded { width:240px; }
  .workspace-shell.lab-spectrum .workspace-nav-desktop { padding:24px 12px; }
  .workspace-shell.lab-spectrum .workspace-nav-desktop .sidebar-nav-item-2026 { border-radius:12px; min-height:46px; }
 }
@@ -281,10 +281,10 @@
 .workspace-shell.lab-spectrum[data-workspace-view] :is(.resource-catalogue-card,.operation-card,.incident-queue,.maintenance-queue,.support-queue,.account-card) {
   border-color:#e5deee; box-shadow:var(--surface-shadow);
 }
-.workspace-shell.lab-spectrum[data-workspace-view] :is(.resource-catalogue-card,.planner-resource-card) {
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-catalogue-card {
   border-radius:15px; transform:none;
 }
-.workspace-shell.lab-spectrum[data-workspace-view] :is(.resource-catalogue-actions,.planner-resource-card-actions) {
+.workspace-shell.lab-spectrum[data-workspace-view] .resource-catalogue-actions {
   background:#fbfafd; border-top:1px solid #eee8f5; padding:13px 16px;
 }
 .workspace-shell.lab-spectrum[data-workspace-view] .resource-management-view.resource-browse-studio .workspace-header {

@@ -51,7 +51,6 @@
 .project-public-shell .announcement-strip-step { color: #30294f; font-size: 14px; font-weight: 600; }
 .project-public-shell .announcement-strip-number { background: #fff; color: #49328d; border: 1px solid #b9afde; }
 .project-public-shell .announcement-strip-static { color: #30294f; font-weight: 600; line-height: 1.7; }
-.project-public-shell .announcement-strip .landing-motion-toggle { color: #49328d; background: #fff; border-color: #a99acb; font-weight: 600; }
 @media(max-width:540px) {
   :root :is(.alert.danger, .guest-booking-alert.danger, .auth-screen .auth-error-summary, .booking-workspace .booking-error-summary, .public-live-catalog .catalog-message[role="alert"], .catalog-schedule p[role="alert"]) { padding: 13px 14px; }
 }

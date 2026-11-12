@@ -12,6 +12,8 @@ Object.assign(process.env, {
   PAYMENTS_ENABLED: 'true', VNPAY_ENABLED: 'true', VNPAY_TMN_CODE: 'TESTONLY', VNPAY_HASH_SECRET: 'isolated-payment-hold-signing-secret',
   VNPAY_PAYMENT_URL: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html', VNPAY_RETURN_URL: 'http://127.0.0.1:8000/api/payments/vnpay/return',
   VNPAY_IPN_URL: 'http://127.0.0.1:8000/api/payments/vnpay/ipn', PAYMENT_APP_URL: 'http://localhost:5173',
+  VIETQR_ENABLED: 'true', VIETQR_BANK: 'Vietcombank', VIETQR_ACCOUNT_NO: '000000000000',
+  VIETQR_ACCOUNT_NAME: 'TEST FIXTURE ONLY', SEPAY_WEBHOOK_API_KEY: 'isolated-sepay-fixture-key',
   CHATGPT_BRIDGE_ENABLED: 'false', EMAIL_ENABLED: 'false', MCP_ASSISTANT_ENABLED: 'false', REMINDER_SCHEDULER_ENABLED: 'false'
 });
 const [{ prisma }, { createApp }, hold, provider] = await Promise.all([
@@ -27,7 +29,9 @@ async function resource(category = 'EQUIPMENT', fee = 50000) {
   return row;
 }
 async function book(r, actor = 'owner', window = {}) {
-  const startAt = window.startAt || new Date(Date.now() + 48 * 3600000).toISOString();
+  // Use a slot visible in the Vietnam 08:00–20:00 calendar at any test run time.
+  const futureVietnamDate = new Date(Date.now() + (48 + 7) * 3600000).toISOString().slice(0, 10);
+  const startAt = window.startAt || new Date(`${futureVietnamDate}T10:00:00+07:00`).toISOString();
   const endAt = window.endAt || new Date(Date.parse(startAt) + 3600000).toISOString();
   const quote = await http.post('/api/booking-pricing/quote').set(auth(actor)).send({ resourceId: r.id, purposeCode: 'STUDY', startAt, endAt });
   assert.equal(quote.status, 200, JSON.stringify(quote.body));
@@ -43,7 +47,6 @@ function callback(row, changes = {}) {
   return { ...values, vnp_SecureHash: provider.signVnpay(values, process.env.VNPAY_HASH_SECRET) };
 }
 const ipn = (row, changes) => http.get('/api/payments/vnpay/ipn').query(callback(row, changes));
-
 test('payment reservation lifecycle on isolated PostgreSQL', async t => {
   try {
     assert.equal((await prisma.$queryRaw`SELECT current_database() AS name`)[0].name, 'lab_resources_payment_hold_test');
@@ -58,6 +61,30 @@ test('payment reservation lifecycle on isolated PostgreSQL', async t => {
       assert.equal(login.status, 200); tokens[name] = login.body.accessToken;
     }
     await prisma.userLabAssignment.create({ data: { userId: actors.staff.id, laboratoryId: lab.id } });
+
+    await t.test('legacy affiliations have equal quotes and payment holds', async () => {
+      await Promise.all([
+        prisma.user.update({ where: { id: actors.owner.id }, data: { customerType: 'INTERNAL' } }),
+        prisma.user.update({ where: { id: actors.peer.id }, data: { customerType: 'EXTERNAL' } })
+      ]);
+      const r = await resource();
+      const date = new Date(Date.now() + (48 + 7) * 3600000).toISOString().slice(0, 10);
+      const window = { startAt: `${date}T10:00:00+07:00`, endAt: `${date}T11:00:00+07:00` };
+      const quote = actor => http.post('/api/booking-pricing/quote').set(auth(actor)).send({ resourceId: r.id, purposeCode: 'STUDY', ...window });
+      const [first, second] = await Promise.all([quote('owner'), quote('peer')]);
+      assert.equal(first.status, 200);
+      assert.equal(second.status, 200);
+      assert.equal(first.body.amountVnd, 50000);
+      assert.equal(second.body.amountVnd, first.body.amountVnd);
+      assert.equal(second.body.version, first.body.version);
+      for (const [actor, hour] of [['owner', 10], ['peer', 12]]) {
+        const startAt = new Date(`${date}T${hour}:00:00+07:00`).toISOString();
+        const booking = await book(r, actor, { startAt });
+        assert.equal(booking.status, 201, JSON.stringify(booking.body));
+        assert.equal(booking.body.status, 'PENDING_APPROVAL');
+        assert.equal((await chargeFor(booking.body)).amount, 50000);
+      }
+    });
 
     await t.test('short-notice free and priced bookings fail at public quote, preflight and direct creation without writes', async () => {
       for (const fee of [0, 50000]) {
@@ -133,7 +160,9 @@ test('payment reservation lifecycle on isolated PostgreSQL', async t => {
       assert.equal((await http.post(`/api/bookings/${b.id}/check-out`).set(auth('staff')).send({ conditionBefore: 'Inspected' })).status, 409);
       const charges = await http.get(`/api/payments/booking/${b.id}`).set(auth('peer')); assert.ok([403,404].includes(charges.status));
       const calendar = await http.get('/api/calendar/slots').query({ resource_id: r.id, start_date: b.startAt }).set(auth('owner'));
-      assert.ok(JSON.stringify(calendar.body).includes('calendar.paymentHold'));
+      assert.equal(calendar.status, 200);
+      const slot = calendar.body.grid.flatMap(hour => hour.days).find(item => item.bookingId === b.id);
+      assert.equal(slot?.labelKey, 'calendar.paymentHold');
     });
 
     await t.test('free bookings confirm immediately without a synthetic payment', async () => {
@@ -158,12 +187,22 @@ test('payment reservation lifecycle on isolated PostgreSQL', async t => {
       assert.ok(Date.parse(first.body.transaction.paymentUrlExpiresAt) <= +deadline);
       assert.equal((await prisma.booking.findUnique({ where: { id: b.id } })).status, 'PENDING_APPROVAL');
       assert.equal((await pay(charge)).body.paymentUrl, first.body.paymentUrl);
+      const returned = await http.get('/api/payments/vnpay/return').query(callback(charge));
+      assert.equal(returned.status, 303);
+      assert.equal(returned.headers.location, `http://localhost:5173/workspace/payments?booking=${b.id}&receipt=${charge.id}&returned=1`);
+      assert.equal((await chargeFor(b)).status, 'pending');
+      assert.equal((await prisma.booking.findUnique({ where: { id: b.id } })).status, 'PENDING_APPROVAL');
+      assert.equal((await http.get(`/api/payments/${charge.id}/receipt`).set(auth('owner'))).status, 409);
       await ipn(charge, { vnp_ResponseCode: '24', vnp_TransactionStatus: '02' });
       const retry = await pay(charge); assert.equal(retry.status, 200);
       assert.equal(+(await prisma.booking.findUnique({ where: { id: b.id } })).paymentDueAt, +deadline);
       const current = await prisma.paymentTransaction.findUnique({ where: { id: retry.body.transaction.id } });
       assert.equal((await ipn(current)).body.RspCode, '00');
       assert.equal((await prisma.booking.findUnique({ where: { id: b.id } })).status, 'CONFIRMED');
+      const receipt = await http.get(`/api/payments/${current.id}/receipt`).set(auth('owner'));
+      assert.equal(receipt.status, 200);
+      assert.equal(receipt.body.transaction.id, current.id);
+      assert.ok([403, 404].includes((await http.get(`/api/payments/${current.id}/receipt`).set(auth('peer'))).status));
       await hold.expirePaymentHolds(prisma, { bookingId: b.id, now: new Date(+deadline + 1) });
       assert.equal((await prisma.booking.findUnique({ where: { id: b.id } })).status, 'CONFIRMED');
       assert.equal((await ipn(current)).body.RspCode, '02');
@@ -233,6 +272,65 @@ test('payment reservation lifecycle on isolated PostgreSQL', async t => {
         await new Promise(resolve => setTimeout(resolve, 5500));
         assert.equal((await prisma.booking.findUnique({ where: { id: b.id } })).status, 'CANCELLED');
       } finally { await stop(); }
+    });
+
+    await t.test('VietQR verifies incoming transfers once and reconciles late settlement', async () => {
+      const initiate = (charge, actor = 'owner') => http.post(`/api/payments/${charge.id}/vietqr`).set(auth(actor)).send({});
+      const notify = (body, authorization = `Apikey ${process.env.SEPAY_WEBHOOK_API_KEY}`) =>
+        http.post('/api/payments/sepay/webhook').set('Authorization', authorization).send(body);
+      async function openTransfer() {
+        const response = await book(await resource());
+        assert.equal(response.status, 201);
+        const booking = response.body;
+        const charge = await chargeFor(booking);
+        assert.equal((await initiate(charge, 'peer')).status, 404);
+        const opened = await initiate(charge);
+        assert.equal(opened.status, 200, JSON.stringify(opened.body));
+        assert.deepEqual((await initiate(charge)).body.vietqr, opened.body.vietqr);
+        assert.equal((await pay(charge)).body.error.code, 'PAYMENT_PROVIDER_LOCKED');
+        assert.equal(opened.body.transaction.paymentUrlExpiresAt, booking.paymentDueAt);
+        assert.equal(opened.body.transaction.status, 'pending');
+        assert.equal(opened.body.transaction.paymentUrl, undefined);
+        const qr = new URL(opened.body.vietqr.qrUrl);
+        assert.equal(qr.origin, 'https://vietqr.app');
+        assert.equal(qr.searchParams.get('acc'), process.env.VIETQR_ACCOUNT_NO);
+        assert.equal(qr.searchParams.get('bank'), process.env.VIETQR_BANK);
+        assert.equal(qr.searchParams.get('amount'), String(charge.amount));
+        assert.equal(qr.searchParams.get('des'), `SEVQR LRM${charge.txnRef}`);
+        const notice = {
+          id: crypto.randomInt(1, 2 ** 40),
+          gateway: process.env.VIETQR_BANK, accountNumber: process.env.VIETQR_ACCOUNT_NO,
+          transactionDate: new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+          content: `BANK ${qr.searchParams.get('des')}`, transferType: 'in', transferAmount: charge.amount,
+        };
+        return { booking, charge, notice };
+      }
+      const { booking, charge, notice } = await openTransfer();
+      assert.equal((await notify(notice, 'Apikey invalid')).status, 401);
+      for (const fields of [
+        { accountNumber: '000000000001' }, { gateway: 'MB' }, { transferType: 'out' },
+        { transferAmount: charge.amount + 1 }, { content: `${notice.content} LRM${charge.txnRef}` },
+        { transactionDate: '2026-02-31 12:30:00' }, { transactionDate: '2020-01-01 00:00:00' },
+      ]) assert.equal((await notify({ ...notice, ...fields })).status, 400);
+      assert.deepEqual((await notify({ ...notice, content: 'Unrelated bank transfer' })).body, { success: true });
+      assert.equal((await chargeFor(booking)).status, 'pending');
+      const callbacks = await Promise.all([notify(notice), notify(notice)]);
+      for (const result of callbacks) assert.deepEqual(result.body, { success: true });
+      assert.equal((await chargeFor(booking)).providerTransactionNo, String(notice.id));
+      assert.equal((await prisma.booking.findUnique({ where: { id: booking.id } })).status, 'CONFIRMED');
+      const receipt = await http.get(`/api/payments/${charge.id}/receipt`).set(auth('owner'));
+      assert.equal(receipt.status, 200);
+      assert.equal(receipt.body.transaction.provider, 'vietqr');
+      assert.equal((await http.get(`/api/payments/${charge.id}/receipt`).set(auth('peer'))).status, 404);
+      assert.equal((await notify({ ...notice, id: notice.id + 1 })).status, 409);
+
+      const late = await openTransfer();
+      assert.equal((await notify({ ...late.notice, id: notice.id })).status, 400);
+      const past = new Date(Date.now() - 1000);
+      await prisma.booking.update({ where: { id: late.booking.id }, data: { paymentDueAt: past } });
+      assert.deepEqual((await notify(late.notice)).body, { success: true });
+      assert.equal((await chargeFor(late.booking)).reconciliationStatus, 'manual_review');
+      assert.equal((await prisma.booking.findUnique({ where: { id: late.booking.id } })).status, 'CANCELLED');
     });
 
     await t.test('booking account lock still blocks credential changes until the booking transaction ends', async () => {

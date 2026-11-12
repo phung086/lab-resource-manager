@@ -1,3 +1,4 @@
+import { PageHeading } from '../../base/PageHeading';
 import { LocalDraftNotice } from '../../base/LocalDraftNotice';
 import { useEffect, useRef, useState } from 'react';
 import { submitChatOnEnter } from '../../../utils/chatKeyboard';
@@ -181,7 +182,7 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
   const labelSession = (row: SupportSession) => row.status === 'WAITING' ? tr('support.position', { position: row.queuePosition }) : tr(`support.status.${row.status}`);
   return <section className="support-page" data-role={user.role} data-has-session={Boolean(current && customerTab === 'history')} aria-labelledby="support-heading">
     {customer && <LocalDraftNotice disabled={busy} store={requestBackup} onRestore={value=>{setLaboratoryId(value.laboratoryId);setCategory(value.category);setRequestMessage(value.requestMessage);setShareContext(false);setCustomerTab('request');}}/>}
-    <header className="page-section-header"><div><h1 id="support-heading">{tr('support.title')}</h1><p>{tr(admin ? 'support.adminHelp' : staff ? 'support.staffHelp' : 'support.customerHelp')}</p></div><button type="button" className="secondary-button" onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />{tr('support.refresh')}</button></header>
+    <PageHeading className="page-section-header"><div><h1 id="support-heading">{tr('support.title')}</h1><p>{tr(admin ? 'support.adminHelp' : staff ? 'support.staffHelp' : 'support.customerHelp')}</p></div><button type="button" className="secondary-button" onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />{tr('support.refresh')}</button></PageHeading>
     {error && <p ref={errorRef} tabIndex={-1} className="alert danger" role="alert">{tr(error)}</p>}
     <p className={`support-connection${connectionError ? ' is-error' : ''}`} role="status">{connectionError ? tr(connectionError) : tr('support.liveHelp')}</p>
     {staff && <div className="support-availability"><Headphones size={20} /><div><strong>{tr(accepting ? 'support.accepting' : 'support.paused')}</strong><p>{tr('support.availabilityHelp')}</p></div><button type="button" className="primary-button" disabled={busy || !metadata?.laboratories.length} onClick={() => void mutate(availability)}>{tr(accepting ? 'support.pause' : 'support.goReady')}</button></div>}

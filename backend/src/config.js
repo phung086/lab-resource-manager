@@ -26,6 +26,7 @@ export const config = {
   sessionIdleMs,
   jwtIssuer: "lab-resource-manager",
   jwtAudience: "lab-resource-manager-api",
+  googleClientId: (process.env.GOOGLE_CLIENT_ID || "").trim(),
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   openaiModel: process.env.OPENAI_MODEL || "",
   assistantConversationEnabled: process.env.ASSISTANT_CONVERSATION_ENABLED !== "false",

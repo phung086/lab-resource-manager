@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {validatePaymentAction,safeVnpayUrl,canInitiateBookingPayment,paymentSessionStatus} from './src/utils/paymentValidation.ts';
+import test from 'node:test';import assert from 'node:assert/strict';import {validatePaymentAction,safeVnpayUrl,canInitiateBookingPayment,canChoosePaymentProvider,paymentSessionStatus} from './src/utils/paymentValidation.ts';
 test('charge requires an actual eligible booking and trimmed description',()=>{assert.equal(validatePaymentAction('charge',{bookingId:'unknown',description:'reason'},['known']).data,null);assert.deepEqual(validatePaymentAction('charge',{bookingId:'known',description:'  note  '},['known']).data,{bookingId:'known',description:'note'});});
 test('reconciliation keeps evidence boundaries',()=>{for(const value of ['a','x'.repeat(501)])assert.equal(validatePaymentAction('reconcile',{reason:value}).data,null);assert.equal(validatePaymentAction('reconcile',{reason:'  abc  '}).data.reason,'abc');});
 test('rate distinguishes blank from free and rejects unsafe numbers',()=>{for(const rate of ['','-1','0.1','100000001','Infinity','1e309'])assert.equal(validatePaymentAction('rate',{rate}).data,null);assert.equal(validatePaymentAction('rate',{rate:'0'}).data.hourlyRateVnd,0);assert.equal(validatePaymentAction('rate',{rate:'100000000'}).data.hourlyRateVnd,100000000);});
@@ -13,4 +13,11 @@ test('payment holds allow only the owner to pay before the original deadline', (
  assert.equal(canInitiateBookingPayment({id:'owner'},{...booking,paymentDueAt:new Date(Date.now()-1).toISOString()},charge),false);
  assert.equal(canInitiateBookingPayment({id:'owner'},{...booking,paymentDueAt:null},charge),false);
  assert.equal(canInitiateBookingPayment({id:'owner'},{...booking,startAt:new Date(Date.now()-1).toISOString()},charge),false);
+});
+
+test('VietQR locks the pending payment method until expiry', () => {
+  const charge = { provider: 'vietqr', status: 'pending', paymentUrlExpiresAt: new Date(Date.now() + 60000).toISOString() };
+  assert.equal(canChoosePaymentProvider(charge, 'vietqr'), true);
+  assert.equal(canChoosePaymentProvider(charge, 'vnpay'), false);
+  assert.equal(canChoosePaymentProvider({ ...charge, status: 'expired' }, 'vnpay'), true);
 });

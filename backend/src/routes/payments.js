@@ -8,10 +8,11 @@ import {
   getPayment,
   initiatePayment,
   processVnpayIpn,
+  processBankTransfer,
   paymentReceipt,
   resolvePaymentReconciliation,
 } from "../services/paymentService.js";
-import { verifyVnpay } from "../services/paymentProviders.js";
+import { paymentProviders, verifyVnpay } from "../services/paymentProviders.js";
 import { prisma } from "../db.js";
 import { config } from "../config.js";
 const router = express.Router();
@@ -33,7 +34,7 @@ const filters = z
   .object({
     bookingId: z.string().min(1).max(100).optional(),
     status: z.enum(["pending", "success", "failed", "expired", "refunded"]).optional(),
-    provider: z.enum(["unselected", "vnpay", "vietqr"]).optional(),
+    provider: z.enum(["unselected", ...paymentProviders]).optional(),
     search: z.string().max(100).optional(),
     from: z.string().datetime({ offset: true }).optional(),
     to: z.string().datetime({ offset: true }).optional(),
@@ -61,18 +62,31 @@ router.get(
   "/vnpay/return",
   route(async (req, res) => {
     verifyVnpay(req.query);
-    const transaction = await prisma.paymentTransaction.findUnique({ where: { txnRef: req.query.vnp_TxnRef }, select: { bookingId: true, appOrigin: true } });
-    const appOrigin = config.corsOrigins.includes(transaction?.appOrigin) ? transaction.appOrigin : process.env.PAYMENT_APP_URL || config.corsOrigins[0];
-    const target = new URL(appOrigin);
-    if (!["https:", "http:"].includes(target.protocol) || (config.isProduction && target.protocol !== "https:")) {
-      throw new Error("PAYMENT_APP_URL must be a valid application URL");
-    }
-    target.pathname = '/workspace/payments'; target.hash = ''; target.search = '';
-    if (transaction?.bookingId) target.searchParams.set('booking', transaction.bookingId);
-    target.searchParams.set('returned', '1');
-    res.set('Cache-Control', 'no-store').redirect(303, target.toString());
+    const transaction = await prisma.paymentTransaction.findUnique({
+      where: { txnRef: req.query.vnp_TxnRef },
+      select: { id: true, bookingId: true, appOrigin: true },
+    });
+    return redirectToReceipt(res, transaction);
   }),
 );
+
+function redirectToReceipt(res, transaction) {
+  const appOrigin = config.corsOrigins.includes(transaction?.appOrigin) ? transaction.appOrigin : process.env.PAYMENT_APP_URL || config.corsOrigins[0];
+  const target = new URL(appOrigin);
+  if (!["https:", "http:"].includes(target.protocol) || (config.isProduction && target.protocol !== "https:")) {
+    throw new Error("PAYMENT_APP_URL must be a valid application URL");
+  }
+  target.pathname = '/workspace/payments'; target.hash = ''; target.search = '';
+  if (transaction?.bookingId) target.searchParams.set('booking', transaction.bookingId);
+  if (transaction) target.searchParams.set('receipt', transaction.id);
+  target.searchParams.set('returned', '1');
+  return res.set('Cache-Control', 'no-store').redirect(303, target.toString());
+}
+
+router.post("/sepay/webhook", route(async (req, res) => {
+  await processBankTransfer(req.body, req.get("authorization"));
+  res.json({ success: true });
+}));
 router.use(requireAuth);
 router.post(
   "/charges",
@@ -120,7 +134,7 @@ router.get(
     res.json(await getPayment(req.params.id, req.user)),
   ),
 );
-for (const provider of ["vnpay", "vietqr"])
+for (const provider of paymentProviders)
   router.post(
     `/:id/${provider}`,
     route(async (req, res) => {

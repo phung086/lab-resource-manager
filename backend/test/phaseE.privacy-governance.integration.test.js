@@ -109,19 +109,16 @@ test("Phase E privacy and identity governance", { timeout: 180000 }, async (t) =
     assert.equal(JSON.stringify(admin.body).includes("secret-value"), true);
   });
 
-  await t.test("customer type remains an unverified declaration without authority", async () => {
-    for (const customerType of ["INTERNAL", "EXTERNAL"]) {
-      const registered = await request(app).post("/api/auth/register").send({
-        email: `declared-${customerType.toLowerCase()}-${marker}@example.test`, password, fullName: `Declared ${customerType}`, customerType
-      });
-      assert.equal(registered.status, 201, JSON.stringify(registered.body));
-      assert.equal(registered.body.user.role, "CUSTOMER");
-      assert.equal(registered.body.user.customerType, customerType);
-      assert.equal(registered.body.user.customerTypeSemantics, "SELF_DECLARED_UNVERIFIED");
-      assert.equal((await request(app).get("/api/users").set(bearer(registered.body.accessToken))).status, 403);
-      assert.equal((await request(app).post("/api/resources").set(bearer(registered.body.accessToken)).send({})).status, 403);
-    }
-    assert.equal((await request(app).post("/api/auth/register").send({ email: `bad-${marker}@example.test`, password, fullName: "Bad Type", customerType: "PARTNER" })).status, 400);
+  await t.test("public registration and profile exclude customer affiliation", async () => {
+    const registered = await request(app).post("/api/auth/register").send({
+      email: `registered-${marker}@example.test`, password
+    });
+    assert.equal(registered.status, 201);
+    assert.equal(registered.body.user.role, "CUSTOMER");
+    assert.equal(Object.hasOwn(registered.body.user, "customerType"), false);
+    assert.equal((await request(app).get("/api/users").set(bearer(registered.body.accessToken))).status, 403);
+    assert.equal((await request(app).post("/api/resources").set(bearer(registered.body.accessToken)).send({})).status, 403);
+    assert.equal((await request(app).post("/api/auth/register").send({ email: `bad-${marker}@example.test`, password, customerType: "INTERNAL" })).status, 400);
     const protectedPatch = await request(app).patch("/api/users/me").set(bearer(tokens.student)).send({ role: "ADMIN", isActive: false, customerType: "EXTERNAL" });
     assert.equal(protectedPatch.status, 400);
     const unchanged = await isolated.user.findUnique({ where: { id: fixture.users.student } });
@@ -129,8 +126,7 @@ test("Phase E privacy and identity governance", { timeout: 180000 }, async (t) =
     assert.equal(unchanged.isActive, true);
     assert.equal(unchanged.customerType, "INTERNAL");
     const declaration = await request(app).patch("/api/users/me").set(bearer(tokens.student)).send({ customerType: "EXTERNAL" });
-    assert.equal(declaration.status, 200);
-    assert.equal(declaration.body.customerTypeSemantics, "SELF_DECLARED_UNVERIFIED");
+    assert.equal(declaration.status, 400);
     assert.equal((await isolated.user.findUnique({ where: { id: fixture.users.student } })).role, "CUSTOMER");
   });
 

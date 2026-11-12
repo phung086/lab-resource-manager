@@ -44,13 +44,13 @@ const StockPage = React.lazy(() => import("./pages/LabWorkspace").then(module =>
 
 const ResourceDetailPage = React.lazy(() => import("./pages/ResourceDetailPage.tsx").then(module => ({ default: module.ResourceDetailPage })));
 const SelectionPage = React.lazy(() => import("./pages/SelectionPage.tsx").then(module => ({ default: module.SelectionPage })));
+const RepeatBookingDraft = React.lazy(() => import("./components/features/planning/RepeatBookingDraft.tsx").then(module => ({ default: module.RepeatBookingDraft })));
 const AuditLogsPage = React.lazy(() => import("./pages/AuditLogsPage.tsx").then(module => ({ default: module.AuditLogsPage })));
 
 const STAFF_ONLY_TABS = new Set(["users", "admin_management", "dashboard", "maintenance", "monitoring", "logs"]);
 
 function canAccessTab(role, tabId) {
   if (tabId === 'stock') return ['ADMIN', 'LAB_STAFF'].includes(role);
-  if (tabId === 'teaching') return false;
   if (!isTabEnabled(tabId)) return false;
   if (STAFF_ONLY_TABS.has(tabId)) return role === "ADMIN" || role === "LAB_STAFF";
   return true;
@@ -87,6 +87,7 @@ function Application() {
   const [calendarRevision, setCalendarRevision] = useState(0);
   const [dashboard, setDashboard] = useState(null);
   const [resources, setResources] = useState([]);
+  const [resourceSearchReady, setResourceSearchReady] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [bookingSummary, setBookingSummary] = useState(null);
   const [incidentSummary, setIncidentSummary] = useState(null);
@@ -251,6 +252,7 @@ function Application() {
 
       setDashboard(value("dashboard", null));
       setResources(value("resources", []));
+      setResourceSearchReady(data.resources?.status === 'fulfilled');
       setBookings(value("bookings", null)?.items || []);
       setBookingSummary(value("bookings", null)?.summary || null);
       setIncidentSummary(value("incidents", null)?.summary || null);
@@ -341,7 +343,7 @@ function Application() {
     return <PublicShell {...publicShellProps}><div className="public-auth-page">
       <a className="public-auth-back" href="/">{translate("ui.back_to_introduction_7876ebe9")}</a>
       {route.page === "register" ? <AuthRegisterView onRegisterSuccess={setUser} onSwitchToLogin={() => openAuth("login")} locale={locale} onLocaleChange={changeLocale} />
-        : <AuthLoginView onLogin={setUser} onSwitchToRegister={() => openAuth("register")} locale={locale} onLocaleChange={changeLocale} />}
+        : <AuthLoginView onLogin={setUser} onSwitchToRegister={() => openAuth("register")} />}
     </div></PublicShell>;
   }
   if (route.kind === "public") {
@@ -376,7 +378,10 @@ function Application() {
       incidentOpenCount={loading || error ? undefined : incidentSummary?.open}
       conflictsCount={0}
       loading={loading}
+      searchResources={resources.filter(resource => resource.operationalStatus !== 'RETIRED')}
+      searchResourcesReady={resourceSearchReady}
       onRefresh={refreshData}
+      selectionControl={user.role === "CUSTOMER" ? <ResourceSelectionTray items={resourceSelection.items} onOpen={() => navigateApp(resourceSelectionPath(activeTab === "resources" ? routeParams : {}))} /> : undefined}
       onAssistantPrefill={(slot) => setActiveGlobalModal({ type: "quick_booking", payload: slot })}
       onLogout={async () => {
         try {
@@ -425,7 +430,6 @@ function Application() {
       <React.Suspense fallback={<p className="empty-state" role="status">{translate("ui.loading_workspace_959fb711")}</p>}>
       {/* REQUIRED CORE — Gated when passwordResetRequired */}
       <ApiCooldownNotice />
-      {user.role === "CUSTOMER" && route.screen !== "resource-selection" && <ResourceSelectionTray items={resourceSelection.items} onOpen={() => navigateApp(resourceSelectionPath(activeTab === "resources" ? routeParams : {}))} />}
       {!user.passwordResetRequired && activeTab === "home" && (
         <WorkspaceHome
           bookingSummary={bookingSummary}
@@ -452,7 +456,7 @@ function Application() {
       {!user.passwordResetRequired && activeTab === 'stock' && canAccessTab(user.role, 'stock') && <StockPage locale={locale} user={user} maintenance={maintenance} />}
       {!user.passwordResetRequired && PAYMENT_FEATURES_ENABLED && activeTab === "payments" && (
         <React.Suspense fallback={<p role="status">{translate("ui.loading_payments_b1f91304")}</p>}>
-          <PaymentsPage user={user} bookingId={paymentBookingId} onClearBooking={() => { setPaymentBookingId(""); setActiveTab("payments"); }} />
+          <PaymentsPage user={user} onChanged={refreshData} bookingId={paymentBookingId} receiptId={routeParams.get("receipt") || undefined} onClearBooking={() => { setPaymentBookingId(""); setActiveTab("payments"); }} />
         </React.Suspense>
       )}
       {!user.passwordResetRequired && activeTab === "smart_calendar" && (
@@ -503,7 +507,10 @@ function Application() {
         onViewCalendar={(id, context) => { catalogueContext(context); openCalendar(id); }}
         onViewDetails={(id, context) => navigateApp(resourceDetailPath(id, catalogueContext(context)))}
         onAddToSelection={resourceSelection.add} selectedResourceIds={resourceSelection.items.map(item => item.id)} onBrowseContextChange={catalogueContext} onViewSelection={context => navigateApp(resourceSelectionPath(catalogueContext(context)))} />}
-      {!user.passwordResetRequired && route.screen === "resource-selection" && <SelectionPage key={user.id} userId={user.id} items={resourceSelection.items} onRemove={resourceSelection.remove}
+      {!user.passwordResetRequired && route.screen === "resource-selection" && user.role === "CUSTOMER" && routeParams.get("repeat") &&
+        <RepeatBookingDraft key={`${user.id}:${routeParams.get("repeat")}`} sourceId={routeParams.get("repeat")}
+          onSaved={() => { setCalendarRevision(value => value + 1); refreshData(); }} />}
+      {!user.passwordResetRequired && route.screen === "resource-selection" && !(user.role === "CUSTOMER" && routeParams.get("repeat")) && <SelectionPage key={user.id} userId={user.id} items={resourceSelection.items} onRemove={resourceSelection.remove}
         onBrowse={() => setActiveTab("resources", Object.fromEntries(routeParams))} onDetails={id => navigateApp(resourceDetailPath(id, routeParams))}
         onViewBookings={id => setActiveTab("bookings", id ? { booking: id } : {})}
         onConfirmed={() => { setCalendarRevision(value => value + 1); refreshData(); }} onPayment={PAYMENT_FEATURES_ENABLED ? openBookingPayment : undefined} />}

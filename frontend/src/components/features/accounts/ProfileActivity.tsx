@@ -1,3 +1,4 @@
+import { formatVnd } from '../../../utils/currency';
 import React from 'react';
 import { ArrowRight, CalendarDays, CreditCard } from 'lucide-react';
 import { useLocale } from '../../../providers/LocaleProvider';
@@ -11,7 +12,6 @@ export function ProfileActivity({ summary, spending }: { summary: unknown; spend
   const activity = buildProfileActivity(summary);
   const number = (value: number) => new Intl.NumberFormat(locale).format(value);
   const percent = (value: number) => new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(value);
-  const money = (value: number) => new Intl.NumberFormat(locale === 'en' ? 'en-GB' : 'vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
   return <>
     {!activity ? <p className="account-warning" role="status">{tr('ui.profile.activityUnavailable')}</p> : <>
       <dl className="account-activity-totals">
@@ -30,7 +30,7 @@ export function ProfileActivity({ summary, spending }: { summary: unknown; spend
     </>}
     {spending && Number.isFinite(spending.totalSpendVnd) && Number.isSafeInteger(spending.successfulPayments) && <section className="account-payment-evidence" aria-labelledby="account-payments-title">
       <h3 id="account-payments-title"><CreditCard size={18} aria-hidden="true" />{tr('ui.profile.verifiedPayments')}</h3>
-      <dl><div><dt>{tr('ui.profile.verifiedTotal')}</dt><dd>{money(spending.totalSpendVnd)}</dd></div><div><dt>{tr('ui.profile.successfulPayments')}</dt><dd>{number(spending.successfulPayments)}</dd></div><div><dt>{tr('ui.profile.lastPayment')}</dt><dd>{spending.lastPaidAt ? formatVietnamDateTime(spending.lastPaidAt) : tr('ui.profile.noPayment')}</dd></div></dl>
+      <dl><div><dt>{tr('ui.profile.verifiedTotal')}</dt><dd>{formatVnd(spending.totalSpendVnd, locale)}</dd></div><div><dt>{tr('ui.profile.successfulPayments')}</dt><dd>{number(spending.successfulPayments)}</dd></div><div><dt>{tr('ui.profile.lastPayment')}</dt><dd>{spending.lastPaidAt ? formatVietnamDateTime(spending.lastPaidAt) : tr('ui.profile.noPayment')}</dd></div></dl>
     </section>}
     <div className="account-section-action"><a className="btn btn-secondary" href={workspacePathForTab('bookings')}>{tr('ui.open_bookings_a9348073')}<ArrowRight size={16} aria-hidden="true" /></a></div>
   </>;

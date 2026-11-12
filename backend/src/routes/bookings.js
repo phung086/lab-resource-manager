@@ -1,6 +1,6 @@
 import { bookingContactSchema } from "../services/bookingContactService.js";
 import { expirePaymentHolds } from '../services/bookingPaymentHoldService.js';
-import { fulfillmentInputSchema, bookingAccess, selfCheckInRoom } from '../services/bookingFulfillmentService.js';
+import { fulfillmentInputSchema, bookingAccess, listHandoverReminders, selfCheckInRoom } from '../services/bookingFulfillmentService.js';
 import express from "express";
 import { z } from "zod";
 
@@ -18,8 +18,9 @@ import {
 } from "../services/bookingService.js";
 import { rescheduleBooking } from "../services/bookingService.js";
 import { getResourceAvailability, checkLabPolicyCompliance } from "../services/availabilityService.js";
-import { ADMIN, LAB_STAFF, STAFF_ROLES } from "../constants/roles.js";
+import { ADMIN, CUSTOMER, LAB_STAFF, STAFF_ROLES } from "../constants/roles.js";
 import { bookingListSchema, bookingPageSchema, listBookingPage, listLegacyBookings } from "../services/workspaceQueueService.js";
+import { getRepeatDraft } from "../services/planning/bundleService.js";
 
 const router = express.Router();
 router.post('/preflight', requireAuth, async (req, res, next) => {
@@ -82,7 +83,7 @@ const bookingInclude = {
 // GET / - List bookings with optional filters
 router.get("/", requireAuth, async (req, res, next) => {
   try {
-    await expirePaymentHolds(prisma);
+    await expirePaymentHolds(prisma, req.user.role === CUSTOMER ? { userId: req.user.id } : {});
     if (req.query.page !== undefined) {
       const query = bookingPageSchema.parse(req.query);
       if (req.user.role === LAB_STAFF && query.resourceId) {
@@ -108,6 +109,20 @@ router.get("/my-bookings", requireAuth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+router.get('/handover-reminders', requireAuth, requireRole(CUSTOMER), async (req, res, next) => {
+  try {
+    const reminders = await listHandoverReminders(prisma, req.user.id);
+    res.set('Cache-Control', 'no-store').json(reminders);
+  } catch (error) { next(error); }
+});
+
+router.get('/:id/repeat-draft', requireAuth, requireRole(CUSTOMER), async (req, res, next) => {
+  try {
+    const id = z.string().min(1).max(255).parse(req.params.id);
+    res.set('Cache-Control', 'no-store').json(await getRepeatDraft(req.user.id, id));
+  } catch (error) { next(error); }
 });
 
 // GET /availability - Pre-check availability for a resource and time window

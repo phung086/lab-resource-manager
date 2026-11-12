@@ -1,6 +1,9 @@
 import { z } from "zod";
-import { ADMIN, LAB_STAFF } from "../constants/roles.js";
+import { Prisma } from "@prisma/client";
+import { ADMIN, CUSTOMER, LAB_STAFF } from "../constants/roles.js";
 import { ALL_BOOKING_STATUSES, CHECKED_OUT, TERMINAL_STATUSES } from "../constants/bookingStatus.js";
+import { HttpError } from "../middleware/errors.js";
+import { HANDOVER_EARLY_MINUTES } from "./bookingFulfillmentService.js";
 import { incidentScopeWhere, OPEN_INCIDENT_STATUSES } from "./incidentService.js";
 
 const pageFields = {
@@ -16,7 +19,7 @@ export const bookingListSchema = z.object({
 export const bookingPageSchema = z.object({
   ...pageFields,
   status: z.enum(ALL_BOOKING_STATUSES).optional(),
-  filter: z.enum(['ALL', 'HISTORY', 'PENDING_PAYMENT', ...ALL_BOOKING_STATUSES]).default('ALL')
+  filter: z.enum(['ALL', 'HISTORY', 'PENDING_PAYMENT', 'ACTION_REQUIRED', ...ALL_BOOKING_STATUSES]).default('ALL')
 }).strict().refine(query => !query.status || query.filter === "ALL", { message: "Use either status or filter" });
 export const incidentPageSchema = z.object({
   ...pageFields,
@@ -54,6 +57,10 @@ function pagination(query, total) {
 export async function listBookingPage(db, actor, query, include) {
   const scope = { ...bookingScopeWhere(actor), ...(query.resourceId ? { resourceId: query.resourceId } : {}) };
   const filter = query.status || query.filter;
+  const actionFilter = filter === 'ACTION_REQUIRED';
+  if (actionFilter && actor.role !== CUSTOMER) {
+    throw new HttpError(403, 'Customer booking actions only', undefined, 'FORBIDDEN');
+  }
   const statuses = filter === 'PENDING_PAYMENT' ? ['PENDING_APPROVAL'] : filter === 'HISTORY' ? TERMINAL_STATUSES : filter === 'ALL' ? ALL_BOOKING_STATUSES : [filter];
   const paymentFilter = filter === 'PENDING_PAYMENT' ? { paymentDueAt: { not: null } } : filter === 'PENDING_APPROVAL' && !query.status ? { paymentDueAt: null } : {};
   const orderBy = filter === CHECKED_OUT
@@ -62,19 +69,30 @@ export async function listBookingPage(db, actor, query, include) {
       ? [{ startAt: "desc" }, { createdAt: "desc" }, { id: "desc" }]
       : [{ startAt: "asc" }, { createdAt: "asc" }, { id: "asc" }];
   const asOf = new Date();
+  const actionWhere = { ...scope, OR: [
+    { status: 'PENDING_APPROVAL', paymentDueAt: { gt: asOf }, startAt: { gt: asOf } },
+    { status: CHECKED_OUT },
+    { status: 'CONFIRMED', startAt: { lte: new Date(+asOf + HANDOVER_EARLY_MINUTES * 60000) }, endAt: { gt: asOf },
+      OR: [
+        { fulfillmentSnapshot: { equals: Prisma.AnyNull } },
+        { fulfillmentSnapshot: { path: ['mode'], equals: 'ROOM_SELF_SERVICE' } },
+        { fulfillmentSnapshot: { path: ['mode'], equals: 'LAB_PICKUP' } }
+      ] }
+  ] };
   return db.$transaction(async tx => {
     const counts = statusCounts(await tx.booking.groupBy({ by: ["status"], where: scope, _count: { _all: true } }));
     const overdue = await tx.booking.count({ where: { ...scope, status: CHECKED_OUT, endAt: { lt: asOf } } });
     const pendingPayment = await tx.booking.count({ where: { ...scope, status: 'PENDING_APPROVAL', paymentDueAt: { not: null } } });
-    const total = filter === 'PENDING_PAYMENT' ? pendingPayment : filter === 'PENDING_APPROVAL' && !query.status ? (counts.PENDING_APPROVAL || 0) - pendingPayment : sum(counts, statuses);
+    const actionRequired = actor.role === CUSTOMER ? await tx.booking.count({ where: actionWhere }) : undefined;
+    const total = actionFilter ? actionRequired : filter === 'PENDING_PAYMENT' ? pendingPayment : filter === 'PENDING_APPROVAL' && !query.status ? (counts.PENDING_APPROVAL || 0) - pendingPayment : sum(counts, statuses);
     const skip = (query.page - 1) * query.pageSize;
     const items = skip >= total ? [] : await tx.booking.findMany({
-      where: { ...scope, status: { in: statuses }, ...paymentFilter }, include, orderBy,
+      where: actionFilter ? actionWhere : { ...scope, status: { in: statuses }, ...paymentFilter }, include, orderBy,
       take: query.pageSize, skip
     });
     return {
       items, pagination: pagination(query, total),
-      summary: { total: sum(counts), byStatus: counts, pendingPayment, history: sum(counts, TERMINAL_STATUSES), overdue, asOf: asOf.toISOString() }
+      summary: { total: sum(counts), byStatus: counts, pendingPayment, actionRequired, history: sum(counts, TERMINAL_STATUSES), overdue, asOf: asOf.toISOString() }
     };
   }, { isolationLevel: "RepeatableRead" });
 }

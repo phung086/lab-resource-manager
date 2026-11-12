@@ -57,7 +57,7 @@ try {
     const data = await fetch(`${api}/resources`, { headers: { Authorization: `Bearer ${token}` } }); collectOriginal(await data.json());
     const user = await fetch(`${api}/auth/me`, { headers: { Authorization: `Bearer ${token}` } }); collectOriginal(await user.json());
     // Preserve original names, booking titles, course names and operational notes.
-    for (const path of ['/bookings', '/maintenance', '/incidents', ...(['student','lecturer','admin'].includes(role) ? ['/lab-workspace/groups'] : []), ...(role === 'admin' ? ['/users'] : [])]) {
+    for (const path of ['/bookings', '/maintenance', '/incidents', ...(role === 'admin' ? ['/users'] : [])]) {
       const response = await fetch(`${api}${path}`, { headers: { Authorization: `Bearer ${token}` } });
       assert.ok(response.ok); collectOriginal(await response.json());
     }

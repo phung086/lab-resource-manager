@@ -71,6 +71,8 @@ export interface MonitoringAlertView {
   lastObservedAt: string;
   acknowledgedAt?: string | null;
   acknowledgedBy?: { id: string; fullName: string; role: string } | null;
+  resolvedAt?: string | null;
+  resolution?: string | null;
   incident?: { id: string; severity: string; status: string; category?: string | null } | null;
 }
 
@@ -109,6 +111,8 @@ export interface TelemetryResourceView {
   };
   activeAlerts: MonitoringAlertView[];
 }
+
+export type TelemetrySummaryView = Pick<TelemetryResourceView, 'resource' | 'sourceHealth' | 'latestTelemetry' | 'monitoring'>;
 
 export interface DashboardPayload {
   generatedAt: string;

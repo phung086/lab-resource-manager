@@ -9,7 +9,7 @@ import { assertLabStaffResourceAccess } from "../middleware/labScope.js";
 import { HttpError } from "../middleware/errors.js";
 import { observeTelemetry } from "../metrics.js";
 import { cameraScopeWhere, recordCameraAccessAttempt, serializeCamera } from "../services/cameraService.js";
-import { acknowledgeMonitoringAlert, monitoringScopeWhere, serializeMonitoringAlert } from "../services/monitoringAlertService.js";
+import { acknowledgeMonitoringAlert, monitoringAlertInclude, monitoringScopeWhere, serializeMonitoringAlert } from "../services/monitoringAlertService.js";
 import {
   authenticateTelemetrySource,
   createTelemetrySource,
@@ -17,8 +17,10 @@ import {
   serializeTelemetrySource,
   telemetrySourceInclude
 } from "../services/telemetryIdentityService.js";
-import { persistTelemetrySample, resolveMonitoringThresholds, serializeTelemetry } from "../services/telemetryService.js";
-import { monitoringOperatorBudget, monitoringSourceBudget } from "../middleware/monitoringLimits.js";
+import { persistTelemetrySample, resolveMonitoringThresholds, serializeTelemetry, serializeTelemetryWithHistory } from "../services/telemetryService.js";
+import { monitoringOperatorBudget, monitoringSourceBudget, createMonitoringBudget } from "../middleware/monitoringLimits.js";
+import { listSimulations, startSimulation, stopSimulation, SIMULATION_SCENARIOS } from '../services/monitoringSimulationService.js';
+import { explainMonitoring } from '../services/monitoringExplanationService.js';
 
 const router = express.Router();
 
@@ -77,6 +79,7 @@ const thresholdSchema = z.object({
 
 const listSchema = z.object({
   resourceId: z.string().uuid().optional(),
+  view: z.enum(['summary', 'detail']).default('detail'),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
   take: z.coerce.number().int().min(1).max(200).default(100)
@@ -105,15 +108,6 @@ function sourceCredential(req) {
   return req.get("x-telemetry-source-token") || "";
 }
 
-function alertInclude() {
-  return {
-    source: { select: { id: true, code: true, name: true } },
-    resource: { select: { id: true, code: true, name: true } },
-    acknowledgedBy: { select: { id: true, fullName: true, role: true } },
-    incident: { select: { id: true, severity: true, status: true, category: true } }
-  };
-}
-
 async function authenticateSource(req, _res, next) {
   try { req.telemetrySource = await authenticateTelemetrySource(prisma, sourceCredential(req)); next(); } catch (error) { next(error); }
 }
@@ -135,7 +129,7 @@ router.post("/samples", authenticateSource, monitoringSourceBudget, async (req, 
         laboratory: { include: { monitoringThreshold: true } },
         monitoringAlerts: {
           where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } },
-          include: alertInclude(),
+          include: monitoringAlertInclude,
           orderBy: { openedAt: "desc" }
         }
       }
@@ -156,6 +150,33 @@ router.post("/samples", authenticateSource, monitoringSourceBudget, async (req, 
 });
 
 router.use(requireAuth, monitoringOperatorBudget);
+
+router.post('/explain', requireRole(ADMIN, LAB_STAFF), createMonitoringBudget(req => req.user.id, 6), async (req, res, next) => {
+  const controller = new globalThis.AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  const closed = () => { if (!res.writableEnded) controller.abort(); };
+  res.on('close', closed);
+  try {
+    const data = z.object({ resourceId: z.string().uuid(), question: z.string().trim().min(3).max(1000), locale: z.enum(['vi', 'en']).default('vi') }).strict().parse(req.body);
+    const result = await explainMonitoring(prisma, req.user, data, { signal: controller.signal, sessionId: req.authSession.id });
+    if (!controller.signal.aborted) res.set('Cache-Control', 'no-store').json(result);
+    else if (!res.destroyed) throw new HttpError(504, 'Monitoring explanation timed out', undefined, 'ASSISTANT_TIMEOUT');
+  } catch (error) { next(error); }
+  finally { clearTimeout(timer); res.off('close', closed); }
+});
+
+router.get('/simulations', requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
+  try { res.set('Cache-Control', 'no-store').json(await listSimulations(prisma, req.user)); } catch (error) { next(error); }
+});
+router.post('/simulations', requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
+  try {
+    const data = z.object({ resourceId: z.string().uuid(), scenario: z.enum(SIMULATION_SCENARIOS) }).strict().parse(req.body);
+    res.status(201).json(await startSimulation(prisma, req.user, data));
+  } catch (error) { next(error); }
+});
+router.post('/simulations/:id/stop', requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
+  try { z.object({}).strict().parse(req.body); res.json(await stopSimulation(prisma, req.user, z.string().uuid().parse(req.params.id))); } catch (error) { next(error); }
+});
 
 router.post("/cameras/:id/access", async (req, res, next) => {
   try {
@@ -318,8 +339,10 @@ router.get("/alerts", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
         ...(query.status ? { status: query.status } : {}),
         ...(query.resourceId ? { resourceId: query.resourceId } : {})
       },
-      include: alertInclude(),
-      orderBy: [{ lastObservedAt: "desc" }, { openedAt: "desc" }],
+      include: monitoringAlertInclude,
+      orderBy: query.status === 'RESOLVED'
+        ? [{ resolvedAt: { sort: 'desc', nulls: 'last' } }, { openedAt: 'desc' }]
+        : [{ lastObservedAt: 'desc' }, { openedAt: 'desc' }],
       take: query.take
     });
     res.json(alerts.map(serializeMonitoringAlert));
@@ -331,7 +354,7 @@ router.get("/alerts", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
 router.post("/alerts/:id/acknowledge", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {
     await prisma.$transaction((tx) => acknowledgeMonitoringAlert(tx, { alertId: req.params.id, actor: req.user }));
-    const alert = await prisma.monitoringAlert.findUnique({ where: { id: req.params.id }, include: alertInclude() });
+    const alert = await prisma.monitoringAlert.findUnique({ where: { id: req.params.id }, include: monitoringAlertInclude });
     res.json(serializeMonitoringAlert(alert));
   } catch (error) {
     next(error);
@@ -356,11 +379,11 @@ router.get("/", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
         telemetrySources: { orderBy: { createdAt: "desc" }, take: 1 },
         monitoringThreshold: true,
         laboratory: { include: { monitoringThreshold: true } },
-        monitoringAlerts: {
+        ...(query.view === 'detail' ? { monitoringAlerts: {
           where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } },
-          include: alertInclude(),
+          include: monitoringAlertInclude,
           orderBy: { openedAt: "desc" }
-        },
+        } } : {}),
         telemetrySamples: {
           where: {
             ...(query.from ? { sampledAt: { gte: query.from } } : {}),
@@ -368,32 +391,18 @@ router.get("/", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
           },
           include: { telemetrySource: true },
           orderBy: { sampledAt: "desc" },
-          take: query.take
+          take: query.view === 'summary' ? 1 : query.take
         }
       },
       orderBy: { code: "asc" }
     });
 
-    res.json(resources.map((resource) => ({
-      ...serializeTelemetry(resource, resource.telemetrySamples[0] || null),
-      history: resource.telemetrySamples.map((sample) => ({
-        id: sample.id,
-        origin: sample.origin,
-        simulationRunId: sample.simulationRunId,
-        sourceId: sample.sourceId,
-        source: sample.telemetrySource?.code || sample.source,
-        sampledAt: sample.sampledAt,
-        online: sample.online,
-        temperatureC: sample.temperatureC,
-        humidityPercent: sample.humidityPercent,
-        cpuPercent: sample.cpuPercent,
-        gpuPercent: sample.gpuPercent,
-        gpuMemoryPercent: sample.gpuMemoryPercent,
-        ramPercent: sample.ramPercent,
-        diskPercent: sample.diskPercent,
-        signals: sample.verifiedSignals || []
-      }))
-    })));
+    if (query.view === 'summary') return res.json(resources.map(resource => {
+      const { resource: identity, sourceHealth, latestTelemetry, monitoring } = serializeTelemetry(resource, resource.telemetrySamples[0] || null);
+      const { id, code, name, laboratoryId, operationalStatus } = identity;
+      return { resource: { id, code, name, laboratoryId, operationalStatus }, sourceHealth, latestTelemetry, monitoring };
+    }));
+    res.json(resources.map(resource => serializeTelemetryWithHistory(resource)));
   } catch (error) {
     next(error);
   }

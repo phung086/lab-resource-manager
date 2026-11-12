@@ -128,10 +128,11 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
     }, { timeout: 15_000 });
   }
   async function heartbeat(actor, accepting) {
-    operator(actor);
     return db.$transaction(async tx => {
       await lockDispatch(tx);
-      if (!(await labs(tx, actor)).length) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
+      const current = await lockCurrentAccount(tx, actor.id, actor.authVersion);
+      operator(current);
+      if (!(await labs(tx, current)).length) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
       const presence = await tx.supportPresence.upsert({ where: { userId: actor.id }, create: { userId: actor.id, accepting: accepting ?? false, lastSeenAt: clock() }, update: { ...(accepting === undefined ? {} : { accepting }), lastSeenAt: clock() } });
       await dispatch(tx);
       return presence;
@@ -139,27 +140,30 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
   }
   async function send(actor, id, data) {
     return db.$transaction(async tx => {
+      const current = await lockCurrentAccount(tx, actor.id, actor.authVersion);
       await lockSession(tx, id);
-      const row = await sessionFor(tx, actor, id);
-      if (actor.role === ADMIN) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
+      const row = await sessionFor(tx, current, id);
+      if (current.role === ADMIN) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
       const existing = await tx.supportMessage.findUnique({ where: { id: data.messageId }, include: { sender: { select: person } } });
       if (existing) {
         if (existing.sessionId !== id || existing.senderId !== actor.id || existing.body !== data.body || existing.source !== 'CHAT') fail('SUPPORT_MESSAGE_CHANGED');
         return existing;
       }
       if (!['WAITING', 'ACTIVE'].includes(row.status)) fail('SUPPORT_SESSION_CLOSED');
-      if (actor.role === LAB_STAFF && (row.status !== 'ACTIVE' || row.assignedStaffId !== actor.id)) throw missing();
-      const message = await tx.supportMessage.create({ data: { id: data.messageId, sessionId: id, senderId: actor.id, kind: actor.role === LAB_STAFF ? 'STAFF' : 'CUSTOMER', body: data.body }, include: { sender: { select: person } } });
+      if (current.role === LAB_STAFF && (row.status !== 'ACTIVE' || row.assignedStaffId !== actor.id)) throw missing();
+      const message = await tx.supportMessage.create({ data: { id: data.messageId, sessionId: id, senderId: actor.id, kind: current.role === LAB_STAFF ? 'STAFF' : 'CUSTOMER', body: data.body }, include: { sender: { select: person } } });
       await tx.supportSession.update({ where: { id }, data: { updatedAt: clock() } });
       return message;
     });
   }
   async function transition(actor, id, action, reason) {
     return db.$transaction(async tx => {
-      await lockDispatch(tx); await lockSession(tx, id);
-      const row = await sessionFor(tx, actor, id);
+      await lockDispatch(tx);
+      const current = await lockCurrentAccount(tx, actor.id, actor.authVersion);
+      await lockSession(tx, id);
+      const row = await sessionFor(tx, current, id);
       if (action === 'finish') {
-        operator(actor);
+        operator(current);
         if (row.status === 'CLOSED') return publicSession(tx, row);
         if (row.status !== 'ACTIVE' || row.assignedStaffId !== actor.id) fail('SUPPORT_INVALID_TRANSITION');
       } else if (action === 'cancel') {
@@ -167,7 +171,7 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
         if (row.status === 'CANCELLED') return publicSession(tx, row);
         if (!['WAITING', 'ACTIVE'].includes(row.status)) fail('SUPPORT_INVALID_TRANSITION');
       } else {
-        if (actor.role !== ADMIN) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
+        if (current.role !== ADMIN) throw new HttpError(403, 'FORBIDDEN', undefined, 'FORBIDDEN');
         if (row.status !== 'ACTIVE') fail('SUPPORT_INVALID_TRANSITION');
         await tx.supportPresence.updateMany({ where: { userId: row.assignedStaffId }, data: { accepting: false } });
       }

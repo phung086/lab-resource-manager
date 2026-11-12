@@ -1,5 +1,5 @@
 import React, { useId, useRef, useState } from 'react';
-import { UserPlus, User as UserIcon, Phone, Building2, KeyRound, UserCog } from 'lucide-react';
+import { UserPlus, User as UserIcon, Phone, KeyRound, UserCog } from 'lucide-react';
 import { apiRequest } from '../../../api.js';
 import { useLocale } from '../../../providers/LocaleProvider';
 import { managedUserServerFields, validateManagedUser, USER_ROLES, UserRole } from '../../../utils/userValidation';
@@ -14,7 +14,7 @@ export interface UserCreatePanelProps {
   onCollapse: () => void;
 }
 
-const initialForm = { fullName: '', email: '', password: '', phone: '', organization: '', role: 'CUSTOMER' as UserRole };
+const initialForm = { fullName: '', email: '', password: '', phone: '', role: 'CUSTOMER' as UserRole };
 
 export function UserCreatePanel(props: UserCreatePanelProps) {
   const { tr } = useLocale();
@@ -112,17 +112,6 @@ export function UserCreatePanel(props: UserCreatePanelProps) {
           <label htmlFor={id + '-phone'}>{tr('ui.contact_phone_3b6da57f')}
             <input id={id + '-phone'} name="phone" type="tel" autoComplete="tel" maxLength={20} value={draft.phone} aria-invalid={!!errors.phone} aria-describedby={errors.phone ? id + '-error-phone' : undefined} onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))} />
             {errors.phone && <span id={id + '-error-phone'} className="users-field-error">{tr(errors.phone)}</span>}
-          </label>
-        </fieldset>
-
-        <fieldset className="users-field-group">
-          <legend className="users-field-group-title">
-            <span className="users-field-group-icon"><Building2 size={14} aria-hidden="true" /></span>
-            {tr('ui.users.fieldGroup.affiliation')}
-          </legend>
-          <label htmlFor={id + '-organization'}>{tr('ui.department_organization_e30b494a')}
-            <input id={id + '-organization'} name="organization" type="text" autoComplete="organization" maxLength={160} value={draft.organization} aria-invalid={!!errors.organization} aria-describedby={errors.organization ? id + '-error-organization' : undefined} onChange={(event) => setDraft((current) => ({ ...current, organization: event.target.value }))} />
-            {errors.organization && <span id={id + '-error-organization'} className="users-field-error">{tr(errors.organization)}</span>}
           </label>
         </fieldset>
 

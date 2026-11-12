@@ -58,6 +58,29 @@ test.beforeEach(async () => {
 });
 test.after(async () => { await new Promise(resolve => server.close(resolve)); await prisma.$disconnect(); });
 
+test('a revoked session cannot send, change availability or close an open support session', async () => {
+  assert.equal((await ready('staff')).status, 200);
+  const opened = await ask('student');
+  assert.equal(opened.status, 201);
+  assert.equal(opened.body.assignedStaffId, users.staff.id);
+  const stale = await prisma.user.findUniqueOrThrow({ where: { id: users.staff.id } });
+  const before = await prisma.supportMessage.count({ where: { sessionId: opened.body.id } });
+  assert.equal((await request(app).post('/api/auth/logout-all').set(auth('staff'))).status, 204);
+  try {
+    const service = createSupportService(prisma);
+    const denied = error => error.code === 'AUTH_INVALID';
+    await assert.rejects(service.send(stale, opened.body.id, { messageId: id(), body: 'Must not be persisted' }), denied);
+    await assert.rejects(service.heartbeat(stale, false), denied);
+    await assert.rejects(service.transition(stale, opened.body.id, 'finish', 'Must not be persisted'), denied);
+    assert.equal(await prisma.supportMessage.count({ where: { sessionId: opened.body.id } }), before);
+    assert.equal((await prisma.supportSession.findUnique({ where: { id: opened.body.id } })).status, 'ACTIVE');
+  } finally {
+    const login = await request(app).post('/api/auth/login').send({ email: stale.email, password: 'SupportTest!2026' });
+    assert.equal(login.status, 200);
+    tokens.staff = login.body.accessToken;
+  }
+});
+
 test('two idle agents handle separate requests; FIFO positions move and completion assigns the oldest waiting request', async () => {
   assert.equal((await ready('staff')).status, 200); assert.equal((await ready('staff2')).status, 200);
   const first = await ask('student'), second = await ask('peer'), third = await ask('third'), fourth = await ask('fourth');

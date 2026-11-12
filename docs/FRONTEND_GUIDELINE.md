@@ -5,7 +5,8 @@
 - React
 - Vite
 - JavaScript/JSX and existing TypeScript component files
-- CSS currently centralized in `frontend/src/styles.css`
+- Shared CSS is loaded from `frontend/src/styles/`. Feature components may
+  import their own stylesheet for local presentation.
 
 Do not migrate to another frontend framework without explicit approval.
 
@@ -63,6 +64,8 @@ large unrelated diff.
   that customer. The backend independently enforces payment ownership.
   An elapsed hosted-session deadline may display expiry; it never proves failure
   or success at the provider and cannot change settlement evidence.
+  VietQR shows the issued amount, recipient and transfer description before the
+  deadline. The checkout polls backend status for verified settlement.
   VNPAY labels do not promise QR: the server may omit `vnp_BankCode` so the
   merchant offers its supported methods. The hosted-URL guard accepts an absent
   bank code or one uppercase alphanumeric code of 3–20 characters; duplicate,
@@ -73,13 +76,48 @@ large unrelated diff.
 - Frontend visibility is UX only.
 - Backend remains authority for every sensitive action.
 - Use canonical uppercase roles.
-- Handle `401` by clearing local session state and requiring re-authentication.
+- Handle protected-request `401` by clearing local session state and requiring
+  re-authentication. Credential rejection on sign-in is a form error.
+
+Login and registration share the Google Identity Services button. Render it
+only after backend configuration and challenge succeed. The Google credential
+and nonce stay in component memory. Persist the LAB session from the normal
+auth response. When configuration is absent, show Google as unavailable.
 
 ## Data Access
 
 Load internal maintenance jobs only for ADMIN/LAB_STAFF. CUSTOMER uses the safe
 resource schedule. Header/sidebar unread badges use `/notifications/unread-count`,
 independent of the50-row notification preview; refresh the count after mutations.
+User clarification 08/11/2026: the resource shortlist belongs in a header icon
+with a dismissible preview, not a persistent bottom tray. Keep historical events
+in the notification inbox instead of replaying global floating notices. Payment
+reads that change booking/charge state refresh shared workspace data; verified or
+refunded transactions must not retain an awaiting-payment countdown. Latest user
+clarification 08/11/2026: compact navigation keeps four primary role shortcuts
+and Profile; Menu exposes every other enabled, role-authorized destination.
+Desktop Menu expands the sidebar in the page layout. A single control beside
+the brand collapses it. Persist the desktop preference across reloads and
+breakpoint changes. Narrow viewports use a modal drawer with Escape and focus
+return.
+Unread notifications use the same user-controlled stacked preview in the inbox
+and customer overview. Opening or switching a preview never marks it read; only the explicit read
+action persists that change, and failed writes retain the item. Optional resource
+specifications and booking guidance use native disclosures with keyboard support
+and respect reduced-motion preferences.
+Public and signed-in discovery share image actions, compact typography, resource
+state presentation and optional specification disclosures. `StatusBadge` and
+`ResourceStatusPill` own shared presentation; booking status/legend tokens refer
+to the same semantic color variables. Physical operation, derived availability,
+booking status, payment status and incident severity remain separate contracts.
+`system-consistency.css` applies shared button and state presentation to existing
+screens. User correction 08/11/2026: retain the floating robot mascot at the bottom
+right throughout the workspace; do not replace it with a small inline control.
+Opening the mobile drawer or password modal temporarily hides the launcher.
+The booking workbench uses contact-style cards across the available width.
+Filter counts and pages remain server-owned. Open a single dossier on selection,
+focus it on load and return focus to its card on close. Keep handover, return,
+history and payment actions in the dossier.
 Until a read group belongs to the current account/role/credential-version scope,
 do not mount the private workspace with previous cached props. Component keys
 alone do not clear App state. Scope changes also close global private dialogs;
@@ -99,6 +137,11 @@ late reads from the prior scope cannot authorize displaying its cached data.
   Clamp an emptied last page after refresh. Read totals from the server summary,
   never from the current page length. Use the shared accessible VI/EN
   `QueuePagination` control and preserve keyboard focus after changing pages.
+
+Overview refinement: show date and time range once each, use the search
+summary as the disclosure's accessible heading, and retain accessible action
+names when repeated visual link text is omitted. Resource operations own their
+board markers/counts; do not depend on retired booking-board styles.
 
 ## Forms And Tables
 
@@ -136,6 +179,10 @@ awaiting payment, not staff approval. Show the fixed server deadline/countdown,
 open checkout after creation, and expose an awaiting-payment queue separate from
 legacy approvals. Free bookings confirm immediately. Only server expiry/IPN can
 cancel/confirm; a browser clock, redirect or return is not settlement evidence.
+The VNPAY return opens `/workspace/payments?receipt=<transactionId>`. Load the
+specific transaction and receipt through the authenticated payment API. Show a
+pending state with bounded polling while the payment is pending. Render the
+receipt only after the server authorizes and returns it.
 The local launcher defaults payments on; explicit LRM_LOCAL_PAYMENTS_ENABLED=false
 disables that optional runtime capability without making priced resources free.
 
@@ -177,6 +224,11 @@ entry per event/resource, not repeated hourly booking cards. Weekly comparison
 is for one resource and renders day summaries from `/calendar/events`, preserving
 events outside the old 08–20 grid; month remains a secondary overview.
 
+The calendar resource picker is a scheduling step with compact thumbnails,
+resource identity and service hours or booking restrictions. It uses up to
+three columns and nine resources per page. Full photos, pricing, selection-cart
+actions and descriptions belong to the resource catalogue or detail views.
+
 Use the stored LAB policy for service hours and duration hints. No policy means
 unknown hours, not an invented window. Empty event space and interval-filtered
 catalogue candidates are not a booking guarantee. Availability is checked on
@@ -196,10 +248,14 @@ bookings in bulk or retries mutations. Per-resource pending/uncertain fences and
 independent results are retained. Render limits page only the loaded catalogue;
 the resource API cap of 250 is disclosed rather than presented as full totals.
 
-Header and calendar search share ResourceSearchField with one outer focus ring;
-the inner input has no border/outline in focus. Calendar hides the header's
-global search because its local search already filters rooms/equipment on that
-screen. Clearing that local input clears its committed search filter. Use plain
+The workspace header and catalogue use ResourceFinder for suggestions from
+the already loaded resource list, with keyboard selection and the normal
+resource detail route. The public catalogue uses its own loaded catalogue and
+scoped facets. Its counts reflect the loaded results for search, laboratory and
+current availability. Calendar retains ResourceSearchField. Both controls use
+one outer focus ring. Calendar and the resource catalogue hide the header's
+global search so each of those pages has one search entry. Clearing the calendar
+input clears its committed search filter. Use plain
 task wording such as “Find an open time” and “Book this time”, not projection,
 candidate or precheck terminology in customer-facing copy.
 
@@ -364,8 +420,8 @@ UI. Default policy is disabled. Guest booking retains accepted public price.
 
 Profile uses a shared identity strip, four section controls and contextual
 membership/help alongside the main task; mobile puts the main task first.
-Contact editing excludes organization and self-declared classification and must
-omit both from PATCH, preserving stored compatibility data. Hidden sections keep
+Registration, guest booking and self/managed contact forms omit all affiliation
+fields from display and payloads. Hidden sections keep
 drafts; validation opens a collapsed address before focusing its invalid field.
 Activity bars use the authoritative all-time booking summary, with explicit
 counts and shares in a semantic table. Missing or inconsistent summaries are

@@ -6,6 +6,8 @@ report/audit/handoff AI cũ và ảnh chụp không phải ngữ cảnh bắt bu
 | Cần hiểu | Tài liệu |
 |---|---|
 | Đề tài và phạm vi | [PROJECT_DIRECTION](PROJECT_DIRECTION.md), [SRS](srs.md), [PRODUCT](../PRODUCT.md) |
+| Kế hoạch hoàn thiện | [GRADUATION_PLAN](GRADUATION_PLAN.md) |
+| Hồ sơ báo cáo | [Word](submission/Ho-so-do-an-Lab-Resource-Manager.docx), [PDF](submission/Ho-so-do-an-Lab-Resource-Manager.pdf) |
 | Trạng thái và quyết định | [CURRENT_STATE](CURRENT_STATE.md), [DECISIONS](DECISIONS.md) |
 | Cấu trúc và quy tắc | [PROJECT_STRUCTURE](PROJECT_STRUCTURE.md), [convention](convention.md), [AGENTS](../AGENTS.md) |
 | Frontend/backend | [Frontend](FRONTEND_GUIDELINE.md), [Backend](BACKEND_GUIDELINE.md) |

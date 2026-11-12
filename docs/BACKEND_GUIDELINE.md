@@ -45,6 +45,17 @@ Every sensitive route must verify:
 
 Do not rely on client-provided identity or lab fields.
 
+Google Identity Services is optional and configured with `GOOGLE_CLIENT_ID`.
+`/api/auth/google/config` exposes availability and the public client ID.
+`/api/auth/google/challenge` issues an origin-checked, short-lived nonce bound
+to an HttpOnly SameSite cookie. `POST /api/auth/google` verifies the provider
+signature, audience, issuer, expiry, verified email and nonce before using
+the unique Google subject. New Gmail or Google Workspace accounts receive
+`CUSTOMER` and use the standard persisted LAB session. First linking requires
+the existing password and invalidates previous sessions through authVersion.
+Google-only users set a local password through the existing email OTP flow.
+Keep provider credentials, cookies and password proofs out of logs.
+
 ## Workspace queue reads
 
 `GET /api/bookings` and `GET /api/incidents` opt into the paginated contract when
@@ -132,6 +143,15 @@ delivered, unread owner scope; a bounded recent-message list is not that total.
 - Retire instead of hard-delete.
 
 ## Runtime Truthfulness
+
+Monitoring keeps an existing metric alert open when a source disconnects or a
+sample omits that metric. A subsequent online reading must clear the condition.
+Resolving an alert does not close its linked incident or change physical state.
+The liveness worker and ingestion lock the same telemetry source. An active
+external source with an overdue online sample opens one `SOURCE_STALE` alert
+and creates notifications in the same transaction. Only a newer online sample
+within the configured freshness window resolves the alert and marks its notices
+read. Retain the original evidence sample and the recovery time for review.
 
 Database or infrastructure failure must produce explicit failure. Do not fall
 back to mock stores or fake success in core runtime.
@@ -242,7 +262,7 @@ must not echo secrets or send a provider request.
 ## Automatic account and payment emails
 
 Enqueue EmailDelivery in the same transaction as public registration, a new
-OTP-verified guest account, or verified VNPAY settlement. Use explicit public
+OTP-verified guest account, or verified payment settlement. Use explicit public
 field snapshots; never include passwords/hashes/OTP/tokens. Email is not account
 activation, password recovery, booking approval or payment authority. Return
 must not enqueue receipts; preserve cancelled/rejected/reconciliation outcomes.
@@ -267,8 +287,9 @@ loopback SMTP, never real business data or customer inboxes. See ADR-030/README.
 ADMIN manages all accounts; LAB_STAFF manages every CUSTOMER, regardless of LAB
 assignment, only through the account endpoints. Resource/booking/support scope
 is unchanged (ADR-034). List/get use safe projections; password hashes, OTP data
-and authVersion are private. PATCH /users/:id accepts contact only (fullName,
-phone, organization), never email, role or credentials. DELETE accepts reason
+and authVersion are private. PATCH /users/:id accepts contact only (fullName
+and phone). Affiliation fields are retained for historical data and excluded
+from account schemas and projections. DELETE accepts reason
 and soft-deletes; active bookings block removal. Removed accounts cannot activate.
 
 POST /auth/password-otp/request: {currentPassword}.

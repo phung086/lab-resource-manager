@@ -123,31 +123,6 @@
   font-size: 11px;
   overflow-wrap: anywhere;
 }
-.hub-orbit {
-  position: absolute;
-  right: 0;
-  top: 30px;
-  display: grid;
-  place-items: center;
-  width: 158px;
-  height: 158px;
-  border: 1px solid #ffffff20;
-  border-radius: 50%;
-  color: #ffffff22;
-  transform: rotate(14deg);
-  z-index: -1;
-}
-.hub-orbit::before,
-.hub-orbit::after {
-  content: "";
-  position: absolute;
-  inset: -20px;
-  border: 1px solid #ffffff12;
-  border-radius: 50%;
-}
-.hub-orbit::after {
-  inset: 20px;
-}
 .workspace-shell .lab-home .hub-button {
   display: inline-flex;
   align-items: center;
@@ -231,20 +206,8 @@
   gap: 12px;
   box-shadow: 0 6px 20px -16px #49337533;
 }
-.hub-search-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #8051ca;
-}
-.workspace-shell .lab-home .hub-search-heading h2 {
-  font-size: 18px;
-}
-.hub-search > p {
-  font-size: 13px;
-  color: var(--hub-muted);
-  line-height: 1.65;
-}
+
+
 .workspace-shell .lab-home .hub-search .home-finder {
   display: grid;
   gap: 10px;
@@ -644,10 +607,8 @@
   overflow: hidden;
   padding: 22px;
   border-radius: 16px;
-  background:
-    radial-gradient(ellipse at 105% 100%, #bf3892, transparent 75%),
-    linear-gradient(135deg, #3d4eaa, #6f32a2);
-  color: #fff;
+  background: var(--workspace-surface-muted, #f0f5ff);
+  color: var(--workspace-text, #202c47);
 }
 .hub-help-icon {
   display: grid;
@@ -655,16 +616,16 @@
   width: 45px;
   height: 45px;
   border-radius: 14px;
-  background: #ffffff1c;
-  border: 1px solid #ffffff30;
+  background: var(--workspace-surface, #fff);
+  color: var(--workspace-accent, #2563eb);
   margin-bottom: 17px;
 }
 .workspace-shell .lab-home .hub-help h2 {
-  color: #fff;
-  font-size: 20px;
+  color: inherit;
+  font-size: 17px;
 }
 .hub-help p {
-  color: #f1e9ff;
+  color: var(--workspace-text-muted, #596980);
   font-size: 12px;
   line-height: 1.8;
   margin-top: 10px;
@@ -675,7 +636,7 @@
   align-items: center;
   justify-content: space-between;
   background: #fff;
-  color: #53338c;
+  color: var(--workspace-accent, #2563eb);
   border: 0;
   border-radius: 8px;
   padding: 11px 13px;

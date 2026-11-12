@@ -11,6 +11,7 @@ test('managed customer creation normalizes contact while preserving password byt
   assert.deepEqual(result.errors, {});
   assert.equal(result.data.email, 'customer+lab@school.edu.vn'); assert.equal(result.data.fullName, 'Mai Phuong');
   assert.equal(result.data.phone, '0912345678'); assert.equal(result.data.password, account.password);
+  assert.equal(Object.hasOwn(result.data, 'organization'), false);
   for (const role of ['ADMIN', 'LAB_STAFF', 'STUDENT']) assert.ok(validateManagedUser({ ...account, role }, 'LAB_STAFF').errors.role);
   assert.ok(validateManagedUser(account, 'CUSTOMER').errors.role);
   assert.equal(validateManagedUser({ ...account, role: 'LAB_STAFF' }, 'ADMIN').data.role, 'LAB_STAFF');
@@ -19,9 +20,9 @@ test('managed account fields enforce credential and contact boundaries without g
   for (const password of ['x'.repeat(11), 'x'.repeat(129)]) assert.ok(validateManagedUser({ ...account, password }).errors.password);
   for (const email of ['x', '.a@school.edu.vn', 'a..b@school.edu.vn']) assert.ok(validateManagedUser({ ...account, email }).errors.email);
   for (const password of ['x'.repeat(12), 'x'.repeat(128)]) assert.equal(validateManagedUser({ ...account, password }).errors.password, undefined);
-  assert.deepEqual(validateManagedUserEdit({ fullName: 'Customer', phone: '', organization: '' }).errors, {});
-  assert.ok(validateManagedUserEdit({ fullName: '', phone: '12345', organization: 'x'.repeat(161) }).errors.organization);
-  assert.ok(validateManagedUserEdit({ fullName: 'Customer', phone: '12345', organization: '' }).errors.phone);
+  assert.deepEqual(validateManagedUserEdit({ fullName: 'Customer', phone: '', organization: 'Legacy data' }).data, { fullName: 'Customer', phone: '' });
+  assert.ok(validateManagedUserEdit({ fullName: '', phone: '12345' }).errors.fullName);
+  assert.ok(validateManagedUserEdit({ fullName: 'Customer', phone: '12345' }).errors.phone);
 });
 test('self password drafts require current password, different new password and matching confirmation', () => {
   assert.deepEqual(validatePasswordDraft({ currentPassword: 'current-secret', newPassword: ' new-secret ', confirmPassword: ' new-secret ' }), {});

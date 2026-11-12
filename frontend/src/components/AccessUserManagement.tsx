@@ -1,3 +1,4 @@
+import { PageHeading } from './base/PageHeading';
 import { HelpDisclosure } from "./base/HelpDisclosure";
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, RefreshCw, ArrowRight } from 'lucide-react';
@@ -20,7 +21,7 @@ import '../styles/users-workspace.css';
 
 type Change = { user: DirectoryUser; type: 'role' | 'active' | 'assign' | 'remove' | 'delete'; role?: UserRole; laboratory?: Laboratory };
 const failure = (error: unknown) => error instanceof Error ? error.message : 'ui.users.requestFailed';
-const initialForm = { fullName: '', email: '', password: '', phone: '', organization: '', role: 'CUSTOMER' as UserRole };
+const initialForm = { fullName: '', email: '', password: '', phone: '', role: 'CUSTOMER' as UserRole };
 const initialRole = () => { const role = readRouteParams().get('role'); return USER_ROLES.includes(role as UserRole) ? role || '' : ''; };
 
 export function AccessUserManagement({ actorRole, actorId }: { actorRole: string; actorId: string }) {
@@ -133,11 +134,11 @@ export function AccessUserManagement({ actorRole, actorId }: { actorRole: string
   const accessProps = user ? { isAdmin, actorId, user: { id: user.id, role: user.role, isActive: user.isActive, fullName: user.fullName }, busy, onPropose: onProposeFromPanel } : null;
 
   return <section className="view-section users-workspace" aria-busy={loading}>
-    <header className="users-heading"><div><h1>{tr(isAdmin ? 'ui.user_administration_2a750b85' : 'account.users.customers')}</h1><HelpDisclosure>{tr(isAdmin ? 'ui.users.subtitle' : 'account.users.staffScope')}</HelpDisclosure></div><div className="users-actions">
+    <PageHeading className="users-heading"><div><h1>{tr(isAdmin ? 'ui.user_administration_2a750b85' : 'account.users.customers')}</h1><HelpDisclosure>{tr(isAdmin ? 'ui.users.subtitle' : 'account.users.staffScope')}</HelpDisclosure></div><div className="users-actions">
       {isAdmin && <button type="button" className="btn btn-secondary" onClick={() => navigateApp(workspacePathForTab('chatgpt_bridge'))}>{tr('bridge.title')}</button>}
       <button type="button" className="btn btn-secondary" disabled={loading || busy} onClick={() => void load()}><RefreshCw size={16} />{tr('ui.refresh_46140fa8')}</button>
       <button type="button" className="btn btn-primary" aria-expanded={showCreate} disabled={busy} onClick={() => setShowCreate(value => !value)}><Plus size={16} />{tr('ui.create_user_70f60575')}</button>
-    </div></header>
+    </div></PageHeading>
     {notice && <p className="users-notice" role="status">{tr(notice)}</p>}
     {isAdmin && <LoyaltyPolicySettings />}
     {showCreate && (
@@ -151,7 +152,7 @@ export function AccessUserManagement({ actorRole, actorId }: { actorRole: string
       />
     )}
     {error && <div className="users-error" role="alert">{tr(error)} <button type="button" className="btn btn-secondary" disabled={loading || busy} onClick={() => void load()}>{tr('ui.users.retry')}</button></div>}
-    <div className="users-layout">
+    <div className={`users-layout users-visual-directory${user ? ' has-selected-user' : ''}`}>
       <UserDirectoryList
         users={users}
         total={users.length}
@@ -166,7 +167,7 @@ export function AccessUserManagement({ actorRole, actorId }: { actorRole: string
         onStatusFilter={setStatusFilter}
         onSelect={choose}
       />
-      <aside ref={dossierRef} tabIndex={-1} className="users-dossier" aria-label={tr('ui.users.accountDetails')}>
+      <aside hidden={!selected} ref={dossierRef} tabIndex={-1} className="users-dossier" aria-label={tr('ui.users.accountDetails')}>
         {!user ? <div className="users-empty users-dossier-empty"><h2>{tr(selected && !loading ? 'ui.users.accountUnavailable' : 'ui.users.selectAccount')}</h2><p>{tr('ui.users.selectHint')}</p></div> : (
           <>
             <AccountDetailPanel

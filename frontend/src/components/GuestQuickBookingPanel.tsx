@@ -75,7 +75,7 @@ export function GuestQuickBookingPanel({
 
   // Step 1: Resource & Booking fields
   const [title, setTitle] = useState(translate("ui.quick_booking_for_f8449101", { value0: resource.name }));
-  const [purpose, setPurpose] = useState(tr("ui.open_lab_use_academic_collaboration_fe1ad425"));
+  const [purpose, setPurpose] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => getVietnamTodayDateString());
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("11:00");
@@ -88,7 +88,6 @@ export function GuestQuickBookingPanel({
 
   // Step 2: Customer Information fields
   const [fullName, setFullName] = useState("");
-  const [organization, setOrganization] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState<AddressValue>({ addressLine: "", provinceCode: "", wardCode: "" });
@@ -301,7 +300,6 @@ export function GuestQuickBookingPanel({
           otpCode: otpCode.trim(),
           fullName: fullName.trim(),
           phone: phone.trim(),
-          organization: organization.trim() || undefined,
           address,
           booking: {
             resourceId: resource.id,
@@ -334,11 +332,11 @@ export function GuestQuickBookingPanel({
   const hasTraining = Boolean(resource.trainingRequirements && resource.trainingRequirements.length > 0);
 
   return (
-    <div ref={panelRef} className="guest-booking-panel" role="region" aria-label={tr("ui.quick_booking_for_external_visitors_0df84f94")} aria-busy={busy}>
+    <div ref={panelRef} className="guest-booking-panel" role="region" aria-label={tr("ui.guest.quickBooking")} aria-busy={busy}>
       <div className="guest-booking-head">
         <span>
           <WalletCards size={18} aria-hidden="true" />
-          {tr("ui.quick_booking_for_visitors_partners_33aa78be")}</span>
+          {tr("ui.guest.emailVerification")}</span>
         <p>{tr("ui.three_steps_choose_time_enter_c2441bb9")}</p>
       </div>
 
@@ -379,7 +377,7 @@ export function GuestQuickBookingPanel({
       </nav>
 
       <h4 className="guest-step-heading" ref={stepHeadingRef} tabIndex={-1}>
-        {tr("ui.step_6acd2db3")}{step} / 3: {step === 1 ? tr("ui.resource_and_schedule_cd6aafbe") : step === 2 ? tr("ui.contact_details_7077b10e") : tr("ui.verification_and_review_489a004a")}
+        {tr("ui.step_6acd2db3")} {step} / 3: {step === 1 ? tr("ui.resource_and_schedule_cd6aafbe") : step === 2 ? tr("ui.contact_details_7077b10e") : tr("ui.verification_and_review_489a004a")}
       </h4>
 
       {/* STEP 1: Resource & Booking */}
@@ -573,16 +571,6 @@ export function GuestQuickBookingPanel({
 
               />
             </label>
-            <label htmlFor="guest-organization">
-              {tr("ui.department_company_organization_a07413d8")}<input
-                id="guest-organization"
-                value={organization}
-                onChange={(e) => setOrganization(e.target.value)}
-                maxLength={160}
-                autoComplete="organization"
-
-              />
-            </label>
           </div>
 
           <div className="guest-address-block">
@@ -632,12 +620,6 @@ export function GuestQuickBookingPanel({
                 <dt>{tr("ui.booked_by_0600af3f")}</dt>
                 <dd>{fullName} · {phone} · {email}</dd>
               </div>
-              {organization && (
-                <div>
-                  <dt>{tr("ui.organization_9bfbf807")}</dt>
-                  <dd>{organization}</dd>
-                </div>
-              )}
               <div>
                 <dt>{tr("ui.address_249de6f5")}</dt>
                 <dd>{address.addressLine || "—"}</dd>

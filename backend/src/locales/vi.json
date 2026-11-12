@@ -1,6 +1,7 @@
 {
   "locale": "vi",
   "messages": {
+    "api.BOOKING_REPEAT_UNAVAILABLE": "Lịch này chưa thể dùng để đặt lại nhóm tài nguyên. Hãy chọn tài nguyên từ danh mục hiện tại.",
     "api.PLAN_SAME_LAB_REQUIRED": "Vui lòng chọn các tài nguyên thuộc cùng một LAB.",
     "api.REQUEST_KEY_REUSED": "Mã yêu cầu đã được sử dụng với nội dung khác. Kiểm tra các lịch đã tạo.",
     "api.WAITLIST_LIMIT": "Bạn đã theo dõi 20 khung giờ. Ngừng theo dõi một mục trước khi thêm.",
@@ -23,7 +24,6 @@
     "api.BRIDGE_REGISTRATION_LIMIT": "Tạm thời không thể đăng ký kết nối mới.",
     "api.ACCOUNT_INACTIVE": "Tài khoản đã bị khóa. Liên hệ quản trị viên.",
     "api.ACTIVITY_BOOKING_CLOSED": "Không thể gửi hoạt động từ lịch đặt đã bị từ chối hoặc hủy.",
-    "api.ACTIVITY_EXISTS": "Lịch đặt này đã được gửi vào một lớp học phần.",
     "api.ACTIVITY_REVISION_NOT_REQUESTED": "Hoạt động này không ở trạng thái yêu cầu chỉnh sửa.",
     "api.ADDRESS_SOURCE_UNAVAILABLE": "Không tải được danh mục địa chỉ Việt Nam. Vui lòng thử lại.",
     "api.AMOUNT_MISMATCH": "Số tiền thông báo thanh toán không khớp với mức phí đã chốt.",
@@ -71,8 +71,6 @@
     "api.EMAIL_DELIVERY_FAILED": "Không thể gửi email OTP. Kiểm tra địa chỉ và thử lại.",
     "api.EMAIL_NOT_CONFIGURED": "Dịch vụ email chưa được cấu hình. Liên hệ cán bộ LAB.",
     "api.FORBIDDEN": "Bạn không có quyền thao tác trên dữ liệu này. Kiểm tra vai trò và phạm vi được phân công.",
-    "api.GROUP_ARCHIVED": "Lớp này đã được lưu trữ và không nhận thay đổi.",
-    "api.GROUP_CODE_EXISTS": "Mã lớp đã tồn tại. Hãy dùng mã khác.",
     "api.IDEMPOTENCY_CONFLICT": "Mã yêu cầu đã được dùng cho một giao dịch khác. Tải lại dữ liệu trước khi thử lại.",
     "api.INCIDENT_INVALID_TRANSITION": "Trạng thái sự cố hiện tại không cho phép thao tác này.",
     "api.INSUFFICIENT_STOCK": "Giao dịch làm số tồn âm hoặc vượt giới hạn cho phép. Kiểm tra số lượng và tồn kho hiện tại.",
@@ -84,7 +82,6 @@
     "api.INVALID_SIGNATURE": "Chữ ký thông báo thanh toán không hợp lệ.",
     "api.INVALID_STAFF_ASSIGNMENT": "Chỉ tài khoản cán bộ LAB được phân công quản lý LAB.",
     "api.LABORATORY_INACTIVE": "LAB đã ngừng hoạt động.",
-    "api.LECTURER_NOT_FOUND": "Cần email của tài khoản giảng viên đang hoạt động.",
     "api.MAINTENANCE_BOOKING_CONFLICT": "Khung bảo trì trùng với lịch đặt đang hoạt động.",
     "api.MAINTENANCE_CHANGED": "Công việc bảo trì vừa thay đổi. Tải lại trước khi sửa.",
     "api.MAINTENANCE_CLOSED": "Chỉ được xuất vật tư cho công việc bảo trì còn mở.",
@@ -130,7 +127,6 @@
     "api.STOCK_CATEGORY": "Sổ kho chỉ áp dụng cho vật tư tiêu hao. Thiết bị được quản lý qua bàn giao và hoàn trả.",
     "api.STOCK_NOT_INITIALIZED": "Hãy ghi nhận phiếu nhập tồn đầu đã kiểm đếm và đơn vị tính trước.",
     "api.STOCK_UNIT": "Không được đổi đơn vị tính sau khi đã ghi sổ kho.",
-    "api.STUDENT_NOT_FOUND": "Cần email của tài khoản sinh viên đang hoạt động.",
     "api.SUPPORT_ALREADY_OPEN": "Bạn đã có một yêu cầu đang chờ hoặc đang hỗ trợ. Hãy tiếp tục phiên đó.",
     "api.SUPPORT_INVALID_TRANSITION": "Trạng thái phiên vừa thay đổi. Hãy làm mới trước khi tiếp tục.",
     "api.SUPPORT_MESSAGE_CHANGED": "Lần gửi lại khác tin nhắn đã lưu. Vui lòng kiểm tra lịch sử rồi gửi tin nhắn mới.",
@@ -379,6 +375,13 @@
     "notification.return.reminder.message": "{title} · {resourceCode} · {endAt}",
     "notification.return.reminder.title": "Nhắc hoàn trả tài nguyên",
     "profile.loyaltyBasis": "Tính từ thanh toán thành công và lịch đặt hoàn tất trong hệ thống",
+    "api.GOOGLE_NOT_CONFIGURED": "Đăng nhập Google hiện chưa khả dụng. Hãy dùng email và mật khẩu.",
+    "api.GOOGLE_UNAVAILABLE": "Chưa thể kết nối đăng nhập Google. Hãy thử lại hoặc dùng email và mật khẩu.",
+    "api.GOOGLE_INVALID_CREDENTIAL": "Không thể xác minh tài khoản Google. Hãy bắt đầu đăng nhập Google lại.",
+    "api.GOOGLE_LINK_REQUIRED": "Hãy xác nhận mật khẩu LAB để liên kết tài khoản Google.",
+    "api.GOOGLE_IDENTITY_CONFLICT": "Tài khoản LAB này đã liên kết với một tài khoản Google khác.",
+    "api.GOOGLE_EMAIL_CHANGED": "Email Google không còn khớp hồ sơ LAB. Hãy dùng email và mật khẩu hoặc liên hệ hỗ trợ.",
+    "api.GOOGLE_EMAIL_UNVERIFIED": "Hãy dùng Gmail hoặc Google Workspace đã xác minh; bạn cũng có thể đăng ký bằng email và mật khẩu.",
     "api.RESOURCE_MAINTENANCE_DUE": "Tài nguyên đã đến hạn bảo trì. Hoàn tất bảo trì và kiểm tra đạt trước khi sử dụng tiếp.",
     "api.RESOURCE_COMPONENT_BROKEN": "Tài nguyên có linh kiện hỏng cần sửa chữa.",
     "api.RESOURCE_CARE_REQUIRED": "Cần cấu hình chu kỳ bảo trì trước khi vận hành.",
@@ -490,6 +493,8 @@
     "calendar.noticeRequired": "Chưa đủ thời gian đặt trước tối thiểu của LAB.",
     "email.auto.welcomeTitle": "Thông tin tài khoản LAB",
     "email.auto.paymentTitle": "Xác nhận thanh toán",
-    "email.auto.reconciliationTitle": "Thanh toán cần đối soát"
+    "email.auto.reconciliationTitle": "Thanh toán cần đối soát",
+    "notification.monitoring.stale.title": "Nguồn giám sát ngừng gửi mẫu",
+    "notification.monitoring.stale.message": "{resourceName} ({resourceCode}) chưa có mẫu mới từ nguồn {sourceCode} sau {minutes} phút. Mở giám sát để kiểm tra kết nối."
   }
 }
