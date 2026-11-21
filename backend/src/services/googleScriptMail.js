@@ -13,7 +13,7 @@ export async function callGoogleScriptMail(operation, message) {
   if (!config) return { success: false, error: "GOOGLE_SCRIPT_MAIL_NOT_CONFIGURED" };
 
   try {
-    const signal = AbortSignal.timeout(10000);
+    const signal = globalThis.AbortSignal.timeout(10000);
     let response = await fetch(config.url, {
       method: "POST", redirect: "manual", signal,
       headers: { "Content-Type": "application/json" },
