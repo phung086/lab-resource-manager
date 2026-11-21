@@ -4,7 +4,7 @@ import { translate } from "../../../i18n.js";
 import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ExternalLink, RefreshCw, ShieldCheck, CreditCard, ReceiptText, CalendarDays, CircleAlert, Landmark } from "lucide-react";
-import { canChoosePaymentProvider, canInitiateBookingPayment, paymentMethods, paymentSessionStatus, paymentStatusLabels, safeVnpayUrl, type PaymentProvider, type PaymentAvailability } from "../../../utils/paymentValidation";
+import { canChoosePaymentProvider, canInitiateBookingPayment, findSuccessfulBookingPayment, paymentMethods, paymentSessionStatus, paymentStatusLabels, safeVnpayUrl, type PaymentProvider, type PaymentAvailability } from "../../../utils/paymentValidation";
 import { apiRequest } from "../../../api.js";
 import { formatVietnamDateTime } from "../../../utils/timezone";
 import { QuoteDiscountSummary } from './QuoteDiscountSummary';
@@ -52,7 +52,7 @@ export function BookingCheckout({ user, bookingId, onClearBooking, onChanged }: 
         apiRequest("/payments/my",{signal:controller.signal})
       ]);
       if(controller.signal.aborted)return;setBooking(bookingRow);
-      setCharge(charges.find((row: Charge) => row.status === "success") || charges.find((row: Charge) => row.status === "pending") || charges.find((row: Charge) => ["failed", "expired"].includes(row.status)) || charges[0] || null);
+      setCharge(findSuccessfulBookingPayment<Charge>(charges) || charges.find((row: Charge) => row.status === "pending") || charges.find((row: Charge) => ["failed", "expired"].includes(row.status)) || charges[0] || null);
       setProviders(paymentList.providers || {});
       const snapshot = JSON.stringify([bookingRow.id, bookingRow.status, bookingRow.paymentDueAt, charges.map((row: Charge) => [row.id, row.status])]);
       if (snapshot !== sharedSnapshot.current) {
@@ -74,7 +74,7 @@ export function BookingCheckout({ user, bookingId, onClearBooking, onChanged }: 
         try {
           const rows: Charge[] = await apiRequest(`/payments/booking/${encodeURIComponent(bookingId)}`, { signal:controller.signal });
           if (stopped) return;
-          const updated = rows.find(row => row.status === 'success') || rows.find(row => row.id === charge?.id);
+          const updated = findSuccessfulBookingPayment(rows) || rows.find(row => row.id === charge?.id);
           if (updated && updated.status !== 'pending') { await load(true); return; }
         } catch (cause: any) {
           if (!controller.signal.aborted) setError(cause.message);

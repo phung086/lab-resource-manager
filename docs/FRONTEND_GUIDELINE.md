@@ -309,6 +309,11 @@ describe the limit for open-ended replies. Operator support opens the staff/admi
 inbox; only customers create human-help requests or receive booking/support drafts.
 Status polling may retry bounded transient GET failures; never retry question
 creation or authorization/validation errors automatically.
+The composer waits for assistant settings. It loads resource choices only when
+the user opens the context disclosure, where a failed load offers its own retry.
+Work status checks run every 500 ms for the first four seconds and after a new
+partial reply, then return to the two-second interval. Duplicate status results
+keep the existing rendered turn.
 
 15/10/2026 clarification (ADR-039): the chatbot has a `LocaleScope` over the shared
 catalogs. Its VI/EN does not activate/store the global locale or change html.lang;

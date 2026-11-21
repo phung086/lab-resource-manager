@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Clock3, DoorOpen, GripVertical, Microscope, Package, Server, Wrench } from "lucide-react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Clock3, DoorOpen, GripVertical, Microscope, Package, Server, Wrench } from "lucide-react";
 
 import { useLocale } from "../../../providers/LocaleProvider";
 import { resourceImageProps } from "../../../utils/resourceImage";
@@ -50,6 +50,16 @@ export function ResourceOperationsBoard(props: ResourceOperationsBoardProps) {
   const { tr } = useLocale();
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const columnsRef = useRef<HTMLDivElement>(null);
+  const columnsId = useId();
+
+  function scrollColumns(direction: -1 | 1) {
+    const board = columnsRef.current;
+    const firstColumn = board?.firstElementChild;
+    if (!board || !firstColumn) return;
+    const gap = Number.parseFloat(window.getComputedStyle(board).columnGap) || 0;
+    board.scrollBy({ left: direction * (firstColumn.getBoundingClientRect().width + gap) });
+  }
 
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -108,9 +118,13 @@ export function ResourceOperationsBoard(props: ResourceOperationsBoardProps) {
             <dd>{props.resources.length}</dd>
           </div>
         </dl>
+        <div className="resource-board-navigation">
+          <button type="button" aria-label={tr("ui.kanban.previous")} aria-controls={columnsId} onClick={() => scrollColumns(-1)}><ChevronLeft size={18} aria-hidden="true" /></button>
+          <button type="button" aria-label={tr("ui.kanban.next")} aria-controls={columnsId} onClick={() => scrollColumns(1)}><ChevronRight size={18} aria-hidden="true" /></button>
+        </div>
       </header>
 
-      <div className="resource-board-columns" role="region" aria-label={tr("ui.physical_state_c30af32d")} tabIndex={0}>
+      <div ref={columnsRef} id={columnsId} className="resource-board-columns" role="region" aria-label={tr("ui.physical_state_c30af32d")} tabIndex={0}>
         {columns.map((column) => (
           <section
             key={column.status}

@@ -6,6 +6,7 @@ import { enqueuePaymentReceipt } from "./emailAutomationService.js";
 import { config } from '../config.js';
 import { isPaymentHold, effectivePaymentDeadline, lockPaymentBooking, expirePaymentHolds, expireLockedPaymentHold, confirmPaidBooking } from './bookingPaymentHoldService.js';
 import { scheduleBookingReminders } from './notificationService.js';
+import { bookingRoomAccessCode } from './bookingRoomAccessCode.js';
 import {
   buildVnpayUrl,
   verifyVnpay,
@@ -82,8 +83,7 @@ async function notifyPayment(tx, row, event, { reconciliation = false, now = new
   const booking = event === 'SUCCESS' && !reconciliation && row.bookingId
     ? await tx.booking.findUnique({ where: { id: row.bookingId }, include: { resource: true } }) : null;
   const mode = booking?.fulfillmentSnapshot?.mode || (booking?.resource.category === 'ROOM' ? 'ROOM_SELF_SERVICE' : 'LAB_PICKUP');
-  const roomAccessReady = mode === 'ROOM_SELF_SERVICE' && booking
-    ? Boolean((await tx.resourceFulfillment.findUnique({ where: { resourceId: booking.resourceId }, select: { roomPasswordCiphertext: true } }))?.roomPasswordCiphertext) : false;
+  const roomAccessReady = mode === 'ROOM_SELF_SERVICE' && Boolean(bookingRoomAccessCode(booking));
   const guidanceMode = mode === 'ROOM_SELF_SERVICE' && !roomAccessReady ? 'ROOM_ACCESS_PENDING' : mode;
   const definitions = [{
     userId: row.userId,
@@ -439,19 +439,16 @@ async function settlePayment({ provider, txnRef, recipient, amount, success, pai
         undefined,
         "INVALID_PROVIDER_CALLBACK",
       );
-    if (!Number.isSafeInteger(row.amount) || amount !== row.amount)
+    const previouslySettled = row.status === "success" || row.status === "refunded";
+    const additionalTransfer = recipient && previouslySettled && row.providerTransactionNo !== evidence.providerTransactionNo;
+    if (!Number.isSafeInteger(row.amount) || (amount !== row.amount && !additionalTransfer))
       throw new HttpError(
         400,
         "Số tiền callback không khớp.",
         undefined,
         "AMOUNT_MISMATCH",
       );
-    if (row.status === "success" || row.status === "refunded") {
-      if (recipient && row.providerTransactionNo !== evidence.providerTransactionNo) {
-        throw new HttpError(409, 'Khoản chuyển thêm cần được đối soát.', undefined, 'INVALID_PROVIDER_CALLBACK');
-      }
-      return false;
-    }
+    if (previouslySettled && !additionalTransfer) return false;
 
     if (row.bookingId) await lockPaymentBooking(tx, row.bookingId);
     const now = new Date();
@@ -464,12 +461,28 @@ async function settlePayment({ provider, txnRef, recipient, amount, success, pai
     if (success) {
       const providerTransactionNo = evidence.providerTransactionNo ?? evidence.vnpTransactionNo;
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment-evidence:${provider}:${providerTransactionNo}`}))::text`;
+      // A separate ledger entry keeps the issued QR reference and first receipt intact.
+      const extraTransferRef = recipient ? `VQR-EXTRA-${txnRef}-${providerTransactionNo}` : null;
       const transactionNoOwner = await tx.paymentTransaction.findFirst({
         where: { ...(recipient ? { provider, providerTransactionNo } : { vnpTransactionNo: providerTransactionNo }), id: { not: row.id } },
-        select: { id: true },
+        select: { txnRef: true, amount: true },
       });
-      if (transactionNoOwner)
+      if (transactionNoOwner) {
+        if (recipient && transactionNoOwner.txnRef === extraTransferRef && transactionNoOwner.amount === amount) return false;
         throw new HttpError(400, "Mã giao dịch provider đã được sử dụng.", undefined, "INVALID_PROVIDER_CALLBACK");
+      }
+      if (row.status === "success" || row.status === "refunded") {
+        if (!recipient || row.providerTransactionNo === providerTransactionNo) return false;
+        const extra = await tx.paymentTransaction.create({ data: {
+          id: crypto.randomUUID(), txnRef: extraTransferRef, bookingId: row.bookingId,
+          userId: row.userId, currency: row.currency, provider, amount, paidAt,
+          providerTransactionNo, status: "success", reconciliationStatus: "manual_review",
+          reconciliationReason: `Additional bank transfer for payment ${txnRef}.`,
+        } });
+        await notifyPayment(tx, extra, "SUCCESS", { reconciliation: true, now });
+        await enqueuePaymentReceipt(tx, extra);
+        return true;
+      }
       const otherSuccess = row.bookingId
         ? await tx.paymentTransaction.findFirst({
             where: { bookingId: row.bookingId, status: "success", id: { not: row.id } },

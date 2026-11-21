@@ -51,7 +51,8 @@ Object.assign(process.env, {
   VNPAY_RETURN_URL: "http://127.0.0.1:8000/api/payments/vnpay/return", VNPAY_IPN_URL: "http://127.0.0.1:8000/api/payments/vnpay/ipn",
   PAYMENT_APP_URL: "http://localhost:5173", EMAIL_APP_URL: "http://localhost:5173",
   SMTP_HOST: "127.0.0.1", SMTP_PORT: String(smtp.address().port), SMTP_USER: "fixture", SMTP_PASS: "fixture-only",
-  EMAIL_FROM: '"LAB Fixture" <sender@mailautomation.test>', EMAIL_AUTOMATION_ENABLED: "false", REMINDER_SCHEDULER_ENABLED: "false"
+  EMAIL_FROM: '"LAB Fixture" <sender@mailautomation.test>', EMAIL_AUTOMATION_ENABLED: "false",
+  OPERATOR_ALERT_EMAILS_ENABLED: "false", REMINDER_SCHEDULER_ENABLED: "false"
 });
 const [{ createApp }, { prisma }, automation, { signVnpay }, { ensureBookingCharge }, guest] = await Promise.all([
   import("../src/app.js"), import("../src/db.js"), import("../src/services/emailAutomationService.js"),
@@ -145,6 +146,49 @@ test("registration commits a durable welcome email with no passwords/tokens; rea
   assert.doesNotMatch(messages[0].raw, /EmailRegistration!2026/);
   assert.equal((await register(recipient)).status, 409); assert.equal(await prisma.emailDelivery.count(), 1);
   await dispatch(); assert.equal(messages.length, 1);
+});
+
+test("optional support and critical incident emails deliver once to assigned staff by loopback SMTP", async () => {
+  const staff = await prisma.user.create({ data: { id: randomUUID(), email: email("staff"), fullName: "Email test staff",
+    role: "LAB_STAFF", passwordHash: await bcrypt.hash(password, 4) } });
+  const other = await prisma.user.create({ data: { id: randomUUID(), email: email("unassigned"), fullName: "Other staff",
+    role: "LAB_STAFF", passwordHash: "test-fixture" } });
+  const lab = await prisma.laboratory.create({ data: { id: randomUUID(), code: "EMAIL-" + randomUUID(),
+    name: "Operator email test LAB", buildingId: "email-building" } });
+  await prisma.userLabAssignment.create({ data: { userId: staff.id, laboratoryId: lab.id } });
+  const resource = await prisma.resource.create({ data: { id: randomUUID(), code: "EMAIL-INCIDENT-" + randomUUID(),
+    name: "Email test room", location: "Test Lab", laboratoryId: lab.id, category: "ROOM", subtype: "ROOM" } });
+  const actor = { Authorization: `Bearer ${token}` };
+  const report = severity => request(app).post("/api/incidents").set(actor).send({ resourceId: resource.id, severity,
+    title: "Isolated incident", description: "Private incident report fixture" }).expect(201);
+  await report("high");
+  assert.equal(await prisma.emailDelivery.count(), 0, "Emails are opt-in");
+  const oldUrl = process.env.EMAIL_APP_URL;
+  process.env.EMAIL_APP_URL = "https://lab.example.test";
+  process.env.OPERATOR_ALERT_EMAILS_ENABLED = "true";
+  const support = { requestId: randomUUID(), laboratoryId: lab.id, category: "OTHER", message: "Private support text fixture" };
+  try {
+    await report("medium");
+    const { body: incident } = await report("critical");
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await request(app).post("/api/support/sessions").set(actor).send(support).expect(201);
+      assert.equal(response.body.status, "WAITING");
+    }
+    const rows = await prisma.emailDelivery.findMany({ where: { kind: "OPERATOR_ALERT" } });
+    assert.equal(rows.length, 2);
+    assert.ok(rows.every(row => row.userId === staff.id && row.userId !== other.id && row.status === "PENDING"));
+    assert.deepEqual(await dispatch(), { sent: 2, failed: 0 });
+    assert.equal(messages.length, 2);
+    assert.ok(messages.every(message => message.recipient === staff.email && !/Private .* fixture/.test(smtpContent(message.raw))));
+    assert.ok(messages.some(message => smtpContent(message.raw).includes("/workspace/support")));
+    assert.ok(messages.some(message => smtpContent(message.raw).includes(`/workspace/incidents?incident=${incident.id}`)));
+    await dispatch(); assert.equal(messages.length, 2);
+  } finally {
+    process.env.OPERATOR_ALERT_EMAILS_ENABLED = "false";
+    process.env.EMAIL_APP_URL = oldUrl;
+    await request(app).post(`/api/support/sessions/${support.requestId}/cancel`).set(actor)
+      .send({ reason: "End of email test" });
+  }
 });
 
 test("missing SMTP preserves PENDING and never fabricates success or consumes delivery attempts", async () => {

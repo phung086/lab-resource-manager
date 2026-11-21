@@ -21,6 +21,7 @@ const suites = [
   ['planning', 'planning', 'PLANNING_TEST_URL', ['planning.integration.test.js']],
   ['operational-audit', 'operational_audit', 'OPERATIONAL_AUDIT_TEST_URL', ['operationalAudit.integration.test.js']],
   ['sessions', 'sessions', 'SESSION_TEST_DATABASE_URL', ['authSessions.integration.test.js']],
+  ['google-auth', 'google_auth', 'GOOGLE_AUTH_TEST_DATABASE_URL', ['googleAuth.integration.test.js']],
   ['guest', 'guest_integrity', 'GUEST_PHASE_D_DATABASE_URL', ['guestBookingIntegrity.integration.test.js']],
   ['concurrency', 'b1d_release', 'BATCH1D_DATABASES', ['bookingConcurrency.db.test.js', 'persistenceMigration.test.js']],
   ['auth-rbac', 'b2_auth_release', 'BATCH2_DATABASE', ['batch2.auth-rbac.integration.test.js']],

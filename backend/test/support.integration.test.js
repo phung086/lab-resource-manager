@@ -96,14 +96,44 @@ test('two idle agents handle separate requests; FIFO positions move and completi
 });
 
 test('support alerts reach active scoped staff/admin, not foreign staff or other customers', async () => {
-  await ready('staff');
   const first = await ask('student'); assert.equal(first.status, 201);
-  const notices = await prisma.notification.findMany({ where: { dedupeKey: { startsWith: `support:${first.body.id}:` } } });
-  const requested = notices.filter(row => row.titleKey === 'support.requested.title');
+  assert.equal(first.body.status, 'WAITING');
+  const noticeWhere = { dedupeKey: { startsWith: `support:${first.body.id}:` } };
+  const requested = await prisma.notification.findMany({ where: noticeWhere });
   assert.deepEqual(requested.map(row => row.userId).sort(), [users.admin.id, users.staff.id, users.staff2.id].sort());
+  const badge = await request(app).get('/api/notifications?unreadOnly=true').set(auth('staff'));
+  assert.equal(badge.status, 200);
+  assert.ok(badge.body.some(row => row.titleKey === 'support.requested.title' && row.messageParams.sessionId === first.body.id));
+  const urgent = name => request(app).get('/api/notifications/unread-count?urgent=true').set(auth(name)).expect(200);
+  assert.ok((await urgent('staff')).body.urgent.some(row => row.titleKey === 'support.requested.title' && row.messageParams.sessionId === first.body.id));
+  assert.deepEqual((await urgent('foreign')).body.urgent, []);
+  assert.deepEqual((await urgent('student')).body.urgent, []);
+  await ready('staff');
+  assert.deepEqual((await urgent('staff')).body.urgent.filter(row => row.messageParams.sessionId === first.body.id).map(row => row.titleKey),
+    ['support.assigned.title']);
+  const notices = await prisma.notification.findMany({ where: noticeWhere });
   assert.equal(notices.filter(row => row.titleKey === 'support.assigned.title' && row.userId === users.staff.id).length, 1);
   await ask('student', { requestId: first.body.id });
-  assert.equal(await prisma.notification.count({ where: { dedupeKey: { startsWith: `support:${first.body.id}:` } } }), notices.length);
+  assert.equal(await prisma.notification.count({ where: noticeWhere }), notices.length);
+});
+
+test('urgent incident notices are scoped to the current LAB and close when resolved', async () => {
+  const resource = await prisma.resource.create({ data: { id: id(), code: 'INCIDENT-' + id(),
+    name: 'Support test room', laboratoryId: labs.a.id, location: 'Test LAB', category: 'ROOM', subtype: 'ROOM' } });
+  const report = severity => request(app).post('/api/incidents').set(auth('student'))
+    .send({ resourceId: resource.id, severity, title: 'Test incident', description: 'Isolated incident test' }).expect(201);
+  const high = (await report('high')).body;
+  const medium = (await report('medium')).body;
+  const urgent = async name => (await request(app).get('/api/notifications/unread-count?urgent=true').set(auth(name)).expect(200))
+    .body.urgent.map(row => row.messageParams.incidentId);
+  assert.ok((await urgent('admin')).includes(high.id));
+  assert.ok((await urgent('staff')).includes(high.id));
+  assert.ok(!(await urgent('staff')).includes(medium.id));
+  assert.ok(!(await urgent('foreign')).includes(high.id));
+  assert.ok(!(await urgent('student')).includes(high.id));
+  await request(app).post(`/api/incidents/${high.id}/resolve`).set(auth('staff'))
+    .send({ resolution: 'Test issue resolved' }).expect(200);
+  assert.ok(!(await urgent('staff')).includes(high.id));
 });
 
 test('real two-way messages persist, explicit retries are idempotent, admin can inspect complete history', async () => {

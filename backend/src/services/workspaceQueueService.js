@@ -54,6 +54,20 @@ function pagination(query, total) {
   return { page: query.page, pageSize: query.pageSize, total, totalPages: Math.ceil(total / query.pageSize) };
 }
 
+async function listCustomerBookings(tx, scope, include, skip, take, activeTotal, historyOrder) {
+  const activeTake = Math.min(take, Math.max(0, activeTotal - skip));
+  const active = activeTake ? await tx.booking.findMany({
+    where: { ...scope, status: { notIn: TERMINAL_STATUSES } },
+    include, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip, take: activeTake
+  }) : [];
+  const historyTake = take - activeTake;
+  const history = historyTake ? await tx.booking.findMany({
+    where: { ...scope, status: { in: TERMINAL_STATUSES } },
+    include, orderBy: historyOrder, skip: Math.max(0, skip - activeTotal), take: historyTake
+  }) : [];
+  return [...active, ...history];
+}
+
 export async function listBookingPage(db, actor, query, include) {
   const scope = { ...bookingScopeWhere(actor), ...(query.resourceId ? { resourceId: query.resourceId } : {}) };
   const filter = query.status || query.filter;
@@ -63,11 +77,9 @@ export async function listBookingPage(db, actor, query, include) {
   }
   const statuses = filter === 'PENDING_PAYMENT' ? ['PENDING_APPROVAL'] : filter === 'HISTORY' ? TERMINAL_STATUSES : filter === 'ALL' ? ALL_BOOKING_STATUSES : [filter];
   const paymentFilter = filter === 'PENDING_PAYMENT' ? { paymentDueAt: { not: null } } : filter === 'PENDING_APPROVAL' && !query.status ? { paymentDueAt: null } : {};
-  const orderBy = filter === CHECKED_OUT
-    ? [{ endAt: "asc" }, { createdAt: "asc" }, { id: "asc" }]
-    : filter === "ALL" || filter === "HISTORY" || TERMINAL_STATUSES.includes(filter)
-      ? [{ startAt: "desc" }, { createdAt: "desc" }, { id: "desc" }]
-      : [{ startAt: "asc" }, { createdAt: "asc" }, { id: "asc" }];
+  const orderBy = actionFilter
+    ? [{ startAt: "asc" }, { createdAt: "asc" }, { id: "asc" }]
+    : [{ startAt: "desc" }, { createdAt: "desc" }, { id: "desc" }];
   const asOf = new Date();
   const actionWhere = { ...scope, OR: [
     { status: 'PENDING_APPROVAL', paymentDueAt: { gt: asOf }, startAt: { gt: asOf } },
@@ -86,10 +98,15 @@ export async function listBookingPage(db, actor, query, include) {
     const actionRequired = actor.role === CUSTOMER ? await tx.booking.count({ where: actionWhere }) : undefined;
     const total = actionFilter ? actionRequired : filter === 'PENDING_PAYMENT' ? pendingPayment : filter === 'PENDING_APPROVAL' && !query.status ? (counts.PENDING_APPROVAL || 0) - pendingPayment : sum(counts, statuses);
     const skip = (query.page - 1) * query.pageSize;
-    const items = skip >= total ? [] : await tx.booking.findMany({
-      where: actionFilter ? actionWhere : { ...scope, status: { in: statuses }, ...paymentFilter }, include, orderBy,
-      take: query.pageSize, skip
-    });
+    let items = [];
+    if (skip < total) {
+      items = actor.role === CUSTOMER && filter === "ALL"
+        ? await listCustomerBookings(tx, scope, include, skip, query.pageSize, total - sum(counts, TERMINAL_STATUSES), orderBy)
+        : await tx.booking.findMany({
+            where: actionFilter ? actionWhere : { ...scope, status: { in: statuses }, ...paymentFilter },
+            include, orderBy, take: query.pageSize, skip
+          });
+    }
     return {
       items, pagination: pagination(query, total),
       summary: { total: sum(counts), byStatus: counts, pendingPayment, actionRequired, history: sum(counts, TERMINAL_STATUSES), overdue, asOf: asOf.toISOString() }

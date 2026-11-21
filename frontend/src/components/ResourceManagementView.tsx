@@ -1,3 +1,4 @@
+import { formatVnd } from '../utils/currency';
 import { ResourceCategoryArt } from "./ResourceCategoryArt";
 import { ResourceFinder } from './features/resources/ResourceFinder';
 import { PageHeading } from "./base/PageHeading";
@@ -133,7 +134,7 @@ const emptyForm = {
 };
 
 export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ user, managementMode = false, browseMode = false, initialSearch = "", initialCategory = "", initialClassification = "ALL", initialQuery = {}, onViewCalendar, onViewDetails, onAddToSelection, selectedResourceIds = [], onViewSelection, onBrowseContextChange }) => {
-  const { tr, t } = useLocale();
+  const { tr, t, locale } = useLocale();
   const [resources, setResources] = useState<any[]>([]);
   const [priceView, setPriceView] = useState(false);
   const [managementSection, setManagementSection] = useState("directory");
@@ -166,6 +167,14 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
   const [boardBookings, setBoardBookings] = useState<BoardBooking[]>([]);
   const [boardBookingsError, setBoardBookingsError] = useState("");
   const errorRef = useRef<HTMLDivElement>(null);
+  const editorTitle = useRef<HTMLHeadingElement>(null);
+  const editorOpener = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (showForm || saving) return;
+    const opener = editorOpener.current;
+    editorOpener.current = null;
+    if (opener?.isConnected) opener.focus();
+  }, [showForm, saving]);
 
   const canManage = ["ADMIN", "LAB_STAFF"].includes(user.role);
   const assignedLabIds = useMemo(() => new Set(laboratories.map((lab) => lab.id)), [laboratories]);
@@ -227,16 +236,28 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
     setShowForm(false);
   }
 
-  function startCreate() {
+  function revealEditor(opener: HTMLElement | null) {
+    editorOpener.current = opener;
     setManagementSection("directory");
-    setEditing(null);
-    setForm({ ...emptyForm, laboratoryId: laboratories.length === 1 ? laboratories[0].id : "" });
-    setFormError("");
     setShowForm(true);
+    requestAnimationFrame(() => {
+      editorTitle.current?.scrollIntoView({ block: "start" });
+      editorTitle.current?.focus({ preventScroll: true });
+    });
   }
 
-  function startEdit(resource: any) {
-    setManagementSection("directory");
+  function startCreate(event: React.MouseEvent<HTMLButtonElement>) {
+    if (saving) return;
+    if (!showForm || editing) {
+      setEditing(null);
+      setForm({ ...emptyForm, laboratoryId: laboratories.length === 1 ? laboratories[0].id : "" });
+      setFormError("");
+    }
+    revealEditor(event.currentTarget);
+  }
+
+  function startEdit(resource: any, opener: HTMLElement | null) {
+    if (saving) return;
     setEditing(resource);
     setForm({
       code: resource.code || "",
@@ -258,7 +279,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       safetyNotes: resource.specs?.usageGuide?.safetyNotes || ""
     });
     setFormError("");
-    setShowForm(true);
+    revealEditor(opener);
   }
 
   async function submitForm(event: React.FormEvent) {
@@ -293,6 +314,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
     };
     try {
       if (editing) {
+        payload.expectedVersion = editing.version;
         payload.changeReason = tr("ui.resource_record_updated_through_administration_0dc1c90d");
         await apiRequest(`/resources/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });
         setNotice({ key: "ui.changes_saved_for_c41dcbb4", params: { value0: form.code } });
@@ -304,6 +326,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       await loadResources();
     } catch (requestError: any) {
       setFormError(requestError?.message || "ui.could_not_save_resource_e6637acf");
+      if (requestError?.code === "RESOURCE_CHANGED") await loadResources();
       window.setTimeout(() => errorRef.current?.focus(), 0);
     } finally {
       setSaving(false);
@@ -426,7 +449,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
             {tr("ui.refresh_b4c61340")}
           </button>
           {managementMode && canManage && (
-            <button type="button" className="btn btn-primary" onClick={startCreate}>
+            <button type="button" className="btn btn-primary" onClick={startCreate} disabled={saving} aria-controls={showForm ? "resource-editor" : undefined}>
               <Plus size={16} aria-hidden="true" />
               {tr("ui.add_resource_f1609e2a")}
             </button>
@@ -499,9 +522,9 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       {notice && <div className="alert success" role="status">{translate(notice)}</div>}
 
       {managementMode && showForm && (
-        <section className="queue-panel resource-editor" aria-labelledby="resource-editor-title">
+        <section id="resource-editor" className="queue-panel resource-editor" aria-labelledby="resource-editor-title">
           <div className="queue-header">
-            <h2 id="resource-editor-title" className="queue-title">
+            <h2 id="resource-editor-title" className="queue-title" ref={editorTitle} tabIndex={-1}>
               <Edit3 size={20} aria-hidden="true" />
               {editing ? translate("ui.edit_c0c536ca", { value0: editing.code }) : tr("ui.create_resource_08170666")}
             </h2>
@@ -586,7 +609,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
                     {resource.name}
                   </button>
                   </h2>
-                  <strong className="rental-card-price">{resource.rental ? new Intl.NumberFormat("vi-VN").format(resource.rental.hourlyRateVnd) + " ₫ / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</strong>
+                  <strong className="rental-card-price">{resource.rental ? formatVnd(resource.rental.hourlyRateVnd, locale) + " / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</strong>
                   <p className="resource-catalogue-lab">{resource.laboratory?.name || resource.location || tr("ui.not_assigned_ebe3cb5d")}</p>
                   <ExpandableCard className="resource-catalogue-more" title={tr("ui.catalogue.specifications")} icon={SlidersHorizontal} tone="teal">
                   {resource.description && <p className="resource-catalogue-description">{resource.description}</p>}
@@ -620,7 +643,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
                   <td data-label={tr("ui.current_availability_f57c5e36")}><StatusPill value={resource.availability?.state || "UNAVAILABLE"} /></td>
                   <td data-label={tr("ui.actions_fc29e7e6")}><div className="resource-row-actions">
                     <button type="button" className="icon-action" aria-label={`${tr("ui.view_details_f6f88b0f")} ${resource.code}`} title={tr("ui.view_details_f6f88b0f")} onClick={() => openDetail(resource)} disabled={detailLoadingId === resource.id}><Eye size={16} /></button>
-                    <button type="button" className="btn btn-secondary btn-sm" aria-label={translate("ui.edit_a4391fd7", { value0: resource.code })} title={manageable ? tr("ui.edit_7a77d761") : tr("ui.outside_your_assigned_laboratories_c9ab3939")} onClick={() => startEdit(resource)} disabled={!manageable}><Edit3 size={16} />{tr(user.role === "ADMIN" ? "ui.resourceAdmin.configure" : "ui.edit_7a77d761")}</button>
+                    <button type="button" className="btn btn-secondary btn-sm" aria-label={translate("ui.edit_a4391fd7", { value0: resource.code })} title={manageable ? tr("ui.edit_7a77d761") : tr("ui.outside_your_assigned_laboratories_c9ab3939")} onClick={event => startEdit(resource, event.currentTarget)} disabled={!manageable || saving}><Edit3 size={16} />{tr(user.role === "ADMIN" ? "ui.resourceAdmin.configure" : "ui.edit_7a77d761")}</button>
                     <button type="button" className="icon-action" aria-label={translate("ui.change_the_status_of_004e9f27", { value0: resource.code })} title={tr("ui.change_status_e85b5764")} onClick={() => setStatusResource(resource)} disabled={!manageable || resource.operationalStatus === "RETIRED"}><Wrench size={16} /></button>
                     <button type="button" className="icon-action danger" aria-label={translate("ui.retire_f59ae3e7", { value0: resource.code })} title={tr("ui.retire_f9fe2615")} onClick={() => setRetireResource(resource)} disabled={!manageable || resource.operationalStatus === "RETIRED"}><Archive size={16} /></button>
                   </div></td>
@@ -675,7 +698,7 @@ export const ResourceManagementView: React.FC<ResourceManagementViewProps> = ({ 
       {managementMode && user.role === "ADMIN" && <div hidden={managementSection !== "pricing"}><ResourcePricingEditor/></div>}
 
       <ResourceDetailsModal key={detail?.id || "closed"} isOpen={Boolean(detail)} onClose={closeDetail} resource={detail} onViewCalendar={onViewCalendar} actorRole={user.role}
-        onEdit={managementMode && detail && canManageResource(detail) ? () => { closeDetail(); startEdit(detail); } : undefined}
+        onEdit={managementMode && detail && canManageResource(detail) && !saving ? () => { closeDetail(); startEdit(detail, detailOpener.current); } : undefined}
         onChangeStatus={managementMode && detail && canManageResource(detail) && detail.operationalStatus !== "RETIRED" ? () => { closeDetail(); setStatusResource(detail); } : undefined} />
       <ResourceStatusModal
         isOpen={Boolean(statusResource)}

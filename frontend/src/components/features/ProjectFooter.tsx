@@ -4,6 +4,7 @@ import { ProjectBrand } from '../base/ProjectBrand';
 import { ArrowUpRight, BookOpen, ChevronDown, Compass, Headphones, LayoutGrid, Mail, MapPin, Phone, ShieldCheck, UserRound } from 'lucide-react';
 import { publicPathForSection, workspacePathForTab } from '../../workspaceRoutes.js';
 import { isTabEnabled } from '../../config/featureFlags';
+import { labSupportHref, labSupportPhone } from '../../config/publicLabContact';
 import '../../styles/project-footer-refined.css';
 import pkg from '../../../package.json';
 
@@ -22,7 +23,6 @@ type FooterLink = [destination: string, labelKey: string];
 const phenikaaMap = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3725.74853797683!2d105.7486864!3d20.962611199999998!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x313452efff394ce3%3A0x391a39d4325be464!2sPhenikaa%20University!5e0!3m2!1sen!2s!4v1794500725490!5m2!1sen!2s';
 const configuredAddress = import.meta.env.VITE_PUBLIC_LAB_ADDRESS?.trim();
 const supportEmail = import.meta.env.VITE_PUBLIC_LAB_SUPPORT_EMAIL?.trim();
-const supportPhone = import.meta.env.VITE_PUBLIC_LAB_SUPPORT_PHONE?.trim();
 
 function publicMapSource(value?: string) {
   if (!value) return undefined;
@@ -38,34 +38,26 @@ function publicMapSource(value?: string) {
 
 const mapSource = configuredAddress ? publicMapSource(import.meta.env.VITE_PUBLIC_LAB_MAP_EMBED_URL) : phenikaaMap;
 
-function PublicLabContact({ signedIn }: { signedIn: boolean }) {
+function FooterLabContact({ signedIn }: { signedIn: boolean }) {
   const { t } = useLocale();
-  const [mapOpen, setMapOpen] = useState(false);
   const labAddress = configuredAddress || t('ui.footer.phenikaaAddress');
   const directions = `https://www.google.com/maps/dir/?${new URLSearchParams({ api: '1', destination: labAddress })}`;
-  const supportPath = workspacePathForTab('support');
-  const supportHref = signedIn ? supportPath : publicPathForSection('dang-nhap', { returnTo: supportPath });
 
   return <div className="project-footer-lab">
     <section aria-labelledby="public-lab-address-title">
       <h2 id="public-lab-address-title"><MapPin size={18} aria-hidden="true" />{t('ui.footer.labAddress')}</h2>
       <address>{labAddress}</address>
       <div className="project-footer-map-actions">
-        {mapSource && <button type="button" aria-expanded={mapOpen} aria-controls="public-lab-map" onClick={() => setMapOpen(open => !open)}>
-          {t(mapOpen ? 'ui.footer.hideMap' : 'ui.footer.showMap')}
-        </button>}
         <a href={directions} target="_blank" rel="noopener noreferrer">{t('ui.footer.directions')}<ArrowUpRight size={15} aria-hidden="true" /></a>
       </div>
-      {mapSource && <div id="public-lab-map" hidden={!mapOpen}>
-        {mapOpen && <iframe src={mapSource} title={t('ui.footer.labMap')} loading="lazy" referrerPolicy="no-referrer" allowFullScreen />}
-      </div>}
+      {mapSource && <iframe src={mapSource} title={t('ui.footer.labMap')} loading="lazy" referrerPolicy="no-referrer" allowFullScreen />}
     </section>
     <section id="lien-he-lab" tabIndex={-1} aria-labelledby="public-lab-contact-title">
       <h2 id="public-lab-contact-title"><Headphones size={18} aria-hidden="true" />{t('ui.footer.labContact')}</h2>
       <div className="project-footer-contact-links">
-        <a href={supportHref}>{t('support.title')}<ArrowUpRight size={15} aria-hidden="true" /></a>
+        <a href={labSupportHref(signedIn)}>{t('support.title')}<ArrowUpRight size={15} aria-hidden="true" /></a>
         {supportEmail && /^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(supportEmail) && <a href={`mailto:${supportEmail}`}><Mail size={15} aria-hidden="true" />{supportEmail}</a>}
-        {supportPhone && /^\+?[0-9(). -]{7,24}$/.test(supportPhone) && <a href={`tel:${supportPhone.replace(/[^+\d]/g, '')}`}><Phone size={15} aria-hidden="true" />{supportPhone}</a>}
+        {labSupportPhone && <a href={labSupportPhone.href}><Phone size={15} aria-hidden="true" />{labSupportPhone.label}</a>}
       </div>
     </section>
   </div>;
@@ -160,7 +152,7 @@ export function ProjectFooter({ variant, role, onNavigate, onPublicNavigate, onR
         {workspace && <div className="project-footer-account">{account.map(([destination, label]) => wsLink(destination, label))}</div>}
       </div>
     </div>
-    {!workspace && <PublicLabContact signedIn={signedIn} />}
+    <FooterLabContact signedIn={workspace || signedIn} />
     <div className="project-footer-baseline">
       <span>{t('shell.project_identity')}</span>
       <span>{t('ui.footer.baselineMeta', { version: pkg.version })}</span>

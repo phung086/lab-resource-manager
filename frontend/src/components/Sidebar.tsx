@@ -2,7 +2,7 @@ import { ProjectBrand } from "./base/ProjectBrand";
 import { translate } from "../i18n.js";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { isTabEnabled } from "../config/featureFlags";
-import { Activity, Bell, CalendarCheck, ChevronDown, ClipboardCheck, Clock, FlaskConical, Layers, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, Search, Server, ShieldAlert, Users, UserRound, Wrench, type LucideIcon } from "lucide-react";
+import { Activity, Bell, CalendarCheck, ChevronDown, ClipboardCheck, Clock, FlaskConical, Layers, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, Plug, Search, Server, ShieldAlert, Users, UserRound, Wrench, type LucideIcon } from "lucide-react";
 
 export interface SidebarProps {
   activeTab: string;
@@ -96,11 +96,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, user, 
       { id: "payments", labelKey: "ui.payments_d4b946cc",  icon: ClipboardCheck },
       { id: "admin_management", labelKey: "ui.resource_management_44713fdd",  icon: Server },
       { id: "users", labelKey: role === "ADMIN" ? "ui.users_and_assignments_291dd22c" : "account.users.customers",  icon: Users },
+      { id: "chatgpt_bridge", labelKey: "bridge.title", icon: Plug },
       { id: "logs", labelKey: "ui.audit_logs_883aea8a",  icon: ClipboardCheck },
     ] },
   ];
   function allowed(id: string) {
     if (!isTabEnabled(id)) return false;
+    if (id === "chatgpt_bridge") return role === "ADMIN";
     if (id === "logs") return staff;
     if (id === "users") return staff;
     if (["stock", "dashboard", "monitoring", "maintenance", "admin_management"].includes(id)) return staff;

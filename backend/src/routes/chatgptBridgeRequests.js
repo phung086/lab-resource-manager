@@ -2,9 +2,9 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errors.js';
-import { bridgeRequests } from '../chatgptBridge/runtime.js';
+import { bridgeDeliverySignal, bridgeRequests } from '../chatgptBridge/runtime.js';
 import { fastQueryPlan } from '../assistant/fastQueries.js';
-import { quickReplyKey } from '../assistant/quickReplies.js';
+import { bridgeGuidanceKey } from '../assistant/quickReplies.js';
 
 const router = express.Router();
 const limited = limit => rateLimit({ windowMs: 60000, limit, keyGenerator: req => req.user.id,
@@ -15,11 +15,15 @@ const mutations = limited(6);
 const fastReads = limited(30);
 const questionLimit = (req, res, next) => {
   const message = req.body?.message;
-  const fast = typeof message === 'string' && message.length <= 2000 && (quickReplyKey(message) || fastQueryPlan({ message, resourceId: req.body?.resourceId }));
+  const fast = typeof message === 'string' && message.length <= 2000 && (bridgeGuidanceKey(message) || fastQueryPlan({ message, resourceId: req.body?.resourceId }));
   return (fast ? fastReads : mutations)(req, res, next);
 };
 router.post('/requests', questionLimit, async (req, res, next) => {
-  try { res.status(202).json(await bridgeRequests.create(req.user, req.body)); }
+  try {
+    const request = await bridgeRequests.create(req.user, req.body);
+    res.status(202).json(request);
+    if (request.status === 'PENDING') bridgeDeliverySignal.emit('queued');
+  }
   catch (error) { next(error); }
 });
 router.get('/requests/:id', async (req, res, next) => {

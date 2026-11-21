@@ -2,9 +2,10 @@ import crypto from "crypto";
 import { stopResourceOperation } from "./resourceCareAccounting.js";
 import { careStatus, bookingCareUsage } from "./resourceCareModel.js";
 import { occupiesWithTurnaround } from './planning/policyModel.js';
+import { lockCurrentAccount } from './accountAccess.js';
 
 import { prisma } from "../db.js";
-import { ADMIN } from "../constants/roles.js";
+import { ADMIN, LAB_STAFF } from "../constants/roles.js";
 import {
   STATUS_REASON_REQUIRED,
   compatibilityStatusFor
@@ -131,6 +132,7 @@ export function serializeCanonicalResource(resource, interval) {
     purchaseDate: resource.purchaseDate?.toISOString() || null,
     warrantyExpiry: resource.warrantyExpiry?.toISOString() || null,
     specs: normalizeSpecs(resource.specs || {}),
+    version: resource.version,
     createdAt: resource.createdAt.toISOString(),
     updatedAt: resource.updatedAt.toISOString()
   };
@@ -226,17 +228,36 @@ export async function applyOperationalStatusChange(
 }
 
 export async function changeOperationalStatus({ resourceId, operationalStatus, reason, actor, client = prisma }) {
-  const work = (tx) => applyOperationalStatusChange(tx, {
-    resourceId,
-    operationalStatus,
-    reason,
-    actor
-  }).then((result) => result.resource);
+  const work = async (tx) => {
+    const { actor: currentActor } = await lockResourceForMutation(tx, actor, resourceId);
+    const result = await applyOperationalStatusChange(tx, {
+      resourceId, operationalStatus, reason, actor: currentActor, lockResource: false
+    });
+    return result.resource;
+  };
 
   if (typeof client.$transaction === "function") {
     return client.$transaction(work);
   }
   return work(client);
+}
+
+export async function assertResourceMutationScope(tx, actor, laboratoryId) {
+  if (actor.role === ADMIN) return;
+  const assignments = laboratoryId ? await tx.$queryRaw`SELECT "userId" FROM user_lab_assignments WHERE "userId" = ${actor.id} AND "laboratoryId" = ${laboratoryId} FOR SHARE` : [];
+  if (actor.role !== LAB_STAFF || !assignments.length) {
+    throw new HttpError(403, "Access denied: you are not assigned to this resource's laboratory", undefined, "FORBIDDEN");
+  }
+}
+
+export async function lockResourceForMutation(tx, actor, resourceId) {
+  const currentActor = await lockCurrentAccount(tx, actor.id, actor.authVersion);
+  if (![ADMIN, LAB_STAFF].includes(currentActor.role)) throw new HttpError(403, "Forbidden", undefined, "FORBIDDEN");
+  await tx.$queryRaw`SELECT id FROM resources WHERE id = ${resourceId} FOR UPDATE`;
+  const resource = await tx.resource.findUnique({ where: { id: resourceId } });
+  if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
+  await assertResourceMutationScope(tx, currentActor, resource.laboratoryId);
+  return { actor: currentActor, resource };
 }
 
 export async function auditResourceMutation(tx, { resourceId, actorId, message, reason = null, metadata = {} }) {

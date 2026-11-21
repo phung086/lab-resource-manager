@@ -7,11 +7,11 @@ import { HttpError } from "../middleware/errors.js";
 import { assertBookingAccess } from "../middleware/labScope.js";
 import {
   checkLabPolicyCompliance,
-  buildAvailabilityResult,
+  evaluateAvailabilityBlocks,
   getResourceAvailability,
+  loadAvailabilityBlocks,
 } from "../services/availabilityService.js";
 import { assertCareReady } from "../services/resourceCareAccounting.js";
-import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
 import { serializeTelemetry } from "../services/telemetryService.js";
 import { getTrainingEligibility } from "../services/trainingEligibilityService.js";
 import { workspaceAssistantTools } from './workspaceTools.js';
@@ -399,35 +399,6 @@ function interval(start, end) {
     );
   return [a, b];
 }
-async function blocks(resourceId, startAt, endAt) {
-  const [bookings, maintenanceWindows] = await Promise.all([
-    prisma.booking.findMany({
-      where: {
-        resourceId,
-        status: { in: ACTIVE_BOOKING_STATUSES }, schedulingReleasedAt: null,
-        startAt: { lt: endAt },
-        endAt: { gt: startAt },
-      },
-      select: { resourceId: true, startAt: true, endAt: true },
-    }),
-    prisma.maintenanceWindow.findMany({
-      where: {
-        resourceId,
-        status: { in: ["scheduled", "in_progress"] },
-        startAt: { lt: endAt },
-        endAt: { gt: startAt },
-      },
-      select: {
-        resourceId: true,
-        startAt: true,
-        endAt: true,
-        status: true,
-        kind: true,
-      },
-    }),
-  ]);
-  return { bookings, maintenanceWindows };
-}
 function policyResult(resource, startAt, endAt, now = new Date()) {
   if (resource.bookingState !== "bookable") return "RESOURCE_NOT_BOOKABLE";
   if (resource.laboratory && !resource.laboratory.isActive)
@@ -499,6 +470,7 @@ async function findSlots(input, actor, { signal } = {}) {
     input.to || new Date(now.getTime() + 7 * 86400000).toISOString(),
   );
   const duration = input.durationMinutes || 60;
+  const resourceLimit = 20;
   const resources = input.resourceId
     ? [await scopedResource(actor, input.resourceId)]
     : await prisma.resource.findMany({
@@ -515,16 +487,18 @@ async function findSlots(input, actor, { signal } = {}) {
         },
         include: { laboratory: { include: { labPolicy: true } } },
         orderBy: { code: "asc" },
-        take: 20,
+        take: resourceLimit + 1,
       });
   const slots = [];
   let checks = 0, resourcesChecked = 0, searchTruncated = false;
-  resourceLoop: for (const resource of resources) {
+  resourceLoop: for (const resource of resources.slice(0, resourceLimit)) {
     assertNotAborted(signal);
     if (!["AVAILABLE", "IN_USE"].includes(resource.operationalStatus) || resource.bookingState !== "bookable") continue;
     if (await careBlockReason(resource.id)) continue;
     resourcesChecked += 1;
-    const data = await blocks(resource.id, from, to);
+    const blocks = await loadAvailabilityBlocks(prisma, {
+      resourceId: resource.id, startAt: from, endAt: to, ignoreExpiredHoldsAt: now,
+    });
     // Fixed 15-minute grid in absolute time (UTC+7 has no DST); canonical policy evaluates VN wall time.
     for (
       let t =
@@ -538,18 +512,7 @@ async function findSlots(input, actor, { signal } = {}) {
       const startAt = new Date(t),
         endAt = new Date(t + duration * 60000);
       if (policyResult(resource, startAt, endAt, now)) continue;
-      const overlap = {
-        bookings: data.bookings.filter(
-          (b) => b.startAt < endAt && b.endAt > startAt,
-        ),
-        maintenanceWindows: data.maintenanceWindows.filter(
-          (b) => b.startAt < endAt && b.endAt > startAt,
-        ),
-      };
-      if (
-        buildAvailabilityResult({ resource, startAt, endAt, ...overlap })
-          .available
-      ) {
+      if (evaluateAvailabilityBlocks({ resource, startAt, endAt, ...blocks }).available) {
         slots.push({
           resourceId: resource.id,
           resourceCode: resource.code,
@@ -564,6 +527,7 @@ async function findSlots(input, actor, { signal } = {}) {
     }
     if (slots.length >= (input.limit || 5)) break;
   }
+  searchTruncated ||= resources.length > resourceLimit && slots.length < (input.limit || 5);
   return {
     slots,
     resourcesChecked,

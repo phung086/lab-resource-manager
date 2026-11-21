@@ -10,7 +10,7 @@ import {
 } from "../middleware/labScope.js";
 import { HttpError } from "../middleware/errors.js";
 import { ADMIN, LAB_STAFF } from "../constants/roles.js";
-import { ACTIVE_BOOKING_STATUSES } from "../constants/bookingStatus.js";
+import { ACTIVE_BOOKING_STATUSES, CHECKED_OUT, RETURNED } from "../constants/bookingStatus.js";
 import {
   BOOKING_STATES,
   OPERATIONAL_STATUSES,
@@ -20,8 +20,10 @@ import {
 } from "../constants/resources.js";
 import {
   auditResourceMutation,
+  assertResourceMutationScope,
   changeOperationalStatus,
   currentInterval,
+  lockResourceForMutation,
   resourceAvailability,
   resourceLaboratorySelect,
   serializeCanonicalResource
@@ -33,7 +35,7 @@ import { normalizeResourceCode, normalizeSpecs, normalizeText } from "../utils/d
 
 import { resourceSpecsSchema } from "../utils/resourceUsageGuide.js";
 import { getFulfillmentSetting, configureFulfillment } from '../services/bookingFulfillmentService.js';
-import { expirePaymentHolds } from '../services/bookingPaymentHoldService.js';
+import { expirePaymentHolds, expireResourcePaymentHolds } from '../services/bookingPaymentHoldService.js';
 import { preparationBookingWhere, turnaroundEnd } from '../services/planning/policyModel.js';
 
 const router = express.Router();
@@ -91,10 +93,12 @@ const resourceUpdateSchema = resourceCreateSchema
   .extend({
     laboratoryId: z.union([z.string().min(1), z.null()]).optional(),
     category: categoryValue.optional(),
+    expectedVersion: z.number().int().nonnegative(),
     changeReason: optionalText(500)
   })
   .strict()
-  .refine((value) => Object.keys(value).some((key) => key !== "changeReason"), "At least one mutable field is required");
+  .refine(({ expectedVersion: _version, changeReason: _reason, ...fields }) =>
+    Object.keys(fields).length > 0, "At least one mutable field is required");
 
 const statusUpdateSchema = z.object({
   operationalStatus: uppercaseEnum(OPERATIONAL_STATUSES),
@@ -346,23 +350,46 @@ router.get("/:id", async (req, res, next) => {
 router.patch("/:id", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {
     const parsed = resourceUpdateSchema.parse(req.body);
-    const { changeReason, ...data } = parsed;
-    const current = await prisma.resource.findUnique({ where: { id: req.params.id } });
-    if (!current) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
-    if (req.user.role === LAB_STAFF) {
-      await assertLabStaffResourceAccess(req.user.id, current.id);
-      if (data.laboratoryId === null) throw new HttpError(403, "LAB_STAFF cannot unassign a resource laboratory", undefined, "FORBIDDEN");
-      if (data.category === null) throw new HttpError(403, "LAB_STAFF cannot clear a reviewed category", undefined, "FORBIDDEN");
-      if (data.laboratoryId && data.laboratoryId !== current.laboratoryId) await assertLabStaffLaboratoryAccess(req.user.id, data.laboratoryId);
-    }
-    if (data.laboratoryId) {
-      const targetLab = await prisma.laboratory.findUnique({ where: { id: data.laboratoryId } });
-      if (!targetLab) throw new HttpError(404, "Laboratory not found", undefined, "NOT_FOUND");
-      if (!targetLab.isActive) throw new HttpError(409, "Laboratory is inactive", undefined, "LABORATORY_INACTIVE");
-    }
+    const { changeReason, expectedVersion, ...data } = parsed;
     const normalizedData = { ...data, ...(data.specs ? { specs: normalizeSpecs(data.specs) } : {}), version: { increment: 1 } };
-    const changedFields = Object.keys(data).filter((field) => JSON.stringify(current[field]) !== JSON.stringify(data[field]));
     const updated = await prisma.$transaction(async (tx) => {
+      const { actor, resource: current } = await lockResourceForMutation(tx, req.user, req.params.id);
+      if (current.version !== expectedVersion) {
+        throw new HttpError(409, "Resource has changed since it was opened", undefined, "RESOURCE_CHANGED");
+      }
+      if (actor.role === LAB_STAFF) {
+        if (data.laboratoryId === null) throw new HttpError(403, "LAB_STAFF cannot unassign a resource laboratory", undefined, "FORBIDDEN");
+        if (data.category === null) throw new HttpError(403, "LAB_STAFF cannot clear a reviewed category", undefined, "FORBIDDEN");
+      }
+      if (data.laboratoryId) {
+        await tx.$queryRaw`SELECT id FROM laboratories WHERE id = ${data.laboratoryId} FOR SHARE`;
+        const targetLab = await tx.laboratory.findUnique({ where: { id: data.laboratoryId } });
+        if (!targetLab) throw new HttpError(404, "Laboratory not found", undefined, "NOT_FOUND");
+        if (data.laboratoryId !== current.laboratoryId) await assertResourceMutationScope(tx, actor, data.laboratoryId);
+        if (!targetLab.isActive) throw new HttpError(409, "Laboratory is inactive", undefined, "LABORATORY_INACTIVE");
+      }
+      if (data.laboratoryId !== undefined && data.laboratoryId !== current.laboratoryId) {
+        const where = { resourceId: current.id };
+        if (await tx.camera.findFirst({ where, select: { id: true } }) || await tx.telemetrySource.findFirst({ where, select: { id: true } })) {
+          throw new HttpError(409, "A resource linked to a camera or data source cannot change laboratories", undefined, "RESOURCE_MONITORING_LINKED");
+        }
+      }
+      if (data.category !== undefined && data.category !== current.category) {
+        const now = new Date();
+        await expireResourcePaymentHolds(tx, current.id, now);
+        const openBooking = await tx.booking.findFirst({
+          where: {
+            resourceId: current.id,
+            status: { in: ACTIVE_BOOKING_STATUSES },
+            OR: [{ endAt: { gt: now } }, { status: { in: [CHECKED_OUT, RETURNED] } }]
+          },
+          select: { id: true }
+        });
+        if (openBooking) {
+          throw new HttpError(409, "Resource category cannot change while a booking still needs handling", undefined, "RESOURCE_CATEGORY_BOOKED");
+        }
+      }
+      const changedFields = Object.keys(data).filter((field) => JSON.stringify(current[field]) !== JSON.stringify(data[field]));
       const resource = await tx.resource.update({ where: { id: current.id }, data: normalizedData });
       await auditResourceMutation(tx, {
         resourceId: current.id,
@@ -382,7 +409,6 @@ router.patch("/:id", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res
 router.patch("/:id/operational-status", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {
     const data = statusUpdateSchema.parse(req.body);
-    if (req.user.role === LAB_STAFF) await assertLabStaffResourceAccess(req.user.id, req.params.id);
     const updated = await changeOperationalStatus({ resourceId: req.params.id, operationalStatus: data.operationalStatus, reason: data.reason, actor: req.user });
     res.json(serializeCanonicalResource(await loadCanonicalResource(updated.id)));
   } catch (error) {
@@ -393,7 +419,6 @@ router.patch("/:id/operational-status", requireAuth, requireRole(ADMIN, LAB_STAF
 router.post("/:id/retire", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {
     const { reason } = retireSchema.parse(req.body);
-    if (req.user.role === LAB_STAFF) await assertLabStaffResourceAccess(req.user.id, req.params.id);
     const updated = await changeOperationalStatus({ resourceId: req.params.id, operationalStatus: "RETIRED", reason, actor: req.user });
     res.json(serializeCanonicalResource(await loadCanonicalResource(updated.id)));
   } catch (error) {

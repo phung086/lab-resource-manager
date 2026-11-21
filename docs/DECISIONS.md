@@ -232,6 +232,10 @@ luồng kiểm chứng/receiver hiện có; không hứa mọi câu trả lời 
 Bridge giữ auth, grant/subscription, busy/rate/ownership guards và lưu history,
 không phát webhook cho local guidance. Không thay schema hay quyền nghiệp vụ.
 
+Làm rõ 17/11/2026: khi Work sẵn sàng, lời chào, giới thiệu và cảm ơn đi qua
+Work để phản hồi theo hội thoại. Hướng dẫn quy trình khớp chính xác và tra cứu
+dữ liệu vẫn xử lý tại LAB. Khung chat báo khi câu hỏi mở ngoại tuyến.
+
 ## ADR-038 — Giữ chỗ thanh toán 15 phút (15/10/2026)
 
 Người dùng yêu cầu lịch có phí chưa trả tiền không được báo đã xác nhận; giữ
@@ -267,6 +271,10 @@ gửi webhook báo có, xác thực bằng API key. LAB kiểm ngân hàng, số
 theo phiên phát hành QR, mã giao dịch, số tiền VND và ID báo có duy nhất.
 Giữ hạn cố định của ADR-038, dùng chung settlement và biên nhận với VNPAY.
 Giao dịch ví cũ vẫn đọc được qua lịch sử; migration đã áp dụng được giữ nguyên.
+Khoản chuyển đến sau khi tham chiếu đã quyết toán có dòng đối soát riêng theo
+ID báo có. Gửi lại cùng sự kiện chỉ được ghi một lần. Khoản chuyển thêm giữ số
+tiền thực nhận và biên nhận riêng. Booking dùng khoản đã xác nhận để mở hồ sơ
+thanh toán và hướng dẫn nhận tài nguyên.
 
 ## ADR-037 — Nhận tài nguyên, truy cập phòng và trả sớm (14/10/2026)
 
@@ -842,6 +850,12 @@ SENT là SMTP acceptance, không chứng minh inbox. Message-ID cố định the
 hỗ trợ nhận diện retry nhưng crash sau SMTP acceptance trước DB write có thể
 gửi trùng; không hứa exactly-once qua SMTP. Không lưu raw provider error có thể
 chứa credential; CLI chỉ đọc trạng thái/configuration flags, không dump env.
+
+Ngày 18/11 thêm email tùy chọn cho yêu cầu hỗ trợ mới và sự cố mức cao/nghiêm
+trọng. Chỉ LAB_STAFF đang phụ trách LAB nhận thư. Mỗi sự kiện và người nhận có
+một khóa chống trùng. Worker kiểm tra lại tài khoản, email, phân công và hồ sơ
+còn cần xử lý trước khi gửi. Nội dung thư chỉ hướng dẫn mở ứng dụng. Bật bằng
+`OPERATOR_ALERT_EMAILS_ENABLED=true` sau khi migrate, mặc định tắt.
 
 Biên nhận dùng thông tin tại thời điểm IPN và giờ Việt Nam. Thanh toán trễ sau
 CANCELLED/REJECTED hoặc trùng settlement phải nêu cần đối soát, không đổi lịch.

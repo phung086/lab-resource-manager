@@ -2,6 +2,7 @@ import crypto from "crypto";
 
 import { ADMIN, LAB_STAFF } from "../constants/roles.js";
 import { HttpError } from "../middleware/errors.js";
+import { publishUrgentIncident } from "./operatorAlertService.js";
 
 export const OPEN_INCIDENT_STATUSES = ["reported", "triaged", "assigned", "investigating"];
 
@@ -145,6 +146,7 @@ export async function createIncident(tx, {
     }
   });
 
+  await publishUrgentIncident(tx, incident, resource.laboratoryId);
   return incident;
 }
 
@@ -224,5 +226,11 @@ export async function transitionIncident(tx, {
     }
   });
 
+  if (action === 'resolve') {
+    await tx.notification.updateMany({
+      where: { dedupeKey: { startsWith: `incident:${incidentId}:urgent:` }, readAt: null },
+      data: { readAt: now }
+    });
+  }
   return updated;
 }

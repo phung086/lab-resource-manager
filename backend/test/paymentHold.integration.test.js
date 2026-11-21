@@ -28,7 +28,7 @@ async function resource(category = 'EQUIPMENT', fee = 50000) {
   if (fee) await prisma.resourcePricingRule.create({ data: { id: id(), resourceId: row.id, purposeCode: 'STUDY', label: 'Test price', hourlyRateVnd: fee } });
   return row;
 }
-async function book(r, actor = 'owner', window = {}) {
+async function book(r, actor = 'owner', window = {}, phone = '0900000001') {
   // Use a slot visible in the Vietnam 08:00–20:00 calendar at any test run time.
   const futureVietnamDate = new Date(Date.now() + (48 + 7) * 3600000).toISOString().slice(0, 10);
   const startAt = window.startAt || new Date(`${futureVietnamDate}T10:00:00+07:00`).toISOString();
@@ -37,7 +37,7 @@ async function book(r, actor = 'owner', window = {}) {
   assert.equal(quote.status, 200, JSON.stringify(quote.body));
   return http.post('/api/bookings').set(auth(actor)).send({ resourceId: r.id, title: 'Isolated test reservation', purpose: 'Testing', purposeCode: 'STUDY',
     acceptedQuote: { amountVnd: quote.body.amountVnd, version: quote.body.version, loyaltyPolicyVersion: quote.body.loyaltyPolicyVersion },
-    contact: { fullName: 'Test Customer', phone: '0900000001' }, startAt, endAt });
+    contact: { fullName: 'Test Customer', phone }, startAt, endAt });
 }
 const chargeFor = booking => prisma.paymentTransaction.findFirst({ where: { bookingId: booking.id }, orderBy: { createdAt: 'desc' } });
 const pay = row => http.post(`/api/payments/${row.id}/vnpay`).set(auth('owner')).send({});
@@ -168,6 +168,51 @@ test('payment reservation lifecycle on isolated PostgreSQL', async t => {
     await t.test('free bookings confirm immediately without a synthetic payment', async () => {
       const response = await book(await resource('ROOM', 0)); assert.equal(response.status, 201);
       assert.equal(response.body.status, 'CONFIRMED'); assert.equal(response.body.paymentDueAt, null); assert.equal(await chargeFor(response.body), null);
+    });
+
+    await t.test('room payment guidance follows the saved contact without legacy room configuration', async () => {
+      const r = await resource('ROOM');
+      const response = await book(r, 'owner', {}, '+12345678');
+      assert.equal(response.status, 201, JSON.stringify(response.body));
+      const charge = await chargeFor(response.body);
+      assert.equal((await pay(charge)).status, 200);
+      assert.equal((await ipn(charge)).body.RspCode, '00');
+      const notification = await prisma.notification.findUniqueOrThrow({ where: { dedupeKey: `payment:${charge.id}:SUCCESS:owner` } });
+      assert.equal(notification.messageKey, 'fulfillment.ROOM_SELF_SERVICE.message');
+      assert.ok(!JSON.stringify(notification).includes('12345678'));
+      const access = await http.get(`/api/bookings/${response.body.id}/access`).set(auth('owner'));
+      assert.equal(access.status, 200, JSON.stringify(access.body));
+      assert.equal(access.body.roomPassword, '12345678');
+    });
+
+    await t.test('reschedule and maintenance release expired holds without the worker', async () => {
+      for (const action of ['reschedule', 'maintenance', 'maintenance-preview']) {
+        const r = await resource();
+        const response = await book(r);
+        assert.equal(response.status, 201, JSON.stringify(response.body));
+        const { id: holdId, startAt, endAt } = response.body;
+        const deadline = new Date();
+        const window = { startAt, endAt };
+        const createMaintenance = () => http.post('/api/maintenance').set(auth('staff')).send({ resourceId: r.id, title: 'Check expiry conflicts', ...window });
+        const preview = () => http.get('/api/maintenance/impact').set(auth('staff')).query({ resourceId: r.id, ...window });
+        if (action === 'reschedule') {
+          const initialStart = new Date(Date.parse(startAt) - 2 * 3600000);
+          const initialEnd = new Date(+initialStart + 3600000);
+          const b = await prisma.booking.create({ data: { id: id(), resourceId: r.id, requestedById: actors.peer.id, title: 'Confirmed reservation', purpose: 'Move test', startAt: initialStart, endAt: initialEnd, status: 'CONFIRMED' } });
+          const move = () => http.post(`/api/bookings/${b.id}/reschedule`).set(auth('staff')).send({ ...window, expectedStartAt: initialStart, reason: 'Move to the requested time' });
+          assert.equal((await move()).status, 409);
+          await prisma.booking.update({ where: { id: holdId }, data: { paymentDueAt: deadline } });
+          const moved = await move();
+          assert.equal(moved.status, 200, JSON.stringify(moved.body));
+        } else {
+          assert.equal((await createMaintenance()).status, 409);
+          await prisma.booking.update({ where: { id: holdId }, data: { paymentDueAt: deadline } });
+          if (action === 'maintenance-preview') assert.deepEqual((await preview()).body.conflicts, []);
+          const created = await createMaintenance();
+          assert.equal(created.status, 201, JSON.stringify(created.body));
+        }
+        assert.equal((await prisma.booking.findUniqueOrThrow({ where: { id: holdId } })).status, 'CANCELLED');
+      }
     });
 
     await t.test('staff cannot move an already valid booking into the preparation window', async () => {
@@ -322,10 +367,27 @@ test('payment reservation lifecycle on isolated PostgreSQL', async t => {
       assert.equal(receipt.status, 200);
       assert.equal(receipt.body.transaction.provider, 'vietqr');
       assert.equal((await http.get(`/api/payments/${charge.id}/receipt`).set(auth('peer'))).status, 404);
-      assert.equal((await notify({ ...notice, id: notice.id + 1 })).status, 409);
+      const extraNotice = { ...notice, id: notice.id + 1, transferAmount: notice.transferAmount + 1000 };
+      for (const result of await Promise.all([notify(extraNotice), notify(extraNotice), notify(notice)])) {
+        assert.deepEqual(result.body, { success: true });
+      }
+      const ledger = await prisma.paymentTransaction.findMany({ where: { bookingId: booking.id } });
+      assert.equal(ledger.length, 2);
+      assert.equal(ledger.find(row => row.id === charge.id).reconciliationStatus, 'none');
+      const extraPayment = ledger.find(row => row.providerTransactionNo === String(extraNotice.id));
+      assert.equal(extraPayment.reconciliationStatus, 'manual_review');
+      assert.equal(extraPayment.amount, extraNotice.transferAmount);
+      const adminLedger = await http.get('/api/payments/admin/transactions').query({ bookingId: booking.id }).set(auth('admin'));
+      assert.equal(adminLedger.status, 200);
+      assert.deepEqual(new Set(adminLedger.body.transactions.map(row => row.id)), new Set([charge.id, extraPayment.id]));
+      assert.equal((await prisma.booking.findUnique({ where: { id: booking.id } })).status, 'CONFIRMED');
+      assert.equal(await prisma.usageLog.count({ where: { bookingId: booking.id, reason: 'PAYMENT_VERIFIED' } }), 1);
 
       const late = await openTransfer();
       assert.equal((await notify({ ...late.notice, id: notice.id })).status, 400);
+      const reusedEvidence = await notify({ ...late.notice, id: extraNotice.id });
+      assert.equal(reusedEvidence.status, 400);
+      assert.equal(reusedEvidence.body.error.code, 'INVALID_PROVIDER_CALLBACK');
       const past = new Date(Date.now() - 1000);
       await prisma.booking.update({ where: { id: late.booking.id }, data: { paymentDueAt: past } });
       assert.deepEqual((await notify(late.notice)).body, { success: true });

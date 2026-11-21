@@ -237,7 +237,8 @@ function PaymentsLedger({
   }
   const canPay = selected && canInitiateBookingPayment(user, selected.booking, selected);
   const hasPaymentMethod = selected && methods.some(method => providers[method] && canChoosePaymentProvider(selected, method));
-  const paymentHelp = selected?.status === 'success' ? 'ui.paymentStudio.paidHelp'
+  const paymentHelp = selected?.reconciliationStatus === 'manual_review' ? 'ui.payments.reconciliationHelp'
+    : selected?.status === 'success' ? 'ui.paymentStudio.paidHelp'
     : selected?.status === 'refunded' ? 'ui.paymentStudio.refundedHelp'
     : !canPay ? 'ui.paymentStudio.reviewHelp'
     : selected?.provider === 'vietqr' && selected.status === 'pending' ? 'ui.paymentStudio.transferHelp'
@@ -251,7 +252,7 @@ function PaymentsLedger({
     const vndDay = (iso: string) => new Date(new Date(iso).getTime() + 7 * 3600_000).toISOString().slice(0, 10);
     const buckets = Array.from({ length: 14 }, (_, i) => {
       const d = new Date(Date.now() + 7 * 3600_000 - (13 - i) * 86400_000);
-      return { key: d.toISOString().slice(0, 10), label: `${d.getDate()}/${d.getMonth() + 1}`, sum: 0, count: 0 };
+      return { key: d.toISOString().slice(0, 10), label: `${d.getUTCDate()}/${d.getUTCMonth() + 1}`, sum: 0, count: 0 };
     });
     const byDay = new Map(buckets.map((b) => [b.key, b]));
     for (const row of rows) {
@@ -259,10 +260,10 @@ function PaymentsLedger({
       counts[state] = (counts[state] || 0) + 1;
       if (state === 'success') paidSum += row.amount;
       if (state === 'pending') pendingSum += row.amount;
-      const bucket = byDay.get(vndDay(row.paidAt || row.createdAt));
+      const bucket = state === 'success' && row.paidAt && Number.isFinite(Date.parse(row.paidAt)) ? byDay.get(vndDay(row.paidAt)) : undefined;
       if (bucket) { bucket.sum += row.amount; bucket.count += 1; }
     }
-    return { counts, paidSum, pendingSum, buckets, max: Math.max(1, ...buckets.map(b => b.sum)) };
+    return { counts, paidSum, pendingSum, buckets, max: Math.max(0, ...buckets.map(b => b.sum)) };
   }, [rows]);
   return (
     <section className="content-stack payment-page payment-ledger" data-role={user.role}>
@@ -405,9 +406,11 @@ function PaymentsLedger({
             <strong>{overview.counts.failed + overview.counts.expired}</strong>
             <span className="payment-stat-hint">{overview.counts.refunded} {tr('ui.refunded_d0d4c45f').toLowerCase()}</span>
           </div>
-          <figure className="payment-flow">
-            <figcaption>{tr('ui.payments.flowChart')}<span className="payment-flow-note">{tr('ui.payments.vietnamTime')}</span></figcaption>
-            <div className="payment-flow-bars" role="img" aria-label={`${tr('ui.payments.flowChart')}: ${overview.counts.success} ${tr('ui.payment_verified_c37ae36e').toLowerCase()}, ${formatVnd(overview.paidSum, locale)}`}>
+          <details className="payment-flow">
+            <summary>{tr('ui.payments.flowChart')}</summary>
+            <p className="payment-flow-note">{tr('ui.payments.flowScope')}</p>
+            {overview.max > 0 ? <>
+            <div className="payment-flow-bars" aria-hidden="true">
               {overview.buckets.map(bucket => (
                 <div key={bucket.key} className="payment-flow-col" title={translate('ui.payments.dayTooltip', { date: bucket.label, count: bucket.count, sum: formatVnd(bucket.sum, locale) })}>
                   <span className={`payment-flow-bar${bucket.sum ? '' : ' is-empty'}`} style={{ height: bucket.sum ? `${Math.max(8, Math.round((bucket.sum / overview.max) * 100))}%` : undefined }} />
@@ -415,7 +418,9 @@ function PaymentsLedger({
                 </div>
               ))}
             </div>
-          </figure>
+            <ul className="sr-only">{overview.buckets.filter(bucket => bucket.count > 0).map(bucket => <li key={bucket.key}>{tr('ui.payments.dayTooltip', { date: bucket.label, count: bucket.count, sum: formatVnd(bucket.sum, locale) })}</li>)}</ul>
+            </> : <p className="payment-flow-note">{tr('ui.payments.noVerifiedFlow')}</p>}
+          </details>
         </section>
       )}
       <div className="payment-ledger-layout"><div className="payment-ledger-main">
@@ -430,7 +435,7 @@ function PaymentsLedger({
       ) : !admin ? (
         <ul className="customer-payment-list" aria-label={tr('ui.my_payments_dae6e05a')}>
           {rows.map(row => <li key={row.id}><button type="button" disabled={!!busy} aria-pressed={selected?.id === row.id} onClick={() => choose(row)}>
-            <span className={'payment-state payment-'+paymentSessionStatus(row)}>{tr(paymentStatusLabels[paymentSessionStatus(row)])}</span>
+            <PaymentLedgerStatus row={row} />
             <strong>{row.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</strong>
             <span>{row.booking?.resource?.name}</span>
             <span className="customer-payment-amount">{formatVnd(row.amount, locale)}</span>
@@ -439,7 +444,7 @@ function PaymentsLedger({
           </button></li>)}
         </ul>
       ) : (
-        <div className="table-wrap payment-register"><table><caption className="sr-only">{tr('ui.payment_ledger_49cf3f23')}</caption><thead><tr><th>{tr('ui.bookings_00f5b333')}</th><th>{tr('ui.amount_4cbdc55b')}</th><th>{tr('ui.status_cb31de81')}</th></tr></thead><tbody>{rows.map(row=><tr key={row.id} className={selected?.id===row.id?'is-selected':''}><td><button type="button" disabled={!!busy} onClick={()=>choose(row)} aria-pressed={selected?.id===row.id}><span><strong>{row.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</strong><small>{row.txnRef}</small><small>{row.user?.fullName} · {formatVietnamDateTime(row.createdAt)}</small></span><ArrowRight size={16} /></button></td><td>{formatVnd(row.amount, locale)}</td><td><span className={'payment-state payment-'+paymentSessionStatus(row)}>{tr(paymentStatusLabels[paymentSessionStatus(row)])}</span></td></tr>)}</tbody></table></div>
+        <div className="table-wrap payment-register"><table><caption className="sr-only">{tr('ui.payment_ledger_49cf3f23')}</caption><thead><tr><th scope="col">{tr('ui.bookings_00f5b333')}</th><th scope="col">{tr('ui.amount_4cbdc55b')}</th><th scope="col">{tr('ui.status_cb31de81')}</th></tr></thead><tbody>{rows.map(row=><tr key={row.id} className={selected?.id===row.id?'is-selected':''}><td><button type="button" disabled={!!busy} onClick={()=>choose(row)} aria-pressed={selected?.id===row.id}><span><strong>{row.booking?.title || tr('ui.booking_no_longer_linked_6ba25274')}</strong><small>{row.txnRef}</small><small>{row.user?.fullName} · {formatVietnamDateTime(row.createdAt)}</small></span><ArrowRight size={16} aria-hidden="true" /></button></td><td>{formatVnd(row.amount, locale)}</td><td><PaymentLedgerStatus row={row} /></td></tr>)}</tbody></table></div>
       )}
       <HelpDisclosure>{tr('ui.showing_up_to_100_recent_6f1a8435')}</HelpDisclosure>
       </div>
@@ -457,8 +462,8 @@ function PaymentsLedger({
         </div>}
         {selected && (
           <div className="payment-detail" key={selected.id}>
-            <div className={`payment-value-block is-${paymentSessionStatus(selected)}`}>
-            <span className="payment-value-icon" aria-hidden="true">{selected.status === 'success' ? <CircleCheck size={28} /> : ['failed','expired'].includes(paymentSessionStatus(selected)) ? <CircleAlert size={28} /> : <Clock3 size={28} />}</span>
+            <div className={`payment-value-block is-${selected.reconciliationStatus === 'manual_review' ? 'review' : paymentSessionStatus(selected)}`}>
+            <span className="payment-value-icon" aria-hidden="true">{selected.reconciliationStatus === 'manual_review' || ['failed','expired'].includes(paymentSessionStatus(selected)) ? <CircleAlert size={28} /> : selected.status === 'success' ? <CircleCheck size={28} /> : <Clock3 size={28} />}</span>
             <span className={`payment-state payment-${paymentSessionStatus(selected)}`}>
               {tr(paymentStatusLabels[paymentSessionStatus(selected)])}
             </span>
@@ -554,4 +559,16 @@ function PaymentsLedger({
       <PaymentReceipt receipt={receipt} onClose={() => setReceipt(null)} />
     </section>
   );
+}
+
+function PaymentLedgerStatus({ row }: { row: Payment }) {
+  const { tr } = useLocale();
+  const status = paymentSessionStatus(row);
+  return <span className="payment-ledger-status">
+    <span className={`payment-state payment-${status}`}>{tr(paymentStatusLabels[status])}</span>
+    {row.reconciliationStatus === 'manual_review' && <span className="payment-state payment-pending">
+      {tr('ui.manual_reconciliation_required_ad0551a4')}
+    </span>}
+    {row.reconciliationStatus === 'resolved' && <small>{tr('ui.reconciliation_resolved_6c18a62d')}</small>}
+  </span>;
 }

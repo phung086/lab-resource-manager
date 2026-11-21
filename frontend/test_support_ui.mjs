@@ -56,6 +56,42 @@ async function ask(page, message) {
 }
 try {
   const student = await open('student'), peer = await open('peer'), third = await open('third'), fourth = await open('fourth'), staff = await open('staff'), staff2 = await open('staff2'), admin = await open('admin');
+  await staff.goto(`${base}/workspace/overview`);
+  const bell = staff.locator('.header-notification-btn-2026');
+  await bell.waitFor();
+  const unread = (await call('staff', '/notifications/unread-count')).unread;
+  await ask(student, 'Khách cần hỗ trợ khi nhân viên chưa sẵn sàng');
+  const waitingRequest = (await call('student', '/support/sessions')).activeSession;
+  assert.equal(waitingRequest.status, 'WAITING');
+  const urgent = staff.locator('.operator-urgent-notice');
+  await urgent.getByText('Khách hàng cần hỗ trợ', { exact: true }).waitFor({ timeout: 12_000 });
+  await staff.setViewportSize({ width: 390, height: 700 });
+  check(await urgent.isVisible() && await staff.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+    'Urgent support notice remains visible at the top on mobile');
+  await staff.setViewportSize({ width: 1440, height: 1000 });
+  await bell.locator('.notification-counter-pill').getByText(String(unread + 1), { exact: true }).waitFor({ timeout: 12_000 });
+  await bell.click();
+  await staff.locator('#header-notices-panel').getByRole('button', { name: /Khách hàng cần hỗ trợ/ }).first().click();
+  await staff.getByRole('link', { name: text('openInbox'), exact: true }).click();
+  await staff.locator('.support-availability').getByText(text('waitingCount').replace('{count}', '1')).waitFor();
+  check(true, 'A paused staff member gets the in-app notice from another workspace and can open the waiting queue');
+  await call('student', `/support/sessions/${waitingRequest.id}/cancel`, { reason: 'Hoàn thành ca kiểm tra thông báo' });
+  await staff.goto(`${base}/workspace/overview`);
+  const lab = await prisma.laboratory.findUniqueOrThrow({ where: { code: 'SUPPORT-a' } });
+  const room = await prisma.resource.upsert({
+    where: { code: 'SUPPORT-UI-ALERT-ROOM' }, update: {},
+    create: { id: crypto.randomUUID(), code: 'SUPPORT-UI-ALERT-ROOM', name: 'Phòng kiểm tra thông báo', laboratoryId: lab.id,
+      category: 'ROOM', subtype: 'ROOM', location: 'Test LAB' }
+  });
+  const incident = await call('student', '/incidents', { resourceId: room.id, severity: 'high', title: 'Kiểm tra thông báo sự cố', description: 'Ca kiểm thử trên cơ sở dữ liệu riêng' });
+  await urgent.getByText('Sự cố cần xử lý', { exact: true }).waitFor({ timeout: 12_000 });
+  await urgent.screenshot({ path: `${output}/staff-urgent-notice.png` });
+  await urgent.getByRole('button', { name: catalogs.vi['notification.urgent.openIncident'], exact: true }).click();
+  await staff.waitForURL(`**/workspace/incidents?incident=${incident.id}`);
+  check(true, 'An urgent incident appears during other work and opens the exact incident');
+  await call('staff', `/incidents/${incident.id}/resolve`, { resolution: 'Kết thúc ca kiểm tra thông báo' });
+  await staff.goto(`${base}/workspace/support`);
+  await student.goto(`${base}/workspace/support`);
   await staff.getByRole('button', { name: text('goReady'), exact: true }).click();
   await staff2.getByRole('button', { name: text('goReady'), exact: true }).click();
   // Ask the actual assistant first, then explicitly choose human support.
@@ -87,6 +123,26 @@ try {
   await student.locator('#assistant-human-message').waitFor({ state: 'visible', timeout: 12_000 });
   await chatText(student, 'Khách A cần kiểm tra đặt lịch');
   check(await student.locator('#assistant-human-message').isVisible(), 'Reload and reopen reconnects the existing staff session inside the dock');
+  for (let index = 1; index <= 8; index++) {
+    await call('student', `/support/sessions/${a.id}/messages`, { messageId: crypto.randomUUID(), body: `Tin nhắn kiểm tra cuộn ${index}` });
+  }
+  await chatText(student, 'Tin nhắn kiểm tra cuộn 8');
+  const scrollArea = student.locator('.lab-assistant-content');
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 700 }]) {
+    await student.setViewportSize(viewport);
+    await scrollArea.focus();
+    await scrollArea.press('Home');
+    await student.waitForFunction(() => document.querySelector('.lab-assistant-content').scrollTop === 0);
+    const area = await scrollArea.boundingBox();
+    const composer = student.locator('#assistant-human-message');
+    const before = await composer.boundingBox();
+    await student.mouse.move(area.x + area.width / 2, area.y + area.height / 2);
+    await student.mouse.wheel(0, 220);
+    await student.waitForFunction(() => document.querySelector('.lab-assistant-content').scrollTop > 100);
+    check(await student.locator('.assistant-human-transcript').evaluate(element => getComputedStyle(element).overflowY === 'visible') &&
+      (await composer.boundingBox()).y === before.y, `${viewport.width}px: one wheel scroll area and a fixed message composer`);
+  }
+  await student.setViewportSize({ width: 1440, height: 1000 });
   await student.locator('#assistant-human-message').fill('<script>customer message</script>'); await student.locator('#assistant-human-message').press('Enter');
   await chatText(handling, '<script>customer message</script>');
   check(await handling.locator('.support-transcript script').count() === 0, 'Customer content renders as text, never executable markup');

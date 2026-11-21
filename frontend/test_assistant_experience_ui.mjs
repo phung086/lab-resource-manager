@@ -47,10 +47,8 @@ try {
 
   for (const [locale, viewport] of [['vi', { width: 1440, height: 900 }], ['en', { width: 375, height: 812 }]]) {
     const customer = await user('CUSTOMER');
-    const login = await fetch(api + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: customer.email, password: 'AssistantUI!2026' }) });
-    assert.equal(login.status, 200); const session = await login.json();
     const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
-    await context.addInitScript(({ session, locale }) => { sessionStorage.setItem('lrm_token', session.accessToken); sessionStorage.setItem('lrm_user', JSON.stringify(session.user)); localStorage.setItem('lrm_locale', locale); }, { session, locale });
+    await context.addInitScript(locale => { localStorage.setItem('lrm_locale', locale); }, locale);
     let writes = 0;
     await context.route('**/api/**', async route => {
       const url = new URL(route.request().url());
@@ -59,6 +57,22 @@ try {
     });
     const page = await context.newPage(); currentPage = page; page.setDefaultTimeout(15000);
     page.on('pageerror', error => errors.push(error.message));
+    await page.goto(base);
+    await page.evaluate(() => sessionStorage.setItem('lrm_pending_resource', 'previous-calendar-resource'));
+    await page.locator('.public-contact-mascot').click();
+    await page.waitForURL(url => url.pathname === '/login');
+    check(new URL(page.url()).searchParams.get('returnTo') === '/workspace/support?assistant=open', `${locale}: guest robot preserves the assistant destination through login`);
+    await page.locator('form input[type=email]').fill(customer.email);
+    await page.locator('form input[type=password]').fill('AssistantUI!2026');
+    await page.locator('form button[type=submit]').click();
+    await page.locator('#lab-assistant-panel').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.activeElement?.id === 'assistant-question');
+    check(new URL(page.url()).pathname === '/workspace/support', `${locale}: signing in opens and focuses the assistant on Support`);
+    await page.goto(base);
+    await page.locator('.public-contact-mascot').click();
+    await page.locator('#lab-assistant-panel').waitFor({ state: 'visible' });
+    check(new URL(page.url()).pathname === '/workspace/support', `${locale}: public robot opens the assistant directly for signed-in users`);
+
     await page.goto(base + '/workspace/resources'); await page.locator('.assistant-launcher').click();
     const dock = page.locator('#lab-assistant-panel'), input = dock.locator('#assistant-question');
     await dock.locator('.assistant-suggestions button').first().waitFor();
@@ -100,9 +114,18 @@ try {
     check(await dock.locator('.assistant-delivery').innerText() === (locale === 'vi' ? 'Đang gửi…' : 'Sending…'), `${locale}: visible sending state`);
     await input.fill('Next draft stays'); await input.press('Enter');
     check(await dock.locator('.assistant-turn').count() === 1, `${locale}: Enter while busy does not duplicate send`);
-    release(); await dock.locator('.assistant-answer').waitFor(); await page.unroute('**/assistant/bridge/requests');
+    const greetingResponse = page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/assistant/bridge/requests'));
+    release();
+    const greetingJob = await (await greetingResponse).json();
+    await dock.locator('.assistant-busy').waitFor();
+    check(greetingJob.status === 'PENDING', `${locale}: greeting waits for the Work receiver`);
+    check(await prisma.chatgptBridgeDelivery.count() === deliveries + 1, `${locale}: greeting creates one remote event`);
+    await bridgeRequests.context(grant, greetingJob.id);
+    await bridgeRequests.reply(grant, { requestId: greetingJob.id, generation: grant.generation,
+      answer: locale === 'vi' ? 'Chào bạn! Hôm nay bạn cần mình giúp gì?' : 'Hi! How can I help today?' });
+    await dock.locator('.assistant-answer').waitFor();
+    await page.unroute('**/assistant/bridge/requests');
     check(await input.inputValue() === 'Next draft stays', `${locale}: reply preserves the next draft`);
-    check(await prisma.chatgptBridgeDelivery.count() === deliveries, `${locale}: greeting creates no remote job`);
     check(!/ChatGPT|OpenAI|Thông tin phản hồi|Response information/.test(await dock.innerText()), `${locale}: no provider or response metadata`);
     check(await dock.locator('.assistant-next-actions button').count() === 2, `${locale}: answer offers LAB navigation`);
 

@@ -23,6 +23,8 @@ sections relevant to the task in items 4–11, in this order:
 12. `backend/prisma/schema.prisma` when touching persistence
 
 Use `.agent/CONTEXT_MAP.md` and the FE/BE area guide to locate those sections.
+Use [the technical handoff](docs/TECHNICAL_HANDOFF.md) to trace a screen or
+business question to its routes, services, schema, migrations, and tests.
 Read shared invariants and follow cross-area dependencies before editing. Read
 whole documents for a whole-project audit or when the scope is uncertain. A
 keyword match alone does not replace the surrounding contract. Reuse unchanged

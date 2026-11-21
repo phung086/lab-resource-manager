@@ -1,3 +1,4 @@
+import { formatVnd } from '../../../utils/currency';
 import { WorkspaceHero } from "./WorkspaceHero";
 import { ExpandableCard } from "../../base/ExpandableCard";
 import { StatusPill } from '../resources/ResourceStatusPill';
@@ -385,8 +386,7 @@ export function CustomerHome(props: RoleHomeProps) {
                         <footer>
                           {row.rental && (
                             <strong>
-                              {row.rental.hourlyRateVnd.toLocaleString("vi-VN")}{" "}
-                              {t("ui.rental.perHour")}
+                              {formatVnd(row.rental.hourlyRateVnd, locale)} / {t("ui.rental.hour")}
                             </strong>
                           )}
 

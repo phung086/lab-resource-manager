@@ -182,7 +182,16 @@
 }
 :root[data-theme="dark"] .lab-studio :is(.project-brand, .project-brand > span, .header-title-2026) { color: var(--studio-night-ink); }
 :root[data-theme="dark"] .lab-studio :is(.project-brand > span > span, .header-telemetry-row-2026, .workspace-group-toggle span, .public-header nav a, .workspace-menu-group .sidebar-nav-item-2026) { color: var(--studio-night-muted); }
-:root[data-theme="dark"] .lab-studio :is(.project-brand > svg, .public-header nav a[aria-current], .workspace-nav-toggle, .rail-menu, .public-menu) { color: var(--studio-night-link); }
+:root[data-theme="dark"] .lab-studio :is(.project-brand > svg, .public-header nav a[aria-current], .workspace-nav-toggle, .public-menu) { color: var(--studio-night-link); }
+:root[data-theme="dark"] .app-shell-2026.workspace-shell.lab-spectrum.lab-studio .workspace-navigation {
+  --rail-surface: var(--studio-night-control);
+  --rail-ink: var(--studio-night-muted);
+  --rail-hover: var(--studio-night-raised);
+  --rail-selected: #2b4270;
+  --rail-selected-ink: #d5e4ff;
+  --rail-selected-line: #859fc3;
+  --rail-focus: var(--studio-night-focus);
+}
 :root[data-theme="dark"] .workspace-shell.lab-studio .workspace-menu-group .sidebar-nav-item-2026.is-active {
   background: #2b4270 !important;
   color: var(--studio-night-ink) !important;
@@ -256,6 +265,45 @@
   box-shadow: none;
 }
 :root[data-theme="dark"] .lab-studio :is(td, .materials-section-heading, .materials-ledger, .user-menu-divider) { border-color: var(--studio-night-line); }
+
+:root[data-theme="dark"] .resource-management-view .resource-management-sections {
+  background: var(--studio-night-raised);
+}
+:root[data-theme="dark"] .resource-management-view .resource-management-sections button[aria-pressed=false] {
+  color: var(--studio-night-muted);
+}
+:root[data-theme="dark"] .resource-operations-board {
+  color: var(--studio-night-ink);
+}
+:root[data-theme="dark"] .resource-operations-board .resource-board-column {
+  background: color-mix(in srgb, var(--lane-accent) 16%, var(--studio-night-surface));
+  border-color: var(--studio-night-line);
+}
+:root[data-theme="dark"] .resource-operations-board :is(.resource-board-column-head h3, .resource-board-card-main, .resource-board-navigation button, .resource-board-card-drag) {
+  color: var(--studio-night-ink);
+}
+:root[data-theme="dark"] .resource-operations-board :is(.resource-board-head p, .resource-board-count, .resource-board-empty, .resource-board-card-code, .resource-board-card-lab) {
+  color: var(--studio-night-muted);
+}
+:root[data-theme="dark"] .resource-operations-board :is(.resource-board-count, .resource-board-card, .resource-board-navigation button) {
+  background: var(--studio-night-surface);
+  border-color: var(--studio-night-line);
+}
+:root[data-theme="dark"] .resource-operations-board :is(.resource-board-card-icon, .resource-board-card-drag, .resource-board-navigation button:hover) {
+  background: var(--studio-night-raised);
+  border-color: var(--studio-night-control-line);
+}
+:root[data-theme="dark"] .resource-operations-board .resource-board-card-icon { color: var(--studio-night-link); }
+
+:root[data-theme="dark"] .modal-container-2026.booking-studio-modal .booking-review {
+  background: var(--studio-night-surface);
+  border-color: var(--studio-night-line);
+  color: var(--studio-night-ink);
+  box-shadow: none;
+}
+:root[data-theme="dark"] .booking-studio-modal .booking-review :is(h3, dd) { color: var(--studio-night-ink); }
+:root[data-theme="dark"] .booking-studio-modal .booking-review dt { color: var(--studio-night-muted); }
+
 :root[data-theme="dark"] .lab-studio :is(.planner-views, .account-navigation, .rental-view-switch, .resource-management-sections) button[aria-pressed=true] {
   background: #2b4270;
   color: var(--studio-night-ink);
@@ -321,7 +369,7 @@
   :root[data-theme="dark"] :is(.lab-studio, .lab-studio-modal) select option::checkmark { color: var(--studio-night-link); }
 }
 
-:root[data-theme="dark"] .project-public-shell.lab-studio :is(.announcement-strip, .landing-hero-glass, .landing-hero-floating-card, .landing-hero-marquee-chip, .landing-benefits, .landing-features, .landing-roles, .landing-process, .landing-schedule, .landing-cta, .public-page-heading, .service-landing, .catalog-card, .catalog-card-body, .catalog-detail, .catalog-detail-heading, .catalog-sidebar, .landing-feature-card, .landing-role-card, .landing-process-card, .landing-schedule-card) {
+:root[data-theme="dark"] .project-public-shell.lab-studio :is(.announcement-strip, .landing-hero-glass, .landing-hero-floating-card, .landing-hero-marquee-chip, .landing-benefits, .landing-features, .landing-roles, .landing-process, .landing-schedule, .landing-cta, .public-page-heading, .service-landing, .catalog-card, .catalog-card-body, .catalog-detail, .catalog-detail-heading, .catalog-sidebar, .landing-role-card, .landing-process-card, .landing-schedule-card) {
   --service-ink: var(--studio-night-ink); --service-muted: var(--studio-night-muted); --service-line: var(--studio-night-line);
   background: var(--studio-night-surface);
   color: var(--studio-night-ink);
@@ -329,6 +377,14 @@
   box-shadow: none;
 }
 :root[data-theme="dark"] .project-public-shell.lab-studio .landing-hero-glass { background: #182437ed; box-shadow: var(--studio-night-shadow); }
+:root[data-theme="dark"] .project-public-shell.lab-studio :is(.landing-features, .landing-workflow) {
+  --landing-rule: var(--studio-night-control-line);
+  --landing-marker: var(--studio-night-link);
+  --landing-marker-bg: var(--studio-night-raised);
+}
+:root[data-theme="dark"] .project-public-shell.lab-studio .landing-workflow {
+  background: var(--studio-night-canvas);
+}
 :root[data-theme="dark"] .project-public-shell.lab-studio :is(.landing-hero-title-accent, .landing-section-eyebrow) { color: var(--studio-night-link); }
 :root[data-theme="dark"] .project-public-shell.lab-studio :is(.landing-hero-subtitle, .landing-feature-card p, .landing-role-card p, .landing-page p, .public-page-heading p, .catalog-card-body p) { color: var(--studio-night-muted); }
 :root[data-theme="dark"] .project-public-shell.lab-studio :is(.landing-hero-floating-title, .catalog-card-body .catalog-card-name, .rental-card-price) { color: var(--studio-night-ink); }
@@ -344,7 +400,7 @@
   border-color: var(--studio-night-line) !important;
   box-shadow: none !important;
 }
-:root[data-theme="dark"] .auth-screen.lab-studio .auth-panel-identity { background: var(--studio-night-raised); }
+:root[data-theme="dark"] .auth-screen.lab-studio .auth-panel-identity { background: linear-gradient(145deg,#192c58,#35256a); }
 :root[data-theme="dark"] :is(.auth-screen.lab-studio, .lab-studio-modal, .lab-assistant.lab-studio) :is(label, p, small, .modal-subtitle-2026, .identity-brand, .identity-journey) { color: var(--studio-night-muted); }
 
 :root[data-theme="dark"] .lab-assistant.lab-studio {
@@ -493,7 +549,7 @@
 
 :root[data-theme="dark"] .project-public-shell.lab-public.lab-spectrum.lab-studio {
   :is(.announcement-strip-static, .announcement-strip-static li, .benefits-summary p, .landing-schedule-card p) { color: var(--studio-night-muted); }
-  :is(.benefits-captions, .landing-workflow-step, .catalog-facet, .rental-view-switch button) {
+  :is(.benefits-captions, .catalog-facet, .rental-view-switch button) {
     background: var(--studio-night-raised);
     color: var(--studio-night-ink);
     border-color: var(--studio-night-line);
@@ -592,7 +648,6 @@
   :is(.operations-report-disclosure, .account-text-link) { color: var(--studio-night-link); }
   .account-role { background: var(--state-info-bg); color: var(--state-info-ink); }
 
-  .workspace-rail .rail-menu,
   .calendar-planner :is(.planner-steps, .planner-step-context, .planner-resource-card, .planner-board),
   .ops-lane-pager .queue-pagination { background: var(--studio-night-surface); border-color: var(--studio-night-line); }
   .calendar-planner .planner-resource-card:is(:focus-within, .is-selected) { border-color: var(--studio-night-focus); }

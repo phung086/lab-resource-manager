@@ -52,7 +52,7 @@ test('MCP failure releases capacity and never claims verified data', async () =>
 test('external model failures fall back to tool results and open a bounded circuit', async () => {
   let calls = 0;
   const service = createAssistantService({ settings: { ...settings, openaiApiKey: 'unit-fixture', openaiModel: 'unit-fixture' }, clientFactory, modelCall: async () => { calls += 1; throw new Error('Provider failure'); } });
-  for (let i = 0; i < 3; i += 1) { const response = await service.answer({ message: 'Find equipment', locale: 'en' }, context('a')); assert.equal(response.provider, 'local'); assert.equal(response.modelStatus, i < 2 ? 'MODEL_UNAVAILABLE' : 'CIRCUIT_OPEN'); assert.equal(response.answer, 'No matching resources within the authorized data.'); }
+  for (let i = 0; i < 3; i += 1) { const response = await service.answer({ message: 'Find equipment', locale: 'en' }, context('a')); assert.equal(response.provider, 'local'); assert.equal(response.modelStatus, i < 2 ? 'MODEL_UNAVAILABLE' : 'CIRCUIT_OPEN'); assert.equal(response.summary[0].key, 'assistant.noResources'); }
   assert.equal(calls, 2);
 });
 test('model receives the request locale without controlling workflow actions', async () => {
@@ -91,11 +91,12 @@ test('guidance without a read plan neither connects MCP nor invokes the model', 
 });
 test('identity, greetings and capabilities answer the user without operational reads or model calls', async () => {
   const service = createAssistantService({ settings: { ...settings, openaiApiKey: 'unit-fixture', openaiModel: 'unit-fixture' }, clientFactory: () => assert.fail('Introduction must not read unrelated operational data'), modelCall: () => assert.fail('Introduction has no grounded model input') });
-  for (const [message, locale] of [['ban la ai', 'vi'], ['Bạn là ai?', 'vi'], ['Bạn là ai trong ứng dụng này?', 'vi'], ['Xin chào!', 'vi'], ['BẠN CÓ THỂ LÀM GÌ?', 'vi'], ['Who are you?', 'en'], ['Hello!', 'en'], ['What can you do?', 'en']]) {
+  for (const [message, locale] of [['ban la ai', 'vi'], ['Bạn là ai?', 'vi'], ['Bạn là ai trong ứng dụng này?', 'vi'], ['Xin chào!', 'vi'], ['BẠN CÓ THỂ LÀM GÌ?', 'vi'], ['Who are you?', 'en'], ['Hello!', 'en'], ['heloo', 'vi'], ['What can you do?', 'en']]) {
     assert.deepEqual(planAssistantQuestion({ message }), []);
     const response = await service.answer({ message, locale }, context('intro'));
-    assert.equal(response.summary[0].key, 'assistant.introduction');
-    assert.match(response.answer, /LAB Resource Manager/);
+    const greeting = ['Xin chào!', 'Hello!', 'heloo'].includes(message);
+    assert.equal(response.summary[0].key, greeting ? 'assistant.quick.greeting' : 'assistant.introduction');
+    assert.match(response.answer, greeting ? /^(Chào bạn|Hi)!/ : /LAB Resource Manager/);
     assert.equal(response.source, 'local_guidance'); assert.equal(response.modelStatus, 'LOCAL_ONLY');
     assert.deepEqual(response.toolsUsed, []); assert.deepEqual(response.toolResults, []); assert.deepEqual(response.actions, []);
     assert.ok(!response.answer.includes('assistant.introduction'));
@@ -112,6 +113,11 @@ test('unknown questions ask for clarification instead of silently selecting oper
   }
   for (const message of ['Tổng quan hệ thống', 'Show operational summary', 'Lab overview'])
     assert.equal(planAssistantQuestion({ message })[0].name, 'get_operational_summary');
+  for (const [message, locale] of [['sao bạn không chạy thế?>', 'vi'], ['bajhj là ai', 'vi'], ['Tài Nguyên là ai?', 'vi'], ['Who is Isaac Newton?', 'en']]) {
+    const response = await service.answer({ message, locale }, context('unknown'));
+    assert.equal(response.summary[0].key, 'assistant.connectionNeeded');
+    assert.equal(response.source, 'local_guidance'); assert.deepEqual(response.toolsUsed, []);
+  }
   // Ordinary Vietnamese "trong" means "in"; it is not an availability request.
   assert.equal(planAssistantQuestion({ message: 'Tìm thiết bị trong phòng lab' })[0].name, 'search_resources');
   assert.equal(planAssistantQuestion({ message: 'Tìm lịch còn trống trong 60 phút' })[0].name, 'find_available_slots');
@@ -126,7 +132,7 @@ test('booking assistance searches real read-only slots in VI/EN and retains expl
 });
 test('unparsed dates ask for an explicit window without inventing availability or contacting a model', async () => {
   const service = createAssistantService({ settings, clientFactory: () => assert.fail('Date needs clarification'), modelCall: () => assert.fail('No evidence') });
-  for (const message of ['Đặt lịch ngày mai', 'Book tomorrow at 09:00', 'Find slots on Monday', 'Tìm khung giờ ngày 10/10/2026']) {
+  for (const message of ['toi muốn đặt phòng 10h', 'Đặt phòng lúc 10h30', 'Đặt lịch ngày mai', 'Book tomorrow at 09:00', 'Find slots on Monday', 'Tìm khung giờ ngày 10/10/2026']) {
     assert.deepEqual(planAssistantQuestion({ message }), []);
     const answer = await service.answer({ message, locale: 'en' }, context('dates'));
     assert.equal(answer.summary[0].key, 'assistant.chooseTimeWindow');

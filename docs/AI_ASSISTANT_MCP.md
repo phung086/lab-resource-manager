@@ -49,9 +49,12 @@ most3 transient network/timeout/5xx failures, respecting cancellation/expiry. PO
 auth and invalid payloads are never retried. Database reads retain finite8s
 transaction bounds and MCP read budgets. No schema, API key or business writes.
 
-15 October 2026 UX clarification (ADR-039): exact greetings, introductions,
-thanks and reviewed workflow guidance can answer locally before provider work.
-The bridge persists these as `ANSWERED` with `provider=local` and
+ADR-039, clarified 17 November 2026: a ready Work receiver handles exact
+greetings, introductions and thanks as conversational turns. When Work is
+offline the dock shows that open questions are unavailable and the local
+assistant can still answer reviewed greetings. Exact workflow guidance can
+answer locally before provider work. The bridge persists local guidance as
+`ANSWERED` with `provider=local` and
 `source=local_guidance`, without a delivery event. All customer/connection/busy
 guards remain. Mixed questions, general knowledge and changing LAB facts retain
 their usual receiver/evidence path. The dock hides provider metadata, keeps real
@@ -294,6 +297,10 @@ late replies. Persisted chat records do not disappear when context TTL expires;
 a deletion/retention policy must be defined before production. Multi-replica
 admission has not been certified. Bridge transcripts are not automatically copied
 to human support; the customer's existing staff-chat button remains available.
+
+The request route signals the worker after a pending Work request and its outbox
+delivery have committed. The existing 500 ms scheduler still covers retries,
+overlapping wakeups and restart recovery. Only one dispatch pass runs per process.
 
 Private package source is `plugins/lab-support-bridge`. Build its endpoint config
 with `backend/scripts/buildChatgptBridgePlugin.mjs`; the script checks HTTPS/OAuth

@@ -70,7 +70,11 @@ test("resource lifecycle: real API, database, booking, fault and maintenance", a
     assert.equal(result.status, 201, JSON.stringify(result.body)); job = result.body;
     assert.equal((await command("staff", resource.id, { action: "BEGIN_MAINTENANCE", maintenanceId: job.id, reason })).status, 200);
     assert.equal((await prisma.resource.findUnique({ where: { id: resource.id } })).operationalStatus, "MAINTENANCE");
-    for (const status of ["in_progress", "completed"]) assert.equal((await request(app).patch(`/api/maintenance/${job.id}`).set("Authorization", `Bearer ${tokens.staff}`).send({ status, changeReason: reason })).status, 200);
+    for (const status of ["in_progress", "completed"]) {
+      const saved = await request(app).patch(`/api/maintenance/${job.id}`).set("Authorization", `Bearer ${tokens.staff}`).send({ status, changeReason: reason, expectedUpdatedAt: job.updatedAt });
+      assert.equal(saved.status, 200, JSON.stringify(saved.body));
+      job = saved.body;
+    }
     assert.equal((await command("staff", resource.id, { action: "INSPECT", maintenanceId: job.id, reason })).status, 409);
     assert.equal((await command("staff", resource.id, { action: "PART", name: "Cooling fan", condition: "OK", reason })).status, 200);
     const incident = await prisma.incident.findFirst({ where: { resourceId: resource.id } });

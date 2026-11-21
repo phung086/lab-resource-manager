@@ -2,7 +2,7 @@
 export function validatePasswordDraft(values, assisted = false, passwordLoginEnabled = true) {
   const errors = {};
   if (!assisted && passwordLoginEnabled && (values.currentPassword.length < 8 || values.currentPassword.length > 128)) errors.currentPassword = 'ui.account.currentPasswordLength';
-  if (values.newPassword.length < 8 || values.newPassword.length > 128) errors.newPassword = 'ui.account.newPasswordLength';
+  if (values.newPassword.length < 8 || new TextEncoder().encode(values.newPassword).length > 72) errors.newPassword = 'ui.account.newPasswordLength';
   else if (!assisted && values.newPassword === values.currentPassword) errors.newPassword = 'ui.account.passwordDifferent';
   if (!values.confirmPassword || values.confirmPassword !== values.newPassword) errors.confirmPassword = 'ui.new_passwords_do_not_match_c6f3eeb4';
   return errors;

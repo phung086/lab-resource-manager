@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
-import { getUserNotifications, countUnreadUserNotifications } from "../services/notificationService.js";
+import { getUserNotifications, countUnreadUserNotifications, listUrgentOperatorNotifications } from "../services/notificationService.js";
 
 const router = express.Router();
 
@@ -15,26 +15,28 @@ const listSchema = z.object({
 
 router.use(requireAuth);
 
+const notificationDto = notification => ({
+  id: notification.id,
+  type: notification.type,
+  title: notification.title,
+  message: notification.message,
+  severity: notification.severity,
+  titleKey: notification.titleKey,
+  messageKey: notification.messageKey,
+  messageParams: notification.messageParams,
+  channel: notification.channel,
+  scheduledAt: notification.scheduledAt,
+  sentAt: notification.sentAt,
+  readAt: notification.readAt,
+  createdAt: notification.createdAt,
+  isUnread: !notification.readAt
+});
+
 router.get("/", async (req, res, next) => {
   try {
     const query = listSchema.parse(req.query);
     const notifications = await getUserNotifications(req.user.id, query);
-    res.json(notifications.map((notification) => ({
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      severity: notification.severity,
-      titleKey: notification.titleKey,
-      messageKey: notification.messageKey,
-      messageParams: notification.messageParams,
-      channel: notification.channel,
-      scheduledAt: notification.scheduledAt,
-      sentAt: notification.sentAt,
-      readAt: notification.readAt,
-      createdAt: notification.createdAt,
-      isUnread: !notification.readAt
-    })));
+    res.json(notifications.map(notificationDto));
   } catch (error) {
     next(error);
   }
@@ -42,7 +44,12 @@ router.get("/", async (req, res, next) => {
 
 router.get("/unread-count", async (req, res, next) => {
   try {
-    res.json({ unread: await countUnreadUserNotifications(req.user.id) });
+    const includeUrgent = req.query.urgent === "true";
+    const [unread, urgent] = await Promise.all([
+      countUnreadUserNotifications(req.user.id),
+      includeUrgent ? listUrgentOperatorNotifications(req.user) : []
+    ]);
+    res.json({ unread, ...(includeUrgent ? { urgent: urgent.map(notificationDto) } : {}) });
   } catch (error) {
     next(error);
   }

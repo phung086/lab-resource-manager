@@ -44,6 +44,7 @@ export function telemetrySourceInclude() {
 }
 
 export async function createTelemetrySource(tx, { code, name, laboratoryId, resourceId, kind = "EXTERNAL", profile = null }) {
+  await tx.$queryRaw`SELECT id FROM resources WHERE id = ${resourceId} FOR SHARE`;
   const resource = await tx.resource.findUnique({
     where: { id: resourceId },
     select: { id: true, laboratoryId: true }

@@ -180,12 +180,19 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
     finally { changingPresence.current = false; }
   }
   const labelSession = (row: SupportSession) => row.status === 'WAITING' ? tr('support.position', { position: row.queuePosition }) : tr(`support.status.${row.status}`);
+  const waitingCount = list?.summary.WAITING ?? 0;
   return <section className="support-page" data-role={user.role} data-has-session={Boolean(current && customerTab === 'history')} aria-labelledby="support-heading">
     {customer && <LocalDraftNotice disabled={busy} store={requestBackup} onRestore={value=>{setLaboratoryId(value.laboratoryId);setCategory(value.category);setRequestMessage(value.requestMessage);setShareContext(false);setCustomerTab('request');}}/>}
     <PageHeading className="page-section-header"><div><h1 id="support-heading">{tr('support.title')}</h1><p>{tr(admin ? 'support.adminHelp' : staff ? 'support.staffHelp' : 'support.customerHelp')}</p></div><button type="button" className="secondary-button" onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />{tr('support.refresh')}</button></PageHeading>
     {error && <p ref={errorRef} tabIndex={-1} className="alert danger" role="alert">{tr(error)}</p>}
     <p className={`support-connection${connectionError ? ' is-error' : ''}`} role="status">{connectionError ? tr(connectionError) : tr('support.liveHelp')}</p>
-    {staff && <div className="support-availability"><Headphones size={20} /><div><strong>{tr(accepting ? 'support.accepting' : 'support.paused')}</strong><p>{tr('support.availabilityHelp')}</p></div><button type="button" className="primary-button" disabled={busy || !metadata?.laboratories.length} onClick={() => void mutate(availability)}>{tr(accepting ? 'support.pause' : 'support.goReady')}</button></div>}
+    {staff && <div className="support-availability">
+      <Headphones size={20} aria-hidden="true" />
+      <div><strong>{tr(accepting ? 'support.accepting' : 'support.paused')}</strong><p>{tr('support.availabilityHelp')}</p>
+        {waitingCount > 0 && <p role="status">{tr('support.waitingCount', { count: waitingCount })}</p>}
+      </div>
+      <button type="button" className="primary-button" disabled={busy || !metadata?.laboratories.length} onClick={() => void mutate(availability)}>{tr(accepting ? 'support.pause' : 'support.goReady')}</button>
+    </div>}
     <div className="support-layout">
       <div className="support-sidebar">
         {customer && <nav className="support-sidebar-tabs" aria-label={tr('support.redesign.sections')}>
@@ -213,7 +220,7 @@ export default function SupportPage({ user, conversationId, sessionId, initialDr
           <div className="support-context"><span><Building2 size={15} aria-hidden="true" />{current.laboratory.code}</span><span>{tr(`support.category.${current.category}`)}</span><span className="support-context-lab">{current.laboratory.name}</span></div>
           {current.status === 'WAITING' && <p className="support-waiting" role="status">{tr('support.waitingHelp', { position: current.queuePosition })}</p>}
           {current.status === 'ACTIVE' && <p className="support-assignee" role="status"><Circle size={10} fill={current.staffConnected ? 'currentColor' : 'none'} />{tr('support.assignedTo', { name: current.assignedStaff?.fullName || '' })} · {tr(current.staffConnected ? 'support.connected' : 'support.disconnected')}</p>}
-          <div className="support-transcript-wrap"><div className="support-transcript" ref={transcript} role="log" aria-label={tr('support.conversation')} aria-live="polite" aria-relevant="additions" onScroll={() => { if (transcript.current) { nearBottom.current = transcript.current.scrollHeight - transcript.current.scrollTop - transcript.current.clientHeight < 80; if (nearBottom.current) setHasNewMessages(false); } }}>
+          <div className="support-transcript-wrap"><div className="support-transcript" ref={transcript} tabIndex={0} role="log" aria-label={tr('support.conversation')} aria-live="polite" aria-relevant="additions" onScroll={() => { if (transcript.current) { nearBottom.current = transcript.current.scrollHeight - transcript.current.scrollTop - transcript.current.clientHeight < 80; if (nearBottom.current) setHasNewMessages(false); } }}>
             {detail?.messages.map(message => <article key={message.id} className={`support-message kind-${message.kind.toLowerCase()}${message.sender?.id === user.id ? ' is-own' : ''}`}>
               {message.kind === 'SYSTEM' ? <><p>{tr(`support.event.${message.eventType}`, { name: message.sender?.fullName || '' })}</p>{message.body && <p>{message.body}</p>}<time dateTime={message.createdAt}>{time(message.createdAt)}</time></> : <><div className="support-message-author"><strong>{message.kind === 'ASSISTANT' ? tr('support.assistant') : message.sender?.fullName}</strong><time dateTime={message.createdAt}>{time(message.createdAt)}</time></div><p>{message.body}</p>{message.source === 'AI_HANDOFF' && <small>{tr('support.priorContext')}</small>}</>}
             </article>)}

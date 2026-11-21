@@ -123,13 +123,19 @@ export function createBridgeEvents({ prisma, settings, sendWebhook = postWebhook
   return { definitions: eventDefinitions, list, subscribe, unsubscribe, dispatchOnce };
 }
 
-export function startBridgeScheduler({ events, enabled, intervalMs = 500 }) {
+export function startBridgeScheduler({ events, enabled, intervalMs = 500, deliverySignal }) {
   if (!enabled) return () => Promise.resolve();
   let running = null, stopped = false;
   const tick = () => {
     if (running || stopped) return;
     running = events.dispatchOnce().catch(() => { console.error('ChatGPT bridge delivery unavailable'); }).finally(() => { running = null; });
   };
+  deliverySignal?.on('queued', tick);
   const timer = setInterval(tick, intervalMs); timer.unref(); tick();
-  return () => { stopped = true; clearInterval(timer); return running || Promise.resolve(); };
+  return () => {
+    stopped = true;
+    deliverySignal?.off('queued', tick);
+    clearInterval(timer);
+    return running || Promise.resolve();
+  };
 }

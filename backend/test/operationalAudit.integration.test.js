@@ -193,7 +193,7 @@ test('maintenance may be scheduled but cannot start before overdue equipment is 
   });
   assert.equal(job.status, 201, JSON.stringify(job.body));
   const start = () => http.patch(`/api/maintenance/${job.body.id}`).set(auth('staff')).send({
-    status: 'in_progress', changeReason: 'Begin inspection and maintenance'
+    status: 'in_progress', changeReason: 'Begin inspection and maintenance', expectedUpdatedAt: job.body.updatedAt
   });
   const blocked = await start();
   assert.equal(blocked.status, 409, JSON.stringify(blocked.body));

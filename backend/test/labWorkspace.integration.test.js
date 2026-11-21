@@ -91,12 +91,21 @@ test('maintenance impact, rescheduling reason and terminal states are enforced b
   assert.equal((await call('post', '/maintenance', 'staff', { ...data, status: 'completed' })).status, 400);
   const created = await call('post', '/maintenance', 'staff', data); assert.equal(created.status, 201, JSON.stringify(created.body));
   const path = `/maintenance/${created.body.id}`;
-  assert.equal((await call('patch', path, 'staff', { startAt: '2026-10-06T01:00:00Z' })).status, 400);
-  assert.equal((await call('patch', path, 'staff', { startAt: '2026-10-06T01:00:00Z', changeReason: 'Earlier technician arrival' })).status, 200);
+  const patch = (updatedAt, data) => call('patch', path, 'staff', { ...data, expectedUpdatedAt: updatedAt });
+  assert.equal((await patch(created.body.updatedAt, { startAt: '2026-10-06T01:00:00Z' })).status, 400);
+  const moved = await patch(created.body.updatedAt, { startAt: '2026-10-06T01:00:00Z', changeReason: 'Earlier technician arrival' });
+  assert.equal(moved.status, 200);
+  for (const changes of [{ title: 'Outdated title' }, { status: 'in_progress', changeReason: 'Outdated transition' }]) {
+    const stale = await patch(created.body.updatedAt, changes);
+    assert.equal(stale.status, 409);
+    assert.equal(stale.body.error.code, 'MAINTENANCE_CHANGED');
+  }
   assert.equal((await call('post', '/lab-workspace/stock', 'staff', { ...movement('ISSUE', 1), maintenanceId: created.body.id })).status, 201);
-  assert.equal((await call('patch', path, 'staff', { status: 'in_progress', changeReason: 'Technician started the job' })).status, 200);
-  assert.equal((await call('patch', path, 'staff', { status: 'completed', changeReason: 'Recorded work completion' })).status, 200);
-  assert.equal((await call('patch', path, 'staff', { status: 'scheduled', changeReason: 'Try reopening closed work' })).status, 409);
+  const started = await patch(moved.body.updatedAt, { status: 'in_progress', changeReason: 'Technician started the job' });
+  assert.equal(started.status, 200);
+  const completed = await patch(started.body.updatedAt, { status: 'completed', changeReason: 'Recorded work completion' });
+  assert.equal(completed.status, 200);
+  assert.equal((await patch(completed.body.updatedAt, { status: 'scheduled', changeReason: 'Try reopening closed work' })).status, 409);
   assert.equal((await call('post', '/lab-workspace/stock', 'staff', { ...movement('ISSUE', 1), maintenanceId: created.body.id })).status, 409);
 });
 
@@ -109,7 +118,7 @@ test('maintenance save rechecks bookings created after a clear impact preview', 
   assert.equal(impact.status, 200);
   assert.deepEqual(impact.body.conflicts, []);
   await prisma.booking.create({ data: { id: id(), resourceId: equipment.id, requestedById: users.student.id, title: 'Booking committed after preview', purpose: 'Race regression', status: 'CONFIRMED', startAt: new Date(update.startAt), endAt: new Date(update.endAt) } });
-  const saved = await call('patch', `/maintenance/${created.body.id}`, 'staff', update);
+  const saved = await call('patch', `/maintenance/${created.body.id}`, 'staff', { ...update, expectedUpdatedAt: created.body.updatedAt });
   assert.equal(saved.status, 409, JSON.stringify(saved.body));
   const persisted = await prisma.maintenanceWindow.findUnique({ where: { id: created.body.id } });
   assert.equal(persisted.startAt.toISOString(), data.startAt.replace('Z', '.000Z'));

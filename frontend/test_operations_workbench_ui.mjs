@@ -18,7 +18,7 @@ const baseIncident={id:'wb-incident',resourceId:resources[0].id,title:'Máy tr�
 const baseJob={id:'wb-job',title:'Kiểm tra hệ thống tản nhiệt GPU',kind:'maintenance',status:'scheduled',resourceId:resources[0].id,resource:resources[0],startAt:'2026-10-29T02:00:00Z',endAt:'2026-10-29T04:00:00Z',createdAt:'2026-10-28T02:00:00Z',updatedAt:'2026-10-28T02:00:00Z',createdBy:person,notes:'Kiểm tra quạt, vệ sinh đường gió và chạy thử sau bảo trì. Ghi kết quả kiểm tra trước khi bàn giao lại thiết bị.'};
 async function open(view,width,locale='vi',role='LAB_STAFF') {
  const actor=role==='LAB_STAFF'?person:{id:'wb-customer',fullName:'Minh Anh',role};
- let incident={...baseIncident},jobs=[{...baseJob},{...baseJob,id:'wb-job-two',title:'Hiệu chuẩn camera thị giác',kind:'calibration',status:'in_progress',resourceId:resources[1].id,resource:resources[1]}],detailFails=false,impactCalls=0,writes=0;
+ let incident={...baseIncident},jobs=[{...baseJob},{...baseJob,id:'wb-job-two',title:'Hiệu chuẩn camera thị giác',kind:'calibration',status:'in_progress',resourceId:resources[1].id,resource:resources[1]}],detailFails=false,impactCalls=0,writes=0,maintenanceWrite;
  const context=await browser.newContext({viewport:{width,height:width<600?844:1000},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];
  page.on('pageerror',error=>errors.push(error.message));
  await context.addInitScript(({actor,locale})=>{sessionStorage.setItem('lrm_token','isolated-workbench-fixture');sessionStorage.setItem('lrm_user',JSON.stringify(actor));localStorage.setItem('lrm_locale',locale);},{actor,locale});
@@ -32,7 +32,7 @@ async function open(view,width,locale='vi',role='LAB_STAFF') {
   else if(path==='/api/resource-care') data={generatedAt:new Date().toISOString(),items:[]};
   else if(path==='/api/maintenance/impact') {impactCalls++;data={conflicts:[]};}
   else if(path==='/api/maintenance') data=jobs;
-  else if(path==='/api/maintenance/wb-job'&&request.method()==='PATCH') {writes++;const body=request.postDataJSON();jobs=jobs.map(row=>row.id==='wb-job'?{...row,...body,updatedAt:'2026-10-28T03:00:00Z'}:row);data=jobs[0];}
+  else if(path==='/api/maintenance/wb-job'&&request.method()==='PATCH') {writes++;maintenanceWrite=request.postDataJSON();status=409;data={error:{code:'MAINTENANCE_CHANGED'}};}
   else if(path==='/api/incidents') data={items:[incident,{...baseIncident,id:'wb-incident-two',title:'Camera cần kiểm tra kết nối',resource:resources[1],resourceId:resources[1].id,severity:'medium',status:'investigating',assignedTo:null}],pagination:{page:1,pageSize:20,total:2,totalPages:1},summary:{total:2,open:2,resolved:0,byStatus:{reported:1,investigating:1}}};
   else if(path==='/api/incidents/wb-incident') {if(detailFails){status=503;data={message:'api.API_REQUEST_FAILED'};}else data=incident;}
   else if(path==='/api/incidents/wb-incident/triage') {writes++;incident={...incident,status:'triaged'};data=incident;}
@@ -43,7 +43,7 @@ async function open(view,width,locale='vi',role='LAB_STAFF') {
  if(view==='incidents') await page.locator('.incident-detail h2').waitFor();
  else {await page.locator('.maintenance-job').first().click();await page.locator('#maintenance-dossier-title').waitFor();}
  await page.evaluate(async()=>{await document.fonts.ready;document.activeElement?.blur();window.scrollTo(0,0);});
- return {page,context,errors,get writes(){return writes},get impactCalls(){return impactCalls},fail(value){detailFails=value}};
+ return {page,context,errors,get writes(){return writes},get impactCalls(){return impactCalls},get maintenanceWrite(){return maintenanceWrite},fail(value){detailFails=value}};
 }
 try {
  for(const view of ['incidents','maintenance'])for(const width of [1440,390]){
@@ -76,6 +76,11 @@ try {
     assert.equal(await page.getByRole('button',{name:catalogs.en['ui.save_maintenance_7bf4123f'],exact:true}).isEnabled(),true);
     await page.locator('[name=endAt]').fill('2026-10-29T12:00');
     assert.equal(await page.getByRole('button',{name:catalogs.en['ui.save_maintenance_7bf4123f'],exact:true}).isDisabled(),true,'Changing the time invalidates prior review');
+    await page.getByRole('button',{name:catalogs.en['ui.check_affected_bookings_f7d4f35b'],exact:true}).click();
+    await page.getByRole('button',{name:catalogs.en['ui.save_maintenance_7bf4123f'],exact:true}).click();
+    await page.getByText(catalogs.en['api.MAINTENANCE_CHANGED'],{exact:true}).waitFor();
+    assert.equal(state.maintenanceWrite.expectedUpdatedAt,baseJob.updatedAt);
+    assert.equal(await page.locator('[name=title]').inputValue(),'Kế hoạch giữ nguyên khi chuyển ngôn ngữ');
    }else{
     await page.locator('.incident-detail-actions').getByRole('button',{name:catalogs.vi['ui.classification_a077263e'],exact:true}).click();
     await page.locator('.incident-detail-actions').getByRole('button',{name:catalogs.vi['ui.start_investigation_f9b7e9ae'],exact:true}).waitFor();

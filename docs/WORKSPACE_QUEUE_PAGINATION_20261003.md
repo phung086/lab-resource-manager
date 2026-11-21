@@ -90,10 +90,12 @@ Every count stays inside the actor's authorized scope.
   an old record's action link opens the confirmation form without writing.
 
 Counts and items share one PostgreSQL Repeatable Read transaction per response.
-Active booking stages sort by earliest start; checked-out loans sort by earliest
-end, putting overdue work first. All/history/terminal booking lists sort by newest
-start. Incidents sort by newest detection time. Creation time and ID finish each
-order, preventing arbitrary tie order in an unchanged dataset.
+Booking lists sort by newest start time, with creation time and ID descending
+as tie-breakers. The customer All filter places active bookings first by newest
+creation time, then history by newest start time. The customer Action required
+filter sorts by earliest start time. Incidents sort by newest detection time.
+Creation time and ID finish each order, preventing arbitrary tie order in an
+unchanged dataset.
 
 ## Frontend behavior
 

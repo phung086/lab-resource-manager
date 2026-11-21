@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CalendarDays, ShieldCheck, Wrench, GraduationCap, Search, Microscope, DoorOpen, CheckCircle, Activity, LifeBuoy, Undo2, CreditCard } from 'lucide-react';
+import { ArrowRight, CalendarDays, ShieldCheck, Wrench, GraduationCap, Microscope, DoorOpen, CheckCircle, Activity, LifeBuoy, Undo2, CreditCard } from 'lucide-react';
 import labHero from '../assets/lab-workbench-hero-optimized.webp';
 import labHeroSmall from '../assets/lab-workbench-hero-small.webp';
 import { PublicResourceCatalog } from './PublicResourceCatalog';
@@ -174,47 +174,30 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
       </section>
 
       {/* FEATURES SECTION */}
-      <section className="landing-features" id="tinh-nang">
+      <section className="landing-features" id="tinh-nang" aria-labelledby="landing-features-heading">
         <div className="landing-features-inner">
           <div className="landing-section-header">
-            <span className="landing-section-eyebrow">
-              <Search size={16} aria-hidden="true" />
-              {t("ui.landing.features.eyebrow")}
-            </span>
-            <h2 className="landing-section-title">{t("ui.landing.features.title")}</h2>
+            <h2 className="landing-section-title" id="landing-features-heading">{t("ui.landing.features.title")}</h2>
             <p className="landing-section-subtitle">
               {t("ui.landing.features.subtitle")}
             </p>
+            <a className="landing-features-link" href="/resources">{t("ui.landing.cta.explore")}</a>
           </div>
-          <div className="landing-features-grid">
-            <div className="landing-feature-card">
-              <div className="landing-feature-icon landing-feature-icon-mint">
-                <DoorOpen size={28} aria-hidden="true" />
-              </div>
-              <h3 className="landing-feature-title">{t("ui.landing.features.rooms.title")}</h3>
-              <p className="landing-feature-desc">
-                {t("ui.landing.features.rooms.desc")}
-              </p>
-            </div>
-            <div className="landing-feature-card">
-              <div className="landing-feature-icon landing-feature-icon-coral">
-                <Microscope size={28} aria-hidden="true" />
-              </div>
-              <h3 className="landing-feature-title">{t("ui.landing.features.equipment.title")}</h3>
-              <p className="landing-feature-desc">
-                {t("ui.landing.features.equipment.desc")}
-              </p>
-            </div>
-            <div className="landing-feature-card">
-              <div className="landing-feature-icon landing-feature-icon-amber">
-                <CalendarDays size={28} aria-hidden="true" />
-              </div>
-              <h3 className="landing-feature-title">{t("ui.landing.features.booking.title")}</h3>
-              <p className="landing-feature-desc">
-                {t("ui.landing.features.booking.desc")}
-              </p>
-            </div>
-          </div>
+          <ul className="landing-features-list" role="list">
+            {([
+              [DoorOpen, "ui.landing.features.rooms.title", "ui.landing.features.rooms.desc"],
+              [Microscope, "ui.landing.features.equipment.title", "ui.landing.features.equipment.desc"],
+              [CalendarDays, "ui.landing.features.booking.title", "ui.landing.features.booking.desc"],
+            ] as const).map(([Icon, title, description]) => (
+              <li className="landing-feature-card" key={title}>
+                <span className="landing-feature-icon" aria-hidden="true"><Icon size={22} /></span>
+                <div>
+                  <h3>{t(title)}</h3>
+                  <p>{t(description)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -230,56 +213,30 @@ export function PublicLanding({ children, scheduleContent, userName, onRegister,
       </>}
       {(page === "home" || page === "process") && <>
       {/* WORKFLOW SECTION */}
-      <section className="landing-workflow" id="quy-trinh">
+      <section className="landing-workflow" id="quy-trinh" aria-labelledby="landing-workflow-heading">
         <div className="landing-workflow-inner">
           <div className="landing-section-header">
-            <span className="landing-section-eyebrow">
-              <ShieldCheck size={16} aria-hidden="true" />
-              {t("ui.landing.workflow.eyebrow")}
-            </span>
-            <h2 className="landing-section-title">{t("ui.landing.workflow.title")}</h2>
+            <h2 className="landing-section-title" id="landing-workflow-heading">{t("ui.landing.workflow.title")}</h2>
             <p className="landing-section-subtitle">
               {t("ui.landing.workflow.subtitle")}
             </p>
           </div>
-          <div className="landing-workflow-steps">
-            <div className="landing-workflow-step">
-              <div className="landing-workflow-number">01</div>
-              <div className="landing-workflow-content">
-                <h3 className="landing-workflow-title">{t("ui.landing.steps.select.title")}</h3>
-                <p className="landing-workflow-desc">
-                  {t("ui.landing.steps.select.desc")}
-                </p>
-              </div>
-            </div>
-            <div className="landing-workflow-step">
-              <div className="landing-workflow-number">02</div>
-              <div className="landing-workflow-content">
-                <h3 className="landing-workflow-title">{t("ui.landing.steps.book.title")}</h3>
-                <p className="landing-workflow-desc">
-                  {t("ui.landing.steps.book.desc")}
-                </p>
-              </div>
-            </div>
-            <div className="landing-workflow-step">
-              <div className="landing-workflow-number">03</div>
-              <div className="landing-workflow-content">
-                <h3 className="landing-workflow-title">{t("ui.landing.steps.handover.title")}</h3>
-                <p className="landing-workflow-desc">
-                  {t("ui.landing.steps.handover.desc")}
-                </p>
-              </div>
-            </div>
-            <div className="landing-workflow-step">
-              <div className="landing-workflow-number">04</div>
-              <div className="landing-workflow-content">
-                <h3 className="landing-workflow-title">{t("ui.landing.steps.return.title")}</h3>
-                <p className="landing-workflow-desc">
-                  {t("ui.landing.steps.return.desc")}
-                </p>
-              </div>
-            </div>
-          </div>
+          <ol className="landing-workflow-steps" role="list">
+            {([
+              ["ui.landing.steps.select.title", "ui.landing.steps.select.desc"],
+              ["ui.landing.steps.book.title", "ui.landing.steps.book.desc"],
+              ["ui.landing.steps.handover.title", "ui.landing.steps.handover.desc"],
+              ["ui.landing.steps.return.title", "ui.landing.steps.return.desc"],
+            ] as const).map(([title, description], index) => (
+              <li className="landing-workflow-step" key={title}>
+                <span className="landing-workflow-number">{index + 1}</span>
+                <div className="landing-workflow-content">
+                  <h3>{t(title)}</h3>
+                  <p>{t(description)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 

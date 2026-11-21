@@ -36,6 +36,7 @@ try {
       code: "QA",
       name: "LAB kiểm thử",
       labPolicy: null,
+      isActive: true,
     };
     const resource = {
       id: "qa-resource",
@@ -45,11 +46,13 @@ try {
       subtype: "OTHER",
       operationalStatus: "AVAILABLE",
       bookingState: "bookable",
+      location: "LAB kiểm thử",
       laboratoryId: lab.id,
       laboratory: lab,
       media: [],
       specs: {},
       capacity: 1,
+      version: 0,
     };
     const customer = {
       ...user,
@@ -70,9 +73,24 @@ try {
     const errors = [];
     let reads = 0,
       failingPath = "";
+    const resourceEditVersions = [];
     await context.route("**/api/**", async (route) => {
       const request = route.request(),
         path = new URL(request.url()).pathname;
+      if (path === "/api/resources/qa-resource" && request.method() === "PATCH") {
+        assert.ok(["ADMIN", "LAB_STAFF"].includes(role));
+        const data = request.postDataJSON();
+        resourceEditVersions.push(data.expectedVersion);
+        if (resourceEditVersions.length === 1) {
+          resource.version = 1;
+          resource.name = "Tên được cập nhật ở phiên khác";
+          return route.fulfill({ status: 409, json: { error: { code: "RESOURCE_CHANGED" } } });
+        }
+        assert.equal(data.expectedVersion, resource.version);
+        resource.name = data.name;
+        resource.version += 1;
+        return route.fulfill({ json: resource });
+      }
       assert.ok(
         request.method() === "GET" || path === "/api/auth/activity",
         "No business mutation in presentation QA",
@@ -281,6 +299,46 @@ try {
           await page.locator('.users-create [id$="password-hint"]').innerText(),
           /12/,
         );
+      }
+      if (view === "resource-management") {
+        await page.setViewportSize({ width: 1099, height: 780 });
+        const addResource = page.getByRole("button", { name: "Thêm tài nguyên", exact: true });
+        const editor = page.locator("#resource-editor");
+        assert.equal(await page.locator(".workspace-rail").evaluate(
+          rail => [...rail.querySelectorAll("button")].every(button =>
+            !button.getClientRects().length ||
+            button.getBoundingClientRect().right <= rail.getBoundingClientRect().right
+          )
+        ), true, "Navigation stays in its column at the tablet breakpoint");
+        await addResource.click({ timeout: 5000 });
+        await page.waitForFunction(() => {
+          const title = document.getElementById("resource-editor-title");
+          const header = document.querySelector(".header-2026");
+          if (!title || !header || title !== document.activeElement) return false;
+          const bounds = title.getBoundingClientRect();
+          return bounds.top >= header.getBoundingClientRect().bottom && bounds.bottom <= innerHeight;
+        });
+        await editor.getByRole("button", { name: "Hủy", exact: true }).click();
+        await editor.waitFor({ state: "hidden" });
+        await page.waitForFunction(() => document.activeElement?.textContent?.trim() === "Thêm tài nguyên");
+
+        const editResource = page.getByRole("button", { name: /Sửa QA-EQ-01/ });
+        const name = editor.locator("#resource-name");
+        const save = editor.getByRole("button", { name: "Lưu thay đổi", exact: true });
+        await editResource.click();
+        await name.fill("Bản nháp cần giữ");
+        await save.click();
+        const conflict = editor.getByRole("alert");
+        await conflict.waitFor();
+        assert.match(await conflict.innerText(), /Nội dung bạn nhập vẫn còn/);
+        assert.equal(await name.inputValue(), "Bản nháp cần giữ");
+        await editor.getByRole("button", { name: "Hủy", exact: true }).click();
+        await editResource.click();
+        assert.equal(await name.inputValue(), "Tên được cập nhật ở phiên khác");
+        await name.fill("Tên hợp lệ sau khi mở lại");
+        await save.click();
+        await editor.waitFor({ state: "hidden" });
+        assert.deepEqual(resourceEditVersions, [0, 1]);
       }
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 1000 });

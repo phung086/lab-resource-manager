@@ -12,8 +12,12 @@ test('empty and malformed login are rejected; normalized email and password byte
 });
 test('current login compatibility and registration boundaries are distinct', () => {
   assert.equal(validateAuth({ ...valid, password: 'x'.repeat(129) }, 'login').password, undefined);
-  assert.ok(validateAuth({ ...valid, password: 'x'.repeat(129) }, 'register').password);
-  for (const length of [8, 128]) assert.equal(validateAuth({ ...valid, password: 'x'.repeat(length) }, 'register').password, undefined);
+  for (const password of ['x'.repeat(73), `${'é'.repeat(36)}x`]) {
+    assert.ok(validateAuth({ ...valid, password }, 'register').password);
+  }
+  for (const password of ['x'.repeat(8), 'x'.repeat(72), 'é'.repeat(36)]) {
+    assert.equal(validateAuth({ ...valid, password }, 'register').password, undefined);
+  }
   assert.ok(validateAuth({ ...valid, password: '1234567' }, 'register').password);
   assert.deepEqual(validateAuth({ email: valid.email, password: valid.password }, 'register'), {});
   assert.equal(validateAuth(valid, 'register').phone, undefined);

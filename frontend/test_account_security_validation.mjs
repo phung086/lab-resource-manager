@@ -17,9 +17,9 @@ test('managed customer creation normalizes contact while preserving password byt
   assert.equal(validateManagedUser({ ...account, role: 'LAB_STAFF' }, 'ADMIN').data.role, 'LAB_STAFF');
 });
 test('managed account fields enforce credential and contact boundaries without guessing email or optional contact', () => {
-  for (const password of ['x'.repeat(11), 'x'.repeat(129)]) assert.ok(validateManagedUser({ ...account, password }).errors.password);
+  for (const password of ['x'.repeat(11), 'x'.repeat(73), `${'é'.repeat(36)}x`]) assert.ok(validateManagedUser({ ...account, password }).errors.password);
   for (const email of ['x', '.a@school.edu.vn', 'a..b@school.edu.vn']) assert.ok(validateManagedUser({ ...account, email }).errors.email);
-  for (const password of ['x'.repeat(12), 'x'.repeat(128)]) assert.equal(validateManagedUser({ ...account, password }).errors.password, undefined);
+  for (const password of ['x'.repeat(12), 'x'.repeat(72), 'é'.repeat(36)]) assert.equal(validateManagedUser({ ...account, password }).errors.password, undefined);
   assert.deepEqual(validateManagedUserEdit({ fullName: 'Customer', phone: '', organization: 'Legacy data' }).data, { fullName: 'Customer', phone: '' });
   assert.ok(validateManagedUserEdit({ fullName: '', phone: '12345' }).errors.fullName);
   assert.ok(validateManagedUserEdit({ fullName: 'Customer', phone: '12345' }).errors.phone);
@@ -28,7 +28,7 @@ test('self password drafts require current password, different new password and 
   assert.deepEqual(validatePasswordDraft({ currentPassword: 'current-secret', newPassword: ' new-secret ', confirmPassword: ' new-secret ' }), {});
   assert.ok(validatePasswordDraft({ currentPassword: 'short', newPassword: 'valid-new-secret', confirmPassword: 'different' }).currentPassword);
   assert.ok(validatePasswordDraft({ currentPassword: 'same-secret', newPassword: 'same-secret', confirmPassword: 'same-secret' }).newPassword);
-  assert.ok(validatePasswordDraft({ currentPassword: 'current-secret', newPassword: 'x'.repeat(129), confirmPassword: 'x'.repeat(129) }).newPassword);
+  assert.ok(validatePasswordDraft({ currentPassword: 'current-secret', newPassword: 'x'.repeat(73), confirmPassword: 'x'.repeat(73) }).newPassword);
 });
 test('assisted password draft omits current password but retains new-password and confirmation checks', () => {
   assert.deepEqual(validatePasswordDraft({ currentPassword: '', newPassword: 'new-secret', confirmPassword: 'new-secret' }, true), {});

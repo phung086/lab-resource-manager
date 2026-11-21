@@ -229,18 +229,21 @@ router.get("/cameras/access-audits", requireRole(ADMIN, LAB_STAFF), async (req, 
 router.post("/cameras", requireRole(ADMIN), async (req, res, next) => {
   try {
     const data = cameraCreateSchema.parse(req.body);
-    const resource = await prisma.resource.findUnique({ where: { id: data.resourceId }, select: { laboratoryId: true } });
-    if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
-    if (resource.laboratoryId !== data.laboratoryId) {
-      throw new HttpError(400, "Camera laboratory must match its resource laboratory", undefined, "TELEMETRY_RESOURCE_SCOPE_MISMATCH");
-    }
-    if (data.telemetrySourceId) {
-      const source = await prisma.telemetrySource.findUnique({ where: { id: data.telemetrySourceId } });
-      if (!source || source.resourceId !== data.resourceId || source.laboratoryId !== data.laboratoryId) {
-        throw new HttpError(400, "Camera source must match camera resource and laboratory", undefined, "TELEMETRY_RESOURCE_SCOPE_MISMATCH");
+    const camera = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM resources WHERE id = ${data.resourceId} FOR SHARE`;
+      const resource = await tx.resource.findUnique({ where: { id: data.resourceId }, select: { laboratoryId: true } });
+      if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
+      if (resource.laboratoryId !== data.laboratoryId) {
+        throw new HttpError(400, "Camera laboratory must match its resource laboratory", undefined, "TELEMETRY_RESOURCE_SCOPE_MISMATCH");
       }
-    }
-    const camera = await prisma.camera.create({ data: { id: crypto.randomUUID(), ...data } });
+      if (data.telemetrySourceId) {
+        const source = await tx.telemetrySource.findUnique({ where: { id: data.telemetrySourceId } });
+        if (!source || source.resourceId !== data.resourceId || source.laboratoryId !== data.laboratoryId) {
+          throw new HttpError(400, "Camera source must match camera resource and laboratory", undefined, "TELEMETRY_RESOURCE_SCOPE_MISMATCH");
+        }
+      }
+      return tx.camera.create({ data: { id: crypto.randomUUID(), ...data } });
+    });
     res.status(201).json(serializeCamera(camera));
   } catch (error) {
     next(error);

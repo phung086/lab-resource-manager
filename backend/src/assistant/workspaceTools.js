@@ -13,7 +13,7 @@ const forbidden = () => { throw new HttpError(403, 'Forbidden', undefined, 'FORB
 const definitions = [
   ['get_material_stock', 'Read current material stock in assigned LABs (ADMIN: all). Uninitialized stock is unknown.', { query: text, limit }, []],
   ['search_customers', 'Find CUSTOMER contact information allowed by account management. No passwords, addresses or financial details.', { query: text, limit }, []],
-  ['get_lab_schedule', 'Read bookings overlapping a Vietnam-time interval. CUSTOMER: own; staff: assigned LABs; ADMIN: all. Returns complete matching totals and a bounded preview.', { startAt: date, endAt: date, resourceId: text, limit }, ['startAt', 'endAt']],
+  ['get_lab_schedule', 'Read bookings overlapping a Vietnam-time interval. CUSTOMER: own; staff: assigned LABs; ADMIN: all. Set ownOnly for a personal schedule. Returns complete matching totals and a bounded preview.', { startAt: date, endAt: date, resourceId: text, ownOnly: { type: 'boolean' }, limit }, ['startAt', 'endAt']],
   ['get_operations_report', 'Read complete 7/30-day persisted operational totals within current staff scope. Scheduled time and declared actual use are separate.', { days: { type: 'integer', enum: [7, 30] } }, []]
 ];
 
@@ -48,6 +48,7 @@ async function read(name, input, actor) {
     if (!Number.isFinite(+startAt) || !Number.isFinite(+endAt) || startAt >= endAt || endAt - startAt > 31 * 86400000)
       throw new HttpError(400, 'Invalid interval', undefined, 'VALIDATION_ERROR');
     const where = { ...bookingScopeWhere(current), ...(input.resourceId ? { resourceId: input.resourceId } : {}),
+      ...(input.ownOnly ? { requestedById: current.id } : {}),
       startAt: { lt: endAt }, endAt: { gt: startAt },
       NOT: { status: 'PENDING_APPROVAL', paymentDueAt: { lte: now } } };
     const [total, counts, items, awaitingPayment] = await Promise.all([tx.booking.count({ where }),

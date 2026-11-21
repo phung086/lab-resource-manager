@@ -9,6 +9,15 @@ test.before(() => { globalThis.sessionStorage = { getItem: () => 'old-customer-s
 test.after(() => { if (originalStorage === undefined) delete globalThis.sessionStorage; else globalThis.sessionStorage = originalStorage; });
 const pending = () => ({ id: 'request-one', status: 'PENDING', expiresAt: new Date(Date.now() + 60000).toISOString() });
 const question = { message: 'Tôi muốn đặt phòng.', locale: 'vi' };
+test('resource links accept only bounded identifiers instead of user or model supplied destinations', async () => {
+  const result = { ...pending(), status: 'ANSWERED', provider: 'local', source: 'authenticated_mcp',
+    answer: 'Bạn có thể mở chi tiết bên dưới.' };
+  const ask = resourceLinks => askChatgptBridge(question, { signal: new AbortController().signal,
+    transport: async () => ({ ...result, resourceLinks }) });
+  const link = { id: randomUUID(), name: 'Phòng thực hành' };
+  assert.deepEqual((await ask([link])).resourceLinks, [link]);
+  await assert.rejects(ask([{ ...link, id: 'https://elsewhere.example' }]), { code: 'bridge.invalidResponse' });
+});
 test('partial content is delivered while pending; completion still requires an actual final answer', async () => {
   const seen = []; let reads = 0;
   const result = await askChatgptBridge(question, { signal: new AbortController().signal, pollMs: 1,

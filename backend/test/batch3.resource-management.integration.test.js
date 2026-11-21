@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import test from "node:test";
 import bcrypt from "bcryptjs";
 import request from "supertest";
+import { setTimeout as delay } from "node:timers/promises";
 
 import {
   assertBatch3Database,
@@ -115,13 +116,109 @@ test("Batch 3 canonical resource management", { timeout: 180000 }, async (t) => 
 
   await t.test("update protects immutable fields and cross-lab resources", async () => {
     const valid = await request(app).patch(`/api/resources/${fixture.resources.assigned}`).set(bearer(tokens.staff))
-      .send({ description: "Updated with real persistence", category: "EQUIPMENT", changeReason: "Catalog review" });
+      .send({ expectedVersion: 0, description: "Updated with real persistence", category: "EQUIPMENT", changeReason: "Catalog review" });
     assert.equal(valid.status, 200);
     assert.equal(valid.body.description, "Updated with real persistence");
-    assert.equal((await request(app).patch(`/api/resources/${fixture.resources.foreign}`).set(bearer(tokens.staff)).send({ name: "IDOR" })).status, 403);
-    assert.equal((await request(app).patch(`/api/resources/${fixture.resources.assigned}`).set(bearer(tokens.admin)).send({ id: id() })).status, 400);
-    assert.equal((await request(app).patch(`/api/resources/${fixture.resources.assigned}`).set(bearer(tokens.admin)).send({ operationalStatus: "BROKEN" })).status, 400);
-    assert.equal((await request(app).patch(`/api/resources/${fixture.resources.assigned}`).set(bearer(tokens.staff)).send({ laboratoryId: fixture.labs.foreign })).status, 403);
+    assert.equal(valid.body.version, 1);
+    assert.equal((await request(app).patch(`/api/resources/${fixture.resources.foreign}`).set(bearer(tokens.staff)).send({ expectedVersion: 0, name: "Outside LAB" })).status, 403);
+    assert.equal((await request(app).patch(`/api/resources/${fixture.resources.assigned}`).set(bearer(tokens.admin)).send({ expectedVersion: 1, id: id() })).status, 400);
+    assert.equal((await request(app).patch(`/api/resources/${fixture.resources.assigned}`).set(bearer(tokens.admin)).send({ expectedVersion: 1, operationalStatus: "BROKEN" })).status, 400);
+    assert.equal((await request(app).patch(`/api/resources/${fixture.resources.assigned}`).set(bearer(tokens.staff)).send({ expectedVersion: 1, laboratoryId: fixture.labs.foreign })).status, 403);
+  });
+
+  await t.test("a concurrent LAB move invalidates staff writes waiting on that resource", async () => {
+    const resourceId = id();
+    await isolated.resource.create({ data: { id: resourceId, code: resourceId, name: "Scoped write test", location: "LAB", laboratoryId: fixture.labs.assigned, category: "EQUIPMENT", subtype: "OTHER" } });
+    let write;
+    await isolated.$transaction(async tx => {
+      const [{ pid }] = await tx.$queryRaw`SELECT pg_backend_pid() AS pid`;
+      await tx.resource.update({ where: { id: resourceId }, data: { laboratoryId: fixture.labs.foreign } });
+      write = request(app).patch(`/api/resources/${resourceId}/operational-status`).set(bearer(tokens.staff))
+        .send({ operationalStatus: "MAINTENANCE", reason: "Verify current LAB scope" }).then(response => response);
+      const deadline = Date.now() + 3000;
+      let blocked = false;
+      while (!blocked && Date.now() < deadline) {
+        [{ blocked }] = await isolated.$queryRaw`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname = current_database() AND ${pid} = ANY(pg_blocking_pids(pid))) AS blocked`;
+        if (!blocked) await delay(20);
+      }
+      assert.ok(blocked, "Wait for the staff write to reach the resource lock before committing the move");
+    });
+    assert.equal((await write).status, 403);
+    assert.equal((await isolated.resource.findUniqueOrThrow({ where: { id: resourceId } })).operationalStatus, "AVAILABLE");
+    assert.equal(await isolated.resourceStatusHistory.count({ where: { resourceId } }), 0);
+  });
+
+  await t.test("concurrent resource edits accept only one version and leave the other draft unsaved", async () => {
+    const resourceId = id();
+    await isolated.resource.create({ data: { id: resourceId, code: resourceId, name: "Original resource", location: "LAB", laboratoryId: fixture.labs.assigned, subtype: "OTHER" } });
+    const endpoint = `/api/resources/${resourceId}`;
+    const update = (token, data) => request(app).patch(endpoint).set(bearer(token)).send(data);
+    const view = await request(app).get(endpoint);
+    assert.equal(view.body.version, 0);
+    assert.equal((await update(tokens.admin, { name: "No version" })).status, 400);
+    assert.equal((await update(tokens.admin, { expectedVersion: 0 })).status, 400);
+    const edits = [
+      { expectedVersion: view.body.version, name: "Admin revision", description: "Admin details" },
+      { expectedVersion: view.body.version, name: "Staff revision", description: "Staff details" }
+    ];
+    const results = await Promise.all([update(tokens.admin, edits[0]), update(tokens.staff, edits[1])]);
+    assert.deepEqual(results.map(result => result.status).sort(), [200, 409]);
+    const winner = results.findIndex(result => result.status === 200);
+    assert.equal(results[1 - winner].body.error.code, "RESOURCE_CHANGED");
+    const saved = await isolated.resource.findUniqueOrThrow({ where: { id: resourceId } });
+    assert.equal(saved.version, 1);
+    assert.equal(saved.name, edits[winner].name);
+    assert.equal(saved.description, edits[winner].description);
+    assert.equal(await isolated.usageLog.count({ where: { resourceId, message: "resource.updated" } }), 1);
+
+    const tariff = await request(app).put(`/api/booking-pricing/${resourceId}/tariff`)
+      .set(bearer(tokens.admin)).send({ hourlyRateVnd: 0, maxBookingMinutes: 120 });
+    assert.equal(tariff.status, 200);
+    const staleLimit = await update(tokens.admin, { expectedVersion: saved.version, maxBookingMinutes: 60 });
+    assert.equal(staleLimit.status, 409);
+    assert.equal(staleLimit.body.error.code, "RESOURCE_CHANGED");
+    assert.equal((await isolated.resource.findUniqueOrThrow({ where: { id: resourceId } })).maxBookingMinutes, 120);
+  });
+
+  await t.test("room category stays stable until the confirmed booking is returned and inspected", async () => {
+    const resourceId = id(), bookingId = id(), now = Date.now();
+    await isolated.resource.create({ data: { id: resourceId, code: resourceId, name: "Bookable room", location: "LAB", laboratoryId: fixture.labs.assigned, category: "ROOM", subtype: "ROOM" } });
+    await isolated.booking.create({ data: {
+      id: bookingId, resourceId, requestedById: fixture.users.student, title: "Room booking", purpose: "Integration test",
+      status: "CONFIRMED", startAt: new Date(now + 10 * 60000), endAt: new Date(now + 70 * 60000),
+      fulfillmentSnapshot: { mode: "ROOM_SELF_SERVICE" }, contactSnapshot: { phone: "0901234567" }
+    } });
+    const endpoint = `/api/resources/${resourceId}`;
+    const changeCategory = async (category) => {
+      const view = await request(app).get(endpoint);
+      return request(app).patch(endpoint).set(bearer(tokens.admin)).send({ category, expectedVersion: view.body.version });
+    };
+    const bookingAction = (action, actor, body = {}) =>
+      request(app).post(`/api/bookings/${bookingId}/${action}`).set(bearer(tokens[actor])).send(body);
+    for (const step of ["self-check-in", "self-return", "complete"]) {
+      const denied = await changeCategory("EQUIPMENT");
+      assert.equal(denied.status, 409);
+      assert.equal(denied.body.error.code, "RESOURCE_CATEGORY_BOOKED");
+      const response = step === "complete" ? await bookingAction(step, "staff")
+        : await bookingAction(step, "student", step === "self-return" ? { conditionAfter: "Room returned in good condition" } : {});
+      assert.equal(response.status, 200, JSON.stringify(response.body.error));
+    }
+    const changed = await changeCategory("EQUIPMENT");
+    assert.equal(changed.status, 200);
+    assert.equal(changed.body.category, "EQUIPMENT");
+  });
+
+  await t.test("resources with monitoring links cannot move labs", async () => {
+    for (const kind of ["cameras", "sources"]) {
+      const resourceId = id(), laboratoryId = fixture.labs.assigned;
+      await isolated.resource.create({ data: { id: resourceId, code: resourceId, name: "Monitored resource", location: "LAB", laboratoryId, category: "EQUIPMENT", subtype: "OTHER" } });
+      const linked = await request(app).post(`/api/telemetry/${kind}`).set(bearer(tokens.admin)).send({ resourceId, laboratoryId, code: id(), name: "Monitoring fixture" });
+      assert.equal(linked.status, 201);
+      const move = await request(app).patch(`/api/resources/${resourceId}`).set(bearer(tokens.admin)).send({ expectedVersion: 0, laboratoryId: fixture.labs.foreign });
+      assert.equal(move.status, 409);
+      assert.equal(move.body.error.code, "RESOURCE_MONITORING_LINKED");
+      assert.equal((await isolated.resource.findUniqueOrThrow({ where: { id: resourceId } })).laboratoryId, laboratoryId);
+    }
   });
 
   await t.test("operational status is authoritative and history is persisted", async () => {
@@ -154,7 +251,7 @@ test("Batch 3 canonical resource management", { timeout: 180000 }, async (t) => 
     const unresolved = await request(app).get("/api/resources?classification=UNRESOLVED");
     assert.equal(unresolved.status, 200);
     assert.equal(unresolved.body.some((resource) => resource.id === fixture.resources.review && resource.category === null), true);
-    const reviewed = await request(app).patch(`/api/resources/${fixture.resources.review}`).set(bearer(tokens.admin)).send({ category: "EQUIPMENT", changeReason: "Verified camera classification" });
+    const reviewed = await request(app).patch(`/api/resources/${fixture.resources.review}`).set(bearer(tokens.admin)).send({ expectedVersion: 0, category: "EQUIPMENT", changeReason: "Verified camera classification" });
     assert.equal(reviewed.status, 200);
     assert.equal(reviewed.body.category, "EQUIPMENT");
     const audit = await isolated.usageLog.findFirst({ where: { resourceId: fixture.resources.review, message: "resource.updated" }, orderBy: { createdAt: "desc" } });

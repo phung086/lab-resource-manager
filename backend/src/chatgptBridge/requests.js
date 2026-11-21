@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { fromJsonSchema } from '@modelcontextprotocol/server';
-import { assistantTools } from '../assistant/toolHandlers.js';
+import { assistantTools, resourceScope } from '../assistant/toolHandlers.js';
 import { getUserLoyalty } from '../services/loyaltyService.js';
 import { quoteBooking, PURPOSE_CODES } from '../services/bookingPricingService.js';
 import { assertNotAborted, RequestGate } from '../assistant/assistantRuntime.js';
@@ -9,11 +9,12 @@ import { activeUser, activeRequester, requestRole, assertGrant, bridgeLocks, bri
 import { CANONICAL_ROLES } from '../constants/roles.js';
 import { fastQueryPlan } from '../assistant/fastQueries.js';
 import { buildAssistantSummary, renderAssistantSummary } from '../assistant/assistantSummary.js';
+import { customerFacingAnswer, isResourceLookup, resourceLinksForResult } from '../assistant/assistantNavigation.js';
 import { businessKnowledge } from './knowledge.js';
 import { bridgeTimeContext } from './timeContext.js';
 import { customerProposalSchema, prepareCustomerProposals } from './customerProposals.js';
 import { isDeepStrictEqual } from 'node:util';
-import { quickReplyKey } from '../assistant/quickReplies.js';
+import { bridgeGuidanceKey } from '../assistant/quickReplies.js';
 import { localize } from '../locales/index.js';
 
 const id = z.string().uuid(), date = z.string().datetime({ offset: true });
@@ -51,6 +52,7 @@ const byteLength = value => Buffer.byteLength(JSON.stringify(value), 'utf8');
 export function createBridgeRequests({ prisma, settings, now = () => new Date() }) {
   const fastGate = new RequestGate(4);
   const enabled = () => { if (!settings.enabled) throw bridgeError(503, 'BRIDGE_UNAVAILABLE'); };
+  const customerAnswer = (answer, locale) => customerFacingAnswer(answer, locale, settings.publicOrigin);
   async function requester(tx, actor) {
     const current = await tx.user.findUnique({ where: { id: actor.id } });
     if (!CANONICAL_ROLES.includes(current?.role) || !activeUser(current, actor.role, actor.authVersion)) throw bridgeError(403, 'FORBIDDEN');
@@ -77,13 +79,20 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
     if (job.expiresAt <= now() || !['PENDING', 'ANSWERED'].includes(job.status) || await supportOpen(tx, job.customerId)) throw bridgeError(409, 'BRIDGE_REQUEST_INACTIVE');
     return job;
   }
-  function dto(job) {
+  async function dto(job, tx = prisma) {
+    const resourceIds = (job.context?.resourceLinks || []).map(resource => resource.id);
+    const resourceLinks = job.status === 'ANSWERED' && resourceIds.length ? await tx.resource.findMany({
+      where: { id: { in: resourceIds }, ...(await resourceScope({ id: job.customerId, role: requestRole(job) })) },
+      select: { id: true, name: true }, take: 5, orderBy: { name: 'asc' }
+    }) : [];
     return { id: job.id, status: job.status, expiresAt: job.expiresAt.toISOString(), locale: job.locale,
-      ...(job.status === 'PENDING' && job.context?.partialReply ? { partialReply: job.context.partialReply } : {}),
-      ...(job.status === 'ANSWERED' ? { answer: job.answer, provider: job.context?.quickReplyKey || job.context?.fastQuery ? 'local' : 'chatgpt',
+      ...(job.status === 'PENDING' && job.context?.partialReply ? {
+        partialReply: { ...job.context.partialReply, text: customerAnswer(job.context.partialReply.text, job.locale) }
+      } : {}),
+      ...(job.status === 'ANSWERED' ? { answer: customerAnswer(job.answer, job.locale), provider: job.context?.quickReplyKey || job.context?.fastQuery ? 'local' : 'chatgpt',
         source: job.context?.fastQuery ? 'authenticated_mcp' : job.context?.quickReplyKey ? 'local_guidance' : 'chatgpt_bridge',
         ...(job.context?.fastQuery ? { toolsUsed: [job.context.fastQuery.name], nextTab: job.context.nextTab } : {}),
-        generatedAt: job.answeredAt.toISOString(), proposals: job.context?.publicProposals || [] } : {}),
+        generatedAt: job.answeredAt.toISOString(), proposals: job.context?.publicProposals || [], resourceLinks } : {}),
       conversation: { id: job.conversationId, expiresAt: new Date(job.createdAt.getTime() + 30 * 60000).toISOString() } };
   }
   async function create(actor, raw) {
@@ -110,8 +119,7 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
         conversationId = previous.conversationId;
       }
       const { message, locale, conversationId: unused, ...context } = input; void unused;
-      const quickKey = quickReplyKey(message);
-      const replyKey = user.role !== 'CUSTOMER' && /\.(greeting|capabilities)$/.test(quickKey || '') ? 'assistant.quick.operator' : quickKey;
+      const replyKey = bridgeGuidanceKey(message);
       const job = await tx.chatgptBridgeRequest.create({ data: { id: randomUUID(), conversationId, customerId: user.id,
         customerAuthVersion: user.authVersion, grantId: grant.id, generation: grant.generation, message, locale,
         context: { ...context, actorRole: user.role, ...(replyKey ? { quickReplyKey: replyKey } : {}), ...(fastPlan ? { fastQuery: fastPlan } : {}) },
@@ -126,7 +134,14 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
       release = fastGate.acquire(actor.id);
       const tool = sharedTools.find(tool => tool.name === fastPlan.name);
       const result = await tool.handler(fastPlan.input, actor, { signal: globalThis.AbortSignal.timeout(settings.toolTimeoutMs || 10000) });
-      const summary = buildAssistantSummary([{ tool: tool.name, result }]);
+      const resourceLinks = resourceLinksForResult(tool.name, result);
+      const summary = tool.name === 'search_resources' && resourceLinks.length
+        ? [{ key: 'assistant.resourceHeading' }]
+        : buildAssistantSummary([{ tool: tool.name, result }]);
+      if (tool.name === 'find_available_slots') {
+        const key = input.startAt ? 'assistant.selectedWindow' : fastPlan.input.from ? 'assistant.requestedWindow' : 'assistant.defaultWindow';
+        summary.unshift({ key });
+      }
       const answer = renderAssistantSummary(summary, (key, params) => localize(input.locale, key, params), input.locale);
       if (byteLength(answer) > 24000) throw bridgeError(429, 'BRIDGE_CONTEXT_LIMIT');
       return await prisma.$transaction(async tx => {
@@ -135,7 +150,8 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
         if ((await terminal(tx, job)).status !== 'PENDING') throw bridgeError(409, 'BRIDGE_REQUEST_INACTIVE');
         const nextTab = ({ get_material_stock: 'stock', search_customers: 'users', get_operations_report: 'dashboard', get_operational_summary: 'dashboard', get_lab_schedule: 'smart_calendar', find_available_slots: 'smart_calendar', search_resources: 'resources' })[tool.name];
         return dto(await tx.chatgptBridgeRequest.update({ where: { id: job.id }, data: { status: 'ANSWERED', answer,
-          answeredAt: now(), readCount: 1, contextBytes: byteLength(answer), context: { ...job.context, nextTab } } }));
+          answeredAt: now(), readCount: 1, contextBytes: byteLength(answer), context: { ...job.context, nextTab,
+            resourceLinks } } }), tx);
       });
     } catch (error) {
       await prisma.chatgptBridgeRequest.updateMany({ where: { id: created.id, status: 'PENDING' }, data: { status: 'CANCELLED' } });
@@ -148,7 +164,7 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
       await bridgeLocks(tx); await requester(tx, actor);
       const job = await tx.chatgptBridgeRequest.findUnique({ where: { id: requestId }, include: { customer: true, grant: { include: { owner: true } } } });
       if (!job || job.customerId !== actor.id || job.customerAuthVersion !== actor.authVersion || requestRole(job) !== actor.role) throw bridgeError(404, 'NOT_FOUND');
-      return dto(await terminal(tx, job));
+      return dto(await terminal(tx, job), tx);
     });
   }
   async function cancel(actor, requestId) {
@@ -228,10 +244,13 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
     return prisma.$transaction(async tx => {
       await bridgeLocks(tx); const job = await jobFor(tx, grant, data.requestId);
       if (job.status !== 'PENDING') throw bridgeError(409, 'BRIDGE_REQUEST_INACTIVE');
-      const bytes = byteLength(value);
+      const links = resourceLinksForResult(data.tool, value);
+      const bytes = byteLength(value) + (links.length ? byteLength(links) : 0);
       if (job.contextBytes + bytes > 24000) throw bridgeError(429, 'BRIDGE_CONTEXT_LIMIT');
-      await tx.chatgptBridgeRequest.update({ where: { id: job.id }, data: { contextBytes: { increment: bytes } } });
-      return { tool: data.tool, data: value, readAt: now().toISOString(), source: 'authenticated_actor_read' };
+      const resourceLinks = isResourceLookup(data.tool) ? links : job.context?.resourceLinks || [];
+      await tx.chatgptBridgeRequest.update({ where: { id: job.id }, data: { contextBytes: { increment: bytes },
+        context: { ...job.context, resourceLinks } } });
+      return { tool: data.tool, data: value, resourceLinks: links, readAt: now().toISOString(), source: 'authenticated_actor_read' };
     });
   }
   async function reply(grant, raw) {
@@ -239,6 +258,7 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
     return prisma.$transaction(async tx => {
       await bridgeLocks(tx); await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('support:dispatch'))::text`;
       const job = await jobFor(tx, grant, data.requestId, 'lab.assistant.reply');
+      data.answer = customerAnswer(data.answer, job.locale);
       if (data.generation !== job.generation) throw bridgeError(409, 'BRIDGE_REQUEST_INACTIVE');
       if (job.status === 'ANSWERED') {
         if (job.answer !== data.answer || !isDeepStrictEqual(job.context?.publishedProposalInputs || [], data.proposals)) throw bridgeError(409, 'BRIDGE_REPLY_CONFLICT');
@@ -259,6 +279,7 @@ export function createBridgeRequests({ prisma, settings, now = () => new Date() 
     return prisma.$transaction(async tx => {
       await bridgeLocks(tx); await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('support:dispatch'))::text`;
       const job = await jobFor(tx, grant, data.requestId, 'lab.assistant.reply');
+      data.text = customerAnswer(data.text, job.locale);
       if (job.status !== 'PENDING' || data.generation !== job.generation) throw bridgeError(409, 'BRIDGE_REQUEST_INACTIVE');
       if (job.context?.knowledgeVersion !== businessKnowledge.version) throw bridgeError(409, 'BRIDGE_CONTEXT_REQUIRED');
       const previous = job.context?.partialReply;

@@ -1,6 +1,6 @@
 import { HttpError } from "../middleware/errors.js";
 import { assertCareReady } from "./resourceCareAccounting.js";
-import { expirePaymentHolds } from './bookingPaymentHoldService.js';
+import { expirePaymentHolds, expiredHoldWhere } from './bookingPaymentHoldService.js';
 import { assertBookingNotice } from './bookingNoticePolicy.js';
 import { occupiesWithTurnaround, preparationBookingWhere, turnaroundEnd } from './planning/policyModel.js';
 
@@ -129,6 +129,38 @@ export function checkLabPolicyCompliance({ policy, startAt, endAt, now = new Dat
   }
 }
 
+export async function loadAvailabilityBlocks(client, { resourceId, startAt, endAt, excludeBookingId, ignoreExpiredHoldsAt }) {
+  const [bookings, maintenanceWindows] = await Promise.all([
+    client.booking.findMany({
+      where: {
+        resourceId,
+        ...preparationBookingWhere(startAt, endAt),
+        ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
+        ...(ignoreExpiredHoldsAt ? { NOT: expiredHoldWhere(ignoreExpiredHoldsAt) } : {}),
+      },
+      select: { id: true, resourceId: true, startAt: true, endAt: true, schedulingReleasedAt: true, policySnapshot: true },
+      orderBy: { startAt: "asc" }
+    }),
+    client.maintenanceWindow.findMany({
+      where: maintenanceOverlapWhere({ resourceId, startAt, endAt }),
+      select: { id: true, resourceId: true, startAt: true, endAt: true, status: true, kind: true, title: true },
+      orderBy: { startAt: "asc" }
+    })
+  ]);
+  return { bookings, maintenanceWindows };
+}
+
+export function evaluateAvailabilityBlocks({ resource, startAt, endAt, bookings, maintenanceWindows }) {
+  const turnaroundMinutes = resource.laboratory?.labPolicy?.turnaroundMinutes || 0;
+  return buildAvailabilityResult({
+    resource,
+    startAt,
+    endAt,
+    bookings: bookings.filter(row => occupiesWithTurnaround(row, startAt, endAt, turnaroundMinutes)),
+    maintenanceWindows: maintenanceWindows.filter(row => row.startAt < endAt && row.endAt > startAt)
+  });
+}
+
 export async function getResourceAvailability(client, { resourceId, startAt, endAt, excludeBookingId, resource = null }) {
   if (client.$transaction) await expirePaymentHolds(client, { resourceId });
   const selectedResource = resource || await client.resource.findUnique({
@@ -138,29 +170,8 @@ export async function getResourceAvailability(client, { resourceId, startAt, end
   if (!selectedResource) {
     throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
   }
-
-  const [bookings, maintenanceWindows] = await Promise.all([
-    client.booking.findMany({
-      where: {
-        resourceId,
-        ...preparationBookingWhere(startAt, endAt),
-        ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
-      },
-      orderBy: { startAt: "asc" }
-    }),
-    client.maintenanceWindow.findMany({
-      where: maintenanceOverlapWhere({ resourceId, startAt, endAt }),
-      orderBy: { startAt: "asc" }
-    })
-  ]);
-
-  const result = buildAvailabilityResult({
-    resource: selectedResource,
-    startAt,
-    endAt,
-    bookings: bookings.filter(row => occupiesWithTurnaround(row, startAt, endAt, selectedResource.laboratory?.labPolicy?.turnaroundMinutes || 0)),
-    maintenanceWindows
-  });
+  const blocks = await loadAvailabilityBlocks(client, { resourceId, startAt, endAt, excludeBookingId });
+  const result = evaluateAvailabilityBlocks({ resource: selectedResource, startAt, endAt, ...blocks });
   try { await assertCareReady(client, resourceId); }
   catch (error) {
     if (!["RESOURCE_MAINTENANCE_DUE", "RESOURCE_INSPECTION_REQUIRED", "RESOURCE_COMPONENT_BROKEN", "RESOURCE_ROOM_UNAVAILABLE"].includes(error.code)) throw error;

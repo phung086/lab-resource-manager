@@ -4,7 +4,7 @@ import { apiRequest } from '../../../api.js';
 import { useLocale } from '../../../providers/LocaleProvider';
 import type { BookingRecord } from '../../../types/booking';
 import { ReceiptButton } from './ReceiptButton';
-import { canInitiateBookingPayment } from '../../../utils/paymentValidation';
+import { canInitiateBookingPayment, findSuccessfulBookingPayment } from '../../../utils/paymentValidation';
 
 export function BookingPaymentSummary({ booking, user, onPayment }: { booking: BookingRecord; user: { id: string; role: string }; onPayment?: (booking: BookingRecord) => void }) {
   const { tr, locale } = useLocale();
@@ -14,7 +14,7 @@ export function BookingPaymentSummary({ booking, user, onPayment }: { booking: B
     apiRequest(`/payments/booking/${encodeURIComponent(booking.id)}`, { signal:controller.signal }).then(data => { if (!controller.signal.aborted) setRows(data); }).catch((cause: any) => { if (!controller.signal.aborted) setError(cause.message); });
     return () => controller.abort();
   }, [booking.id, booking.status, revision]);
-  const charge = rows?.find(row => row.status === 'success') || rows?.find(row => row.status === 'pending') || rows?.[0];
+  const charge = findSuccessfulBookingPayment(rows || []) || rows?.find(row => row.status === 'pending') || rows?.[0];
   const canPay = canInitiateBookingPayment(user, booking, charge);
   return <section className="booking-payment-summary operations-dossier-section" aria-label={tr('ui.payment_ledger_49cf3f23')}>
     <div><h3>{tr(charge?.status === 'success' ? 'ui.payment_verified_c37ae36e' : 'ui.usage_fee_cdf18099')}</h3><strong>{formatVnd(booking.feeAmountVnd || 0, locale)}</strong></div>

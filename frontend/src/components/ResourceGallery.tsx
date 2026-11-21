@@ -38,7 +38,16 @@ export function ResourceGallery({ resourceId, initialItems, category, studio = f
       : <>
         <figure key={item.id} className="gallery-frame">
           <ResourceMediaPreview key={`${item.kind}:${item.url}`} kind={item.kind} url={item.url} alt={item.altText || item.title} />
-          {(item.credit || item.sourceUrl) && <figcaption><details><summary>{t("ui.rental.imageCredit")}</summary>{item.credit && <span>{item.credit}{item.license ? ` · ${item.license}` : ''}</span>}{item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">{t("ui.view_source_c593dcfc")}</a>}</details></figcaption>}
+          <figcaption>
+            <strong>{item.title}</strong>
+            {(item.credit || item.sourceUrl) && (
+              <details>
+                <summary>{t("ui.rental.imageCredit")}</summary>
+                {item.credit && <span>{item.credit}{item.license ? ` · ${item.license}` : ''}</span>}
+                {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">{t("ui.view_source_c593dcfc")}</a>}
+              </details>
+            )}
+          </figcaption>
         </figure>
         {studio && items.length > 1 && <div className="gallery-stepper"><button type="button" aria-label={t("ui.experience.previousImage")} onClick={() => setSelectedId(items[(selectedIndex - 1 + items.length) % items.length].id)}><ChevronLeft size={20} /></button><span aria-live="polite">{selectedIndex + 1} / {items.length}</span><button type="button" aria-label={t("ui.experience.nextImage")} onClick={() => setSelectedId(items[(selectedIndex + 1) % items.length].id)}><ChevronRight size={20} /></button></div>}
         {items.length > 1 && <div className="lab-gallery-choices" role="group" aria-label={t("ui.choose_an_image_or_video_09ba2fa8")}>{items.map(row => <button key={row.id} type="button" aria-pressed={item.id === row.id} onClick={() => setSelectedId(row.id)}>{studio && row.kind === 'IMAGE' && <img {...resourceImageProps(row.url, 'card')} alt="" onError={event => { event.currentTarget.hidden = true; }} />}{row.kind === 'VIDEO' ? <Play size={18} aria-hidden="true" /> : <Image size={18} aria-hidden="true" />}<span><small>{row.kind === 'VIDEO' ? 'Video' : t("ui.image_20a36f62")}</small>{row.title}</span></button>)}</div>}

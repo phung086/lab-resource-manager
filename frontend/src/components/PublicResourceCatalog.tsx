@@ -1,3 +1,4 @@
+import { formatVnd } from '../utils/currency';
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
@@ -127,7 +128,7 @@ export function PublicResourceCatalog({
   onGuestBookingComplete?: (result: any) => void;
   onReady?: () => void;
 }) {
-  const { tr, t } = useLocale();
+  const { tr, t, locale } = useLocale();
   const [resources, setResources] = useState<Resource[]>([]);
   const [guestBookingOpened, setGuestBookingOpened] = useState(false);
   const [selected, setSelected] = useState<Resource | null>(null);
@@ -420,7 +421,7 @@ export function PublicResourceCatalog({
                 <h3><button type="button" className="catalog-card-name" onClick={() => void openDetails(row)}>{row.name}</button></h3>
                 <p className="catalog-card-loc"><MapPin size={14} aria-hidden="true" />{row.laboratory?.name || row.location}</p>
                 <div className="catalog-card-bottom">
-                <strong className="rental-card-price">{row.rental ? new Intl.NumberFormat("vi-VN").format(row.rental.hourlyRateVnd) + " ₫ / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</strong>
+                <strong className="rental-card-price">{row.rental ? formatVnd(row.rental.hourlyRateVnd, locale) + " / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</strong>
                 <span title={tr('ui.current_availability_f57c5e36')}><StatusPill value={row.availability?.state || 'UNAVAILABLE'} /></span>
                 </div>
                 <span className="catalog-card-policy badge-approval">{row.effectiveRequiresApproval ? tr("ui.approval_required_dc95ee8f") : Number(row.rental?.hourlyRateVnd) > 0 ? tr("ui.confirmed_after_payment_2c477063") : tr("ui.automatic_a25c8028")}</span>

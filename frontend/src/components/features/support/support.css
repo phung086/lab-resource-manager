@@ -52,7 +52,8 @@
 .support-waiting,.support-assignee{padding:11px 24px;font-size:.8rem;background:#f7f9fc;color:#42556b;line-height:1.6}
 .support-assignee{display:flex;flex-wrap:wrap;align-items:center;gap:7px}.support-assignee svg{color:#146b65}
 .support-transcript-wrap{position:relative;min-height:0}
-.support-transcript{height:clamp(320px,44dvh,520px);overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:22px;padding:24px;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#c6b9e4 #f5f3fa;background:#fcfcfe}
+.support-transcript{height:clamp(320px,44dvh,520px);overflow:auto;display:flex;flex-direction:column;gap:22px;padding:24px;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#c6b9e4 #f5f3fa;background:#fcfcfe}
+.support-transcript:focus-visible{outline:2px solid var(--primary,#2057c7);outline-offset:-2px}
 .support-message{align-self:start;max-width:88%;padding:16px 18px;border-radius:14px 14px 14px 3px;background:#e5f5f0;color:#214d47;overflow-wrap:anywhere;animation:support-message-arrive .28s cubic-bezier(.16,1,.3,1)}
 .support-message.is-own{align-self:end;background:#eee9ff;color:#3c2d6a;border-radius:14px 14px 3px 14px}
 .support-message p{white-space:pre-wrap;line-height:1.7;font-size:.92rem}

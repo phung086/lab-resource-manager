@@ -11,6 +11,7 @@ table or issue every tool call; choose evidence for the actual question.
 | Quick schedule | `get_lab_schedule` with exact Vietnam interval. Customer gets own bookings; staff gets assigned LABs; admin gets all. Totals cover all matches; rows are a bounded preview. |
 | Customer contact lookup | `search_customers` for staff/admin, using a name/email/phone query. Only CUSTOMER contact fields are returned. Never infer access to that customer's foreign-LAB bookings or payments. |
 | Find a room or machine | `search_resources`; resolve needs, then `get_resource_detail` for actual specifications/usage guide. |
+| Open a named room or resource | Use `search_resources` once. The website adds the verified detail buttons from its results. Ask for a clearer name if there is no match. |
 | Find a suitable booking time | `find_available_slots`, `check_user_eligibility`; use `check_booking_conflicts` for a selected interval. State exact Vietnam dates. |
 | Check rental cost or discounts | `get_resource_tariff`, `get_my_loyalty`, then `quote_rental` for the resolved resource, purpose and interval. Quote is not a reservation. |
 | View or discuss an existing booking | `get_my_bookings`, then `get_booking_detail` for the owned booking. Never substitute a foreign booking identifier. |

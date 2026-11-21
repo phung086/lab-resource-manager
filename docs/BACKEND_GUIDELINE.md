@@ -45,6 +45,15 @@ Every sensitive route must verify:
 
 Do not rely on client-provided identity or lab fields.
 
+Resource metadata, status and retirement writes recheck the active account
+and current LAB assignment under transaction locks. Resource LAB reassignment
+is blocked while a camera or telemetry source references it, including inactive
+links. Existing monitoring history stays in its original LAB.
+
+Guest email OTP can create or reuse only a CUSTOMER identity. Operations
+accounts use ordinary sign-in. Newly assigned passwords have a 72-byte UTF-8
+limit for bcrypt. Existing credentials retain their previous verification path.
+
 Google Identity Services is optional and configured with `GOOGLE_CLIENT_ID`.
 `/api/auth/google/config` exposes availability and the public client ID.
 `/api/auth/google/challenge` issues an origin-checked, short-lived nonce bound
@@ -68,6 +77,9 @@ Apply current `UserLabAssignment` scope inside every staff list and aggregate
 query. Admin reads remain global; customer reads retain ownership scope.
 Use deterministic ordering with an ID tie-breaker. Items and counts share one
 Repeatable Read transaction per response; successive pages are separate snapshots.
+Booking lists order by start time descending, then creation time and ID descending.
+The customer All filter places active bookings first by creation time descending.
+The customer Action required filter orders by start time ascending.
 See [queue contract and verification](WORKSPACE_QUEUE_PAGINATION_20261003.md).
 
 ## Persistence Rules
@@ -123,6 +135,10 @@ duration limits; this projection does not replace final eligibility checks.
   For older holds whose stored deadline exceeds startAt, effective expiry is
   startAt. Apply that cap to workers, reads, checkout/retries and callbacks.
   Legacy approval flags remain projected false; AI respects care/duration rules.
+- Reschedule and maintenance conflict checks expire overdue payment holds under
+  the resource lock before testing overlap. `PATCH /api/maintenance/:id` requires
+  `expectedUpdatedAt` from the loaded record. A stale edit or transition returns
+  `409 MAINTENANCE_CHANGED` and the client retains the draft.
 - Future booking/maintenance intervals block only intersecting intervals, not
   current catalogue availability. A closed LAB blocks catalogue/calendar/creation.
 
@@ -141,6 +157,14 @@ delivered, unread owner scope; a bounded recent-message list is not that total.
 - Changing operational status should be transactional and history-backed where
   schema supports it.
 - Retire instead of hard-delete.
+- Resource list and detail return `version`. `PATCH /api/resources/:id`
+  requires this value as `expectedVersion` together with the fields to update.
+  The API checks it under the resource lock and returns `409 RESOURCE_CHANGED`
+  for a stale edit. The editor keeps the draft and refreshes the resource list.
+- Category changes return `409 RESOURCE_CATEGORY_BOOKED` while a confirmed
+  or pending booking has time remaining, the resource is checked out, or a
+  return still needs inspection. Expired payment holds are processed under the
+  same resource lock before checking for outstanding bookings.
 
 ## Runtime Truthfulness
 
@@ -238,8 +262,10 @@ calls. Unknown questions ask for clarification; never substitute operational
 counts as a catch-all answer. `get_operational_summary` requires an explicit
 overview/summary intent. Vietnamese `trong` (in) alone must not select slot search.
 Keep local guidance marked `source=local_guidance` and the existing finite gates.
-ADR-039 adds exact reviewed greetings/thanks/workflow guidance before provider
-work. Bridge local replies persist as ANSWERED with local/local_guidance and no
+ADR-039 keeps reviewed workflow guidance local. Since 17 November, a ready
+Work receiver handles greetings, introductions and thanks. The local assistant
+uses its reviewed replies when the receiver is unavailable.
+Bridge local replies persist as ANSWERED with local/local_guidance and no
 delivery event, preserving connection/customer/busy/rate checks and history.
 Mixed questions and changing facts never use this shortcut. External receiver
 speed remains environment-dependent; do not label local timings as model latency.

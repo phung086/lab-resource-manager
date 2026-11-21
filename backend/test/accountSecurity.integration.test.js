@@ -95,6 +95,20 @@ test("contact validation identifies wrong fields and registered email/password c
  const event=await prisma.systemAuditEvent.findFirstOrThrow({where:{targetId:customer.id,action:"USER_PROFILE_CHANGED"}});assert.equal(event.actorId,users.staff.id);
 });
 
+test("new passwords use the bcrypt UTF-8 limit and existing credentials remain readable", async () => {
+ const atLimit = 'é'.repeat(36), overLimit = `${atLimit}a`;
+ const email = `utf8-${marker}@security.test`;
+ err(await call('post', '/auth/register', null, { email, password: overLimit }), 400, 'VALIDATION_ERROR');
+ assert.equal((await call('post', '/auth/register', null, { email, password: atLimit })).status, 201);
+ assert.equal((await call('post', '/auth/login', null, { email, password: atLimit })).status, 200);
+ err(await call('post', '/auth/change-password', 'other', { currentPassword: password, newPassword: overLimit, challengeId: randomUUID(), otp: '123456' }), 400, 'VALIDATION_ERROR');
+ err(await confirm(users.other.id, randomUUID(), '123456', 'staff', overLimit), 400, 'VALIDATION_ERROR');
+ err(await call('post', '/users', 'staff', { email: `staff-utf8-${marker}@security.test`, fullName: 'Test customer', role: 'CUSTOMER', password: overLimit }), 400, 'VALIDATION_ERROR');
+ const legacy = await makeCustomer('legacy-long-password');
+ await prisma.user.update({ where: { id: legacy.id }, data: { passwordHash: await bcrypt.hash(overLimit, 4) } });
+ assert.equal((await call('post', '/auth/login', null, { email: legacy.email, password: overLimit })).status, 200);
+});
+
 test("missing or rejected SMTP never permits a password change",async()=>{
  const target=await makeCustomer("delivery");const smtpPass=process.env.SMTP_PASS;delete process.env.SMTP_PASS;
  err(await ask(target.id),503,"SMTP_NOT_CONFIGURED");process.env.SMTP_PASS=smtpPass;

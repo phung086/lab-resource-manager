@@ -60,7 +60,7 @@ async function open(view, width, locale = 'vi', role = 'CUSTOMER', overrides = {
       detailReads++;
       if (failDetail) { status = 503; data = { code: 'API_REQUEST_FAILED', message: 'api.API_REQUEST_FAILED' }; }
       else data = { session, messages: messages.filter(row => row.sequence > Number(url.searchParams.get('after') || 0)), hasMore: false, nextCursor: messages.length };
-    } else if (path === '/api/payments/my' || path === '/api/payments/admin/transactions') data = { transactions: [transaction, { ...charge, id: 'visual-paid', txnRef: 'LAB2710GPU002', status: 'success', provider: 'vnpay', paidAt: '2026-10-27T02:05:00Z', amount: 80000, booking: { ...charge.booking, title: 'Thực hành xử lý ảnh' } }], providers: overrides.providers || { vnpay: true, vietqr: false } };
+    } else if (path === '/api/payments/my' || path === '/api/payments/admin/transactions') data = { transactions: [transaction, { ...charge, id: 'visual-paid', txnRef: 'LAB2710GPU002', status: 'success', provider: 'vnpay', paidAt: new Date().toISOString(), amount: 80000, booking: { ...charge.booking, title: 'Thực hành xử lý ảnh' } }], providers: overrides.providers || { vnpay: true, vietqr: false } };
     else if (path === '/api/payments/visual-paid/receipt') data = { transaction: { ...charge, status: 'success', provider: 'vnpay', paidAt: '2026-10-27T02:05:00Z' }, generatedAt: '2026-10-27T02:15:00Z' };
     else if (request.method() !== 'GET') throw new Error(`Unexpected fixture mutation: ${path}`);
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) }).catch(() => {});
@@ -117,6 +117,20 @@ try {
     }
   }
   if (phase !== 'before') {
+    const reconciliation = await open('payments', 390, 'en', 'ADMIN', {
+      transaction: { status: 'success', provider: 'vietqr', reconciliationStatus: 'manual_review', paidAt: new Date().toISOString() },
+    });
+    const { page } = reconciliation;
+    assert.equal(await page.locator('.payment-register tbody tr').first().getByText(catalogs.en['ui.manual_reconciliation_required_ad0551a4']).count(), 1);
+    assert.equal(await page.locator('.payment-value-block').getByText(catalogs.en['ui.payments.reconciliationHelp']).count(), 1);
+    assert.equal(await page.locator('.payment-flow').getAttribute('open'), null);
+    await page.locator('.payment-flow summary').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('.payment-flow-bar:not(.is-empty)').count(), 1);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    assert.deepEqual(reconciliation.errors, []);
+    results.push({ scenario: 'reconciliation-ledger-mobile-en', passed: true });
+    await reconciliation.context.close();
     for (const view of ['support', 'payments']) {
       const state = await open(view, 1440, 'en');
       assert.equal(await state.page.locator('main').innerText().then(text => /support\.studio\.|ui\.paymentStudio\./.test(text)), false);

@@ -11,7 +11,7 @@ import { ADMIN, CANONICAL_ROLES, LAB_STAFF, CUSTOMER } from "../constants/roles.
 import { safeUserSelect } from "../services/userService.js";
 import { canManageTarget } from "../services/accountAccess.js";
 import { createAccount, editAccount, changeAccountRole, changeAccountActive, removeAccount, staffCustomerSelect } from "../services/accountManagementService.js";
-import { requestPasswordOtp, confirmPasswordOtp } from "../services/passwordSecurityService.js";
+import { requestPasswordOtp, confirmPasswordOtp, newPasswordSchema } from "../services/passwordSecurityService.js";
 import { validateVietnamAddress } from "../services/addressService.js";
 import { publicCustomerUser } from "../services/guestBookingService.js";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, recordSystemAuditEvent } from "../services/systemAuditService.js";
@@ -151,7 +151,7 @@ router.get("/", requireAuth, requireRole(ADMIN, LAB_STAFF), async (req, res, nex
 
 const createUserSchema = z.object({
   email: z.string().trim().email().max(255).transform((value) => value.toLowerCase()),
-  password: z.string().min(12).max(128),
+  password: newPasswordSchema(12),
   fullName: z.string().trim().min(2).max(255),
   role: z.enum(CANONICAL_ROLES).default("CUSTOMER"),
   isActive: z.boolean().default(true),
@@ -309,7 +309,7 @@ const editAccountSchema = z.object({
 }).strict().refine(value => Object.keys(value).length > 0, { message: "Specify a field to update" });
 const reasonSchema = z.object({ reason: z.string().trim().min(5).max(500) }).strict();
 const assistedConfirmSchema = z.object({ challengeId: z.string().uuid(), otp: z.string().regex(/^\d{6}$/),
-  newPassword: z.string().min(8).max(128) }).strict();
+  newPassword: newPasswordSchema() }).strict();
 
 router.patch("/:id", requireAuth, requireRole(ADMIN, LAB_STAFF), accountLimit, async (req, res, next) => {
   try {

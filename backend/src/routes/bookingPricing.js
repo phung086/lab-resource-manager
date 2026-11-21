@@ -18,7 +18,9 @@ router.put("/:resourceId/tariff", requireAuth, requireRole("ADMIN"), async (req,
       if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
       const before = await tx.resourcePricingRule.findMany({ where: { resourceId } });
       for (const purposeCode of PURPOSE_CODES) await tx.resourcePricingRule.upsert({ where: { resourceId_purposeCode: { resourceId, purposeCode } }, create: { id: crypto.randomUUID(), resourceId, purposeCode, label: "Thuê theo giờ", hourlyRateVnd: data.hourlyRateVnd }, update: { hourlyRateVnd: data.hourlyRateVnd, label: "Thuê theo giờ", version: { increment: 1 } } });
-      await tx.resource.update({ where: { id: resourceId }, data: { maxBookingMinutes: data.maxBookingMinutes } });
+      if (resource.maxBookingMinutes !== data.maxBookingMinutes) {
+        await tx.resource.update({ where: { id: resourceId }, data: { maxBookingMinutes: data.maxBookingMinutes, version: { increment: 1 } } });
+      }
       await recordSystemAuditEvent(tx, { actor: req.user, action: AUDIT_ACTIONS.RESOURCE_PRICING_CHANGED, targetType: "RESOURCE", targetId: resourceId, resourceId, labId: resource.laboratoryId, beforeState: { rates: before.map(row => ({ purposeCode: row.purposeCode, hourlyRateVnd: row.hourlyRateVnd, version: row.version })), maxBookingMinutes: resource.maxBookingMinutes }, afterState: data, reason: "Cập nhật giá thuê và giới hạn thời lượng" });
       return { ...data, resourceId };
     }));

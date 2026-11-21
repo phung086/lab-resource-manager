@@ -7,6 +7,7 @@ export type BridgeRequest = {
   expiresAt: string; answer?: string; locale?: string; generatedAt?: string;
   provider?: 'chatgpt' | 'local'; source?: 'chatgpt_bridge' | 'local_guidance' | 'authenticated_mcp';
   toolsUsed?: string[]; nextTab?: string;
+  resourceLinks?: { id: string; name: string }[];
   partialReply?: { text: string; sequence: number; generatedAt: string };
   proposals?: BridgeProposal[];
   conversation?: { id: string; expiresAt: string; retainedTurns?: number };
@@ -19,6 +20,7 @@ export type BridgeQuestion = {
 type Transport = (path: string, options?: Record<string, unknown>) => Promise<unknown>;
 const PREFIX = '/assistant/bridge/requests';
 const POLL_MS = 2000, MAX_WAIT_MS = 10 * 60 * 1000;
+const FAST_POLL_MS = 500, FAST_POLL_WINDOW_MS = 4000;
 const REQUEST_ID = /^[a-zA-Z0-9_-]{1,128}$/;
 
 function failure(key: string) { return Object.assign(new Error(key), { code: key }); }
@@ -46,6 +48,9 @@ function validateRequest(value: unknown): BridgeRequest {
       !((request.source === 'chatgpt_bridge' && request.provider === 'chatgpt') || (['local_guidance', 'authenticated_mcp'].includes(request.source || '') && request.provider === 'local')))) throw failure('bridge.invalidResponse');
   if (request.status === 'ANSWERED') request.proposals = parseBridgeProposals(request.proposals);
   else if (request.proposals?.length) throw failure('bridge.invalidResponse');
+  if (request.resourceLinks !== undefined && (request.status !== 'ANSWERED' || !Array.isArray(request.resourceLinks) || request.resourceLinks.length > 5 ||
+    request.resourceLinks.some(resource => !resource || typeof resource.id !== 'string' || !REQUEST_ID.test(resource.id) ||
+      typeof resource.name !== 'string' || !resource.name.trim() || resource.name.length > 255))) throw failure('bridge.invalidResponse');
   if (request.partialReply && (request.status !== 'PENDING' || typeof request.partialReply.text !== 'string' || !request.partialReply.text.trim() ||
     request.partialReply.text.length > 1500 || !Number.isInteger(request.partialReply.sequence) || request.partialReply.sequence < 1 || request.partialReply.sequence > 3 || !Number.isFinite(Date.parse(request.partialReply.generatedAt)))) throw failure('bridge.invalidResponse');
   return request;
@@ -64,7 +69,7 @@ function pause(milliseconds: number, signal: AbortSignal) {
 export async function askChatgptBridge(question: BridgeQuestion, options: {
   signal: AbortSignal; onPending?: (request: BridgeRequest) => void; transport?: Transport; pollMs?: number;
 }): Promise<BridgeRequest> {
-  const { signal, onPending, transport = apiRequest, pollMs = POLL_MS } = options;
+  const { signal, onPending, transport = apiRequest, pollMs } = options;
   if (signal.aborted) throw signal.reason;
   const token = getAccessToken();
   const headers = { 'X-LRM-Locale': question.locale, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
@@ -74,9 +79,11 @@ export async function askChatgptBridge(question: BridgeQuestion, options: {
     if (signal.aborted) throw signal.reason;
     onPending?.(request);
     const deadline = Math.min(Date.parse(request.expiresAt), Date.now() + MAX_WAIT_MS);
+    let fastPollUntil = Date.now() + FAST_POLL_WINDOW_MS;
     while (request.status === 'PENDING') {
       if (Date.now() >= deadline) throw failure('bridge.expired');
-      await pause(Math.min(Math.max(1, pollMs), Math.max(1, deadline - Date.now())), signal);
+      const wait = pollMs ?? (Date.now() < fastPollUntil ? FAST_POLL_MS : POLL_MS);
+      await pause(Math.min(Math.max(1, wait), Math.max(1, deadline - Date.now())), signal);
       let payload: unknown;
       for (let attempt = 0; ; attempt++) {
         if (Date.now() >= deadline) throw failure('bridge.expired');
@@ -94,8 +101,10 @@ export async function askChatgptBridge(question: BridgeQuestion, options: {
       if (next.status === 'PENDING' && request.partialReply && (!next.partialReply || next.partialReply.sequence < request.partialReply.sequence ||
           (next.partialReply.sequence === request.partialReply.sequence && next.partialReply.text !== request.partialReply.text) ||
           !next.partialReply.text.startsWith(request.partialReply.text))) throw failure('bridge.invalidResponse');
+      const hasNewPartial = next.status === 'PENDING' && next.partialReply && next.partialReply.sequence !== request.partialReply?.sequence;
       request = next;
       if (signal.aborted) throw signal.reason;
+      if (hasNewPartial) fastPollUntil = Date.now() + FAST_POLL_WINDOW_MS;
       if (request.status === 'PENDING') onPending?.(request);
     }
     if (request.status === 'EXPIRED') throw failure('bridge.expired');

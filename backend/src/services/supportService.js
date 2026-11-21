@@ -3,6 +3,8 @@ import { prisma } from '../db.js';
 import { HttpError } from '../middleware/errors.js';
 import { ADMIN, LAB_STAFF, CUSTOMER } from '../constants/roles.js';
 import { lockCurrentAccount } from './accountAccess.js';
+import { operatorAlertRecipients } from './operatorAlertService.js';
+import { enqueueOperatorAlertEmails } from './emailAutomationService.js';
 
 export const SUPPORT_CATEGORIES = ['BOOKING', 'PAYMENT', 'ACCOUNT', 'RESOURCE', 'OTHER'];
 export const SUPPORT_STATUSES = ['WAITING', 'ACTIVE', 'CLOSED', 'CANCELLED'];
@@ -121,8 +123,9 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
       }
       await tx.supportMessage.create({ data: { id: randomUUID(), sessionId: data.requestId, senderId: actor.id, kind: 'CUSTOMER', body: data.message } });
       await event(tx, data.requestId, 'REQUESTED', actor.id);
-      const recipients = await tx.user.findMany({ where: { isActive: true, deletedAt: null, OR: [{ role: ADMIN }, { role: LAB_STAFF, labAssignments: { some: { laboratoryId: lab.id } } }] }, select: { id: true } });
+      const recipients = await operatorAlertRecipients(tx, lab.id);
       await supportNotice(tx, recipients.map(row => row.id), { id: data.requestId, laboratoryId: lab.id }, 'requested', clock());
+      await enqueueOperatorAlertEmails(tx, recipients, { kind: 'support', id: data.requestId, laboratoryId: lab.id });
       await dispatch(tx);
       return publicSession(tx, await tx.supportSession.findUnique({ where: { id: data.requestId }, include }));
     }, { timeout: 15_000 });
@@ -180,6 +183,10 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
         : { status: action === 'finish' ? 'CLOSED' : 'CANCELLED', closedAt: clock(), resolution: reason } });
       await tx.supportMessage.create({ data: { id: randomUUID(), sessionId: id, senderId: actor.id, kind: 'SYSTEM', body: reason, eventType: action === 'finish' ? 'CLOSED' : action === 'cancel' ? 'CANCELLED' : 'REQUEUED' } });
       await tx.notification.updateMany({ where: { dedupeKey: { startsWith: `support:${id}:` }, readAt: null }, data: { readAt: clock() } });
+      if (action === 'requeue') {
+        const recipients = await operatorAlertRecipients(tx, row.laboratoryId);
+        await supportNotice(tx, recipients.map(user => user.id), row, 'requested', clock(), true);
+      }
       await dispatch(tx);
       return publicSession(tx, await tx.supportSession.findUnique({ where: { id }, include }));
     });
@@ -187,10 +194,10 @@ export function createSupportService(db = prisma, clock = () => new Date()) {
   return { metadata, list, detail, request, heartbeat, send, transition };
 }
 
-async function supportNotice(tx, recipients, session, eventType, now) {
+async function supportNotice(tx, recipients, session, eventType, now, renew = eventType === 'assigned') {
   for (const userId of recipients) {
     const dedupeKey = `support:${session.id}:${eventType}:${userId}`;
-    await tx.notification.upsert({ where: { dedupeKey }, update: {}, create: {
+    await tx.notification.upsert({ where: { dedupeKey }, update: renew ? { readAt: null, sentAt: now } : {}, create: {
       id: randomUUID(), userId, dedupeKey, title: eventType === 'assigned' ? 'Bạn có phiên hỗ trợ mới' : 'Khách hàng cần hỗ trợ',
       message: 'Mở chat hỗ trợ để xem yêu cầu.', titleKey: `support.${eventType}.title`, messageKey: 'support.open.message',
       messageParams: { sessionId: session.id, laboratoryId: session.laboratoryId }, severity: 'info', sentAt: now

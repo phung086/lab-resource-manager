@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {validatePaymentAction,safeVnpayUrl,canInitiateBookingPayment,canChoosePaymentProvider,paymentSessionStatus} from './src/utils/paymentValidation.ts';
+import test from 'node:test';import assert from 'node:assert/strict';import {validatePaymentAction,safeVnpayUrl,canInitiateBookingPayment,canChoosePaymentProvider,paymentSessionStatus,findSuccessfulBookingPayment} from './src/utils/paymentValidation.ts';
 test('charge requires an actual eligible booking and trimmed description',()=>{assert.equal(validatePaymentAction('charge',{bookingId:'unknown',description:'reason'},['known']).data,null);assert.deepEqual(validatePaymentAction('charge',{bookingId:'known',description:'  note  '},['known']).data,{bookingId:'known',description:'note'});});
 test('reconciliation keeps evidence boundaries',()=>{for(const value of ['a','x'.repeat(501)])assert.equal(validatePaymentAction('reconcile',{reason:value}).data,null);assert.equal(validatePaymentAction('reconcile',{reason:'  abc  '}).data.reason,'abc');});
 test('rate distinguishes blank from free and rejects unsafe numbers',()=>{for(const rate of ['','-1','0.1','100000001','Infinity','1e309'])assert.equal(validatePaymentAction('rate',{rate}).data,null);assert.equal(validatePaymentAction('rate',{rate:'0'}).data.hourlyRateVnd,0);assert.equal(validatePaymentAction('rate',{rate:'100000000'}).data.hourlyRateVnd,100000000);});
@@ -20,4 +20,11 @@ test('VietQR locks the pending payment method until expiry', () => {
   assert.equal(canChoosePaymentProvider(charge, 'vietqr'), true);
   assert.equal(canChoosePaymentProvider(charge, 'vnpay'), false);
   assert.equal(canChoosePaymentProvider({ ...charge, status: 'expired' }, 'vnpay'), true);
+});
+
+test('additional transfers in reconciliation do not displace the verified booking payment', () => {
+  const extra = { id: 'extra', status: 'success', reconciliationStatus: 'manual_review' };
+  const verified = { id: 'verified', status: 'success', reconciliationStatus: 'none' };
+  assert.equal(findSuccessfulBookingPayment([extra, verified]), verified);
+  assert.equal(findSuccessfulBookingPayment([extra]), extra);
 });

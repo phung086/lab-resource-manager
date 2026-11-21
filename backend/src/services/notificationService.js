@@ -3,6 +3,9 @@ import crypto from "crypto";
 
 import { prisma } from "../db.js";
 import { settlementProviders } from './paymentProviders.js';
+import { ADMIN, LAB_STAFF } from '../constants/roles.js';
+import { incidentNoticeKey, supportNoticeKeys, urgentIncidentSeverities } from '../constants/operatorAlerts.js';
+import { incidentScopeWhere, OPEN_INCIDENT_STATUSES } from './incidentService.js';
 
 export const BOOKING_UPCOMING_REMINDER_MINUTES = Number(process.env.BOOKING_UPCOMING_REMINDER_MINUTES || 30);
 export const RETURN_REMINDER_MINUTES = Number(process.env.RETURN_REMINDER_MINUTES || 15);
@@ -145,6 +148,45 @@ export async function getUserNotifications(userId, { unreadOnly = false, take = 
 export async function countUnreadUserNotifications(userId, client = prisma) {
   await dispatchDueNotifications(client, new Date(), userId);
   return client.notification.count({ where: { userId, sentAt: { not: null }, readAt: null } });
+}
+
+export async function listUrgentOperatorNotifications(actor, client = prisma) {
+  if (![ADMIN, LAB_STAFF].includes(actor.role)) return [];
+  const candidates = await client.notification.findMany({
+    where: { userId: actor.id, sentAt: { not: null }, readAt: null, titleKey: { in: [...supportNoticeKeys, incidentNoticeKey] } },
+    orderBy: [{ severity: 'desc' }, { sentAt: 'desc' }, { id: 'asc' }],
+    take: 50
+  });
+  const supportIds = candidates.filter(row => supportNoticeKeys.includes(row.titleKey)).map(row => row.messageParams?.sessionId).filter(id => typeof id === 'string');
+  const incidentIds = candidates.filter(row => row.titleKey === incidentNoticeKey).map(row => row.messageParams?.incidentId).filter(id => typeof id === 'string');
+  const [sessions, incidents] = await Promise.all([
+    supportIds.length ? client.supportSession.findMany({
+      where: {
+        id: { in: supportIds }, status: { in: ['WAITING', 'ACTIVE'] },
+        laboratory: { isActive: true, ...(actor.role === LAB_STAFF ? { staffAssignments: { some: { userId: actor.id } } } : {}) }
+      },
+      select: { id: true, status: true, assignedStaffId: true, laboratory: { select: { name: true } } }
+    }) : [],
+    incidentIds.length ? client.incident.findMany({
+      where: { ...incidentScopeWhere(actor), id: { in: incidentIds }, severity: { in: urgentIncidentSeverities }, status: { in: OPEN_INCIDENT_STATUSES } },
+      select: { id: true, resource: { select: { name: true } } }
+    }) : []
+  ]);
+  const liveIncidents = new Map(incidents.map(incident => [incident.id, incident]));
+  const liveSessions = new Map(sessions.map(session => [session.id, session]));
+  return candidates.filter(row => {
+    if (row.titleKey === incidentNoticeKey) return liveIncidents.has(row.messageParams?.incidentId);
+    const session = liveSessions.get(row.messageParams?.sessionId);
+    if (row.titleKey === 'support.assigned.title') return session?.status === 'ACTIVE' && session.assignedStaffId === actor.id;
+    return session?.status === 'WAITING';
+  }).slice(0, 5).map(row => ({
+    ...row,
+    messageParams: {
+      ...row.messageParams,
+      locationName: liveIncidents.get(row.messageParams?.incidentId)?.resource.name ||
+        liveSessions.get(row.messageParams?.sessionId)?.laboratory.name
+    }
+  }));
 }
 
 export function startReminderScheduler({

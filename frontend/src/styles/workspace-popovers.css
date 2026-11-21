@@ -100,6 +100,51 @@
 }
 
 .workspace-shell .header-notices { position: relative; flex: none; }
+.app-shell-2026.workspace-shell.lab-spectrum.lab-studio .header-2026:has(> .operator-urgent-notice) {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.operator-urgent-notice {
+  flex: 0 0 100%;
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px 2px 12px;
+  border: 1px solid #d9ad65;
+  border-radius: 10px;
+  background: #fff4dd;
+  color: #643b10;
+  font-size: .83rem;
+}
+.operator-urgent-notice[data-danger="true"] { border-color: #dfa0a4; background: #fff0ef; color: #7c2731; }
+.operator-urgent-message { display: flex; flex-wrap: wrap; column-gap: 10px; overflow-wrap: anywhere; }
+.operator-urgent-notice button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.operator-urgent-notice button:last-child { min-width: 40px; }
+.operator-urgent-notice button:hover { background: rgb(0 0 0 / 7%); }
+.operator-urgent-notice button:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
+:root[data-theme="dark"] .operator-urgent-notice { border-color: #927044; background: #382b1c; color: #ffe3ad; }
+:root[data-theme="dark"] .operator-urgent-notice[data-danger="true"] { border-color: #9d5d65; background: #3e242b; color: #ffd1d1; }
+@media(max-width: 540px) {
+  .operator-urgent-notice { gap: 5px; padding-inline: 8px 3px; }
+  .operator-urgent-notice button { min-height: 44px; }
+  .operator-urgent-notice button:first-of-type svg { display: none; }
+}
 .workspace-shell .workspace-popover {
   --popover-ink: #223653;
   --popover-muted: #536884;
@@ -138,7 +183,7 @@
 .workspace-shell .workspace-popover-heading { display: flex; align-items: center; gap: 9px; color: var(--popover-ink); }
 .workspace-shell .workspace-popover-icon { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--popover-tint, #edf3ff); color: var(--popover-accent, #2254a6); }
 .workspace-shell .workspace-popover-note { margin: 10px 0; color: var(--popover-muted); font-size: 12px; line-height: 1.5; }
-.workspace-shell .header-notices-items { display: grid; gap: 5px; list-style: none; margin: 10px 0; padding: 0; max-height: min(280px, 48dvh); overflow: auto; }
+.workspace-shell .header-notices-items { display: grid; gap: 5px; list-style: none; margin: 10px 0; padding: 0; }
 .workspace-shell .header-notices-items button {
   display: grid; gap: 3px; width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid #e1e8f4; border-radius: 9px;
   background: #fff; color: var(--popover-ink); text-align: start; font: inherit; cursor: pointer; overflow-wrap: anywhere;

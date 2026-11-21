@@ -100,6 +100,11 @@ Internet, thay schema, chạy migration hay seed DB để thêm key. SDK đã c�
 
 ## 4. Khi sẵn sàng thêm key
 
+Trên Railway của bản LAB deploy, `OPENAI_MODEL=gpt-6-luna` đã được chuẩn bị.
+Chỉ thêm `OPENAI_API_KEY` của project API có quyền gọi model này và áp dụng thay
+đổi. Khi có cả key và model, khung chat dùng OpenAI API với tra cứu LAB. Nếu
+gỡ key, khung chat dùng ChatGPT Work khi kết nối sẵn sàng, hoặc tra cứu nội bộ.
+
 1. Tạo key cho project API của bạn, có khả năng gọi Responses API và hạn mức phù
    hợp. Cấu hình ngân sách/cảnh báo tại tài khoản nhà cung cấp.
 2. Chọn model mà tài khoản được phép dùng, hỗ trợ Responses API và Structured
@@ -222,8 +227,10 @@ tạo ticket mới; không mở lại ticket cũ đã hết hạn.
    bằng client MCP; anonymous POST `/mcp/support-bridge` phải 401.
 2. Tạo/cài plugin từ gói đã build hoặc Add custom MCP server, OAuth DCR, cả ba
    scope `lab.assistant.read`, `lab.assistant.reply`, `lab.assistant.events`.
-3. ADMIN đăng nhập LAB, xem và tự xác nhận quyền tại `/workspace/chatgpt-bridge`.
-   Quyền chỉ phục vụ câu hỏi khách; thu hồi ngay tại màn này khi cần.
+3. ADMIN đăng nhập LAB, mở **Tài khoản và quản trị → Kết nối ChatGPT** từ
+   thanh bên (hoặc mở **Menu** trước nếu thanh bên đang thu gọn). Trang
+   `/workspace/chatgpt-bridge` hiển thị trạng thái kết nối và cho phép quản lý quyền.
+   Khi ChatGPT gửi yêu cầu cấp quyền, ADMIN xem và tự xác nhận tại trang này.
 4. Mở một Work/Cloud chat hỗ trợ, dùng skill customer-support để subscribe
    `lab.assistant.question.created` và tự refresh trước TTL. Có token nhưng chưa
    subscribe thì website chưa thể gửi câu hỏi. Không bật nhiều consumer cạnh tranh.
@@ -320,3 +327,19 @@ câu ngắn sau tối ưu mất43,2giây; ba lượt ngrok mất33,6giây (quy t
 nhưng chưa đạt mục tiêu vài giây. Cần OpenAI API/streaming được cấu hình riêng nếu yêu cầu độ trễ chat
 tức thời có kiểm soát; không dùng cookie/token ChatGPT hay tự động hóa web để
 giả một API. Quota/outage phải báo thật, khách vẫn có nút chuyển staff.
+
+### 8.2. Cấp lại quyền cho plugin đã cài
+
+Từ [cài đặt LAB Support](https://chatgpt.com/settings/plugins-settings/plugin_asdk_app_6acf13e36eec81918a51082417a0e8b7),
+mở menu của tài khoản hiện có và chọn **Reconnect**. ADMIN LAB đăng nhập và
+xác nhận lại quyền cho plugin. Sau đó dùng một bộ nhận Work/Cloud để đăng ký lại
+`lab.assistant.question.created`. Màn quản trị cầu nối cần báo **Sẵn sàng nhận
+câu hỏi**. Gửi một câu hỏi mở qua chatbot LAB và kiểm tra câu trả lời xuất hiện
+trong dock để xác minh toàn tuyến.
+
+Ngày 15/11/2026, hostname ngrok cũ được khôi phục qua container
+`lrm-chatgpt-tunnel`. Tunnel nhận OAuth/MCP cho LAB Support. Từ 17/11, policy
+cũng cho GET tới hai đường dẫn return và IPN của VNPAY Sandbox. Trang LAB và
+các API nghiệp vụ còn lại sử dụng địa chỉ local. Policy local nằm tại
+`%LOCALAPPDATA%/ngrok/lab-bridge/traffic-policy.json`. ChatGPT Usage hiển thị
+100% hạn mức tháng ở thời điểm kiểm tra. Grant và subscription cũ đã hết hạn.

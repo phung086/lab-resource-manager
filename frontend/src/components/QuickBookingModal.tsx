@@ -6,6 +6,7 @@ import { BookingAvailabilityHelp } from './features/planning/BookingAvailability
 import type { LocaleMessage } from "../providers/LocaleProvider";
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
+import { formatVnd } from '../utils/currency';
 import React, { useState, useEffect, useRef } from "react";
 import { Calendar, AlertCircle, CheckCircle2, ArrowRight, ShieldAlert, Shield, RefreshCw } from "lucide-react";
 import { BaseModal2026 } from "./BaseModal2026.js";
@@ -102,12 +103,12 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
   onProceedPayment,
   initialDraft, onDraftChange, onQuoteChanged, onAttempt, onBookingError
 }) => {
-  const { tr } = useLocale();
+  const { tr, locale } = useLocale();
   const [contact, setContact] = useState({ fullName: '', phone: '' });
   const [deliveryMode, setDeliveryMode] = useState('LAB_PICKUP');
   const [deliveryAddress, setDeliveryAddress] = useState({ addressLine: '', provinceCode: '', wardCode: '' });
   const [deliveryLabels, setDeliveryLabels] = useState({ provinceName: '', wardName: '' });
-  const [fulfillment, setFulfillment] = useState<{ category: string; deliveryAllowed: boolean } | null>(null);
+  const [fulfillment, setFulfillment] = useState<{ category: string; deliveryAllowed: boolean; deliveryFeeVnd?: number } | null>(null);
   const [contactLoading, setContactLoading] = useState(true), [contactError, setContactError] = useState(''), [contactRetry, setContactRetry] = useState(0);
   useEffect(() => {
     if (!isOpen) return;
@@ -549,7 +550,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             )}
           </div>
           {createdBooking?.paymentDueAt && <PaymentHoldNotice paymentDueAt={createdBooking.paymentDueAt} startAt={createdBooking.startAt} />}
-          {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>{tr('ui.agreed_fee_e147e0c0')}{createdBooking.feeAmountVnd.toLocaleString('vi-VN')} {tr('ui.vnd_789721c8')}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>{tr('ui.view_booking_payment_3a007567')}</button>}</div>}
+          {createdBooking?.feeAmountVnd > 0 && <div className="alert"><p>{tr('ui.agreed_fee_e147e0c0')} {formatVnd(createdBooking.feeAmountVnd, locale)}</p>{onProceedPayment && <button type="button" className="secondary-button" onClick={() => onProceedPayment(createdBooking)}>{tr('ui.view_booking_payment_3a007567')}</button>}</div>}
         </div>
       ) : (
         <form onChangeCapture={()=>{draftDirty.current=true;}} ref={formRef} id="quick-booking-form" onSubmit={handleSubmit} className={`booking-form booking-workspace booking-compose${reviewing ? " is-reviewing" : ""}`} noValidate>
@@ -566,10 +567,12 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               <dt>{tr('ui.time_b295fd62')}</dt><dd>{selectedDate} · {startTime}–{endTime} {tr('ui.timezoneVietnam')}</dd>
               <dt>{tr('ui.session_title_87c59f6e')}</dt><dd>{title}</dd>
               <dt>{tr('ui.customer.contactTitle')}</dt><dd>{contact.fullName} · {contact.phone}</dd>
-              <dt>{tr('ui.fulfillment.receiveMethod')}</dt><dd>{tr(deliveryMode === 'HOME_DELIVERY' ? 'ui.fulfillment.homeDelivery' : 'ui.fulfillment.labPickup')}{deliveryMode === 'HOME_DELIVERY' && ` · ${[deliveryAddress.addressLine, deliveryLabels.wardName, deliveryLabels.provinceName].filter(Boolean).join(', ')}`}</dd>
-              <dt>{tr('ui.usage_fee_10b23fee')}</dt><dd>{quote.amountVnd.toLocaleString('vi-VN')} {tr('ui.vnd_bf502a39')}</dd></dl>
-            <QuoteDiscountSummary quote={quote} />
-            <p>{tr(quote.amountVnd > 0 ? 'ui.paymentHold.rule' : 'ui.bookingReview.free')}</p>
+              <dt>{tr('ui.fulfillment.receiveMethod')}</dt><dd>{tr(deliveryMode === 'HOME_DELIVERY' ? 'ui.fulfillment.homeDelivery' : 'ui.fulfillment.labPickup')}{deliveryMode === 'HOME_DELIVERY' && ` · ${[deliveryAddress.addressLine, deliveryLabels.wardName, deliveryLabels.provinceName].filter(Boolean).join(', ')}`}</dd></dl>
+            <div className="booking-review-quote">
+              <div className="booking-review-quote-total"><span>{tr('ui.usage_fee_10b23fee')}</span><strong>{formatVnd(quote.amountVnd, locale)}</strong></div>
+              <QuoteDiscountSummary quote={quote} />
+              <p>{tr(quote.amountVnd > 0 ? 'ui.paymentHold.rule' : 'ui.bookingReview.free')}</p>
+            </div>
             <p>{tr('ui.bookingReview.next')}</p>
             <button type="button" className="btn btn-secondary" disabled={isSubmitting} onClick={() => { setReview(null); requestAnimationFrame(() => bookingField('booking-contact-name')?.focus()); }}>{tr('ui.bookingReview.edit')}</button>
           </section>}
@@ -725,7 +728,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           {fieldFeedback("booking-title")}
 
           {/* Purpose */}
-          {pricingRules.length > 0 && new Set(pricingRules.map(rule => rule.hourlyRateVnd)).size > 1 && <label className="booking-field">{tr("ui.pricing_purpose_f1a0b490")}<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{pricingRules.map(rule => <option key={rule.id} value={rule.purposeCode}>{rule.label} — {rule.hourlyRateVnd.toLocaleString("vi-VN")} {tr("ui.vnd_hour_c2aca1ee")}</option>)}</select></label>}
+          {pricingRules.length > 0 && new Set(pricingRules.map(rule => rule.hourlyRateVnd)).size > 1 && <label className="booking-field">{tr("ui.pricing_purpose_f1a0b490")}<select value={purposeCode} onChange={e => setPurposeCode(e.target.value)}>{pricingRules.map(rule => <option key={rule.id} value={rule.purposeCode}>{rule.label} — {formatVnd(rule.hourlyRateVnd, locale)} / {tr("ui.rental.hour")}</option>)}</select></label>}
           <div className="booking-field">
             <label htmlFor="booking-purpose" className="booking-label">
               {tr("ui.usage_purpose_701ce708")}</label>
@@ -743,7 +746,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           </div>
 
           {fieldFeedback("booking-purpose")}
-          {fulfillment?.deliveryAllowed && <fieldset className="booking-contact" disabled={isSubmitting}><legend>{tr('ui.fulfillment.title')}</legend><label htmlFor="booking-delivery-mode">{tr('ui.fulfillment.receiveMethod')}</label><select id="booking-delivery-mode" className="booking-input" value={deliveryMode} onChange={event => setDeliveryMode(event.target.value)}><option value="LAB_PICKUP">{tr('ui.fulfillment.labPickup')}</option><option value="HOME_DELIVERY">{tr('ui.fulfillment.homeDelivery')}</option></select>{deliveryMode === 'HOME_DELIVERY' && <><p>{tr('ui.fulfillment.deliveryFee', { amount: '0' })}</p><VietnamAddressSelector required value={deliveryAddress} onLabelsChange={setDeliveryLabels} onChange={value => { setDeliveryAddress(value); clearFieldError('address-province'); clearFieldError('address-ward'); clearFieldError('address-line'); }} fieldErrors={{ provinceCode: fieldErrors['address-province'], wardCode: fieldErrors['address-ward'], addressLine: fieldErrors['address-line'] }} /></>}</fieldset>}
+          {fulfillment?.deliveryAllowed && <fieldset className="booking-contact" disabled={isSubmitting}><legend>{tr('ui.fulfillment.title')}</legend><label htmlFor="booking-delivery-mode">{tr('ui.fulfillment.receiveMethod')}</label><select id="booking-delivery-mode" className="booking-input" value={deliveryMode} onChange={event => setDeliveryMode(event.target.value)}><option value="LAB_PICKUP">{tr('ui.fulfillment.labPickup')}</option><option value="HOME_DELIVERY">{tr('ui.fulfillment.homeDelivery')}</option></select>{deliveryMode === 'HOME_DELIVERY' && <>{typeof fulfillment.deliveryFeeVnd === 'number' && <p>{tr('ui.fulfillment.deliveryFee', { amount: formatVnd(fulfillment.deliveryFeeVnd, locale) })}</p>}<VietnamAddressSelector required value={deliveryAddress} onLabelsChange={setDeliveryLabels} onChange={value => { setDeliveryAddress(value); clearFieldError('address-province'); clearFieldError('address-ward'); clearFieldError('address-line'); }} fieldErrors={{ provinceCode: fieldErrors['address-province'], wardCode: fieldErrors['address-ward'], addressLine: fieldErrors['address-line'] }} /></>}</fieldset>}
           <p className="booking-review-note">{tr("ui.rental.quickConfirm")}</p>
           <LabPolicySummary policy={{...currentPolicy, maxBookingMinutes: currentResource?.maxBookingMinutes ?? currentPolicy?.maxBookingMinutes}} requiresApproval={currentResource ? effectiveRequiresApproval : undefined} />
           </fieldset>
@@ -753,7 +756,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             <div className="booking-summary-content"><span className="slot-ticket-code">{currentResource?.code}</span><h3>{currentResource?.name || tr('ui.choose_a_resource_1ba6fed9')}</h3>
             <dl className="booking-summary-time"><div><dt>{tr('ui.booking_date_502b0188')}</dt><dd>{selectedDate || '—'}</dd></div><div><dt>{tr('ui.time_b295fd62')}</dt><dd>{startTime}–{endTime}</dd></div></dl>
             <div className="booking-summary-fee"><h4>{tr('ui.bookingStudio.fee')}</h4>
-          <div className={`alert${quoteError ? " danger" : ""}`} aria-live="polite">{quoteError ? <span role="alert">{translate(quoteError)} <button className="secondary-button" type="button" onClick={() => setPricingRetry(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></span> : quote?.key === quoteKey ? <span>{tr("ui.usage_fee_10b23fee")}<strong>{quote.amountVnd.toLocaleString("vi-VN")} {tr("ui.vnd_bf502a39")}</strong>{quote.amountVnd > 0 ? tr("ui.pay_after_confirmation_and_before_2effbba2") : tr("ui.no_payment_required_a44e1364")}</span> : !timeIsValid ? tr("ui.calendarWorkspace.validTimeForFee") : tr("ui.updating_usage_fee_be66cd3f")}</div>
+          <div className={`alert${quoteError ? " danger" : ""}`} aria-live="polite">{quoteError ? <span role="alert">{translate(quoteError)} <button className="secondary-button" type="button" onClick={() => setPricingRetry(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></span> : quote?.key === quoteKey ? <span>{tr("ui.usage_fee_10b23fee")}<strong>{formatVnd(quote.amountVnd, locale)}</strong>{quote.amountVnd > 0 ? tr("ui.pay_after_confirmation_and_before_2effbba2") : tr("ui.no_payment_required_a44e1364")}</span> : !timeIsValid ? tr("ui.calendarWorkspace.validTimeForFee") : tr("ui.updating_usage_fee_be66cd3f")}</div>
           <QuoteDiscountSummary quote={quote?.key === quoteKey ? quote : null} />
             </div><p className="booking-summary-note">{tr('ui.bookingStudio.notReserved')}</p></div>
           </aside>

@@ -7,16 +7,20 @@ import { prisma } from "../src/db.js";
 const c = emailConfiguration();
 const report = {
   automationEnabled: process.env.EMAIL_AUTOMATION_ENABLED !== "false",
-  smtpConfigured: c.configured,
-  fields: Object.fromEntries(["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "EMAIL_FROM"].map(key => [key, Boolean(process.env[key])])),
+  transport: c.provider,
+  transportConfigured: c.configured,
+  fields: Object.fromEntries((c.provider === "google_script"
+    ? ["GOOGLE_SCRIPT_MAIL_URL", "GOOGLE_SCRIPT_MAIL_TOKEN", "EMAIL_FROM"]
+    : ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "EMAIL_FROM"]
+  ).map(key => [key, Boolean(process.env[key])])),
   applicationUrlValid: Boolean(emailApplicationUrl()),
-  smtpVerified: false,
-  deliveryMeaning: "SENT means SMTP accepted the message, not proof of inbox delivery."
+  transportVerified: false,
+  deliveryMeaning: "SENT records acceptance by the configured mail transport. Inbox delivery needs separate verification."
 };
 try {
   if (process.argv.includes("--verify")) {
     const result = await verifyEmailTransport();
-    report.smtpVerified = result.success;
+    report.transportVerified = result.success;
     if (!result.success) report.verificationError = result.error;
   }
   if (process.argv.includes("--queue")) {
@@ -25,8 +29,8 @@ try {
       orderBy: { createdAt: "asc" }, select: { id: true, kind: true, attempts: true, lastError: true, createdAt: true } });
   }
   console.log(JSON.stringify(report, null, 2));
-  if (!report.smtpConfigured || !report.applicationUrlValid ||
-      (process.argv.includes("--verify") && !report.smtpVerified)) process.exitCode = 1;
+  if (!report.transportConfigured || !report.applicationUrlValid ||
+      (process.argv.includes("--verify") && !report.transportVerified)) process.exitCode = 1;
 } catch {
   console.error("Email configuration check failed: database unavailable or email migration not deployed.");
   process.exitCode = 1;

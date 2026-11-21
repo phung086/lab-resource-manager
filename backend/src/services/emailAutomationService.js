@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../db.js";
 import { normalizeLocale, localize } from "../locales/index.js";
 import { emailConfiguration, sendEmail } from "./emailService.js";
+import { LAB_STAFF } from "../constants/roles.js";
+import { urgentIncidentSeverities } from "../constants/operatorAlerts.js";
 
 const MAX_ATTEMPTS = 5;
 const LEASE_MS = 120000;
@@ -47,6 +49,42 @@ export async function enqueuePaymentReceipt(tx, payment) {
   });
 }
 
+const operatorEmailEnabled = () => process.env.OPERATOR_ALERT_EMAILS_ENABLED === "true";
+
+export async function enqueueOperatorAlertEmails(tx, recipients, alert) {
+  if (!operatorEmailEnabled()) return;
+  const staff = recipients.filter(user => user.role === LAB_STAFF);
+  if (!staff.length) return;
+  await tx.emailDelivery.createMany({
+    skipDuplicates: true,
+    data: staff.map(user => ({
+      id: randomUUID(), userId: user.id, recipient: user.email,
+      dedupeKey: `operator-alert:${alert.kind}:${alert.id}:${user.id}`,
+      kind: "OPERATOR_ALERT", payload: { kind: alert.kind, id: alert.id, laboratoryId: alert.laboratoryId }
+    }))
+  });
+}
+
+async function operatorAlertIsCurrent(client, row) {
+  const { kind, id, laboratoryId } = row.payload;
+  if (!laboratoryId) return false;
+  const staff = await client.userLabAssignment.findFirst({
+    where: { userId: row.userId, laboratoryId, user: { email: row.recipient, role: LAB_STAFF, isActive: true, deletedAt: null } },
+    select: { userId: true }
+  });
+  if (!staff) return false;
+  if (kind === "support") {
+    return Boolean(await client.supportSession.findFirst({
+      where: { id, laboratoryId, OR: [{ status: "WAITING" }, { status: "ACTIVE", assignedStaffId: row.userId }] },
+      select: { id: true }
+    }));
+  }
+  return kind === "incident" && Boolean(await client.incident.findFirst({
+    where: { id, resource: { laboratoryId }, severity: { in: urgentIncidentSeverities }, status: { in: ["reported", "triaged", "assigned", "investigating"] } },
+    select: { id: true }
+  }));
+}
+
 export function renderAutomatedEmail(row) {
   const t = (key, params) => localize(row.locale, `email.auto.${key}`, params);
   const p = row.payload;
@@ -55,7 +93,8 @@ export function renderAutomatedEmail(row) {
   const date = value => new Intl.DateTimeFormat(row.locale === "en" ? "en-GB" : "vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short", hour12: false
   }).format(new Date(value)) + " (UTC+7)";
-  const fields = [], paragraphs = [t("greeting", { name: p.name || p.email })];
+  const isOperatorAlert = row.kind === "OPERATOR_ALERT";
+  const fields = [], paragraphs = isOperatorAlert ? [] : [t("greeting", { name: p.name || p.email })];
   let subject, path;
   if (row.kind === "ACCOUNT_REGISTERED") {
     subject = t("registeredSubject"); path = "/login";
@@ -78,11 +117,18 @@ export function renderAutomatedEmail(row) {
       paragraphs.push(t(p.reconciliationRequired ? "reconciliation" : "bookingNotice"));
     } else if (p.reconciliationRequired) paragraphs.push(t("reconciliation"));
     paragraphs.push(t("receiptNotice"));
+  } else if (isOperatorAlert && ["support", "incident"].includes(p.kind)) {
+    const support = p.kind === "support";
+    subject = t(support ? "supportAlertSubject" : "incidentAlertSubject");
+    paragraphs.push(t(support ? "supportAlertBody" : "incidentAlertBody"));
+    path = support ? "/workspace/support" : `/workspace/incidents?incident=${encodeURIComponent(p.id)}`;
   } else throw new Error("EMAIL_KIND_INVALID");
-  const link = appUrl + path;
-  const text = [...paragraphs, ...fields.map(([label, value]) => `${label}: ${value ?? "—"}`), `${t("openApp")}: ${link}`, t("footer")].join("\n\n");
-  const html = renderEmailDocument({ locale: row.locale, title: t(row.kind === "ACCOUNT_REGISTERED" ? "welcomeTitle" : p.reconciliationRequired ? "reconciliationTitle" : "paymentTitle"), preview: paragraphs[1], paragraphs, fields,
-    link, linkLabel: t("openApp"), footer: t("footer"), warning: Boolean(p.reconciliationRequired),
+  const appHost = new URL(appUrl).hostname;
+  const link = isOperatorAlert && /^(?:localhost\.?|127(?:\.\d{1,3}){3}|\[::1\]|0\.0\.0\.0)$/i.test(appHost) ? undefined : appUrl + path;
+  const text = [...paragraphs, ...fields.map(([label, value]) => `${label}: ${value ?? "—"}`), ...(link ? [`${t("openApp")}: ${link}`] : []), t("footer")].join("\n\n");
+  const title = isOperatorAlert ? subject : t(row.kind === "ACCOUNT_REGISTERED" ? "welcomeTitle" : p.reconciliationRequired ? "reconciliationTitle" : "paymentTitle");
+  const html = renderEmailDocument({ locale: row.locale, title, preview: paragraphs[1] || paragraphs[0], paragraphs, fields,
+    link, linkLabel: t("openApp"), footer: t("footer"), warning: isOperatorAlert || Boolean(p.reconciliationRequired),
     highlight: row.kind === "PAYMENT_RECEIPT" ? { label: t("amount"), value: new Intl.NumberFormat(row.locale === "en" ? "en-GB" : "vi-VN", {style:"currency",currency:p.currency}).format(p.amount) } : undefined });
   return { subject, html, text };
 }
@@ -102,7 +148,8 @@ export async function dispatchEmailDeliveries({ client = prisma, limit = 10, now
       await tx.emailDelivery.updateMany({ where: { status: "SENDING", lockedAt: { lt: staleAt }, attempts: { gte: MAX_ATTEMPTS } },
         data: { status: "FAILED", nextAttemptAt: null, leaseToken: null, lockedAt: null, lastError: "DELIVERY_UNCERTAIN" } });
       const [candidate] = await tx.$queryRaw`SELECT id FROM email_deliveries
-        WHERE "attempts" < ${MAX_ATTEMPTS} AND ((status = 'PENDING' AND "nextAttemptAt" <= ${now})
+        WHERE "attempts" < ${MAX_ATTEMPTS} AND ("kind" <> 'OPERATOR_ALERT' OR ${operatorEmailEnabled()})
+          AND ((status = 'PENDING' AND "nextAttemptAt" <= ${now})
           OR (status = 'SENDING' AND "lockedAt" < ${staleAt}))
         ORDER BY "createdAt", id FOR UPDATE SKIP LOCKED LIMIT 1`;
       if (!candidate) return null;
@@ -111,6 +158,13 @@ export async function dispatchEmailDeliveries({ client = prisma, limit = 10, now
       } });
     });
     if (!row) break;
+    if (row.kind === "OPERATOR_ALERT" && !await operatorAlertIsCurrent(client, row)) {
+      await client.emailDelivery.updateMany({
+        where: { id: row.id, status: "SENDING", leaseToken },
+        data: { status: "FAILED", leaseToken: null, lockedAt: null, nextAttemptAt: null, lastError: "OPERATOR_ALERT_STALE" }
+      });
+      continue;
+    }
     let delivery;
     try {
       delivery = await sendEmail({ to: row.recipient, ...renderAutomatedEmail(row),

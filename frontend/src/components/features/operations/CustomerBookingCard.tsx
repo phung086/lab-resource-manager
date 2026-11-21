@@ -1,3 +1,4 @@
+import { formatVnd } from '../../../utils/currency';
 import React, { useEffect, useState } from 'react';
 import { ArrowUpRight, Clock3, CreditCard, Hourglass, MapPin } from 'lucide-react';
 import { useLocale } from '../../../providers/LocaleProvider';
@@ -58,7 +59,7 @@ export function CustomerBookingCard({ booking, busy, isSelected, onSelect, onPay
         </time>
         <span className="ticket-description"><strong className="operation-card-resource">{booking.resource?.name || booking.title}</strong><span className="ticket-time"><Clock3 size={14} aria-hidden="true" />{toVietnamTimeString(booking.startAt)}–{toVietnamTimeString(booking.endAt)}</span><span className="ticket-location"><MapPin size={14} aria-hidden="true" />{booking.resource?.laboratory?.name || tr('ui.not_assigned_ebe3cb5d')}</span></span>
       </span>
-      <span className="ticket-footer"><span className="ticket-fee">{!pay && timer}{typeof booking.feeAmountVnd === 'number' && <><small>{tr('ui.bookingStudio.fee')}</small><strong>{new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-GB').format(booking.feeAmountVnd)} ₫</strong></>}</span><span className="operation-card-inspect">{tr(action)}<ArrowUpRight size={18} aria-hidden="true" /></span></span>
+      <span className="ticket-footer"><span className="ticket-fee">{!pay && timer}{typeof booking.feeAmountVnd === 'number' && <><small>{tr('ui.bookingStudio.fee')}</small><strong>{formatVnd(booking.feeAmountVnd, locale)}</strong></>}</span><span className="operation-card-inspect">{tr(action)}<ArrowUpRight size={18} aria-hidden="true" /></span></span>
     </button>
     {pay && deadline !== null && <div className="customer-ticket-payment">
       <div className="customer-payment-deadline">

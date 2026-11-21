@@ -1,49 +1,17 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from "react";
 
 type Theme = "light" | "dark";
-const preferenceKey = "lrm_theme";
-const systemQuery = "(prefers-color-scheme: dark)";
 const ThemeContext = createContext<{ theme: Theme; toggleTheme: () => void } | null>(null);
 
-function storedTheme(): Theme | null {
-  try {
-    const value = localStorage.getItem(preferenceKey);
-    return value === "light" || value === "dark" ? value : null;
-  } catch {
-    return null;
-  }
-}
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [preference, setPreference] = useState(storedTheme);
-  const [systemDark, setSystemDark] = useState(() => window.matchMedia(systemQuery).matches);
-  const theme = preference ?? (systemDark ? "dark" : "light");
+  const [theme, setTheme] = useState<Theme>("light");
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
-  useEffect(() => {
-    const system = window.matchMedia(systemQuery);
-    const syncSystem = () => setSystemDark(system.matches);
-    const syncStorage = (event: StorageEvent) => {
-      if (event.key === preferenceKey || event.key === null) setPreference(storedTheme());
-    };
-    syncSystem();
-    system.addEventListener("change", syncSystem);
-    window.addEventListener("storage", syncStorage);
-    return () => {
-      system.removeEventListener("change", syncSystem);
-      window.removeEventListener("storage", syncStorage);
-    };
-  }, []);
-
   function toggleTheme() {
-    const next = theme === "dark" ? "light" : "dark";
-    setPreference(next);
-    try {
-      localStorage.setItem(preferenceKey, next);
-    } catch { /* Keep the in-page choice when storage is unavailable. */ }
+    setTheme(current => current === "dark" ? "light" : "dark");
   }
 
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;

@@ -1,3 +1,4 @@
+import { formatVnd } from '../utils/currency';
 import React, { useId, useState } from "react";
 import { LayoutGrid, List, ArrowRight } from "lucide-react";
 import { useLocale } from "../providers/LocaleProvider";
@@ -43,7 +44,7 @@ export function ResourceTariffTable({ resources, onSelect }: { resources: Tariff
           </div>
           <dl className="rental-tariff-facts">
             <div><dt>{tr("ui.rental.hourlyPrice")}</dt>
-              <dd className="rental-tariff-rate">{resource.rental ? `${format.format(resource.rental.hourlyRateVnd)} ₫` : tr("ui.rental.pricePending")}</dd>
+              <dd className="rental-tariff-rate">{resource.rental ? formatVnd(resource.rental.hourlyRateVnd, locale) : tr("ui.rental.pricePending")}</dd>
             </div>
             <div><dt>{tr("ui.rental.maxDuration")}</dt>
               <dd>{resource.maxBookingMinutes ? `${format.format(resource.maxBookingMinutes / 60)} ${tr(resource.maxBookingMinutes === 60 ? "ui.rental.hour" : "ui.rental.hours")}` : "—"}</dd>

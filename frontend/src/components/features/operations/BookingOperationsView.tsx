@@ -7,6 +7,7 @@ import { navigateApp, readRouteParams, resourceSelectionPath, workspacePathForTa
 import { apiRequest } from "../../../api.js";
 import type { LocaleMessage } from "../../../providers/LocaleProvider";
 import { translate } from "../../../i18n.js";
+import { formatVnd } from '../../../utils/currency';
 import { useLocale } from '../../../providers/LocaleProvider';
 import React, { useEffect, useRef, useState } from "react";
 import { AlertCircle, ClipboardList, History, RefreshCw, X, Clock, CalendarPlus, RotateCcw } from "lucide-react";
@@ -492,7 +493,7 @@ interface BookingDossierProps {
 
 function BookingDossier({ booking, user, isStaff, busy, onClose, onAction, onOpenHistory, onCancel, onPayment, onRescheduled }: BookingDossierProps) {
   const [moving,setMoving] = useState(false);
-  const { tr } = useLocale();
+  const { tr, locale } = useLocale();
   const isOwner = booking.requestedById === user.id;
   const [currentTime, setCurrentTime] = useState(Date.now());
   useEffect(() => {
@@ -662,7 +663,7 @@ function BookingDossier({ booking, user, isStaff, busy, onClose, onAction, onOpe
       )}
 
       {/* Fee */}
-      {!isOwner && Boolean(booking.feeAmountVnd) && (user.role === 'ADMIN' && onPayment ? <BookingPaymentSummary key={`admin-payment-${booking.id}`} booking={booking} user={user} onPayment={onPayment} /> : <section className="operations-dossier-section"><strong>{tr('ui.agreed_usage_fee_38f5f31a')} {booking.feeAmountVnd?.toLocaleString('vi-VN')} {tr('ui.vnd_bf502a39')}</strong></section>)}
+      {!isOwner && typeof booking.feeAmountVnd === 'number' && booking.feeAmountVnd !== 0 && (user.role === 'ADMIN' && onPayment ? <BookingPaymentSummary key={`admin-payment-${booking.id}`} booking={booking} user={user} onPayment={onPayment} /> : <section className="operations-dossier-section"><strong>{tr('ui.agreed_usage_fee_38f5f31a')} {formatVnd(booking.feeAmountVnd, locale)}</strong></section>)}
 
       {/* Actions */}
       {booking.status === 'PENDING_APPROVAL' && booking.paymentDueAt && <PaymentHoldNotice paymentDueAt={booking.paymentDueAt} startAt={booking.startAt} onExpired={onRescheduled} />}

@@ -51,8 +51,8 @@ test("server filtering and full scoped totals include old pending, overdue, hist
     assert.equal(response.body.summary.byStatus.PENDING_APPROVAL, 25);
     assert.equal(response.body.summary.overdue, 7);
     assert.ok(response.body.items.every(row => row.status === (filter === "HISTORY" ? "COMPLETED" : filter)));
-    const dates = response.body.items.map(row => filter === "CHECKED_OUT" ? row.endAt : row.startAt);
-    if (filter !== "HISTORY") assert.deepEqual(dates, [...dates].sort());
+    const dates = response.body.items.map(row => row.startAt);
+    assert.deepEqual(dates, [...dates].sort().reverse(), `${filter}: recent dates first`);
   }
   const open = await get("/incidents?page=2&pageSize=20&filter=OPEN");
   assert.equal(open.body.items.length, 5);
@@ -63,6 +63,45 @@ test("server filtering and full scoped totals include old pending, overdue, hist
   assert.ok(open.body.items.every(row => row.status === "reported"));
   const done = await get("/incidents?page=1&filter=RESOLVED");
   assert.equal(done.body.pagination.total, 57);
+});
+
+test("operator confirmed bookings show recent dates first across server pages", async () => {
+  const expected = fixture.bookings
+    .filter(row => row.status === "CONFIRMED")
+    .sort((first, second) => +second.startAt - +first.startAt)
+    .map(row => row.id);
+  for (const actor of ["staff", "admin"]) {
+    const ids = [];
+    for (let page = 1; page <= 3; page++) {
+      const response = await get(`/bookings?page=${page}&pageSize=3&filter=CONFIRMED`, actor);
+      assert.equal(response.status, 200);
+      assert.equal(response.body.pagination.total, expected.length);
+      ids.push(...response.body.items.map(row => row.id));
+    }
+    assert.deepEqual(ids, expected, `${actor}: latest booking date appears on page one`);
+  }
+});
+
+test("customer All shows newly created active bookings before history across page boundaries", async () => {
+  const { id: fixtureId, ...source } = fixture.bookings.find(row => row.requestedById === fixture.users.student.id);
+  const cancelled = { ...source, id: `${fixtureId}-cancelled`, status: "CANCELLED", startAt: new Date("2030-01-01T03:00:00Z"), endAt: new Date("2030-01-01T04:00:00Z"), createdAt: new Date("2026-10-01T00:00:00Z") };
+  const confirmed = { ...source, id: `${fixtureId}-confirmed`, status: "CONFIRMED", startAt: new Date("2030-01-01T02:00:00Z"), endAt: new Date("2030-01-01T03:00:00Z"), createdAt: new Date("2026-11-01T00:00:00Z"), feeAmountVnd: 20000 };
+  await prisma.booking.createMany({ data: [cancelled, confirmed] });
+  try {
+    const first = await get("/bookings?page=1&pageSize=20&filter=ALL", "student");
+    const second = await get("/bookings?page=2&pageSize=20&filter=ALL", "student");
+    assert.equal(first.status, 200);
+    assert.equal(second.status, 200);
+    assert.equal(first.body.items[0].id, confirmed.id);
+    assert.equal(second.body.items[13].id, cancelled.id, "History starts at the first slot after 33 active bookings");
+    assert.equal(new Set([...first.body.items, ...second.body.items].map(row => row.id)).size, 40);
+    const history = await get("/bookings?page=1&pageSize=1&filter=HISTORY", "student");
+    assert.equal(history.body.items[0].id, cancelled.id);
+    const staff = await get("/bookings?page=1&pageSize=1&filter=ALL");
+    assert.equal(staff.body.items[0].id, cancelled.id, "Staff retains chronological ordering");
+  } finally {
+    await prisma.booking.deleteMany({ where: { id: { in: [cancelled.id, confirmed.id] } } });
+  }
 });
 
 test("all pages and summaries enforce admin, staff lab assignment, owner and current account checks", async () => {

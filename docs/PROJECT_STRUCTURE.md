@@ -42,7 +42,7 @@ lab-resource-manager/
 │   ├── scripts/            # Local launcher and locale checks
 │   └── test_*.mjs, test-utils/
 ├── docs/                   # Maintained contracts, guides, context, ERD and backlog
-│   └── submission/        # Hồ sơ báo cáo Word/PDF tại mốc bàn giao
+│   └── submission/        # Bảy tài liệu Word tiếng Việt phục vụ báo cáo
 ├── data/                   # Resource import template and labelled demo inventory
 ├── infra/prometheus/       # Metrics scrape configuration
 ├── firmware/               # Optional real telemetry adapter
@@ -68,10 +68,21 @@ transactions stay on the backend; hiding a route never grants or denies authorit
 Prisma schema/migrations remain the persistence source; root SQL dumps are not
 an alternate schema. Do not create empty directories just to imitate a template.
 
+```mermaid
+flowchart LR
+    Browser["Trình duyệt React / Vite"] --> Client["api.js và services"]
+    Client --> Route["Express /api"]
+    Route --> Middleware["Middleware xác thực và phân quyền"]
+    Middleware --> Service["Service nghiệp vụ"]
+    Service --> Prisma["Prisma"]
+    Prisma --> Database[("PostgreSQL 16")]
+    Source["Nguồn giám sát đã xác thực"] --> Route
+```
+
 ## Điểm sửa dùng chung
 
-- `frontend/src/utils/currency.ts` định dạng số tiền VND cho luồng báo giá,
-  thanh toán và hồ sơ. Các nhãn trạng thái giao dịch nằm trong
+- `frontend/src/utils/currency.ts` định dạng số tiền VND cho danh mục, bảng
+  giá, báo giá, đặt nhanh, thanh toán và hồ sơ. Các nhãn trạng thái giao dịch nằm trong
   `frontend/src/utils/paymentValidation.ts`, với nội dung lấy từ catalog VI/EN.
 - `backend/src/services/telemetryService.js` dựng dữ liệu mẫu và lịch sử cho
   API giám sát và dashboard. `monitoringAlertService.js` định nghĩa phần quan hệ

@@ -9,7 +9,7 @@ export function validateAuth(values, mode) {
   else if (!emailPattern.test(data.email)) errors.email = 'ui.invalid_email_format_b9c6e7d2';
   if (!data.password) errors.password = 'ui.customer.passwordRequired';
   else if (data.password.length < 8) errors.password = 'ui.password_must_be_at_least_8_7e8d9c0a';
-  else if (mode === 'register' && data.password.length > 128) errors.password = 'ui.auth_password_policy';
+  else if (mode === 'register' && new TextEncoder().encode(data.password).length > 72) errors.password = 'ui.auth_password_policy';
   return errors;
 }
 export function authFailure(cause, mode) {

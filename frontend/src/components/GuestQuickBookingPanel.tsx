@@ -1,3 +1,4 @@
+import { formatVnd } from '../utils/currency';
 import type { LocaleMessage } from "../providers/LocaleProvider";
 import { translate } from "../i18n.js";
 import { useLocale } from '../providers/LocaleProvider';
@@ -38,10 +39,6 @@ export type Resource = {
 
 export type AddressValue = { addressLine: string; provinceCode: string; wardCode: string };
 
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("vi-VN").format(value || 0);
-}
-
 const categoryLabels: Record<string, string> = {
   ROOM: "ui.lab_room_8ed94274",
   EQUIPMENT: "ui.resources_eb706979",
@@ -69,7 +66,7 @@ export function GuestQuickBookingPanel({
   resource: Resource;
   onComplete: (result: any) => void;
 }) {
-  const { tr } = useLocale();
+  const { tr, locale } = useLocale();
   // Wizard Step: 1 = Resource & Booking, 2 = Customer Info, 3 = OTP & Final Review
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
@@ -482,7 +479,7 @@ export function GuestQuickBookingPanel({
               >
                 {pricingRules.map((rule) => (
                   <option key={rule.id} value={rule.purposeCode}>
-                    {rule.label} — {formatMoney(rule.hourlyRateVnd)} {tr("ui.vnd_hour_c2aca1ee")}</option>
+                    {rule.label} — {formatVnd(rule.hourlyRateVnd, locale)} / {tr("ui.rental.hour")}</option>
                 ))}
               </select>
             </label>
@@ -493,7 +490,7 @@ export function GuestQuickBookingPanel({
               <span role="alert" className="quote-error">{tr(quoteError)} <button type="button" className="guest-error-edit" onClick={()=>setQuoteRetry(value=>value+1)}>{tr("ui.retry_c58d068c")}</button></span>
             ) : quote?.key === quoteKey ? (
               <span>
-                {tr("ui.estimated_fee_c69e3fcf")}<strong>{formatMoney(quote.amountVnd)} {tr("ui.vnd_bf502a39")}</strong>
+                {tr("ui.estimated_fee_c69e3fcf")}<strong>{formatVnd(quote.amountVnd, locale)}</strong>
                 {quote.amountVnd > 0
                   ? tr("ui.after_confirmation_continue_to_vnpay_494a4aa6")
                   : tr("ui.this_resource_or_purpose_has_969242bf")}
@@ -627,7 +624,7 @@ export function GuestQuickBookingPanel({
               <div>
                 <dt>{tr("ui.usage_fee_cdf18099")}</dt>
                 <dd>
-                  <strong>{quote?.key === quoteKey ? translate("ui.vnd_e239b46a", { value0: formatMoney(quote.amountVnd) }) : tr("ui.not_calculated_return_to_step_5c596e9d")}</strong>
+                  <strong>{quote?.key === quoteKey ? formatVnd(quote.amountVnd, locale) : tr("ui.not_calculated_return_to_step_5c596e9d")}</strong>
                 </dd>
               </div>
               <div>

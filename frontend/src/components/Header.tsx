@@ -32,6 +32,7 @@ export interface HeaderProps {
   onLogout?: () => void;
   onOpenAssistant?: () => void;
   assistantControl?: React.ReactNode;
+  urgentNotice?: React.ReactNode;
   onOpenHome?: () => void;
   onNavigate?: (tab: string, params?: Record<string, string>) => void;
   showSearch?: boolean;
@@ -53,6 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onOpenAssistant,
   assistantControl,
+  urgentNotice,
   onOpenHome,
   onNavigate,
   showSearch = true,
@@ -276,6 +278,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
       </div>
+      {urgentNotice}
     </header>
   );
 };

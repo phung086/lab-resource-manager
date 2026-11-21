@@ -8,7 +8,7 @@ export const PAYMENT_HOLD_MS = 15 * 60 * 1000;
 export const isPaymentHold = booking => booking?.status === 'PENDING_APPROVAL' && Boolean(booking.paymentDueAt);
 export const effectivePaymentDeadline = booking => booking?.paymentDueAt
   ? new Date(Math.min(+new Date(booking.paymentDueAt), booking.startAt ? +new Date(booking.startAt) : Infinity)) : null;
-const expiredHoldWhere = now => ({ status: 'PENDING_APPROVAL', paymentDueAt: { not: null }, OR: [{ paymentDueAt: { lte: now } }, { startAt: { lte: now } }] });
+export const expiredHoldWhere = now => ({ status: 'PENDING_APPROVAL', paymentDueAt: { not: null }, OR: [{ paymentDueAt: { lte: now } }, { startAt: { lte: now } }] });
 export const settledBookingPaymentWhere = booking => ({
   bookingId: booking.id, userId: booking.requestedById, amount: booking.feeAmountVnd,
   currency: 'VND', status: 'success', provider: { in: settlementProviders },

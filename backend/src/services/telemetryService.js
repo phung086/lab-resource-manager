@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { HttpError } from "../middleware/errors.js";
 import { serializeTelemetrySource } from "./telemetryIdentityService.js";
 import { SOURCE_STALE_RULE, resolveStaleSourceAlert } from './monitoringAlertService.js';
+import { publishUrgentIncident } from "./operatorAlertService.js";
 
 export const TELEMETRY_STATES = Object.freeze({
   HEALTHY: "HEALTHY",
@@ -207,7 +208,7 @@ async function reconcileAlerts(tx, { source, sample, thresholdResolution, now })
     if (alert.severity === "CRITICAL") {
       const linked = await tx.incident.findUnique({ where: { monitoringAlertId: alert.id }, select: { id: true } });
       if (!linked) {
-        await tx.incident.create({
+        const incident = await tx.incident.create({
           data: {
             id: crypto.randomUUID(),
             resourceId: source.resourceId,
@@ -233,6 +234,10 @@ async function reconcileAlerts(tx, { source, sample, thresholdResolution, now })
             }
           }
         });
+        if (sample.origin === "EXTERNAL") {
+          const resource = await tx.resource.findUnique({ where: { id: source.resourceId }, select: { laboratoryId: true } });
+          await publishUrgentIncident(tx, incident, resource?.laboratoryId, now);
+        }
         await tx.usageLog.create({
           data: {
             id: crypto.randomUUID(),

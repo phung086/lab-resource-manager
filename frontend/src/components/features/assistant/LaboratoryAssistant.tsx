@@ -8,7 +8,7 @@ import { RobotMascot } from './RobotMascot';
 import { apiRequest } from '../../../api.js';
 import { hasMessage } from '../../../i18n.js';
 import { vietnamTimeToIso } from '../../../utils/timezone';
-import { navigateApp, workspacePathForTab } from '../../../workspaceRoutes.js';
+import { navigateApp, resourceDetailPath, workspacePathForTab } from '../../../workspaceRoutes.js';
 import { askChatgptBridge, type BridgeRequest } from '../../../services/chatgptBridgeApi';
 import { reviewBridgeProposal, type BridgeProposal, type BridgeSupportDraft } from '../../../services/chatgptBridgeProposals';
 import CustomerSupportChat from '../support/CustomerSupportChat';
@@ -21,8 +21,8 @@ type Action = { type: string; labelKey: string; payload?: Slot };
 type Segment = { text?: string; key?: string; params?: Record<string, unknown>; labels?: Record<string, string>; times?: Record<string, string> };
 type Resource = { id: string; name: string; code: string; category?: string; operationalStatus?: string };
 type Source = { chunkId: string; excerpt: string; document: { title: string; version?: string; fileName?: string } };
-type Answer = { answer: string; summary: Segment[]; locale: string; provider: string; modelStatus: string; source: string; toolsUsed: string[]; actions: Action[]; toolResults: { tool: string; result: Record<string, unknown> }[]; proposals?: BridgeProposal[]; nextTab?: string; conversation?: { id: string; expiresAt: string; retainedTurns?: number } };
-type Props = { isOpen: boolean; onClose: () => void; onPrefill: (slot: Slot) => void; onNavigate: (tab: string) => void; workspaceTab?: string; actorRole?: string };
+type Answer = { answer: string; summary: Segment[]; locale: string; provider: string; modelStatus: string; source: string; toolsUsed: string[]; actions: Action[]; toolResults: { tool: string; result: Record<string, unknown> }[]; resourceLinks?: BridgeRequest['resourceLinks']; proposals?: BridgeProposal[]; nextTab?: string; conversation?: { id: string; expiresAt: string; retainedTurns?: number } };
+type Props = { isOpen: boolean; onClose: () => void; onPrefill: (slot: Slot) => void; onNavigate: (tab: string, params?: Record<string, string>) => void; workspaceTab?: string; actorRole?: string };
 type Turn = { id: string; question: string; response?: Answer; partial?: string; delivery: 'sending' | 'sent' | 'failed' | 'cancelled' };
 
 export default function LaboratoryAssistant(props: Props) {
@@ -45,12 +45,22 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [setupError, setSetupError] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]), [mode, setMode] = useState('CHECKING'), [connectionAttempt, setConnectionAttempt] = useState(0);
   const [resources, setResources] = useState<Resource[]>([]), [resourceId, setResourceId] = useState('');
+  const [contextOpen, setContextOpen] = useState(false);
+  const [resourceLoad, setResourceLoad] = useState<'idle' | 'loading' | 'failed'>('idle');
+  const [resourceRetry, setResourceRetry] = useState(0);
   const [duration, setDuration] = useState(''), [startAt, setStartAt] = useState(''), [endAt, setEndAt] = useState('');
   const [bridge, setBridge] = useState<{ enabled: boolean; connected: boolean; mode: string } | null>(null);
   const [checkingConnection, setCheckingConnection] = useState(false);
   const [humanMode, setHumanMode] = useState(false), [humanDraft, setHumanDraft] = useState<BridgeSupportDraft | undefined>();
-  useEffect(() => { if (humanMode && isOpen && content.current) content.current.scrollTop = content.current.scrollHeight; }, [humanMode, isOpen]);
-  const usesBridge = Boolean(bridge?.enabled && bridge.connected && bridge.mode === 'chatgpt_bridge');
+  const [humanComposer, setHumanComposer] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (humanMode && isOpen && content.current) {
+      nearBottom.current = true;
+      content.current.scrollTop = content.current.scrollHeight;
+    }
+  }, [humanMode, isOpen]);
+  const usesBridge = mode === 'LOCAL_GROUNDED' && Boolean(bridge?.enabled && bridge.connected && bridge.mode === 'chatgpt_bridge');
+  const openQuestionsOffline = bridge?.enabled && !usesBridge && mode === 'LOCAL_GROUNDED';
   const operator = actorRole === 'ADMIN' || actorRole === 'LAB_STAFF';
   useEffect(() => {
     if (!isOpen || actorRole !== 'CUSTOMER') return;
@@ -62,10 +72,10 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
   }, [isOpen, actorRole]);
 
   useEffect(() => {
-    if (!isOpen || !content.current || !latestTurn.current || !nearBottom.current) return;
+    if (!isOpen || humanMode || !content.current || !latestTurn.current || !nearBottom.current) return;
     // Scroll the conversation only; opening a result must not move the workspace.
     content.current.scrollTop += latestTurn.current.getBoundingClientRect().top - content.current.getBoundingClientRect().top - 12;
-  }, [messages, isOpen]);
+  }, [messages, isOpen, humanMode]);
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; inFlight.current?.abort(); };
@@ -74,19 +84,35 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
     if (!isOpen) return;
     const controller = new AbortController();
     setCheckingConnection(true); setSetupError(false);
-    Promise.allSettled([
-      apiRequest('/assistant/suggestions', { signal: controller.signal }),
-      resourcesLoaded.current ? Promise.resolve(null) : apiRequest('/resources', { signal: controller.signal })
-    ]).then(([settings, rows]) => {
+    apiRequest('/assistant/suggestions', { signal: controller.signal }).then(settings => {
       if (controller.signal.aborted) return;
-      if (settings.status === 'fulfilled') { setSuggestions(settings.value.suggestionKeys || []); setMode(settings.value.mode); setBridge(settings.value.bridge || null); }
-      else { setMode('UNAVAILABLE'); setBridge(null); }
-      if (rows.status === 'fulfilled' && rows.value) { setResources(Array.isArray(rows.value) ? rows.value : rows.value.resources || []); resourcesLoaded.current = true; }
-      setSetupError(settings.status === 'rejected' || rows.status === 'rejected');
-      setCheckingConnection(false);
+      setSuggestions(settings.suggestionKeys || []);
+      setMode(settings.mode);
+      setBridge(settings.bridge || null);
+    }).catch(() => {
+      if (controller.signal.aborted) return;
+      setMode('UNAVAILABLE');
+      setBridge(null);
+      setSetupError(true);
+    }).finally(() => {
+      if (!controller.signal.aborted) setCheckingConnection(false);
     });
     return () => controller.abort();
   }, [isOpen, connectionAttempt]);
+  useEffect(() => {
+    if (!isOpen || humanMode || !contextOpen || resourcesLoaded.current) return;
+    const controller = new AbortController();
+    setResourceLoad('loading');
+    apiRequest('/resources', { signal: controller.signal }).then(rows => {
+      if (controller.signal.aborted) return;
+      setResources(Array.isArray(rows) ? rows : rows.resources || []);
+      resourcesLoaded.current = true;
+      setResourceLoad('idle');
+    }).catch(() => {
+      if (!controller.signal.aborted) setResourceLoad('failed');
+    });
+    return () => controller.abort();
+  }, [isOpen, humanMode, contextOpen, resourceRetry]);
   useEffect(() => {
     if (locale !== previousLocale.current) {
       previousLocale.current = locale;
@@ -174,10 +200,15 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
       let response: Answer;
       if (usesBridge) {
         const work = askChatgptBridge(body, { signal: controller.signal, onPending: request => {
-          if (!controller.signal.aborted && mounted.current) setMessages(previous => previous.map(turn => turn.id === turnId ? { ...turn, partial: request.partialReply?.text, delivery: 'sent' } : turn));
+          if (!controller.signal.aborted && mounted.current) setMessages(previous => {
+            const partial = request.partialReply?.text;
+            const turn = previous.find(item => item.id === turnId);
+            if (!turn || (turn.delivery === 'sent' && turn.partial === partial)) return previous;
+            return previous.map(item => item.id === turnId ? { ...item, partial, delivery: 'sent' } : item);
+          });
         } }); bridgeWork.current = work;
         const result = await work;
-        response = { answer: result.answer!, locale: result.locale || locale, provider: result.provider!, source: result.source!, modelStatus: 'ANSWERED', summary: [{ text: result.answer! }], toolsUsed: result.toolsUsed || [], toolResults: [], actions: [], conversation: result.conversation, proposals: result.proposals, nextTab: result.nextTab };
+        response = { answer: result.answer!, locale: result.locale || locale, provider: result.provider!, source: result.source!, modelStatus: 'ANSWERED', summary: [{ text: result.answer! }], toolsUsed: result.toolsUsed || [], toolResults: [], actions: [], conversation: result.conversation, proposals: result.proposals, nextTab: result.nextTab, resourceLinks: result.resourceLinks };
       } else response = await apiRequest('/assistant/chat', { method: 'POST', signal: controller.signal, body: JSON.stringify(body) });
       if (!mounted.current || controller.signal.aborted) return;
       if (usesBridge) bridgeConversationId.current = response.conversation?.id;
@@ -197,7 +228,7 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
       ...Object.fromEntries(Object.entries(segment.labels || {}).map(([key, id]) => [key, label(id)])),
       ...Object.fromEntries(Object.entries(segment.times || {}).map(([key, value]) => [key, time(value)])) });
   }
-  function navigate(tab: string) { dismiss(false); onNavigate(tab); }
+  function navigate(tab: string, params?: Record<string, string>) { dismiss(false); onNavigate(tab, params); }
   const targetLabels: Record<string, string> = { stock: 'assistant.openStock', users: 'assistant.openCustomers', dashboard: 'assistant.openReport', smart_calendar: 'assistant.openCalendar' };
   function review(proposal: BridgeProposal) {
     try {
@@ -217,25 +248,32 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
     }}>
     <header>
       <span className="assistant-avatar" aria-hidden="true">{humanMode ? <Headphones size={21} /> : <RobotMascot />}</span>
-      <div className="assistant-heading"><h2 id="lab-assistant-title">{tr(humanMode ? 'support.handoff' : 'assistant.title')}</h2><p>{tr(humanMode ? 'support.message' : 'assistant.subtitle')}</p></div>
+      <div className="assistant-heading">
+        <h2 id="lab-assistant-title">{tr(humanMode ? 'support.handoff' : 'assistant.title')}</h2>
+        {!humanMode && openQuestionsOffline ? <p className="assistant-offline-status" role="status">{tr('assistant.connection.limits')}</p>
+          : <p>{tr(humanMode ? 'support.message' : 'assistant.subtitle')}</p>}
+      </div>
       <LanguageToggle className="assistant-language" labelKey="assistant.changeLanguage" />
       {!humanMode && <button type="button" className="assistant-new" disabled={busy || !messages.length} onClick={() => void newConversation()} aria-label={tr('assistant.newConversation')} title={tr('assistant.newConversation')}><Plus size={19} aria-hidden="true" /></button>}
       <button type="button" className="assistant-minimize" onClick={() => dismiss()} aria-label={tr('assistant.minimize')}><X size={19} aria-hidden="true" /></button>
     </header>
-    <div className="lab-assistant-content" ref={content} onScroll={event => { const el = event.currentTarget; nearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }}>
+    <div className="lab-assistant-content" ref={content} tabIndex={0} role="region" aria-label={tr('support.conversation')}
+      onScroll={event => { const el = event.currentTarget; nearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }}>
       {localeError && <p role="alert">{tr('assistant.languageLoadFailed')}</p>}
       {!humanMode && !messages.length && <div className="assistant-welcome"><h3>{tr('assistant.welcome')}</h3><p>{tr(operator ? 'assistant.operatorWelcome' : 'assistant.welcomeHelp')}</p></div>}
       {!humanMode && checkingConnection && <p className="assistant-connection-check" role="status">{tr('assistant.mode.CHECKING')}</p>}
-      <details hidden={humanMode} ref={contextFields} className="assistant-context-disclosure"><summary>{tr('assistant.context')}{resourceId && <span>{resources.find(resource => resource.id === resourceId)?.code}</span>}</summary>
+      <details hidden={humanMode} ref={contextFields} className="assistant-context-disclosure" onToggle={event => setContextOpen(event.currentTarget.open)}><summary>{tr('assistant.context')}{resourceId && <span>{resources.find(resource => resource.id === resourceId)?.code}</span>}</summary>
         <div className="assistant-context">
           <label>{tr('assistant.resource')}<select ref={resourceInput} value={resourceId} onChange={event => setResourceId(event.target.value)}><option value="">{tr('assistant.inferResource')}</option>{resources.map(resource => <option value={resource.id} key={resource.id}>{resource.code} · {resource.name}</option>)}</select></label>
           <label>{tr('assistant.duration')}<input type="number" min={15} max={480} step={1} value={duration}  aria-describedby="assistant-duration-help" onChange={event => setDuration(event.target.value)} /><small id="assistant-duration-help">{tr('assistant.durationHelp')}</small></label>
           <label>{tr('assistant.start')}<input type="datetime-local" value={startAt} onChange={event => setStartAt(event.target.value)} /></label>
           <label>{tr('assistant.end')}<input type="datetime-local" value={endAt} onChange={event => setEndAt(event.target.value)} /></label>
+          {resourceLoad === 'loading' && <small role="status">{tr('ui.loading_resources_0e955376')}</small>}
+          {resourceLoad === 'failed' && <div role="alert"><p>{tr('ui.could_not_load_the_resource_f0ca2a15')}</p><button type="button" className="secondary-button" onClick={() => setResourceRetry(value => value + 1)}>{tr('ui.retry_c58d068c')}</button></div>}
         </div>
       </details>
       {!humanMode && setupError && <div role="alert" className="assistant-setup-error"><p>{tr('assistant.unavailable')}</p><button type="button" className="secondary-button" disabled={busy || checkingConnection} onClick={() => setConnectionAttempt(value => value + 1)}>{tr('assistant.retryConnection')}</button></div>}
-      {!humanMode && !setupError && bridge?.enabled && !bridge.connected && <div className="assistant-capabilities">
+      {!humanMode && !setupError && openQuestionsOffline && <div className="assistant-capabilities">
         <p className="assistant-capability-ready"><CheckCircle2 size={16} aria-hidden="true" />{tr('assistant.connection.localReady')}</p>
         <details><summary>{tr('assistant.connection.limits')}</summary><p>{tr('assistant.localAvailable')}</p>
           {actorRole === 'ADMIN' && <p>{tr('assistant.connection.adminHelp')}</p>}
@@ -256,6 +294,7 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
         </article>;
         const slots = turn.response.toolResults?.flatMap(result => Array.isArray(result.result.slots) ? result.result.slots as Slot[] : []) || [];
         const foundResources = turn.response.toolResults?.filter(result => ['search_resources', 'recommend_equipment'].includes(result.tool)).flatMap(result => Array.isArray(result.result.resources) ? result.result.resources as Resource[] : []) || [];
+        const resourceLinks = turn.response.resourceLinks ?? foundResources.slice(0, 5);
         const segments = (turn.response.summary || []).filter(segment => !(slots.length && segment.key === 'assistant.slotLine') && !(foundResources.length && segment.key === 'assistant.resourceLine'));
         return <article key={turn.id} className="assistant-turn" ref={index === messages.length - 1 ? latestTurn : undefined}>
           <p className="assistant-question">{turn.question}</p>
@@ -270,8 +309,11 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
               </> : <small>{proposal.laboratoryName}</small>}
               <button type="button" className="secondary-button" disabled={busy || humanMode} onClick={() => review(proposal)}>{tr('bridge.reviewProposal')}</button>
             </div>)}
-            {foundResources.map(resource => <article className="assistant-resource-result" key={resource.id}><strong>{resource.name}</strong><small>{resource.code} · {label(`enum.operational.${resource.operationalStatus}`)}</small></article>)}
-            {!!foundResources.length && <button type="button" className="secondary-button" onClick={() => navigate('resources')}>{tr('assistant.viewResources')}</button>}
+            {resourceLinks.map(resource => <article className="assistant-resource-result" key={resource.id}><strong>{resource.name}</strong>
+              <a className="secondary-button" href={resourceDetailPath(resource.id)} onClick={event => {
+                if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault(); navigate('resources', { resource: resource.id });
+              }}>{tr('assistant.openResource')}<ArrowUpRight size={14} aria-hidden="true" /></a></article>)}
             {slots.map(slot => {
               const action = turn.response.actions?.find(action => action.type === 'PREFILL_BOOKING' && action.payload?.resourceId === slot.resourceId && action.payload.startAt === slot.startAt && action.payload.endAt === slot.endAt);
               return <div className="assistant-slot-result" key={`${slot.resourceId}-${slot.startAt}`}>
@@ -282,7 +324,7 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
             })}
             {turn.response.actions?.filter(action => ['OPEN_BOOKINGS', 'CHOOSE_CONTEXT'].includes(action.type)).map(action => <button type="button" className="secondary-button" key={action.type} onClick={() => action.type === 'OPEN_BOOKINGS' ? navigate('bookings') : chooseContext()}>{label(action.labelKey)}</button>)}
             {turn.response.toolResults?.filter(result => result.tool === 'search_knowledge_base').flatMap(result => Array.isArray(result.result.sources) ? result.result.sources as Source[] : []).map(source => <details className="assistant-evidence" key={source.chunkId}><summary>{source.document.title}{source.document.version && ` · ${source.document.version}`}</summary><p>{source.excerpt}</p></details>)}
-            {index === messages.length - 1 && <nav className="assistant-next-actions" aria-label={tr('assistant.continueInLab')}>
+            {index === messages.length - 1 && !resourceLinks.length && <nav className="assistant-next-actions" aria-label={tr('assistant.continueInLab')}>
               <span>{tr('assistant.continueInLab')}</span>
               {turn.response.nextTab && targetLabels[turn.response.nextTab] && (operator || turn.response.nextTab === 'smart_calendar') && <button type="button" onClick={() => navigate(turn.response!.nextTab!)}>{tr(targetLabels[turn.response.nextTab])}<ArrowUpRight size={14} aria-hidden="true" /></button>}
               {operator && !turn.response.nextTab && <button type="button" onClick={() => navigate('stock')}>{tr('assistant.openStock')}<ArrowUpRight size={14} aria-hidden="true" /></button>}
@@ -293,8 +335,13 @@ function AssistantConversation({ isOpen, onClose, onPrefill, onNavigate, workspa
         </article>;
       })}</div>
       {error && <p className="alert danger" role="alert">{tr(error)}</p>}
-      {humanMode && <CustomerSupportChat visible={isOpen} initialDraft={humanDraft} initialMessage={question.trim() || messages.at(-1)?.question || ''} conversationId={!conversationExpired ? conversationId.current : undefined} onReturn={() => { setHumanMode(false); setHumanDraft(undefined); requestAnimationFrame(() => questionInput.current?.focus({ preventScroll: true })); }} />}
+      {humanMode && <CustomerSupportChat visible={isOpen} initialDraft={humanDraft}
+        initialMessage={question.trim() || messages.at(-1)?.question || ''}
+        conversationId={!conversationExpired ? conversationId.current : undefined}
+        scrollArea={content} nearBottom={nearBottom} composer={humanComposer}
+        onReturn={() => { setHumanMode(false); setHumanDraft(undefined); requestAnimationFrame(() => questionInput.current?.focus({ preventScroll: true })); }} />}
     </div>
+    {humanMode && <div className="assistant-bottom assistant-human-bottom" ref={setHumanComposer} />}
     <div className="assistant-bottom" hidden={humanMode}>
       <form className="assistant-compose" onSubmit={event => { event.preventDefault(); void send(question); }}>
         <label className="sr-only" htmlFor="assistant-question">{tr('assistant.question')}</label>

@@ -212,7 +212,8 @@ export function MaintenancePage({ actorId, locale, resources, maintenance, onCha
     if (!canSave) { setError('ui.maintenance.needsCheck'); checkButtonRef.current?.focus(); return; }
     setOperation('saving'); setError(''); setNotice('');
     try {
-      await apiRequest(original ? '/maintenance/' + original.id : '/maintenance', { method: original ? 'PATCH' : 'POST', body: JSON.stringify(result.data) });
+      const data = original ? { ...result.data, expectedUpdatedAt: original.updatedAt } : result.data;
+      await apiRequest(original ? '/maintenance/' + original.id : '/maintenance', { method: original ? 'PATCH' : 'POST', body: JSON.stringify(data) });
       setBackup(null); setStorageError(false);
       try { clearMaintenanceDraft(actorId); } catch { /* Confirmed server save must never remain restorable in this session. */ }
       setEditing(null); setReview(null); setFieldErrors({}); onChanged(); setNotice('ui.maintenance_saved_after_rechecking_conflicts_e1c210d1');
@@ -225,7 +226,7 @@ export function MaintenancePage({ actorId, locale, resources, maintenance, onCha
   async function transition(row: Row, data: { status: string; changeReason: string }) {
     if (busy) return;
     setOperation('updating'); setError(''); setNotice('');
-    try { await apiRequest('/maintenance/' + row.id, { method: 'PATCH', body: JSON.stringify(data) }); onChanged(); setNotice('ui.job_updated_inspect_and_update_31b494ac'); }
+    try { await apiRequest('/maintenance/' + row.id, { method: 'PATCH', body: JSON.stringify({ ...data, expectedUpdatedAt: row.updatedAt }) }); onChanged(); setNotice('ui.job_updated_inspect_and_update_31b494ac'); }
     catch (caught) { showServerError(caught); }
     finally { setOperation(null); }
   }

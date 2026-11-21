@@ -97,15 +97,29 @@ docker exec lrm-local-review-backend-1 npm run demo:seed-local
 Không reset database. Seed có guard riêng; không dùng lệnh này mỗi lần demo.
 Hướng dẫn kiểm thử cả ba role ở [SYSTEM_TEST_GUIDE](docs/SYSTEM_TEST_GUIDE.md).
 
-### Địa điểm và liên hệ ở footer công khai
+### Địa điểm và liên hệ trên trang công khai
 
 Footer mặc định hiển thị khuôn viên [Đại học Phenikaa](https://pseb.phenikaa-uni.edu.vn/vi/page/lien-he).
-Nút liên hệ mở kênh Hỗ trợ trực tuyến của LAB. Nếu triển khai tại địa điểm khác,
+Biểu tượng robot ở góc dưới bên phải mở Hỗ trợ trực tuyến của LAB. Các nút
+Facebook/Messenger, Zalo và gọi điện xếp dọc phía trên robot. Để bật từng nút,
+điền thông tin được phép công khai vào `frontend/.env.local` rồi khởi động lại Vite.
+
+```dotenv
+VITE_PUBLIC_LAB_FACEBOOK_URL=
+VITE_PUBLIC_LAB_ZALO_URL=
+VITE_PUBLIC_LAB_SUPPORT_PHONE=
+```
+
+Dùng URL HTTPS tới trang Facebook/Messenger hoặc Zalo. Số điện thoại có thể
+nhập theo định dạng `+84`. Mục để trống sẽ ẩn nút tương ứng. Với Docker production,
+điền các biến cùng tên trong `.env.production` trước khi build frontend.
+
+Nếu triển khai tại địa điểm khác,
 đặt `VITE_PUBLIC_LAB_ADDRESS` và `VITE_PUBLIC_LAB_MAP_EMBED_URL` trong
 `frontend/.env.local` hoặc môi trường build Compose. Lấy URL `src` từ mục
 [Nhúng bản đồ](https://support.google.com/maps/answer/7101463?hl=vi) của Google Maps.
-`VITE_PUBLIC_LAB_SUPPORT_EMAIL` và `VITE_PUBLIC_LAB_SUPPORT_PHONE` dùng cho
-kênh hỗ trợ được phép công khai. Các giá trị này xuất hiện trong bản frontend.
+`VITE_PUBLIC_LAB_SUPPORT_EMAIL` hiển thị email hỗ trợ trong footer.
+Các giá trị này xuất hiện trong bản frontend.
 
 ### Bật đăng nhập và đăng ký bằng Google
 
@@ -204,6 +218,11 @@ mở **Visit Site** trong cùng profile khi đã xác nhận đúng domain ngrok
 mình. Đây là màn cảnh báo của gói miễn phí. Nếu thấy
 [ERR_NGROK_8012](https://ngrok.com/docs/errors/err_ngrok_8012) hoặc 502 sau đó,
 kiểm tra target cổng 8000 và `http://127.0.0.1:8000/health/ready`.
+Nếu đang dùng container `lrm-chatgpt-tunnel` và ngrok trả `404 Not Found`,
+kiểm tra file `%LOCALAPPDATA%/ngrok/lab-bridge/traffic-policy.json`. Policy phải
+cho qua `GET /api/payments/vnpay/return` và `GET /api/payments/vnpay/ipn`
+cùng các đường dẫn OAuth/MCP đã có. Sau khi chỉnh, khởi động lại đúng container
+ngrok để nạp policy. Backend vẫn xác minh chữ ký cho cả hai đường dẫn.
 Có thể kiểm tra đường IPN qua HTTPS bằng yêu cầu không chữ ký:
 
 ```powershell
@@ -314,6 +333,13 @@ Từ `backend/`, kiểm tra cấu hình: `npm.cmd run email:check`; thêm
 `docker exec lrm-local-review-backend-1 npm run email:check -- --verify --queue`.
 Lệnh verify không gửi email. Khi SMTP hợp lệ, worker xử lý mỗi 10 giây;
 đăng ký một tài khoản bằng email mình sở hữu để nhận thư xác nhận thực tế.
+
+Thông báo đầu trang cho nhân viên và quản trị viên tự cập nhật khi đang dùng
+workspace. Để gửi thêm email về yêu cầu hỗ trợ mới và sự cố mức cao/nghiêm trọng
+cho nhân viên đúng LAB, áp dụng migration chuẩn trước rồi đặt
+`OPERATOR_ALERT_EMAILS_ENABLED=true` và `EMAIL_APP_URL` thành địa chỉ giao diện
+nhân viên truy cập được. Cấu hình ở `backend/.env` khi chạy local hoặc env
+backend khi chạy Compose production. Email này mặc định tắt.
 
 Thiếu SMTP: thư giữ PENDING và không tiêu hao số lần thử. Lỗi gửi được thử lại
 với thời gian chờ tăng dần, tối đa 5 lần; FAILED cần operator kiểm tra nguyên
@@ -530,6 +556,7 @@ Các integration/E2E Batch sử dụng PostgreSQL database riêng có guard. Kh�
 
 ## Tài liệu quan trọng
 
+- [Bàn giao kỹ thuật và tra cứu mã nguồn theo dòng](docs/TECHNICAL_HANDOFF.md)
 - `AGENTS.md`
 - `.agent/PROJECT_RULES.md`
 - `.agent/INSTRUCTOR_BASELINE.md`
@@ -539,8 +566,7 @@ Các integration/E2E Batch sử dụng PostgreSQL database riêng có guard. Kh�
 - `docs/DECISIONS.md`
 - `docs/DEPLOYMENT.md`
 - `docs/GRADUATION_DEMO_RUNBOOK.md`
-- `docs/BATCH5_WALKTHROUGH.md`
-- `docs/BATCH6_WALKTHROUGH.md`
+- [Hướng dẫn kiểm thử hệ thống](docs/SYSTEM_TEST_GUIDE.md)
 
 ## Safety
 

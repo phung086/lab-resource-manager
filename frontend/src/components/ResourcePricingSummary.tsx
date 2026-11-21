@@ -22,7 +22,7 @@ export function ResourcePricingSummary({ resourceId }: { resourceId: string }) {
   if (loading) return <p role="status">{tr("ui.loading_148ded83")}</p>;
   if (error) return <div role="alert"><p>{tr(error)}</p><button type="button" className="btn btn-secondary" onClick={() => setRevision(value => value + 1)}>{tr("ui.retry_c58d068c")}</button></div>;
   const prices = [...new Set(rules.map(rule => rule.hourlyRateVnd))];
-  if (prices.length === 1) return <div className="rental-price"><strong>{new Intl.NumberFormat(locale).format(prices[0])} ₫</strong><span>/ {tr("ui.rental.hour")}</span></div>;
+  if (prices.length === 1) return <div className="rental-price"><strong>{formatVnd(prices[0], locale)}</strong><span>/ {tr("ui.rental.hour")}</span></div>;
   return <>
     {rules.length ? <dl className="resource-pricing-rules">{rules.map(rule => <div key={rule.id}>
       <dt>{rule.label || rule.purposeCode}<small>{rule.purposeCode}</small></dt>

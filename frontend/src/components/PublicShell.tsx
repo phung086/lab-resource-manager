@@ -1,10 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { Headphones, Menu, X } from 'lucide-react';
+import { Facebook, Menu, Phone, X } from 'lucide-react';
 import { useLocale } from '../providers/LocaleProvider';
 import { LanguageToggle } from './base/LanguageToggle';
 import { ThemeToggle } from './base/ThemeToggle';
 import { ProjectBrand } from './base/ProjectBrand';
 import { ProjectFooter } from './features/ProjectFooter';
+import { RobotMascot } from './features/assistant/RobotMascot';
+import { AI_ASSISTANT_ENABLED } from '../config/featureFlags';
+import { facebookSupportUrl, labSupportHref, labSupportPhone, zaloSupportUrl } from '../config/publicLabContact';
 import { publicPathForSection, readAppRoute } from '../workspaceRoutes.js';
 import '../styles/public-landing.css';
 
@@ -19,6 +22,7 @@ type Props = {
 
 export function PublicShell({ children, beforeMain, onRegister, onNavigate, userName, onWorkspace }: Props) {
   const { t } = useLocale();
+  const contactLabel = t(AI_ASSISTANT_ENABLED ? 'assistant.title' : 'support.title');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const navigation = [['tai-nguyen', 'ui.rooms_equipment_89c1fa9a'], ['kiem-tra-lich', 'ui.check_schedule_a393bfd5'], ['quy-trinh', 'ui.how_it_works_dd37bc66']];
@@ -42,9 +46,12 @@ export function PublicShell({ children, beforeMain, onRegister, onNavigate, user
     </header>
     {beforeMain}
     <main id="noi-dung" tabIndex={-1}>{children}</main>
-    <a className="public-contact-shortcut" href="#lien-he-lab" aria-label={t('ui.footer.labContact')} title={t('ui.footer.labContact')}>
-      <Headphones size={21} aria-hidden="true" />
-    </a>
+    <nav className="public-contact-rail" aria-label={t('ui.footer.labContact')}>
+      {facebookSupportUrl && <a className="public-contact-channel is-facebook" href={facebookSupportUrl} target="_blank" rel="noopener noreferrer" aria-label={t('ui.footer.facebook')} title={t('ui.footer.facebook')}><Facebook size={21} aria-hidden="true" /></a>}
+      {zaloSupportUrl && <a className="public-contact-channel is-zalo" href={zaloSupportUrl} target="_blank" rel="noopener noreferrer" aria-label={t('ui.footer.zalo')} title={t('ui.footer.zalo')}><span aria-hidden="true">{t('ui.footer.zalo')}</span></a>}
+      {labSupportPhone && <a className="public-contact-channel is-phone" href={labSupportPhone.href} aria-label={t('ui.footer.callSupport', { phone: labSupportPhone.label })} title={t('ui.footer.callSupport', { phone: labSupportPhone.label })}><Phone size={19} aria-hidden="true" /></a>}
+      <a className="public-contact-mascot" href={labSupportHref(Boolean(userName), { openAssistant: AI_ASSISTANT_ENABLED })} aria-label={contactLabel} title={contactLabel}><RobotMascot /></a>
+    </nav>
     <ProjectFooter variant="public" onPublicNavigate={onNavigate} onRegister={onRegister} signedIn={Boolean(userName)} />
   </div>;
 }

@@ -5,7 +5,7 @@ export function validateManagedUser(values: { fullName: string; email: string; p
   const data = { fullName: values.fullName.trim(), email: values.email.trim().toLowerCase(), password: values.password, role: values.role };
   if (data.fullName.length < 2 || data.fullName.length > 255) errors.fullName = 'ui.users.nameLength';
   if (!/^(?!\.)(?!.*\.\.)([a-z0-9_'+\-.]*)[a-z0-9_+-]@([a-z0-9][a-z0-9-]*\.)+[a-z]{2,}$/i.test(data.email)) errors.email = 'ui.users.emailInvalid';
-  if (data.password.length < 12 || data.password.length > 128) errors.password = 'ui.users.passwordLength';
+  if (data.password.length < 12 || new TextEncoder().encode(data.password).length > 72) errors.password = 'ui.users.passwordLength';
   if (!USER_ROLES.includes(data.role as UserRole)) errors.role = 'ui.users.roleRequired';
   else if (actorRole !== 'ADMIN' && (actorRole !== 'LAB_STAFF' || data.role !== 'CUSTOMER')) errors.role = 'ui.users.roleRequired';
   const contact = validateManagedUserEdit({ fullName: values.fullName, phone: values.phone || '' });

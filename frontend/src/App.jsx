@@ -4,6 +4,7 @@ import { SessionGuard } from './components/features/accounts/SessionGuard';
 import { storeAuthUser } from './services/authStorage.js';
 import { publicSiteOrigin, seoForPath } from './utils/seo.js';
 import { workspaceActorScope, workspaceDataIsCurrent } from './utils/workspaceScope.js';
+import { useWorkspaceNotifications } from './hooks/useWorkspaceNotifications.js';
 
 import { translate } from "./i18n.js";
 
@@ -93,8 +94,6 @@ function Application() {
   const [incidentSummary, setIncidentSummary] = useState(null);
   const [maintenance, setMaintenance] = useState([]);
   const [incidents, setIncidents] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [notificationUnreadCount, setNotificationUnreadCount] = useState(null);
   const [loadedWorkspaceScope, setLoadedWorkspaceScope] = useState(null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -179,14 +178,21 @@ function Application() {
   const pendingWorkspaceRefresh = React.useRef(false);
   const previousTab = React.useRef(activeTab);
   const isPasswordResetRequired = Boolean(user?.passwordResetRequired);
+  const notificationFeed = useWorkspaceNotifications(
+    route.kind === 'workspace' && !isPasswordResetRequired ? workspaceScope : null,
+    ['ADMIN', 'LAB_STAFF'].includes(routeUserRole)
+  );
+  const { items: notifications, unread: notificationUnreadCount, refresh: refreshNotifications } = notificationFeed;
   useEffect(() => {
     if (authChecking) return;
     if (!routeUserId && route.kind === "workspace") {
       navigateApp(publicPathForSection("login", { returnTo: route.canonicalUrl }), { replace: true });
     } else if (routeUserId && route.kind === "auth") {
       const pending = sessionStorage.getItem("lrm_pending_resource");
-      const destination = pending ? workspacePathForTab("smart_calendar", { resource: pending }) : safeReturnTo(new URLSearchParams(route.search).get("returnTo")) || workspacePathForTab("home");
-      if (pending) { sessionStorage.removeItem("lrm_pending_resource"); setCalendarResourceId(pending); }
+      const returnTo = safeReturnTo(new URLSearchParams(route.search).get("returnTo"));
+      const destination = returnTo || (pending ? workspacePathForTab("smart_calendar", { resource: pending }) : workspacePathForTab("home"));
+      if (pending) sessionStorage.removeItem("lrm_pending_resource");
+      if (pending && !returnTo) setCalendarResourceId(pending);
       navigateApp(destination, { replace: true });
     } else if (routeUserId && route.kind === "workspace" && isPasswordResetRequired && !["home", "profile"].includes(route.tab)) {
       navigateApp(workspacePathForTab("home"), { replace: true });
@@ -236,8 +242,6 @@ function Application() {
       const requests = {
         resources: read("/resources"),
         bookings: read("/bookings?page=1&pageSize=100"),
-        notifications: read("/notifications"),
-        notificationCount: read('/notifications/unread-count'),
         incidents: read("/incidents?page=1&pageSize=50&filter=OPEN"),
         ...(["ADMIN", "LAB_STAFF"].includes(routeUserRole) ? { maintenance: read('/maintenance'), dashboard: read(`/dashboard?includeTelemetry=${TELEMETRY_FEATURES_ENABLED}`) } : {}),
         ...(routeUserRole === "ADMIN" ? { users: read("/users") } : {})
@@ -257,9 +261,6 @@ function Application() {
       setBookingSummary(value("bookings", null)?.summary || null);
       setIncidentSummary(value("incidents", null)?.summary || null);
       setMaintenance(value("maintenance", []));
-      setNotifications(value("notifications", []));
-      const unread = value('notificationCount', null)?.unread;
-      setNotificationUnreadCount(Number.isSafeInteger(unread) && unread >= 0 ? unread : null);
       setUsers(value("users", []));
       setIncidents(value("incidents", null)?.items || []);
 
@@ -290,6 +291,7 @@ function Application() {
   }, [routeUserId, routeUserRole, workspaceScope]);
 
   const refreshData = React.useCallback(() => {
+    refreshNotifications();
     if (appDataController.current && !appDataController.current.signal.aborted) {
       // A mutation may finish while shared reads are pending. Refresh once more
       // afterwards so an earlier snapshot cannot overwrite the mutation result.
@@ -297,7 +299,7 @@ function Application() {
       return;
     }
     void loadData();
-  }, [loadData]);
+  }, [loadData, refreshNotifications]);
 
   useEffect(() => {
     if (!routeUserId) return;
@@ -315,8 +317,11 @@ function Application() {
     previousTab.current = activeTab;
     // Home entry refreshes in the background: keep the mounted home stable instead of
     // flipping the whole workspace back into its loading skeleton.
-    if (routeUserId && activeTab === "home" && !wasHome) loadData({ silent: loadedWorkspaceScope === workspaceScope });
-  }, [activeTab, routeUserId, loadData, loadedWorkspaceScope, workspaceScope]);
+    if (routeUserId && activeTab === "home" && !wasHome) {
+      loadData({ silent: loadedWorkspaceScope === workspaceScope });
+      refreshNotifications();
+    }
+  }, [activeTab, routeUserId, loadData, loadedWorkspaceScope, workspaceScope, refreshNotifications]);
 
   useEffect(() => {
     if (routeUserRole && route.kind === "workspace" && !canAccessTab(routeUserRole, activeTab)) {
@@ -361,6 +366,7 @@ function Application() {
     <DraftActorContext.Provider value={user.id} key={user.id}><AppLayout
       key={`${user.id}:${user.role}:${user.authVersion ?? 0}`}
       activeTab={activeTab}
+      initialAssistantOpen={activeTab === "support" && routeParams.get("assistant") === "open"}
       onSelectTab={(tabId, params) => {
         if (canAccessTab(user.role, tabId)) {
           setError("");
@@ -374,6 +380,7 @@ function Application() {
       onLocaleChange={changeLocale}
       notifications={notifications}
       notificationUnreadCount={notificationUnreadCount}
+      urgentNotices={notificationFeed.urgent}
       incidents={incidents}
       incidentOpenCount={loading || error ? undefined : incidentSummary?.open}
       conflictsCount={0}
@@ -488,7 +495,7 @@ function Application() {
           <AdminResourceManagementView key={routeHash} user={user} initialClassification={routeParams.get("classification") || "ALL"} />
         )
       )}
-      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter actorRole={user.role} notifications={notifications} loading={loading} loadError={translate(error)} onOpenBookings={() => setActiveTab("bookings")} onChanged={refreshData} />}
+      {!user.passwordResetRequired && activeTab === "escalations" && <NotificationCenter actorRole={user.role} notifications={notifications} loading={notificationFeed.loading} loadError={notificationFeed.error} onOpenBookings={() => setActiveTab("bookings")} onChanged={refreshNotifications} />}
       {!user.passwordResetRequired && activeTab === "dashboard" && <MonitoringDashboardPage mode="operations" dashboard={dashboard} loading={loading} onRefresh={refreshData} />}
       {!user.passwordResetRequired && route.screen === "resource-detail" && (
         <ResourceDetailPage

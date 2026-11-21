@@ -234,6 +234,7 @@ export async function completeGuestBooking(payload, { locale = "vi" } = {}) {
     const booking = await createBookingWithTransaction(tx, {
       requestedById: user.id,
       expectedAuthVersion: user.authVersion,
+      guest: true,
       // The guest accepted a public list-price quote before identity verification.
       // Loyalty discounts apply to subsequent authenticated owner quotes.
       applyLoyalty: false,

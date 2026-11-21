@@ -273,6 +273,21 @@ test("Guest booking OTP, identity, and transaction integrity on PostgreSQL 16", 
     assert.equal(after.passwordHash, originalHash);
   });
 
+  await t.test("guest OTP cannot create reservations for staff or administrators", async () => {
+    for (const role of ["ADMIN", "LAB_STAFF"]) {
+      const userId = id(), target = email(`privileged-${role.toLowerCase()}`);
+      await isolated.user.create({ data: { id: userId, email: target, fullName: "Operations account", role, passwordHash: await bcrypt.hash(password, 4) } });
+      await issueOtp(target);
+      const response = await request(app).post("/api/guest-booking/book")
+        .send(completionPayload(target, resources.priced, 165));
+      assert.equal(response.status, 401, JSON.stringify(response.body));
+      assert.equal(response.body.error.code, 'AUTH_REQUIRED');
+      assert.equal(await isolated.booking.count({ where: { requestedById: userId } }), 0);
+      assert.equal(await isolated.paymentTransaction.count({ where: { userId } }), 0);
+      assert.equal(await isolated.notification.count({ where: { userId } }), 0);
+    }
+  });
+
   await t.test("existing INTERNAL classification is preserved", async () => {
     const target = email("existing-internal");
     const userId = id();

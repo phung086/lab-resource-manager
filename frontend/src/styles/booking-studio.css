@@ -79,6 +79,12 @@
 .modal-container-2026.booking-studio-modal .booking-review dl { display:grid; grid-template-columns:1fr; gap:5px; margin:20px 0; }
 .modal-container-2026.booking-studio-modal .booking-review dt { font-size:11px; color:#6c7b73; margin-top:10px; }
 .modal-container-2026.booking-studio-modal .booking-review dd { margin:0; font-size:14px; overflow-wrap:anywhere; }
+.booking-studio-modal .booking-review-quote { display:grid; gap:12px; padding:16px; border-radius:12px; background:#203867; color:#f5f8ff; }
+.booking-review-quote-total { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:4px 16px; }
+.booking-review-quote-total span { font-size:.9rem; font-weight:600; }
+.booking-review-quote-total strong { font-size:clamp(1.35rem,3vw,1.8rem); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.modal-container-2026.booking-studio-modal .booking-review-quote .booking-discount-summary { display:grid; margin:0; padding-block:8px; border-block:1px solid #ffffff48; }
+.modal-container-2026.booking-studio-modal .booking-review-quote p { margin:0; color:#e1eaff; }
 .modal-backdrop-2026 .modal-container-2026.booking-studio-modal .modal-footer-2026 { padding:16px 26px; background:#fff; border-top:1px solid #e0d8ea; }
 .modal-backdrop-2026 .modal-container-2026.booking-studio-modal .modal-footer-2026 .btn { min-height:48px; padding:12px 20px; border-radius:12px; }
 @keyframes session-enter { from { opacity:.25; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }

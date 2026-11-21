@@ -1,5 +1,5 @@
 {
-  "autoCompactWindow": 120000,
+  "autoCompactWindow": 1000000,
   "skillOverrides": {
     "algorithmic-art": "user-invocable-only",
     "banner-design": "user-invocable-only",

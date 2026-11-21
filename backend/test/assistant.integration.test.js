@@ -102,6 +102,36 @@ test.after(async () => {
   await prisma.$disconnect();
 });
 
+test('slot suggestions honor recorded turnaround and skip expired holds without changing them', async () => {
+  const { runAssistantTool } = await import('../src/assistant/toolHandlers.js');
+  const from = new Date(Date.now() + 2 * 86400000);
+  from.setUTCHours(3, 0, 0, 0);
+  const at = minutes => new Date(+from + minutes * 60000);
+  const record = { resourceId: equipment.id, requestedById: users.student.id, title: 'Turnaround fixture', purpose: 'Integration test' };
+  const returned = await prisma.booking.create({ data: {
+    ...record, id: id(), status: 'RETURNED', startAt: at(-90), endAt: at(60),
+    returnedAt: at(0), schedulingReleasedAt: at(0), policySnapshot: { turnaroundMinutes: 30 },
+  } });
+  const expired = await prisma.booking.create({ data: {
+    ...record, id: id(), status: 'PENDING_APPROVAL', startAt: at(30), endAt: at(60),
+    paymentDueAt: new Date(Date.now() - 60000),
+  } });
+  const confirmed = await prisma.booking.create({ data: {
+    ...record, id: id(), status: 'CONFIRMED', startAt: at(60), endAt: at(90),
+    policySnapshot: { turnaroundMinutes: 30 },
+  } });
+  try {
+    const result = await runAssistantTool('find_available_slots', {
+      resourceId: equipment.id, from: from.toISOString(), to: at(150).toISOString(),
+      durationMinutes: 30, limit: 3,
+    }, { user: users.student });
+    assert.deepEqual(result.slots.map(slot => slot.startAt), [at(30).toISOString(), at(120).toISOString()]);
+    assert.equal((await prisma.booking.findUniqueOrThrow({ where: { id: expired.id } })).status, 'PENDING_APPROVAL');
+  } finally {
+    await prisma.booking.deleteMany({ where: { id: { in: [returned.id, expired.id, confirmed.id] } } });
+  }
+});
+
 test('authentication, localized errors and suggestions preserve stable contracts', async () => {
   const unauthenticated = await fetch(`${base}/api/assistant/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en' }, body: '{}' });
   assert.equal(unauthenticated.status, 401); assert.equal(unauthenticated.headers.get('content-language'), 'en'); assert.match((await unauthenticated.json()).error.message, /sign in|authentication/i);

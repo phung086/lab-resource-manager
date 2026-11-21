@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { submitChatOnEnter } from '../../../utils/chatKeyboard';
 import { Send, Headphones } from 'lucide-react';
 import { useLocale } from '../../../providers/LocaleProvider';
@@ -10,8 +11,9 @@ const open = (session?: SupportSession) => !!session && ['WAITING', 'ACTIVE'].in
 const errorKey = (cause: unknown) => cause instanceof Error ? cause.message : 'api.API_REQUEST_FAILED';
 
 // Uses the existing authenticated support workflow. No model may submit this form.
-export default function CustomerSupportChat({ visible, initialDraft, initialMessage, conversationId, onReturn }: {
+export default function CustomerSupportChat({ visible, initialDraft, initialMessage, conversationId, scrollArea, nearBottom, composer, onReturn }: {
   visible: boolean; initialDraft?: BridgeSupportDraft; initialMessage: string; conversationId?: string; onReturn: () => void;
+  scrollArea: RefObject<HTMLDivElement | null>; nearBottom: RefObject<boolean>; composer: HTMLDivElement | null;
 }) {
   const { tr, locale } = useLocale();
   const [metadata, setMetadata] = useState<SupportMetadata | null>(null);
@@ -28,7 +30,6 @@ export default function CustomerSupportChat({ visible, initialDraft, initialMess
   const mounted = useRef(false), writing = useRef(false), cursor = useRef(0);
   const requestAttempt = useRef<{ signature: string; id: string } | null>(null);
   const sendAttempt = useRef<{ signature: string; id: string } | null>(null);
-  const bottom = useRef<HTMLDivElement>(null), nearBottom = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
     if (!visible) return;
@@ -70,9 +71,9 @@ export default function CustomerSupportChat({ visible, initialDraft, initialMess
     return () => { controller.abort(); clearTimeout(timer); };
   }, [selected, visible]);
   useEffect(() => {
-    const transcript = bottom.current?.parentElement;
-    if (visible && nearBottom.current && transcript) transcript.scrollTop = transcript.scrollHeight;
-  }, [detail?.messages.length, visible]);
+    const viewport = scrollArea.current;
+    if (visible && nearBottom.current && viewport) viewport.scrollTop = viewport.scrollHeight;
+  }, [detail?.messages.length, composer, nearBottom, scrollArea, visible]);
   const actionErrorRef = useRef<HTMLParagraphElement>(null);
   async function mutate(work: () => Promise<void>) {
     if (writing.current) return;
@@ -127,19 +128,18 @@ export default function CustomerSupportChat({ visible, initialDraft, initialMess
     </form>}
     {session && <>
       {session.status === 'WAITING' && <p role="status">{tr('support.waitingHelp', { position: session.queuePosition })}</p>}
-      <div className="assistant-human-transcript" role="log" aria-live="polite" aria-relevant="additions" onScroll={event => { const el = event.currentTarget; nearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }}>
+      <div className="assistant-human-transcript" role="log" aria-live="polite" aria-relevant="additions">
         {detail?.messages.map(row => <article key={row.id} className={row.kind === 'CUSTOMER' ? 'assistant-question' : 'assistant-human-message'}>
           {row.kind === 'SYSTEM' ? <p>{tr(`support.event.${row.eventType}`, { name: row.sender?.fullName || '' })}{row.body && ` · ${row.body}`}</p> : <><strong>{row.kind === 'ASSISTANT' ? tr('support.assistant') : row.sender?.fullName}</strong><p>{row.body}</p></>}
           <time dateTime={row.createdAt}>{time(row.createdAt)}</time>
         </article>)}
-        <div ref={bottom} />
       </div>
       {open(session) && <>
-        <form className="assistant-compose" onSubmit={event => { event.preventDefault(); void mutate(send); }}>
+        {composer && createPortal(<form className="assistant-compose" onSubmit={event => { event.preventDefault(); void mutate(send); }}>
           <label className="sr-only" htmlFor="assistant-human-message">{tr('support.message')}</label>
           <textarea id="assistant-human-message" rows={2} required maxLength={2000} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={submitChatOnEnter} />
           <button type="submit" className="primary-button" disabled={busy || !draft.trim()} aria-label={tr('support.send')}><Send size={18} aria-hidden="true" /></button>
-        </form>
+        </form>, composer)}
         <details><summary>{tr('support.cancel')}</summary><form className="assistant-human-request" onSubmit={event => { event.preventDefault(); void mutate(cancel); }}><label>{tr('support.cancelReason')}<input required minLength={3} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} /></label><button type="submit" disabled={busy || reason.trim().length < 3}>{tr('support.cancel')}</button></form></details>
       </>}
     </>}

@@ -1,5 +1,6 @@
 import { renderEmailDocument } from './emailTemplate.js';
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 import { createHmac, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { prisma } from "../db.js";
 import { config } from "../config.js";
@@ -13,6 +14,12 @@ const COOLDOWN_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
 const failure = (code, status = 400, details) => ({ code, status, details });
 const raise = value => { throw new HttpError(value.status, value.code, value.details, value.code); };
+
+export function newPasswordSchema(minLength = 8) {
+  return z.string().min(minLength).refine((value) => Buffer.byteLength(value, "utf8") <= 72, {
+    message: "Password must be at most 72 UTF-8 bytes"
+  });
+}
 
 function codeHash(row, code) {
   return createHmac("sha256", config.jwtSecret)

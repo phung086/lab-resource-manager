@@ -1,6 +1,7 @@
 .project-footer-lab {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(230px, 2fr);
+  align-items: start;
   gap: 12px;
   max-width: 1280px;
   margin: 24px auto 0;
@@ -32,7 +33,7 @@
   flex-wrap: wrap;
   gap: 4px 12px;
 }
-.project-footer-lab :is(a, button) {
+.project-footer-lab a {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -52,34 +53,62 @@
 .project-footer-lab svg { flex: none; }
 .project-footer-lab iframe {
   display: block;
-  width: 100%;
-  min-height: 230px;
+  width: min(100%, 340px);
+  height: 200px;
   margin-top: 6px;
   border: 0;
   border-radius: 8px;
+  background: var(--footer-contact-line, #d7e2f2);
 }
-.project-public-shell .public-contact-shortcut {
+.project-public-shell .public-contact-rail {
   position: fixed;
-  inset-inline-end: max(14px, env(safe-area-inset-right));
-  inset-block-end: max(14px, env(safe-area-inset-bottom));
+  inset-inline-end: max(12px, env(safe-area-inset-right));
+  inset-block-end: max(10px, env(safe-area-inset-bottom));
   z-index: 30;
   display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border: 1px solid #426ee1;
-  border-radius: 50%;
-  background: #2252c7;
-  color: #fff;
-  box-shadow: 0 4px 16px #14275438;
+  justify-items: center;
+  gap: 8px;
 }
-.project-public-shell .public-contact-shortcut:hover { background: #193e9a; }
+.public-contact-rail .public-contact-channel {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #ffffff70;
+  border-radius: 50%;
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 750;
+  text-decoration: none;
+  box-shadow: 0 3px 12px #14275433;
+}
+.public-contact-rail .is-facebook { background: #1858c9; }
+.public-contact-rail .is-zalo { background: #0067c9; }
+.public-contact-rail .is-phone { background: #13735f; }
+.public-contact-mascot {
+  display: grid;
+  width: 84px;
+  aspect-ratio: 120 / 136;
+  border-radius: 18px;
+}
+.public-contact-mascot .lab-robot { display: block; width: 100%; height: 100%; }
+.public-contact-rail a:focus-visible { outline: 2px solid var(--workspace-accent, #2252c7); outline-offset: 3px; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .public-contact-mascot .lab-robot { transition: transform 160ms ease-out; }
+  .public-contact-mascot:hover .lab-robot { transform: translateY(-3px); }
+}
+@media (hover: hover) {
+  .public-contact-rail .public-contact-channel:hover { filter: brightness(.87); }
+}
+.project-footer--public .project-footer-baseline { padding-inline-end: 92px; }
 .project-footer-lab :target { outline: 2px solid var(--footer-contact-link, #234fa4); outline-offset: 3px; }
 
 .workspace-shell.lab-studio .workspace-popover.user-dropdown-menu-2026 {
   --account-row: #f4f7fd;
   --account-line: #dce6f5;
   --account-active: #e7efff;
+  --account-icon: #e4edfb;
+  transform-origin: top right;
 }
 .workspace-shell.lab-studio .user-dropdown-menu-2026 .user-menu-actions { gap: 5px; }
 .user-dropdown-menu-2026 .user-menu-chevron { margin-inline-start: auto; }
@@ -90,10 +119,25 @@
 .workspace-shell.lab-studio .user-dropdown-menu-2026 .user-menu-item-btn:not(.item-logout):is(:hover, :focus-visible) {
   background: var(--account-active);
 }
+.workspace-shell.lab-studio .user-dropdown-menu-2026 .user-menu-item-btn:not(.item-logout) > svg:first-child {
+  box-sizing: content-box;
+  padding: 6px;
+  border-radius: 8px;
+  background: var(--account-icon);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .workspace-shell.lab-studio .workspace-popover.user-dropdown-menu-2026 { animation: account-menu-arrive 150ms ease-out; }
+  .workspace-shell.lab-studio .user-dropdown-menu-2026 .user-menu-item-btn { transition: background-color 150ms ease-out, border-color 150ms ease-out; }
+}
+@keyframes account-menu-arrive {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 :root[data-theme="dark"] .workspace-shell.lab-studio .workspace-popover.user-dropdown-menu-2026 {
   --account-row: var(--studio-night-control);
   --account-line: var(--studio-night-line);
   --account-active: var(--studio-night-raised);
+  --account-icon: #2b4270;
 }
 :root[data-theme="dark"] .workspace-shell.lab-studio .user-dropdown-menu-2026 .user-menu-item-btn:not(.item-logout) { color: var(--studio-night-ink); }
 :root[data-theme="dark"] .workspace-shell.lab-studio .user-dropdown-menu-2026 .user-menu-item-btn:not(.item-logout) svg { color: var(--studio-night-link); }
@@ -102,9 +146,13 @@
   --footer-contact-surface: var(--studio-night-raised);
   --footer-contact-link: var(--studio-night-link);
 }
-:root[data-theme="dark"] .project-public-shell.lab-studio .project-footer-lab a { color: var(--footer-contact-link); }
+:root[data-theme="dark"] :is(.workspace-shell, .project-public-shell).lab-studio .project-footer-lab a { color: var(--footer-contact-link); }
 
-@media (max-width: 620px) {
+@container (max-width: 620px) {
   .project-footer-lab { grid-template-columns: 1fr; }
-  .project-footer--public .project-footer-baseline { padding-inline-end: 46px; }
+}
+@media (max-width: 620px) {
+  .project-public-shell .public-contact-rail { inset-inline-end: max(8px, env(safe-area-inset-right)); gap: 6px; }
+  .public-contact-mascot { width: 60px; }
+  .project-footer--public .project-footer-baseline { padding-inline-end: 66px; }
 }

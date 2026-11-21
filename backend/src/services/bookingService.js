@@ -2,6 +2,7 @@ import { lockCurrentAccount } from "./accountAccess.js";
 import { policySnapshot } from './planning/policyModel.js';
 import { PAYMENT_HOLD_MS, expirePaymentHolds, expireResourcePaymentHolds, isPaymentHold } from './bookingPaymentHoldService.js';
 import { bookingContact } from "./bookingContactService.js";
+import { bookingRoomAccessCode } from "./bookingRoomAccessCode.js";
 import { bookingFulfillmentSnapshot, assertHandoverWindow, assertBookingPaid, assertHandoverReady } from './bookingFulfillmentService.js';
 import crypto from "crypto";
 import { assertCareReady } from "./resourceCareAccounting.js";
@@ -19,7 +20,7 @@ import {
   ACTIVE_BOOKING_STATUSES,
   isValidTransition
 } from "../constants/bookingStatus.js";
-import { ADMIN, LAB_STAFF } from "../constants/roles.js";
+import { ADMIN, CUSTOMER, LAB_STAFF } from "../constants/roles.js";
 import { assertLabStaffResourceAccess } from "../middleware/labScope.js";
 import {
   getResourceAvailability,
@@ -211,7 +212,7 @@ export async function preflightBooking(actor, { resourceId, startAt, endAt, purp
   }, { timeout: 8000 });
 }
 
-export async function createBookingWithTransaction(tx, { requestedById, resourceId, title, purpose, startAt, endAt, purposeCode, acceptedQuote, contact, fulfillment, applyLoyalty = true, expectedAuthVersion }) {
+export async function createBookingWithTransaction(tx, { requestedById, resourceId, title, purpose, startAt, endAt, purposeCode, acceptedQuote, contact, fulfillment, applyLoyalty = true, expectedAuthVersion, guest = false }) {
   const start = new Date(startAt);
   const end = new Date(endAt);
 
@@ -220,6 +221,7 @@ export async function createBookingWithTransaction(tx, { requestedById, resource
   }
 
   const requester = await lockCurrentAccount(tx, requestedById, expectedAuthVersion);
+  if (guest && requester.role !== CUSTOMER) throw new HttpError(401, "Sign in to continue", undefined, "AUTH_REQUIRED");
   await tx.$queryRaw`SELECT id FROM resources WHERE id = ${resourceId} FOR UPDATE`;
   if (requester.role === LAB_STAFF) {
     const scopedResource = await tx.resource.findUnique({ where: { id: resourceId }, select: { laboratoryId: true } });
@@ -241,6 +243,9 @@ export async function createBookingWithTransaction(tx, { requestedById, resource
 
     const contactSnapshot = await bookingContact(tx, requestedById, contact);
     const fulfillmentSnapshot = await bookingFulfillmentSnapshot(tx, resource, fulfillment);
+    if (requester.role === CUSTOMER && fulfillmentSnapshot?.mode === 'ROOM_SELF_SERVICE' && !bookingRoomAccessCode({ contactSnapshot })) {
+      throw new HttpError(400, 'Complete your booking contact', undefined, 'BOOKING_CONTACT_REQUIRED');
+    }
     const now = new Date();
     checkLabPolicyCompliance({ policy: resource.laboratory?.labPolicy, startAt: start, endAt: end, now });
     const initialStatus = quote.amountVnd > 0 ? PENDING_APPROVAL : CONFIRMED;
@@ -315,6 +320,7 @@ export async function rescheduleBooking({ bookingId, actor, startAt, endAt, expe
     await assertBookingTrainingEligibility(tx,{userId:booking.requestedById,resourceId:booking.resourceId,now:new Date()});
     checkLabPolicyCompliance({ policy: currentPolicy, startAt, endAt });
     if (+startAt < Date.now()) throw new HttpError(400, "Cannot move into the past", undefined, "POLICY_VIOLATION");
+    await expireResourcePaymentHolds(tx, booking.resourceId);
     const availability = await getResourceAvailability(tx, { resourceId: booking.resourceId, startAt, endAt, excludeBookingId: bookingId, resource });
     assertResourceAvailable(availability);
     checkLabPolicyCompliance({ policy: currentPolicy, startAt, endAt });

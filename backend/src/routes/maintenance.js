@@ -14,6 +14,9 @@ import {
   maintenanceStatuses
 } from "../services/availabilityService.js";
 import { bookingOverlapWhere } from "../utils/bookingOverlap.js";
+import { expireResourcePaymentHolds } from "../services/bookingPaymentHoldService.js";
+import { assertResourceMutationScope, lockResourceForMutation } from "../services/resourceService.js";
+import { lockCurrentAccount } from "../services/accountAccess.js";
 import { recordSystemAuditEvent } from "../services/systemAuditService.js";
 import {
   maintenanceKinds as dataContractMaintenanceKinds,
@@ -45,7 +48,8 @@ const maintenanceWindowSchema = z.object({
 const maintenanceWindowUpdateSchema = maintenanceWindowSchema
   .partial()
   .extend({
-    changeReason: optionalNote(500)
+    changeReason: optionalNote(500),
+    expectedUpdatedAt: z.string().datetime({ offset: true }).transform((value) => new Date(value))
   }).strict();
 
 const maintenanceListQuerySchema = z.object({
@@ -62,7 +66,11 @@ router.get("/impact", requireRole(ADMIN, LAB_STAFF), requireLabAccess("query.res
   try {
     const data = z.object({ resourceId: z.string().uuid(), startAt: z.coerce.date(), endAt: z.coerce.date() }).strict().parse(req.query);
     validateMaintenanceWindow(data.startAt, data.endAt);
-    const rows = await prisma.booking.findMany({ where: bookingOverlapWhere(data), select: { id: true, title: true, startAt: true, endAt: true, status: true }, orderBy: { startAt: "asc" } });
+    const rows = await prisma.$transaction(async (tx) => {
+      await lockResourceForMutation(tx, req.user, data.resourceId);
+      await expireResourcePaymentHolds(tx, data.resourceId);
+      return tx.booking.findMany({ where: bookingOverlapWhere(data), select: { id: true, title: true, startAt: true, endAt: true, status: true }, orderBy: { startAt: "asc" } });
+    });
     res.json({ conflicts: rows });
   } catch (error) { next(error); }
 });
@@ -112,11 +120,7 @@ router.post("/", requireRole(ADMIN, LAB_STAFF), requireLabAccess("body.resourceI
     validateMaintenanceWindow(data.startAt, data.endAt);
 
     const window = await prisma.$transaction(async (tx) => {
-      // Lock resource row to serialize concurrent maintenance + booking operations
-      await tx.$queryRaw`SELECT 1 FROM resources WHERE id = ${data.resourceId} FOR UPDATE`;
-
-      const resource = await tx.resource.findUnique({ where: { id: data.resourceId } });
-      if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
+      const { resource } = await lockResourceForMutation(tx, req.user, data.resourceId);
 
       await ensureNoBookingConflictTx(tx, {
         resourceId: data.resourceId,
@@ -156,63 +160,34 @@ router.post("/", requireRole(ADMIN, LAB_STAFF), requireLabAccess("body.resourceI
 router.patch("/:id", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
   try {
     const data = maintenanceWindowUpdateSchema.parse(req.body);
-    const { changeReason: _changeReason, ...windowData } = data;
+    const { changeReason: _changeReason, expectedUpdatedAt, ...windowData } = data;
     if (!Object.keys(windowData).length) {
       throw new HttpError(400, "No maintenance changes were provided", undefined, "VALIDATION_ERROR");
     }
 
-    const current = await prisma.maintenanceWindow.findUnique({
-      where: { id: req.params.id },
-      include: maintenanceInclude
-    });
-    if (!current) throw new HttpError(404, "Maintenance window not found", undefined, "NOT_FOUND");
-
-    const nextResourceId = windowData.resourceId || current.resourceId;
-    const nextStartAt = windowData.startAt || current.startAt;
-    const nextEndAt = windowData.endAt || current.endAt;
-    const nextStatus = windowData.status || current.status;
-    validateMaintenanceWindow(nextStartAt, nextEndAt);
-
-    // If LAB_STAFF, check lab access for the target resource
-    if (req.user.role === LAB_STAFF) {
-      await assertLabStaffResourceAccess(req.user.id, current.resourceId);
-      const targetRes = await prisma.resource.findUnique({
-        where: { id: nextResourceId },
-        select: { laboratoryId: true }
-      });
-      if (!targetRes?.laboratoryId) {
-        throw new HttpError(403, "Resource has no laboratory assigned", undefined, "FORBIDDEN");
-      }
-      const assignment = await prisma.userLabAssignment.findUnique({
-        where: {
-          userId_laboratoryId: {
-            userId: req.user.id,
-            laboratoryId: targetRes.laboratoryId
-          }
-        }
-      });
-      if (!assignment) {
-        throw new HttpError(403, "Access denied: you are not assigned to this resource's laboratory", undefined, "FORBIDDEN");
-      }
-    }
-
     const updated = await prisma.$transaction(async (tx) => {
-      // Serialize edits to this job, then reject a stale edit rather than overwriting it.
-      await tx.$queryRaw`SELECT id FROM maintenance_windows WHERE id = ${current.id} FOR UPDATE`;
-      const fresh = await tx.maintenanceWindow.findUnique({ where: { id: current.id } });
-      if (!fresh || fresh.updatedAt.getTime() !== current.updatedAt.getTime()) throw new HttpError(409, "Maintenance changed. Reload before editing.", undefined, "MAINTENANCE_CHANGED");
+      const actor = await lockCurrentAccount(tx, req.user.id, req.user.authVersion);
+      await tx.$queryRaw`SELECT id FROM maintenance_windows WHERE id = ${req.params.id} FOR UPDATE`;
+      const fresh = await tx.maintenanceWindow.findUnique({ where: { id: req.params.id } });
+      if (!fresh) throw new HttpError(404, "Maintenance window not found", undefined, "NOT_FOUND");
+
+      const nextResourceId = windowData.resourceId || fresh.resourceId;
+      // Use a consistent order when two jobs move between the same resources.
+      for (const resourceId of [...new Set([fresh.resourceId, nextResourceId])].sort()) {
+        await tx.$queryRaw`SELECT id FROM resources WHERE id = ${resourceId} FOR UPDATE`;
+        const resource = await tx.resource.findUnique({ where: { id: resourceId }, select: { laboratoryId: true } });
+        if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
+        await assertResourceMutationScope(tx, actor, resource.laboratoryId);
+      }
+      if (+fresh.updatedAt !== +expectedUpdatedAt) throw new HttpError(409, "Maintenance changed. Reload before editing.", undefined, "MAINTENANCE_CHANGED");
+      const nextStartAt = windowData.startAt || fresh.startAt;
+      const nextEndAt = windowData.endAt || fresh.endAt;
+      const nextStatus = windowData.status || fresh.status;
+      validateMaintenanceWindow(nextStartAt, nextEndAt);
       if (["completed", "cancelled"].includes(fresh.status)) throw new HttpError(409, "Completed or cancelled maintenance is read-only.", undefined, "MAINTENANCE_CLOSED");
       if ((windowData.startAt || windowData.endAt || windowData.resourceId || (windowData.status && windowData.status !== fresh.status)) && (!_changeReason || _changeReason.length < 5)) throw new HttpError(400, "Explain the schedule or status change (at least 5 characters).", undefined, "MAINTENANCE_REASON_REQUIRED");
       if (fresh.status === "in_progress" && nextResourceId !== fresh.resourceId) throw new HttpError(409, "Work in progress cannot move to another resource.", undefined, "MAINTENANCE_RESOURCE_LOCKED");
       if (windowData.status && windowData.status !== fresh.status && !({ scheduled: ["in_progress", "cancelled"], in_progress: ["completed", "cancelled"] }[fresh.status] || []).includes(windowData.status)) throw new HttpError(409, "Invalid maintenance transition", undefined, "MAINTENANCE_INVALID_TRANSITION");
-      // Lock resource row to serialize concurrent operations
-      await tx.$queryRaw`SELECT 1 FROM resources WHERE id = ${nextResourceId} FOR UPDATE`;
-
-      if (windowData.resourceId && windowData.resourceId !== current.resourceId) {
-        const resource = await tx.resource.findUnique({ where: { id: windowData.resourceId } });
-        if (!resource) throw new HttpError(404, "Resource not found", undefined, "NOT_FOUND");
-      }
-
       // The booked interval can end while the borrower still has the resource.
       // Use the same resource lock as checkout and return before starting work.
       if (nextStatus !== fresh.status && ["in_progress", "completed"].includes(nextStatus)) {
@@ -231,11 +206,11 @@ router.patch("/:id", requireRole(ADMIN, LAB_STAFF), async (req, res, next) => {
       });
 
       const saved = await tx.maintenanceWindow.update({
-        where: { id: current.id },
-        data: windowData,
+        where: { id: fresh.id },
+        data: { ...windowData, updatedAt: new Date(Math.max(Date.now(), +fresh.updatedAt + 1)) },
         include: maintenanceInclude
       });
-      await recordSystemAuditEvent(tx, { actor: req.user, action: "MAINTENANCE_UPDATED", targetType: "MAINTENANCE", targetId: saved.id, labId: saved.resource.laboratoryId, resourceId: saved.resourceId, beforeState: { startAt: fresh.startAt.toISOString(), endAt: fresh.endAt.toISOString(), status: fresh.status }, afterState: { startAt: saved.startAt.toISOString(), endAt: saved.endAt.toISOString(), status: saved.status }, reason: _changeReason });
+      await recordSystemAuditEvent(tx, { actor, action: "MAINTENANCE_UPDATED", targetType: "MAINTENANCE", targetId: saved.id, labId: saved.resource.laboratoryId, resourceId: saved.resourceId, beforeState: { startAt: fresh.startAt.toISOString(), endAt: fresh.endAt.toISOString(), status: fresh.status }, afterState: { startAt: saved.startAt.toISOString(), endAt: saved.endAt.toISOString(), status: saved.status }, reason: _changeReason });
       await tx.usageLog.create({
         data: {
           id: crypto.randomUUID(),
@@ -263,6 +238,7 @@ const maintenanceInclude = {
 
 async function ensureNoBookingConflictTx(tx, { resourceId, startAt, endAt, status }) {
   if (!BLOCKING_MAINTENANCE_STATUSES.includes(status)) return;
+  await expireResourcePaymentHolds(tx, resourceId);
   const conflicts = await tx.booking.findMany({
     where: bookingOverlapWhere({ resourceId, startAt, endAt }),
     orderBy: { startAt: "asc" }

@@ -1,5 +1,547 @@
 # Trạng thái dự án hiện tại
 
+## Bàn giao mã nguồn và tài liệu — 21/11/2026
+
+- [Bản bàn giao kỹ thuật](TECHNICAL_HANDOFF.md) truy các luồng từ màn
+  hình đến API, service, dữ liệu và test, với 175 liên kết đến dòng mã.
+  Điểm vào nằm trong README và AGENTS.
+- Kiểm tra `test:required` trên frontend và backend đạt. Kiểm tra tài
+  liệu, tệp nộp và ảnh minh chứng trước khi đưa snapshot lên GitHub.
+  Cấu hình bí mật và dữ liệu vận hành giữ tại môi trường tương ứng.
+
+## Giảm thời gian chờ chatbot — 20/11/2026
+
+- Railway `40e45764` và Vercel `Er95Po3koKmTPMZVByD8ktxFfh9W` đã sẵn
+  sàng. Khung chat tải cài đặt trước, chỉ tải danh mục khi mở bộ chọn
+  ngữ cảnh. Lỗi danh mục có nút thử lại riêng.
+- Chrome trên Vercel với danh mục bị làm chậm 1,8 giây: từ mở khung đến
+  khi gửi được giảm 2,89 giây xuống 0,88 giây. Tìm Pi 5 hiện kết quả
+  sau 0,84 giây tính từ lúc bấm gửi. Xác minh bộ chọn phục hồi sau HTTP 503.
+- Work phát tín hiệu cho worker ngay sau khi request pending và outbox
+  đã commit. Trình duyệt kiểm tra mỗi 500 ms trong bốn giây đầu và khi
+  có câu trả lời từng phần mới. Với phản hồi Work mô phỏng, phần đầu hiện
+  ở 1,01 giây và kết quả cuối ở 1,52 giây thay cho 2,01 giây trước đó.
+- Typecheck, 15 ca bridge frontend và 25 ca assistant/mail backend đạt.
+  Cloud chưa có key OpenAI và subscription Work đang chưa kết nối,
+  nên chưa đo thời gian sinh câu trả lời của hai nhà cung cấp.
+
+## OpenAI API tiết kiệm và email tự động trên Railway — 20/11/2026
+
+- Railway đã đặt `OPENAI_MODEL=gpt-6-luna` và dành chỗ cho
+  `OPENAI_API_KEY`. Khi có key, khung chat dùng Responses API.
+  Khi gỡ key, khung chat dùng ChatGPT Work nếu kết nối sẵn sàng,
+  hoặc tra cứu nội bộ. Cấu hình local tiếp tục dùng môi trường của local.
+- Luna dùng `reasoning.effort=none`, gói Standard, tối đa 1.200 token
+  đầu ra cho kế hoạch và 450 cho tóm tắt. Mỗi lượt gọi model chờ tối đa
+  8 giây. Khi quá hạn hoặc kết quả bị cắt, backend dùng tra cứu/nội
+  dung theo quy tắc có sẵn. Đã kiểm thử payload và xử lý kết quả bị cắt.
+- Railway `1b4696e8` và Vercel `C4F1t9Q366onQsmDM9P882h5W9qC`
+  đã sẵn sàng. Kiểm tra Chrome hai đường định tuyến với phản hồi
+  kiểm thử. Chưa gọi OpenAI thật vì Railway chưa có key.
+- Relay Google Apps Script riêng của LAB đã kết nối trên Railway.
+  Token đúng qua verify, token sai bị từ chối. Vercel gửi OTP thử tới
+  hộp thư được chỉ định, HTTP 202 trong 2,62 giây sau khi Google chấp nhận.
+  Chờ đối chiếu thư thực nhận trong hộp thư.
+- Kiểm tra outbox có tám thư chào mừng từ lúc dựng demo, gồm bảy
+  địa chỉ mẫu và một tài khoản quản trị demo. Giữ bản ghi và đánh dấu
+  `PRE_ACTIVATION_DEMO_EMAIL_SKIPPED` trước khi bật worker. Đã bật
+  `EMAIL_AUTOMATION_ENABLED=true`; email cảnh báo staff vẫn là tùy chọn riêng.
+  Railway `4bf63dd3` chạy lại image API chuẩn. Vercel readiness và OAuth
+  discovery trả 200, danh mục giữ đủ 104 tài nguyên có ảnh.
+  Xem [hướng dẫn relay](DEPLOYMENT.md#google-apps-script-mail-for-railway).
+
+## Đầu kết nối ChatGPT Work cho bản deploy — 19/11/2026
+
+- Bật `CHATGPT_BRIDGE_ENABLED` trên Railway cho bản demo. OAuth và MCP
+  dùng domain HTTPS Railway, trang cấp quyền ADMIN dùng Vercel. Khóa
+  mã hóa được tạo riêng cho cloud và lưu trong Railway Variables.
+- Deployment `acdd63e8` thành công. OAuth discovery trả 200 với S256,
+  MCP thiếu token trả 401, trang quản trị qua Vercel trả 200. Kiểm tra
+  CUSTOMER vẫn tìm được Raspberry Pi 5 và nhận 403 ở API quản trị.
+- Cloud chưa có grant hoặc event subscription. Đăng ký MCP trên ChatGPT
+  bằng tên riêng **LAB Support Cloud**, giữ cấu hình plugin local. ADMIN
+  cấp quyền từ bản Vercel, sau đó kích hoạt một bộ nhận Work cho sự kiện
+  `lab.assistant.question.created` và thử một câu hỏi mở qua website.
+  Xem [hướng dẫn kết nối](AI_ASSISTANT_SETUP.md#8-kết-nối-tài-khoản-chatgpt-qua-plugin).
+
+## Kiểm tra bản deploy đang chạy — 19/11/2026
+
+- Chrome desktop, năm lần mỗi trang với cache trình duyệt mới. Nội dung
+  xuất hiện trung vị sau 1,57 giây ở trang chủ, 2,21 giây ở danh mục và
+  1,62 giây ở trang lịch. Ảnh bìa đầu tiên ở danh mục tải sau 2,23 giây.
+  Cả 15 lần trả HTTP 200, không có lỗi tài nguyên cùng origin được ghi nhận.
+- Qua Vercel, readiness và danh mục đạt 40/40 HTTP 200 trong năm đợt,
+  mỗi đợt tám yêu cầu đồng thời. Danh mục trung vị 0,98 giây, p95
+  2,52 giây. Sau warm-up, 38 ảnh trả HTTP 200 và CDN HIT, p95 214 ms.
+  Số đo từ một máy kiểm thử, chưa đo tải kéo dài.
+- Đăng nhập CUSTOMER qua Chrome và tìm Raspberry Pi 5 trong chatbot,
+  kết quả có link chi tiết sau 733 ms. Năm ca API đạt HTTP 200 trong
+  368–541 ms, có tìm theo mã và lấy lịch trống. Cloud chạy
+  `LOCAL_GROUNDED`, chưa cấu hình OpenAI.
+- Railway đang tắt worker email. Token Apps Script đã cấu hình, còn
+  thiếu URL `/exec` và địa chỉ gửi. Hai test adapter mô phỏng đạt, chưa
+  thử gửi thật. Cần chủ tài khoản Google cấp quyền MailApp cho Web App
+  LAB, sau đó nối Railway và thử nhận OTP trong hộp thư kiểm soát.
+
+## Danh mục cloud và ảnh trên Vercel CDN — 19/11/2026
+
+- Đã nhập 87 mã còn thiếu và 160 dòng giá theo mục đích vào Railway.
+  API Vercel trả 104 tài nguyên, gồm toàn bộ 101 mã local và ba mã cloud
+  có trước. Đối chiếu theo mã xác nhận nhóm, trạng thái vận hành, model,
+  thông số, lab, giới hạn đặt và 160 dòng giá. Cloud bỏ marker
+  `LOCAL_DEMO` và dùng mô tả riêng cho `DEMO-HOST-PC` do máy local cung cấp số đo.
+- Hai DB vận hành độc lập. Lịch đặt, lịch bảo trì, lịch sử, mã mở cửa
+  và số đo telemetry vẫn thuộc môi trường sở hữu dữ liệu. Railway đã
+  trở lại bản API chuẩn sau khi nhập dữ liệu và gắn ảnh.
+- Đã gắn ảnh bìa cho 104/104 tài nguyên. Vercel phục vụ 38 WebP có
+  giấy phép công bố, tổng 3.299.050 byte, dưới `frontend/public/media/catalog/`.
+  Dùng ảnh theo model nếu xác định được, ảnh theo công năng có ghi tham
+  khảo khi thiếu xác nhận. Manifest credits có nguồn và giấy phép.
+- Chrome giải mã 38/38 tệp và kiểm tra tìm kiếm, ảnh, chi tiết, nguồn
+  cùng bố cục 390 px. Danh mục công khai hiển thị 102 mã vì quy tắc
+  sẵn có ẩn hai tài nguyên đang ở trạng thái `RETIRED`.
+- Một đợt 38 lượt tải ảnh đồng thời sau warm-up đạt 38 HTTP 200,
+  38 CDN HIT, p95 192 ms từ máy kiểm thử. Chưa đo tải API/DB kéo dài.
+  Upload ảnh qua giao diện cần cấu hình và nghiệm thu object storage S3.
+  Xem [DEPLOYMENT](DEPLOYMENT.md#public-catalogue-images-on-vercel).
+
+## Ảnh danh mục local theo tài nguyên — 19/11/2026
+
+- Rà 101 tài nguyên trong DB local. Bổ sung 82 ảnh bìa và cập nhật 19 ảnh
+  chính cũ. Bộ ảnh gồm 40 WebP lưu tại `frontend/public/media/local-resource-catalog/`,
+  có `sources.json` và nằm ngoài Git theo cấu hình local-only.
+- 60 thiết bị DEMO26 dùng ảnh tham khảo theo 10 dòng model, kể cả Camera
+  Module 3 Standard và HQ Camera C/CS được cắt riêng đúng biến thể từ tài liệu
+  Raspberry Pi. Phòng và thiết bị thiếu model dùng ảnh theo công năng,
+  được ghi rõ là tham khảo. Nguồn chưa xác minh quyền phân phối được đánh dấu.
+- Hiện tiêu đề ảnh và nguồn ở gallery chi tiết. Kiểm tra Chrome giải mã
+  đủ 40 ảnh, đối chiếu 101 bản ghi qua API, mở thẻ và chi tiết tám tài
+  nguyên trên desktop, kiểm tra Pi 5 trên mobile. Typecheck và bốn test media đạt.
+- Ghi dữ liệu qua transaction có guard DB local. Giữ lịch, giá, thông số,
+  ảnh phụ và video có trước. Bộ ảnh local nằm ngoài gói deploy Vercel.
+
+## Đồng bộ mật khẩu tài khoản local và cloud — 19/11/2026
+
+- Giữ mật khẩu hiện hành trên cloud làm giá trị cố định cho từng tài khoản.
+  Cập nhật bản local cho ADMIN, ba LAB_STAFF và CUSTOMER, có audit và thu hồi
+  phiên local cũ qua authVersion. Xác minh cả năm cặp thông tin đăng nhập được
+  trên hai API với đúng vai trò. Cơ sở dữ liệu vẫn riêng, các lần đổi mật khẩu
+  về sau áp dụng ở từng môi trường.
+
+## Tài khoản vận hành và bộ kịch bản trình diễn — 19/11/2026
+
+- Local và Vercel dùng cùng email ADMIN lấy từ danh tính chủ workspace
+  Railway, mật khẩu riêng cho từng môi trường. Đã xác minh ADMIN mới và
+  vô hiệu hóa hai ADMIN bootstrap cũ qua API. Railway dùng danh tính mới
+  cho bootstrap. Tài khoản mới gồm ba LAB_STAFF có phạm vi riêng và một
+  CUSTOMER. Thông tin đăng nhập dùng kho mã hóa của người dùng Windows,
+  sao chép theo vai trò bằng `ops/Copy-LabLogin.ps1`.
+- Mỗi DB có thêm hai LAB (Điện tử và Tự động hóa, Đo lường và Kiểm định),
+  bảy phòng và bảy thiết bị với đủ bảy trạng thái vật lý. Dữ liệu được đánh
+  dấu là mẫu. Không xóa lịch, phiên vận hành hoặc tài nguyên có trước.
+- Ngày 20/11/2026 giờ Việt Nam, phòng SHOW-ROOM-01 có lịch 09:00–10:00 và
+  hiệu chuẩn 13:00–14:00; SHOW-DEVICE-01 có bảo trì 10:00–11:00. Preflight
+  chặn cả ba tình huống. Hàng bảo trì có phiếu lên lịch, đang thực hiện,
+  hoàn tất và đã hủy. Có sự cố mẫu mức cao ở SHOW-DEVICE-05.
+- Chrome mở được màn Giám sát với ADMIN mới trên cả hai bản, giữ nền sáng.
+  API lọc đủ bảy trạng thái ở cả hai DB, mỗi bộ lọc trả đúng một phòng và
+  một thiết bị mẫu. Local hoàn tất mô phỏng nhiệt có nhãn với 60 mẫu và
+  quan sát được cảnh báo. Cloud chưa có nguồn telemetry phần cứng được
+  xác minh. Tạo lại lịch theo ngày mới bằng `ops/provision-showcase.mjs`
+  theo runbook.
+
+## Mặc định nền sáng và xác minh ADMIN — 19/11/2026
+
+- Frontend mở nền sáng trên mỗi lần tải trang, kể cả khi hệ điều hành
+  hoặc dữ liệu theme cũ đang đặt tối. Nút đổi theme áp dụng trong phiên trang.
+- Chrome đã xác minh đăng nhập ADMIN, mở workspace và tải lại ở chế độ sáng
+  trên local và domain Vercel. Cả hai dùng tài khoản ADMIN của môi trường
+  tương ứng. Không reset tài khoản hay sửa dữ liệu.
+- Vercel Ready và API readiness 200. Typecheck đạt, lint có ba cảnh báo và
+  không lỗi.
+
+## Google Apps Script mail cho bản demo cloud — 19/11/2026
+
+- Thêm transport `google_script` dùng chung luồng OTP và email outbox.
+  SMTP là mặc định. Bản local vẫn dùng container API và PostgreSQL hiện có,
+  Vite ở `127.0.0.1:5173`. Không đổi env, dữ liệu hoặc cấu hình chatbot local.
+- Đã deploy adapter lên Railway Trial. API cloud readiness 200. Cấu hình
+  gửi cloud chưa bật. Đã đặt token trong Railway Variables, chờ chủ tài khoản
+  Google cấp quyền MailApp và cung cấp URL `/exec` của Web App LAB riêng.
+- Hai test relay, 12 ca SMTP trên PostgreSQL 16 và SMTP loopback riêng,
+  release security và production config đều đạt. Chrome mở danh mục trên cả
+  hai bản và tải tài nguyên qua đúng API tương ứng.
+- Tiếp theo: đặt URL và email gửi trong Railway, gọi verify, thử OTP vào
+  hộp thư được chỉ định, rà outbox trước khi bật worker.
+  Xem [DEPLOYMENT](DEPLOYMENT.md#google-apps-script-mail-for-railway).
+
+## Demo staging Vercel và Railway — 19/11/2026
+
+- Checkout `codex/claude-qa-20261021` tại `603b623`, có diff đang làm.
+  Thêm `frontend/vercel.mjs`, `backend/railway.json` và hướng dẫn tại
+  [DEPLOYMENT](DEPLOYMENT.md#11-staging-demo-on-vercel-and-railway).
+- Frontend build production, kiểm tra cấu hình rewrite và file đích,
+  backend `verify:prod-config` và Docker build target `runner` đều đạt.
+  Vite cảnh báo chunk JS lớn nhất khoảng 535 kB trước gzip.
+- Đã triển khai snapshot mã runtime từ checkout này qua CLI. Demo:
+  [lab-resource-manager-demo.vercel.app](https://lab-resource-manager-demo.vercel.app).
+  [Railway](https://railway.com/project/a6b3db0b-57f1-4b12-bd1b-9f5df1f87454)
+  xác nhận Trial. Một API replica ở vùng mặc định Washington, D.C. và
+  PostgreSQL 16 có volume riêng, không có public TCP proxy. Không push Git.
+- PostgreSQL nhận đủ 40 migrations. Bootstrap riêng tạo một LAB mẫu qua bản
+  deploy tạm, sau đó trở lại image API từ Dockerfile canonical. Tạo ba tài
+  nguyên giá 0 và tài khoản QA qua API. Tài khoản bootstrap được lưu trong
+  Railway Variables. SMTP, thanh toán, Google và ChatGPT Work bridge chưa bật.
+- Qua domain Vercel, Chrome mở được trang chủ. HTTP smoke xác nhận các trang
+  tĩnh và workspace, API readiness 200, route/asset thiếu 404, workspace và
+  API `no-store`, API riêng tư chưa đăng nhập trả 401. Đăng nhập ADMIN và
+  CUSTOMER đạt. LAB_STAFF chỉ thấy LAB sau khi được phân công. Chatbot nội bộ
+  trả lời với provider `local`. Đặt miễn phí nhận CONFIRMED. Hai request cùng
+  slot nhận một 201 và một 409, lịch QA đã hủy để trả lại slot.
+- Việc tiếp theo để nghiệm thu sử dụng thật là xác minh bàn giao/nhận trả trên
+  cloud, đo tải, diễn tập restore và chọn email HTTPS hoặc gói hỗ trợ SMTP.
+  Theo dõi hạn Trial và mức sử dụng trước khi chia sẻ lịch demo dài hạn.
+
+## Hỗ trợ, cảnh báo và cuộn giao diện — 18/11/2026
+
+- Checkout `codex/claude-qa-20261021` tại `603b623`. Chuông thông báo
+  staff/admin tự lấy dữ liệu mỗi 5 giây khi tab đang hiện. Yêu cầu mới
+  hiển thị cả khi nhân viên chưa sẵn sàng. Khách thấy vị trí chờ và được
+  giao theo quy tắc FIFO hiện có.
+- Hàng đầu workspace hiển thị yêu cầu còn chờ, phiên vừa được giao hoặc sự
+  cố mức cao/nghiêm trọng còn mở. Nút mở dẫn tới hàng chờ, phiên được giao
+  hoặc hồ sơ sự cố đã phân quyền. Có thể ẩn dải thông báo mà vẫn giữ trong
+  hộp thư thông báo.
+- Email tùy chọn dùng hàng đợi SMTP hiện có. Migration mới chỉ mở rộng loại
+  thư outbox. Đã áp dụng trên PostgreSQL test riêng và kiểm thử qua SMTP
+  loopback. Môi trường đang chạy giữ tùy chọn gửi thư thật ở trạng thái tắt.
+  Cách bật nằm trong [README](../README.md).
+- Khung chat hỗ trợ dùng một vùng cuộn và giữ ô soạn tin trong tầm nhìn.
+  Vùng chat trang hỗ trợ cho phép cuộn tiếp trang khi chạm cuối. Menu chuông
+  và danh sách tài nguyên đã chọn dùng vùng cuộn của chính menu.
+- Đã rà 113 trạng thái trên Chrome gồm trang công khai, CUSTOMER, LAB_STAFF,
+  ADMIN và các lớp nổi. Không còn tràn ngang toàn trang hay vùng cuộn dọc
+  lồng nhau trong các trạng thái đo ở 1.440 và 390 px. Chrome chạy 29 kiểm tra
+  luồng hỗ trợ, gồm lăn chuột, thông báo ngoài trang hỗ trợ và mở đúng sự cố.
+  Hỗ trợ API 12 ca, email API 12 ca, frontend/backend required và lint đạt.
+
+## Thứ tự lịch đặt và bàn giao — 18/11/2026
+
+- Các nhóm trạng thái lịch đặt xếp ngày bắt đầu mới hơn trước. Cùng ngày giờ
+  thì dùng thời điểm tạo và mã bản ghi để giữ thứ tự ổn định qua phân trang.
+  Nhóm Tất cả của khách vẫn ưu tiên lịch còn hiệu lực, mới tạo trước.
+- Đạt 8 ca phân trang trên PostgreSQL 16 riêng, backend `test:required`
+  và lint. Chrome 390/1440 px kiểm tra các thẻ giữ đúng thứ tự backend.
+  Kiểm tra trình duyệt dùng API fixture với các mốc thời gian đọc từ local.
+
+## Hồ sơ Word và dọn tài liệu — 17/11/2026
+
+- Bàn giao 7 tài liệu tiếng Việt tại [mục lục hồ sơ Word](README.md#hồ-sơ-word-tiếng-việt).
+  Đã mở bằng Microsoft Word và kiểm tra bố cục đủ 17 trang. Các kết quả
+  kiểm thử trong hồ sơ lấy từ những mốc dự án đã ghi bên dưới.
+- Dọn 5 ghi chú QA, prompt và kế hoạch commit đã kết thúc cùng hai tệp
+  tổng hợp cũ. Các nguồn đối chiếu kỹ thuật và hai PDF gốc của giảng viên
+  có trong [mục lục tài liệu](README.md).
+- Lượt này chỉ sửa tài liệu. Trước buổi báo cáo, chạy thử luồng ba vai trò
+  theo [kịch bản demo](GRADUATION_DEMO_RUNBOOK.md) trên môi trường kiểm thử.
+
+## Lịch của khách và vị trí nút trợ lý — 17/11/2026
+
+- Nhóm Tất cả trong Lịch đặt của tôi xếp lịch còn hiệu lực lên trước theo
+  thời điểm tạo giảm dần, rồi đến lịch sử. Phân trang thực hiện ở backend
+  và giữ thứ tự riêng của các bộ lọc khác cùng hàng đợi cán bộ LAB.
+- Nút trợ lý nằm trong phần đầu nội dung của lịch đặt, thanh toán, lịch tài
+  nguyên, danh mục và hỗ trợ để tránh che nút thao tác.
+- Dữ liệu local xác nhận lịch 20.000 đ đã thanh toán và đứng đầu nhóm Tất cả.
+  Đạt 7 ca phân trang trên PostgreSQL riêng và frontend `test:required`.
+  Chrome 390 và 1440 px kiểm tra nút Lịch sử, mở/đóng trợ lý với API fixture.
+
+## Khôi phục VNPAY Sandbox qua ngrok — 17/11/2026
+
+- Policy của `lrm-chatgpt-tunnel` từng chỉ cho phép OAuth/MCP và trả 404
+  cho cả return lẫn IPN. Đã cho phép GET ở đúng hai đường dẫn VNPAY và
+  khởi động lại container tunnel hiện có.
+- Qua hostname HTTPS, return thiếu chữ ký trả 400 và IPN trả mã 97.
+  OAuth discovery trả 200, MCP thiếu token trả 401 và API tài nguyên vẫn
+  trả 404. Chưa xác minh kết quả giao dịch cụ thể hoặc nhận lại IPN của giao dịch này.
+
+### Rà soát checkout và đối soát
+
+- Giao dịch VNPAY 50.000 đ tạo URL lúc 13:34:02, cùng hết hạn với lượt giữ
+  chỗ lúc 13:48:55 giờ Việt Nam. Backend trả lại URL còn hạn cùng mã tham
+  chiếu ở các lượt mở tiếp theo. Lỗi Sandbox lúc 13:45:29 xảy ra trước hạn.
+  LAB chưa ghi nhận báo có, giao dịch đã hết hạn và lịch đã hủy.
+- QueryDr Sandbox trả mã 99, thiếu trạng thái có thể xác minh, ở cả giao dịch
+  trên và một đối chứng đã có thanh toán trong LAB. Cần đối chiếu trên Merchant
+  Sandbox để xác định kết quả giao dịch và kiểm tra lịch sử gửi IPN.
+- VNPAY return và IPN qua ngrok đã tới bộ xác thực. Runtime local chưa cấu
+  hình VietQR và tunnel trả 404 cho webhook SePay. Chưa có bài nghiệm thu với
+  báo có SePay thật hoặc một giao dịch VNPAY mới qua cổng thật trong lượt này.
+- Đạt 47 ca tích hợp trên PostgreSQL 16 riêng (giữ chỗ, bàn giao, email),
+  4 ca cấu hình provider, 23 kiểm tra Chrome với API/PostgreSQL riêng và
+  14 kịch bản checkout/biên lai với fixture. Không ghi giao dịch kiểm thử vào DB demo.
+
+## Sửa ba lỗi đã xác minh trong lượt review — 17/11/2026
+
+- Checkout `codex/claude-qa-20261021` / HEAD `603b623` cùng các thay đổi
+  có sẵn. `PATCH /api/resources/:id` yêu cầu `expectedVersion` từ API
+  danh mục hoặc chi tiết. Một trong hai lượt sửa cùng phiên bản được lưu,
+  lượt còn lại nhận `409 RESOURCE_CHANGED`. Form giữ nội dung và tải lại
+  danh mục. Thay đổi giới hạn thời lượng từ biểu giá cũng tăng phiên bản.
+- Đổi loại tài nguyên được kiểm tra cùng khóa dùng khi đặt và bàn giao.
+  Lịch còn thời gian sử dụng, tài nguyên chưa trả và lượt trả chờ kiểm tra
+  đều chặn đổi loại. Kiểm thử đi qua tự nhận, tự trả, cán bộ hoàn tất rồi
+  mới đổi loại thành công. Xử lý giữ chỗ hết hạn theo luồng hiện có.
+- Trợ lý và API đặt lịch dùng chung truy vấn khung bận và phép kiểm thời
+  gian chuẩn bị. Trợ lý bỏ qua giữ chỗ quá hạn trong lần đọc, không đổi
+  bản ghi. Kiểm thử cả thời gian chuẩn bị sau lịch đã xác nhận và sau
+  hoàn trả sớm, cùng mốc hết thời gian chuẩn bị.
+- Gate bắt buộc đạt 95 ca frontend và 158 ca backend. Lint backend,
+  typecheck/build frontend, đồng bộ 4.136 khóa VI/EN và đối chiếu ERD đạt.
+  Frontend còn ba cảnh báo lint và cảnh báo gói chính trên 500 kB.
+  PostgreSQL 16 riêng đạt 102 ca trong bảy nhóm liên quan, tính mỗi nhóm
+  một lần theo kết quả đạt gần nhất. Ca trợ lý ban đầu thiếu `returnedAt`
+  trong fixture, đã sửa fixture và chạy lại đạt 11/11. Các container
+  kiểm thử đã dừng. Chrome kiểm xung đột phiên bản và lưu lại sau khi
+  mở hồ sơ mới cho ADMIN và LAB_STAFF bằng fixture.
+
+[Hợp đồng tài nguyên](BACKEND_GUIDELINE.md#resource-rules) và
+[SRS](srs.md#42-resource-catalogue-and-administration) đã cập nhật. Lượt
+này giữ schema, migration và dữ liệu demo. UI local và API readiness trả
+HTTP 200. Các ca ghi chạy trên môi trường kiểm thử.
+
+## Tổng duyệt ba vai trò trước báo cáo — 15/11/2026
+
+- Checkout `C:/Projects/lab-resource-manager`, branch
+  `codex/claude-qa-20261021`, HEAD `603b623`. Trước lượt này có 95 mục
+  thay đổi/chưa theo dõi. Preflight xác nhận Docker Linux Engine chưa chạy,
+  UI demo `5173` và API `8000` chưa truy cập được. Kiểm tra cuối lượt thấy
+  Docker backend/demo PostgreSQL healthy, readiness `8000` trả `200` và
+  `database=ready`. UI demo `5173` vẫn chưa truy cập được. Lượt này cập nhật
+  hai tài liệu hiện có và dùng stack tách biệt để giữ dữ liệu demo.
+- PostgreSQL 18 cục bộ bị chặn ở bước đối chiếu cấu trúc baseline. Trên
+  PostgreSQL **16.15** riêng qua WSL (`127.0.0.1:25439`, DB
+  `lab_resources_rehearsal_test`), triển khai canonical đạt, Prisma báo
+  **39 migrations**, schema up to date. Express `18000` báo database ready.
+  Chrome desktop tiếng Việt `1440×900` mở Vite `15173` và đăng nhập thật
+  bằng form cho cả ba vai trò. Mọi dữ liệu mới chỉ ở DB kiểm thử. Browser
+  chỉ cho request tới hai origin loopback. Các provider tích hợp để tắt.
+
+| Phạm vi | Kết quả quan sát trên stack kiểm thử |
+| --- | --- |
+| ADMIN | API phân công cán bộ vào hai LAB khác nhau, tạo phòng và thiết bị, lưu giá 0 đ và 60.000 đ/giờ. Chrome mở người dùng, quản trị tài nguyên, nhật ký và bảng điều khiển. API trả bản ghi phân công, đổi giá và lịch sử nghiệp vụ. |
+| CUSTOMER | Chrome mở danh mục công khai, lịch, thông báo và hai hồ sơ lịch. Preflight báo giá 0 đ và chưa tạo lịch. API lưu lịch miễn phí ở `CONFIRMED`, chặn đặt sát giờ với `BOOKING_NOTICE_REQUIRED`, chặn trùng với `409 BOOKING_CONFLICT`, trả `404` cho khách khác và `403` cho cán bộ ngoài LAB. Lịch công khai ẩn tiêu đề riêng và email chủ lịch. |
+| LAB_STAFF | API lưu bảo trì và chặn đặt trùng khoảng đó bằng `409 BOOKING_CONFLICT`. Mẫu tổng hợp gửi qua ingress đã xác thực tạo cảnh báo nghiêm trọng và sự cố có liên kết. Cán bộ ghi nhận cảnh báo. Mẫu mất kết nối giữ cảnh báo đang mở, mẫu online bình thường làm cảnh báo kết thúc, sự cố giữ nguyên trạng thái và thiết bị vẫn `AVAILABLE`. Chrome mở giám sát, sự cố, bảo trì và hồ sơ bàn giao. |
+| Nhận và trả | LAB_STAFF dùng form Chrome để bàn giao, nhận trả và hoàn tất. Lịch miễn phí đi qua `CONFIRMED → CHECKED_OUT → RETURNED → COMPLETED`, sau khi chờ đúng cửa sổ bàn giao theo giờ server. Tài nguyên chuyển `AVAILABLE → IN_USE → AVAILABLE`. API chủ lịch thấy từng mốc, Chrome hiển thị **Hoàn tất**. |
+| Lịch có phí | API giữ lịch ở `PENDING_APPROVAL` với hạn cố định 15 phút. Cán bộ duyệt thay thanh toán bị chặn với `BOOKING_PAYMENT_REQUIRED`. Chrome hiển thị **Chờ thanh toán**. |
+
+Kiểm thử tập trung đạt 18 ca backend (overlap, thời gian đặt trước, vòng
+đời, LAB scope, quyền truy cập lịch) và 14 ca frontend (route, xác thực).
+Lượt Chrome hoàn tất không phát sinh lỗi JavaScript hoặc phản hồi HTTP lỗi
+từ các request UI. Phân công, tạo tài nguyên, đặt lịch, bảo trì và ghi tín
+hiệu chạy qua API. Mẫu giám sát là số liệu tổng hợp gửi từ nguồn QA. Log
+tạm ở `%TEMP%/lab-rehearsal-d2f4cce3/rehearsal-chrome.log`. Express, Vite
+và PostgreSQL kiểm thử đã dừng sau lượt chạy.
+Phạm vi lượt này dừng ở Chrome desktop và DB tách biệt. Chưa nghiệm thu trên
+stack demo, điện thoại, phần cứng, thanh toán/IPN, thời điểm hết hạn thực,
+Google, email/OTP, ChatGPT Work, AI hoặc tải production.
+
+**Trước khi trình bày.** Chuẩn bị ba phiên độc lập và kiểm tra lại đúng LAB
+của cán bộ. Mở sẵn một phòng miễn phí, một lịch đã hoàn tất, một cửa sổ bảo
+trì và một hồ sơ cảnh báo có nguồn/mẫu/sự cố đã xác minh. Kiểm tra thủ công
+UI và readiness của môi trường sẽ chiếu. Nếu thao tác ghi, dùng DB test riêng
+và chọn khung đủ thời gian báo trước. Nếu chưa tới giờ nhận, chuyển sang lịch
+hoàn tất đã chuẩn bị. Trình tự và câu dẫn 25 phút nằm trong
+[kịch bản báo cáo](GRADUATION_DEMO_RUNBOOK.md).
+
+### Kiểm nhanh chống trùng và cập nhật giám sát
+
+- PostgreSQL 16.15 riêng, DB `lab_resources_logic_test`. Hai CUSTOMER cùng
+  qua preflight rồi gửi đồng thời một khung 09:00–09:30 trên cùng phòng. API
+  trả một `201 CONFIRMED`, một `409 BOOKING_CONFLICT`. DB có đúng một lịch
+  cho khung đó và có ràng buộc loại trừ GiST. Khách còn lại đặt được
+  09:30–10:00, đúng quy tắc khoảng `[startAt, endAt)`.
+- Chrome ở **Giám sát thiết bị → Nguồn cảm biến**, giữ tab hiển thị. Nguồn QA
+  gửi mẫu tổng hợp qua ingress thật. Từ 25 °C lên hai mẫu 58/60 °C, Chrome
+  tự hiện 60 °C, một cảnh báo nhiệt nghiêm trọng và liên kết sự cố sau 5,0
+  giây. Mẫu offline hiển thị sau 5,0 giây và giữ cảnh báo nhiệt đang mở.
+  Mẫu online 27 °C hiển thị sau 5,0 giây, đóng cảnh báo. Vụ việc và trạng
+  thái vật lý `AVAILABLE` giữ nguyên. Đây là lần đo local của màn polling
+  5 giây. Log tạm ở `%TEMP%/lab-quick-logic-4ab3affc/logic-final.log`.
+
+## Chốt hồ sơ báo cáo và rà mã lần hai — 15/11/2026
+
+- Checkout `codex/claude-qa-20261021` / HEAD `603b623` cùng diff hiện có.
+  Gỡ component Kanban lịch đặt đã ngừng dùng và bài test riêng sau khi xác
+  nhận hai tệp có trong Git, không có sửa đổi cục bộ. Giữ bảng vận hành tài
+  nguyên và kiểm thử hồ sơ lịch đang dùng.
+- Danh mục, bảng giá, báo giá, đặt nhanh và hồ sơ dùng chung `formatVnd`
+  theo VI/EN. Biểu mẫu và hồ sơ nhận tài nguyên lấy phí giao tận nơi từ API.
+  Test hành trình kiểm tra số tiền fixture khác 0 trên VI desktop và EN mobile.
+  Không đổi quy tắc tính phí, phân quyền, schema, migration hoặc dữ liệu demo.
+- Frontend `test:required` đạt 95 ca và kiểm 4.134 khóa VI/EN. Typecheck và
+  build đạt, còn ba cảnh báo lint và cảnh báo gói lớn hơn 500 kB. Backend
+  `test:required` đạt 158 ca, lint và đối chiếu ERD đạt.
+- Release integration đạt 300 ca trong 26 nhóm trên PostgreSQL 16 riêng,
+  không lỗi, không bỏ qua. Instance tạm đã dừng. Trình duyệt đạt 14 kịch bản
+  thanh toán, 65 kiểm tra danh mục và sáu biến thể hồ sơ với fixture. Edge
+  đọc danh mục local qua `GET /api/resources` với HTTP 200.
+- [SRS 1.5](srs.md) ghi khớp VietQR/SePay, đối soát khoản chuyển thêm,
+  bảo trì theo phiên bản và giới hạn mật khẩu mới. [Cấu trúc](PROJECT_STRUCTURE.md)
+  và SRS có sơ đồ. Bộ tổng hợp 13 trang ở mốc này đã được thay bằng
+  [bộ Word tiếng Việt theo từng chủ đề](README.md#hồ-sơ-word-tiếng-việt).
+
+Kết quả tổng duyệt ba vai trò và các bước trước khi trình bày nằm ở mục trên.
+
+## Tối ưu trợ lý và khôi phục đường dẫn LAB Support — 15/11/2026
+
+- Câu hỏi rõ về khung giờ trống kiểm tra lịch và chính sách trên DB ngay, kể cả
+  khi Work chưa kết nối. Câu có “của tôi” lọc chủ lịch trong phạm vi của vai trò.
+  Giờ tương đối dùng giờ Việt Nam và kết quả báo khi chạm giới hạn khảo sát.
+- Bridge knowledge `2026-11-15.1` cập nhật quy tắc tài khoản, thời hạn thanh toán
+  theo `paymentDueAt` và yêu cầu đặt trước tối thiểu. Xem
+  [hướng dẫn kết nối](AI_ASSISTANT_SETUP.md#82-cấp-lại-quyền-cho-plugin-đã-cài).
+- Backend lint, `test:required` và 26 ca bridge integration trên PostgreSQL test
+  riêng đạt. Trên hostname ngrok cũ, discovery trả 200, MCP không token trả 401
+  và API tài nguyên bị chặn 404. Runtime tunnel là container `lrm-chatgpt-tunnel`
+  với chính sách chỉ cho phép đường dẫn OAuth/MCP của plugin.
+- Ngày 16/11, ADMIN đã cấp quyền cho LAB Support mới trên tài khoản ChatGPT Plus
+  đích qua DCR với ba scope hiện có. Plugin mới dùng endpoint LAB cũ; bộ nhận
+  Work có hướng dẫn trong phiên chat và đọc bộ quy tắc từ backend. Gói Cloud và
+  skill cũ chưa được nhập sang. Backend báo connected với một subscription VERIFIED.
+- Một câu hỏi về hạn giữ chỗ được gửi qua API chatbot bằng tài khoản CUSTOMER
+  demo. ChatGPT trả lời sau khoảng 25 giây, nguồn `chatgpt_bridge`. Câu trả lời
+  nêu đúng mốc sớm hơn giữa 15 phút sau khi tạo và giờ bắt đầu, lịch quá hạn
+  được giải phóng và khoản trả muộn cần đối soát. Chưa kiểm tra tự gia hạn
+  subscription hay chạy đủ bộ đánh giá model trên tài khoản mới.
+- Kiểm tra 17/11: UI, API và discovery qua ngrok trả 200. Grant OAuth còn hiệu
+  lực, subscription hết hạn lúc 00:06 giờ Việt Nam. Chrome thực qua tài khoản
+  demo mở dock sau đăng nhập, trả lời chào và tra cứu lịch cá nhân khớp API.
+  Cả 5 khung giờ phòng ngày 18/11 khớp kiểm tra khả dụng. Câu hỏi mở hiện phản
+  hồi hướng dẫn tại chỗ. Bộ backend `test:assistant` đạt 41/41. Đăng ký lại
+  bộ nhận trong phiên Work hiện có rồi thử lại câu hỏi mở.
+- Làm rõ hội thoại: khi có bộ nhận Work, lời chào, giới thiệu và cảm ơn đều
+  tạo sự kiện như câu hỏi mở. Hướng dẫn quy trình và tra cứu vẫn xử lý tại
+  LAB. Chrome trên runtime local xác nhận trạng thái ngoại tuyến luôn hiện
+  ở tiêu đề khung chat ở 390 và 1.440 px. Backend đã tải
+  quy tắc `2026-11-17.1`. Bộ bắt buộc frontend/backend, 26 ca bridge integration
+  và 67 kiểm tra UI qua PostgreSQL riêng đạt; phản hồi UI dùng fixture giao
+  thức. Runtime còn grant nhưng thiếu subscription mới; chưa thử lời chào
+  qua ChatGPT thật sau thay đổi.
+- Mở lại phiên Work hiện có từ ChatGPT desktop. Work báo cấu hình trigger cũ
+  đã tồn tại; thử gỡ bằng công cụ host bị từ chối tham số. LAB vẫn có grant
+  OAuth và 0 bộ nhận VERIFIED. Khung chat thật đã mở bằng CUSTOMER demo.
+  Bước tiếp theo là Pause/Resume tác vụ LAB Support trong Scheduled rồi
+  xác minh subscription trên backend trước khi gửi “chào?” từ khung chat.
+- Khi ngoại tuyến, lời chào tiếng Anh có lỗi gõ gần như “heloo” dùng lời chào
+  của LAB. Câu hỏi “... là ai” với danh tính khác hoặc chưa rõ nói rõ giới
+  hạn hội thoại. Đã kiểm tra cả hai và “Bạn là ai?” trên website thật với
+  CUSTOMER demo. Các ca này là `local_guidance`. Backend bắt buộc và 122 kiểm
+  tra hội thoại trên Chrome đạt, với 0 lượt ghi qua API booking/thanh toán.
+
+- Kiểm tra 18/11 trên checkout `codex/claude-qa-20261021` tại `603b623`. Mở
+  phòng theo tên dùng truy vấn giới hạn vào danh mục đã phân quyền. UI tạo nút
+  mở đúng hồ sơ từ ID trả về và không in đường dẫn vào nội dung trả lời. Work
+  đọc quy tắc `2026-11-18.1` để ưu tiên kết quả, giữ câu trả lời ngắn và tránh
+  thông tin kỹ thuật. Đã bấm mở thành công Phòng thực hành điện tử trên Chrome.
+  Thời gian từ lưu câu hỏi đến lưu trả lời là 12 ms với câu khớp truy vấn
+  nhanh, và 42,6 giây với một cách hỏi qua Work (hai lượt đọc, nút đúng).
+  Đây là thời gian của hai lượt kiểm tra, không phải cam kết tốc độ của Work.
+  27 ca tích hợp bridge trên PostgreSQL test riêng đạt.
+
+- Ngày 19/11, đăng ký nhận câu hỏi hết hạn lúc 09:03 giờ Việt Nam trong khi
+  OAuth còn hiệu lực. Pause/Resume tác vụ hiện có “Nhận câu hỏi LAB” đã khôi
+  phục kết nối. Gửi “toi muốn đặt phòng 10h” qua API chatbot bằng CUSTOMER demo
+  nhận câu trả lời ChatGPT sau 43 giây, hỏi ngày và giờ kết thúc. Đăng ký mới
+  có hạn đến 10:56 ngày 20/11. Chưa xác minh Work tự gia hạn.
+  Chế độ ngoại tuyến cũng nhận được cách viết “đặt phòng 10h” và đưa nút
+  chọn ngày giờ trước khi tra lịch.
+
+## Bố cục workspace và mở biểu mẫu tài nguyên — 15/11/2026
+
+- Ở khổ 761–1099 px, thanh điều hướng xếp dọc trong cột trái và cụm tiện ích
+  của header dành đủ bề ngang cho tìm kiếm và nút tắt.
+- Thêm/sửa tài nguyên cuộn tới biểu mẫu và đưa focus vào tiêu đề. Hủy hoặc
+  lưu xong trả focus về nút đã mở. Lỗi khi lưu vẫn giữ nội dung đã nhập.
+- Chrome kiểm tra từ 390 đến 1440 px và mô phỏng API từ chối rồi chấp nhận
+  lượt lưu kế tiếp cho ADMIN và LAB_STAFF. Bộ kiểm tra giao diện và frontend
+  `test:required` đạt. Các ca UI dùng API fixture, không ghi vào cơ sở dữ liệu.
+- Thanh điều hướng thu gọn dùng nền xanh xám phẳng, biểu tượng cùng tông và
+  mục hiện tại có viền, nền riêng. Chrome kiểm tra sáng/tối ở 390, 980 và
+  1440 px, với tương phản biểu tượng thấp nhất 6,45:1 và focus rõ khi dùng Tab.
+
+## Phân cấp nội dung trang công khai theo frontend-design — 15/11/2026
+
+- Khối tài nguyên dùng danh sách ba hàng và có lối vào danh mục. Quy trình
+  dùng danh sách bốn bước theo đúng thứ tự nghiệp vụ, bố trí ngang ở desktop
+  và dọc ở mobile. Khối cuối trang phân biệt đăng nhập với xem danh mục.
+- Chrome kiểm tra tiếng Việt/Anh và sáng/tối ở 320, 390, 820, 1440 px, gồm
+  tương phản của hai khối, điều hướng bằng bàn phím và trang quy trình riêng.
+  Ở 390 px EN tối, khối tài nguyên từ 1.251 xuống 669 px, khối quy trình
+  từ 1.374 xuống 656 px. Kiểm thử media đạt 28 kiểm tra và frontend
+  `test:required` đạt. Các kiểm tra này bao phủ trang công khai.
+
+## Giao diện xác thực và vận hành theo mẫu tham chiếu — 15/11/2026
+
+- Trang đăng nhập và đăng ký dùng mảng nhận diện xanh tím với ảnh LAB sẵn có.
+  Menu hồ sơ có hiệu ứng mở ngắn, trạng thái hover/focus và hỗ trợ giảm chuyển động.
+- Bảng vận hành phân biệt cột theo trạng thái vật lý và có nút cuộn ngang.
+  Đổi trạng thái vẫn đi qua hộp thoại xác nhận và quyền vận hành hiện hành.
+- Bước xác nhận lịch đặt làm nổi bật tổng phí từ báo giá, chiết khấu và thời hạn
+  thanh toán nếu có. Trường hợp miễn phí hiển thị quy tắc xác nhận tương ứng.
+- Frontend `test:required` đạt. Chrome kiểm tra giao diện ở 1.440 px sáng và
+  390 px tối với dữ liệu API kiểm thử. Bộ kiểm thử khách hàng đầy đủ dừng ở
+  bước nhập thông tin của luồng khách vãng lai.
+
+## Liên hệ nhanh trên trang công khai — 15/11/2026
+
+- Robot ở cuối cụm liên hệ góc phải mở Trợ lý LAB trên trang Hỗ trợ nếu trợ lý
+  được bật. Đăng nhập giữ đích mở khung chat. Khi trợ lý tắt, robot dẫn tới
+  Hỗ trợ trực tuyến, giống liên kết ở chân trang. Facebook /
+  Messenger, Zalo và gọi điện xuất hiện phía trên khi có cấu hình công khai.
+  Mẫu cấu hình và cách bật từng kênh nằm trong README.
+- Chrome kiểm tra cấu hình mẫu ở 1.440 px VI và 390 px EN, kiểm tra cấu
+  hình trống ở 390 px. Frontend `test:required` đạt. Chưa có địa chỉ đích
+  thực cho các kênh liên hệ ngoài hệ thống.
+- Chrome kiểm lại lượt bấm robot, đăng nhập và tự mở khung chat có focus trên
+  desktop VI và mobile EN. Bộ trợ lý qua PostgreSQL riêng đạt 65 kiểm tra.
+  Phản hồi cầu nối trong lượt kiểm thử do fixture giao thức trả về.
+
+## Giao diện sổ giao dịch — 13/11/2026
+
+- Thu gọn biểu đồ 14 ngày. Số liệu chỉ dùng khoản đã xác minh theo ngày thanh
+  toán của các giao dịch đang hiển thị. Có thông báo khi khoảng này chưa có số liệu.
+- Hiển thị trạng thái đối soát ngay trên thẻ giao dịch của khách và trong bảng
+  quản trị. Hồ sơ giao dịch cần đối soát có hướng dẫn riêng.
+- Đã xem bản trước và sau trên Chrome ở 1.440 và 390 px. Bộ Chrome thanh toán
+  và hỗ trợ đạt 18 kịch bản dùng API fixture, gồm VI/EN và mở biểu đồ bằng bàn
+  phím. Frontend `test:required` đạt. Chưa xác minh cổng thanh toán thật hoặc
+  rà giao diện toàn bộ các màn ở lượt này.
+- Footer công khai và sau đăng nhập hiển thị bản đồ Phenikaa trực tiếp, tự
+  tải khi cuộn đến gần. Chrome xác nhận Google Maps hiển thị ở trang công
+  khai VI 1.440 px và màn Thanh toán EN 390 px dùng API fixture cho ứng dụng.
+  Frontend `test:required` đạt.
+
+## Xử lý review mã nguồn `603b623f` — 13/11/2026
+
+- Khoản VietQR chuyển thêm vào tham chiếu đã quyết toán có dòng đối soát
+  và biên nhận riêng. Hồ sơ đặt lịch ưu tiên khoản đã xác nhận booking.
+- API kiểm quyền tài khoản và LAB dưới khóa trước khi sửa tài nguyên. Chặn
+  chuyển LAB khi còn liên kết camera hoặc nguồn telemetry, kể cả đã tắt.
+- API bảo trì yêu cầu phiên bản bản ghi khi lưu. Xem ảnh hưởng, lập bảo trì
+  và dời lịch xử lý giữ chỗ hết hạn dưới khóa tài nguyên.
+- OTP đặt nhanh chỉ dùng danh tính CUSTOMER. Mã phòng và hướng dẫn thanh
+  toán dùng cùng ảnh chụp liên hệ. Mật khẩu mới giới hạn 72 byte UTF-8.
+- Restore chạy trong một transaction. Đã kiểm bản dump hợp lệ và rollback
+  bản dump hỏng trên PostgreSQL 16 riêng với cả hai script. Ma trận release
+  đã có Google sign-in với SMTP loopback.
+- `test:required` đạt 158 ca backend và 95 ca frontend. Lint backend đạt.
+  Frontend còn ba cảnh báo lint và cảnh báo bundle trên 500 kB. Đạt 134 ca
+  trong 10 suite PostgreSQL 16 liên quan. Chrome đạt bảy kịch bản với API
+  fixture, gồm desktop, mobile, VI/EN và giữ bản nháp khi API trả 409.
+- Chưa chạy toàn bộ ma trận release, GitHub CI hoặc provider thật cho lượt
+  này. Thay đổi nằm trên working tree của `codex/claude-qa-20261021`.
+
 ## Bản đồ và liên hệ trên trang công khai — 12/11/2026
 
 - Footer hiển thị địa điểm khuôn viên Đại học Phenikaa trên đường Nguyễn Trác,
@@ -862,7 +1404,7 @@ confirmed/empty/payment-hold ×1440/1024/390 PASS, checkout7 states PASS;
 và không tuyên bố giao dịch/email live. Bước tiếp chỉ đề xuất: biên tập câu chữ
 trên từng màn với bố cục hiện có, không tự bỏ/ẩn panel.
 
-## UI polish pass theo UI_REFINEMENT_PROMPT — 30/10/2026
+## Tinh chỉnh giao diện theo yêu cầu ngày 30/10/2026
 
 Scope: CSS/motion + dead code, giữ nghiệp vụ/API/RBAC/schema nguyên vẹn.
 Sửa: spectrum.css (landing-cta đổi gradient 3 màu → wash tĩnh #f6f2fd, giữ
@@ -897,7 +1439,7 @@ Dừng đúng frontend session và mở lại5173 với AI=true, giữ payment=t
 không bật telemetry/backend hay đổi RBAC. Nút hiện floating ở overview,
 inline gọn tại resources/payments/support/maintenance/monitoring theo layout
 hiện có. Giữ cơ chế lazy mount; không tự gửi câu hỏi hoặc fake câu trả lời.
-Thêm nhắc giữ mascot/cờ runtime vào UI_REFINEMENT_PROMPT. Backend8000 vẫn tắt.
+Ghi lại yêu cầu giữ mascot và cờ runtime. Backend8000 vẫn tắt.
 Sửa thêm assistant.css: dock z930 cao hơn launcher920, tránh nút inline đè
 nút đóng trên mobile. Browser6 cases overview/resources/payments×1440/390 PASS:
 mascot visible, open/close bằng click, lỗi503 hiện rõ, không request trợ lý
@@ -937,8 +1479,8 @@ Temp/lab-ui-finish-{surfaces,care,drafts,required}.log. Xem ảnh desktop/mobile
 thật từ browser fixture; không gắn nhãn live data. Baseline trước lượt systemic:
 entryJS gzip140064/CSS164332 bytes; giữa lượt140076/163049. Số cuối trong
 build-final.json; không suy luận throughput backend từ số read StrictMode.
-Prompt người dùng yêu cầu: docs/UI_REFINEMENT_PROMPT.md, đủ hướng mỹ thuật,
-phạm vi route, source/token owners, bảo vệ hợp đồng, gates và giới hạn kiểm chứng.
+Đã ghi hướng mỹ thuật, phạm vi route, vị trí token, bảo vệ hợp đồng,
+phép kiểm và giới hạn kiểm chứng trong tài liệu giao việc của lượt đó.
 UI5173 chạy; API8000/Docker chưa chạy. Chưa có điện thoại/screen reader thật,
 external merchant/inbox hoặc AI integration DB. Không gọi đây là production
 certification. Bước tiếp: Claude polish theo prompt trên mã hiện tại, nghiệm thu
@@ -1346,8 +1888,7 @@ người dùng duyệt và thực hiện trước đó (249f30b…6be59ff, gồm
 công việc 28/10 của Codex (bản nháp dùng chung, workbench, accessibility,
 hồ sơ tài nguyên) vẫn UNCOMMITTED theo đúng bàn giao; đề xuất khi người dùng
 sẵn sàng: commit thành 3 lô (drafts system, accessibility+focus, workbench/
-care/monitoring) — chờ duyệt, chưa thực hiện. Kế hoạch 7 lô cũ tại
-docs/COMMIT_PLAN_20261027.md đã hoàn tất.
+care/monitoring) — chờ duyệt, chưa thực hiện. Kế hoạch 7 lô ngày 27/10 đã hoàn tất.
 
 Đánh giá "còn cần tinh chỉnh theo ý người dùng": (1) commit lô 28/10 khi
 duyệt; (2) các màn mới (drafts notice, resource dossier timeline) đã theo
@@ -1499,15 +2040,14 @@ quay lại UI hội thoại hỗ trợ đang hoạt động và chi tiết thanh
 33 đường dẫn untracked. Gates chứng nhận TRÊN ĐÚNG CÂY NÀY: test:required
 PASS (91 tests, i18n 3992 keys, lint 2 warning cũ, typecheck, build),
 test:ui:contrast 22/22 · 0 finding, test:ui:a11y PASS 21 lượt, test:media 4/4.
-Kết quả review nằm ở [COMMIT_PLAN_20261027.md](COMMIT_PLAN_20261027.md): đề
-xuất 7 lô commit theo thứ tự (CSS global → spectrum/shell → catalogue →
+Kết quả review đề xuất 7 lô commit theo thứ tự (CSS global → spectrum/shell → catalogue →
 bookings → payments/support/monitoring → audit → test+docs), danh sách
 KHÔNG commit (4 file probe tạm, thư mục .codex/.impeccable/.qa, harness QA
 22–23/10 chờ quyết định), rủi ro (locales gộp ở lô 7 nên lô trước có thể
 chưa green riêng lẻ; package.json vs test:ui:a11y). KHÔNG tự commit — chờ
 người dùng duyệt kế hoạch.
 
-Vòng này docs-only (thêm COMMIT_PLAN_20261027.md), gates đã chạy chứng nhận
+Vòng này chỉ cập nhật tài liệu kế hoạch commit, các gate đã chạy
 như trên. git diff --check PASS. Chưa commit/push/deploy.
 
 Hướng kế tiếp: **dừng vòng lặp tự động ở đây cho tới khi người dùng duyệt** —
@@ -2108,7 +2648,7 @@ Không sửa ứng dụng. Giữ cả JSON FAIL ban đầu. Audit logs không c�
 route registry vẫn là candidate cần đối chiếu SRS338/ADR-022/entrypoint khác;
 không coi bỏ expected nav là đã giải quyết yêu cầu hoặc tự phục hồi module.
 
-Evidence/giới hạn: [QA_UI_MATRIX_20261022.md](QA_UI_MATRIX_20261022.md) và
+Kết quả và giới hạn của lượt QA cũ được lưu trong lịch sử Git, cùng
 C:/Users/Admin/.codex/lab-controller/qa-controller-readonly-20261023/final-results/coverage.json.
 Tập ghép ghi runner/hash từng lượt; summary.json trong .qa hiện chỉ6mobile.
 25backend suite là evidence22/10, chưa rerun. Functional reads chưa đủ;
@@ -2803,8 +3343,7 @@ paid receipt/no-repay/phone snapshot/selection; ADMIN và STAFF VI desktop/EN
 mobile xác nhận resource detail/edit và filter. Fault-injection429 xác nhận dừng
 request, retry chủ động và giữ draft. Không seed, migration hay business writes
 trên DB chính; chưa chạy lại fulfillment DB integration và chưa có khóa cửa thật.
-Không coi là whole-system PASS. Chi tiết/evidence/giới hạn:
-[UI_RESUME_20261017.md](UI_RESUME_20261017.md).
+Phạm vi kiểm tra chỉ bao gồm các hành trình nêu ở mục này.
 
 ## Robot nổi và workspace hỗ trợ ngày17/10/2026
 

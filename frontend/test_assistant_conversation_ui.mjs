@@ -73,7 +73,7 @@ try {
     check(await dock.locator('.assistant-compose button[type=submit]').isDisabled(), `${role}: expired context requires explicit reset`);
     await dock.getByRole('button', { name: 'New conversation', exact: true }).click();
     const hello = await ask('Hello');
-    check(!hello.request.conversationId && hello.body.summary[0].key === 'assistant.introduction', `${role}: reset recovers through real API`);
+    check(!hello.request.conversationId && hello.body.summary[0].key === 'assistant.quick.greeting', `${role}: reset recovers through real API`);
     check(await dock.locator('.assistant-about').count() === 0, `${role}: provider metadata is absent`);
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${role}: no page horizontal overflow`);
     await page.screenshot({ path: `${output}/${name}-conversation-en.png` });

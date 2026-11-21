@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import '../payments/payments.css';
 import { apiRequest } from '../../../api.js';
+import { formatVnd } from '../../../utils/currency';
 import { useLocale } from '../../../providers/LocaleProvider';
 import { formatVietnamDateTime } from '../../../utils/timezone';
 
 type Access = { mode: string; roomPassword: string | null; roomAccessConfigured: boolean; availableAt: string; canCheckIn: boolean; pickupInstructions: string; address?: { fullAddress: string }; deliveryFeeVnd?: number };
 export function BookingAccessPanel({ bookingId, status, category, onChanged }: { bookingId: string; status: string; category?: string | null; onChanged?: () => void }) {
-  const { tr } = useLocale();
+  const { tr, locale } = useLocale();
   const [access, setAccess] = useState<Access | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false), [revision, setRevision] = useState(0);
   const [windowClosed, setWindowClosed] = useState(false);
   const [condition, setCondition] = useState(''), [returning, setReturning] = useState(false), [copied, setCopied] = useState(false);
@@ -55,7 +56,7 @@ export function BookingAccessPanel({ bookingId, status, category, onChanged }: {
           <button type="submit" className="primary-button" disabled={busy || !condition.trim()}>{tr('ui.fulfillment.confirmReturn')}</button>
           <button type="button" className="secondary-button" disabled={busy} onClick={() => setReturning(false)}>{tr('ui.close_5d54c2a1')}</button>
         </form>}
-      </> : <><h3>{tr(access.mode === 'HOME_DELIVERY' ? 'ui.fulfillment.homeDelivery' : 'ui.fulfillment.labPickup')}</h3><p>{access.address?.fullAddress || access.pickupInstructions}</p><p>{tr(access.mode === 'HOME_DELIVERY' ? 'ui.fulfillment.staffDelivery' : 'ui.fulfillment.staffPickup')}</p>{access.mode === 'HOME_DELIVERY' && <p>{tr('ui.fulfillment.deliveryFee', { amount: new Intl.NumberFormat('vi-VN').format(access.deliveryFeeVnd || 0) })}</p>}</>}
+      </> : <><h3>{tr(access.mode === 'HOME_DELIVERY' ? 'ui.fulfillment.homeDelivery' : 'ui.fulfillment.labPickup')}</h3><p>{access.address?.fullAddress || access.pickupInstructions}</p><p>{tr(access.mode === 'HOME_DELIVERY' ? 'ui.fulfillment.staffDelivery' : 'ui.fulfillment.staffPickup')}</p>{access.mode === 'HOME_DELIVERY' && typeof access.deliveryFeeVnd === 'number' && <p>{tr('ui.fulfillment.deliveryFee', { amount: formatVnd(access.deliveryFeeVnd, locale) })}</p>}</>}
     </>}
     {status === 'RETURNED' && <p role="status">{tr(category === 'ROOM' ? 'ui.fulfillment.awaitingInspection' : 'ui.fulfillment.awaitingResourceInspection')}</p>}
   </section>;

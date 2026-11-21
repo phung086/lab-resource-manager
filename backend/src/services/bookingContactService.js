@@ -2,9 +2,11 @@ import { z } from 'zod';
 import { HttpError } from '../middleware/errors.js';
 import { CUSTOMER } from '../constants/roles.js';
 
+export const bookingPhonePattern = /^(?:0\d{9}|\+[1-9]\d{7,14})$/;
+
 export const bookingContactSchema = z.object({
   fullName: z.string().trim().min(2).max(255),
-  phone: z.string().trim().regex(/^(?:0\d{9}|\+[1-9]\d{7,14})$/)
+  phone: z.string().trim().regex(bookingPhonePattern)
 }).strict();
 
 // Validate saved contact too: email-only registration never invents a name/phone.

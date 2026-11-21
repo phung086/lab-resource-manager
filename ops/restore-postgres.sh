@@ -29,8 +29,6 @@ if [ -z "$POSTGRES_CONTAINER" ]; then
   exit 1
 fi
 
-docker cp "$BACKUP_FILE" "$POSTGRES_CONTAINER:/tmp/lrm-restore.dump"
-docker exec "$POSTGRES_CONTAINER" sh -c "pg_restore -U '$POSTGRES_USER' -d '$POSTGRES_DB' --clean --if-exists /tmp/lrm-restore.dump"
-docker exec "$POSTGRES_CONTAINER" rm -f /tmp/lrm-restore.dump >/dev/null
+docker exec -i "$POSTGRES_CONTAINER" pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --single-transaction < "$BACKUP_FILE"
 
 echo "Restore completed from: $BACKUP_FILE"

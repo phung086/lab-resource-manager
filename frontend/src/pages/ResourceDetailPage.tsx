@@ -1,3 +1,4 @@
+import { formatVnd } from '../utils/currency';
 import "../styles/resource-experience.css";
 /**
  * ResourceDetailPage.tsx
@@ -70,7 +71,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   selectionFull = false,
   onViewSelection
 }) => {
-  const { tr } = useLocale();
+  const { tr, locale } = useLocale();
   const isOperator = user?.role === 'ADMIN' || user?.role === 'LAB_STAFF';
 
   // Separate resource state
@@ -437,7 +438,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
           <div className="resource-sidebar-card">
             {/* Header */}
             <div className="resource-sidebar-header">
-              <h2 className="resource-sidebar-title">{resource.rental ? new Intl.NumberFormat("vi-VN").format(resource.rental.hourlyRateVnd) + " ₫ / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</h2>
+              <h2 className="resource-sidebar-title">{resource.rental ? formatVnd(resource.rental.hourlyRateVnd, locale) + " / " + tr("ui.rental.hour") : tr("ui.rental.pricePending")}</h2>
               <p className="resource-sidebar-subtitle">
                 {tr("ui.rental.maxDuration")} {resource.maxBookingMinutes ? resource.maxBookingMinutes / 60 : "—"} {tr("ui.rental.hours")}
               </p>

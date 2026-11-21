@@ -54,7 +54,7 @@ try {
       else if (path === '/api/laboratories') data = [lab];
       else if (path === '/api/resources') data = [resource];
       else if (path === '/api/resources/qa-scope-b') data = other;
-      else if (path.endsWith('/fulfillment')) data = { category: 'EQUIPMENT', deliveryAllowed: false };
+      else if (path.endsWith('/fulfillment')) data = { category: 'EQUIPMENT', deliveryAllowed: true, deliveryFeeVnd: 12345 };
       else if (path === '/api/users/me') data = { ...customer, ...contact };
       else if (path === '/api/calendar/events') data = { events: [{ id: 'busy-fixture', type: 'booking',
         resourceId: resource.id, start: at(date, '08:00'), end: at(date, '20:00') }] };
@@ -120,6 +120,9 @@ try {
     await result.click();
     await page.getByRole('dialog').waitFor();
     assert.ok(reads.includes('/api/resources/qa-scope-b'));
+    await page.locator('#booking-delivery-mode').selectOption('HOME_DELIVERY');
+    const deliveryFee = page.getByText(locale === 'vi' ? 'Phí giao tận nơi:' : 'Delivery fee:', { exact: false });
+    assert.match(await deliveryFee.innerText(), locale === 'vi' ? /12\.345/ : /12,345/);
     await page.keyboard.press('Escape');
     await page.getByRole('dialog').waitFor({ state: 'detached' });
     await recovery.getByRole('button', { name: locale === 'vi' ? /Tìm giờ phù hợp/ : /Find available times/ }).click();

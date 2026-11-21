@@ -13,7 +13,7 @@ import { publicCustomerUser } from "../services/guestBookingService.js";
 import { forgetAssistantSession } from "../assistant/assistantService.js";
 import { enqueueRegistrationEmail } from "../services/emailAutomationService.js";
 import { signUserToken, extendSession, sessionInfo } from "../services/authTokens.js";
-import { requestPasswordOtp, confirmPasswordOtp } from "../services/passwordSecurityService.js";
+import { requestPasswordOtp, confirmPasswordOtp, newPasswordSchema } from "../services/passwordSecurityService.js";
 import { createGoogleAuthRouter } from './googleAuth.js';
 
 const router = express.Router();
@@ -37,14 +37,14 @@ const loginSchema = z.object({
 
 const registerSchema = z.object({
   email: z.string().trim().email().transform(value => value.toLowerCase()),
-  password: z.string().min(8).max(128)
+  password: newPasswordSchema()
 }).strict();
 
 const changePasswordSchema = z.object({
   challengeId: z.string().uuid(),
   otp: z.string().regex(/^\d{6}$/),
   currentPassword: z.string().max(128).optional(),
-  newPassword: z.string().min(8).max(128)
+  newPassword: newPasswordSchema()
 }).strict().refine((value) => value.currentPassword !== value.newPassword, {
   message: "New password must be different from the current password",
   path: ["newPassword"]

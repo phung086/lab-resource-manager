@@ -456,6 +456,9 @@ Windows:
 .\ops\restore-postgres.ps1 -BackupFile backups\lab_resources-YYYYMMDD-HHMMSS.dump -ConfirmRestore
 ```
 
+Both restore scripts use one PostgreSQL transaction. If the restore fails,
+PostgreSQL rolls back the restore and the script reports failure.
+
 Never edit `_prisma_migrations` manually to force a deployment.
 
 ## 10. Production release checks
@@ -487,3 +490,131 @@ The exact graduation scenario is documented in:
 `docs/GRADUATION_DEMO_RUNBOOK.md`
 
 A build alone is not sufficient evidence of production readiness.
+
+## 11. Staging demo on Vercel and Railway
+
+Use a dedicated demo environment with a clean PostgreSQL 16 database and
+synthetic inventory. Select one reviewed revision for both projects, including
+its forward migrations. Give each platform access to that revision when the
+release is authorized.
+
+### Railway
+
+1. Create a PostgreSQL 16 service with a persistent volume. Place it and the API
+   in the same environment and region (Singapore for the initial demo). Keep the
+   database private. Verify the selected image's PostgreSQL major version and
+   support for `btree_gist` before applying the baseline.
+2. Set the API Root Directory to `/backend` and the config file to the absolute
+   repository path `/backend/railway.json`. Railway builds the existing Dockerfile
+   runner image. The pre-deploy job runs `npm run db:deploy` through the private
+   network. The API then starts on Railway's injected `PORT` and waits for
+   `/health/ready`. Keep one replica with Serverless disabled for the demo.
+3. Set the following variables in the API service. Use a Railway variable reference
+   such as `${{Postgres.DATABASE_URL}}` if the DB service is named `Postgres`.
+   Confirm that the resolved URL uses the private host.
+
+   | Variable | Demo value |
+   |---|---|
+   | `NODE_ENV` | `production` |
+   | `DATABASE_URL` | Private PostgreSQL service reference |
+   | `JWT_SECRET` | Dedicated random value of at least 32 characters |
+   | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_FULL_NAME` | Dedicated first-admin identity. Use a unique password of at least 12 characters and keep it private. |
+   | `CORS_ORIGINS` | Exact stable Vercel demo HTTPS origin |
+   | `TRUST_PROXY` | `true` for initial staging verification. Confirm IP handling through both ingress paths before inviting viewers. |
+   | `REMINDER_SCHEDULER_ENABLED` | `true` |
+   | `EMAIL_AUTOMATION_ENABLED`, `OPERATOR_ALERT_EMAILS_ENABLED` | `false` |
+   | `PAYMENTS_ENABLED`, `VNPAY_ENABLED`, `VIETQR_ENABLED` | `false` |
+   | `ASSISTANT_CONVERSATION_ENABLED`, `MCP_ASSISTANT_ENABLED`, `CHATGPT_BRIDGE_ENABLED`, `HARDWARE_TELEMETRY_ENABLED` | `false` |
+
+   The pre-deploy command reapplies the configured bootstrap administrator on
+   each release. Use this identity for administration and create separate
+   CUSTOMER and LAB_STAFF accounts through the application. Assign staff to
+   the demo lab. Add synthetic resources priced at zero through the normal
+   administration flow.
+4. Generate a Railway public HTTPS hostname for the API. Keep DB credentials,
+   JWT secret and the bootstrap password in Railway Variables.
+
+Railway Hobby disables outbound SMTP. The demo uses pre-provisioned accounts
+and free resources. Guest OTP and automated email need a separately verified
+email setup. See [Railway outbound networking](https://docs.railway.com/networking/outbound-networking).
+
+#### Google Apps Script mail for Railway
+
+1. Create a standalone Apps Script project in the Google account intended to
+   send mail. Copy [Code.gs](../ops/google-apps-script/Code.gs). Add the Script
+   Property `LAB_MAIL_TOKEN` with a randomly generated 32-byte value encoded
+   as 64 lowercase hexadecimal characters. Keep it out of the script source
+   and the frontend.
+2. In the editor, save the code, select `authorizeMail` and click **Run**.
+   The Google account that will send the mail approves the MailApp scope.
+   This function checks quota without sending email. Deploy as a **Web app**
+   that executes as the owner and allows **Anyone** including anonymous callers.
+   The script requires its token before sending a single-recipient email.
+   Use the deployed Web app URL ending in `/exec`.
+3. In Railway set `EMAIL_TRANSPORT=google_script`,
+   `GOOGLE_SCRIPT_MAIL_URL` to the Web App URL, `GOOGLE_SCRIPT_MAIL_TOKEN` to
+   the same Script Property value, and `EMAIL_FROM` to the sending Google
+   account address. MailApp sends as the owner. Set `EMAIL_APP_URL` to the
+   public Vercel origin.
+4. Run `npm run email:check -- --verify` in the API container and verify an
+   OTP in a controlled inbox. Review the pending outbox before enabling
+   `EMAIL_AUTOMATION_ENABLED=true`. The OTP path uses the configured
+   transport independently of the outbox worker.
+
+Local keeps SMTP by default. Keep cloud variables in Railway and use a
+separate sender project and database for the deployed demo. The relay uses
+Google's daily recipient quota. Acceptance by MailApp does not guarantee
+inbox delivery. A lost response after sending can lead to a duplicate when
+the outbox retries.
+[Google Web Apps](https://developers.google.com/apps-script/guides/web) ·
+[MailApp quotas](https://developers.google.com/apps-script/guides/services/quotas)
+
+### Vercel
+
+Set Root Directory to `frontend` and Node.js to 22.x. Use the committed
+`vercel.mjs` for the Vite build, static route rewrites and same-origin API
+proxy. Configure these variables for the demo deployment environment:
+
+| Variable | Demo value |
+|---|---|
+| `LRM_RAILWAY_API_ORIGIN` | Railway API HTTPS origin with no path |
+| `VITE_API_BASE_URL` | `/api` |
+| `VITE_PUBLIC_SITE_URL` | Stable Vercel demo HTTPS origin |
+| `VITE_SEO_INDEXABLE` | `false` |
+| `VITE_ENABLE_RESEARCH_FEATURES`, `VITE_ENABLE_AI_ASSISTANT`, `VITE_ENABLE_TELEMETRY_FEATURES`, `VITE_ENABLE_PAYMENT_FEATURES` | `false` |
+
+Use the stable Vercel hostname for the demo. A preview branch that needs a
+working API should have its own staging target and exact allowed origin.
+`VITE_*` values are public build inputs. See
+[Vercel programmatic configuration](https://vercel.com/docs/project-configuration/vercel-ts)
+and [Railway pre-deploy](https://docs.railway.com/deployments/pre-deploy-command).
+
+### Public catalogue images on Vercel
+
+- The curated catalogue ships WebP files under `frontend/public/media/catalog/`.
+  The filenames include a digest, and Vercel caches this path with
+  `Cache-Control: public, max-age=31536000, immutable`. Include the entire
+  directory in later deployments because existing API records reference it.
+- Publish the files first and verify a public HTTPS 200 before attaching them
+  via the resource media API. Allowlist the exact frontend hostname in
+  `MEDIA_EXTERNAL_HOSTS`. PostgreSQL stores the URL, source, title, alt text,
+  credit and license. Browser image requests go directly to Vercel.
+- Keep the fingerprinted credits manifest alongside the assets. The
+  local-only image directory has a separate ignore rule. The cloud service
+  uses the S3 configuration above when an administrator needs upload and
+  replacement from the application.
+
+### Acceptance on the target environment
+
+- Check `/api/health/ready` via Vercel and verify migrations on the target DB.
+- Open `/`, `/resources`, `/schedule` and `/how-it-works`. Reload a workspace
+  deep link and verify private pages and API responses carry `no-store`.
+  A missing asset or unknown API route must return a 404.
+- Verify sign-in, reload, sign-out and role boundaries on the stable Vercel
+  domain. Check proxy/IP behavior from two distinct clients and on direct
+  Railway ingress. Treat the Railway API hostname as publicly reachable.
+- Run the booking, handover and return scenario using a free resource. Run the
+  concurrent booking check on the isolated demo DB. Schedule backups and
+  verify restore to a separate database before admitting real users.
+- Capture API latency, error rate and Railway API/DB usage during a separate
+  staging load test. Configure a usage alert before inviting viewers.

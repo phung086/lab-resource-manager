@@ -173,14 +173,25 @@ test('authenticated older clients discover the same tools without losing OAuth c
   assert.equal(listed.result.tools.length, 4);
 });
 
-test('simple app questions are answered and persisted without webhook work, with owner and busy guards', async () => {
-  for (const [message, locale] of [['xin chào', 'vi'], ['Who are you?', 'en'], ['Hướng dẫn đặt lịch', 'vi']]) {
+test('workflow guidance stays local while conversational questions reach Work with the current actor', async () => {
+  for (const [message, locale] of [['Hướng dẫn đặt lịch', 'vi'], ['How do I pay?', 'en']]) {
     const before = await prisma.chatgptBridgeDelivery.count();
     const job = await ask(alice, { message, locale });
     assert.equal(job.status, 'ANSWERED'); assert.equal(job.provider, 'local'); assert.equal(job.source, 'local_guidance');
     assert.ok(job.answer.includes('LAB') || job.answer.includes('15')); assert.equal(await prisma.chatgptBridgeDelivery.count(), before);
     assert.equal((await requests.read(alice, job.id)).answer, job.answer);
     await assert.rejects(requests.read(bob, job.id), error => error.status === 404);
+  }
+  for (const [actor, message, locale] of [[owner, 'chào?', 'vi'], [alice, 'Who are you?', 'en'], [alice, 'Thanks', 'en']]) {
+    const job = await ask(actor, { message, locale });
+    assert.equal(job.status, 'PENDING');
+    assert.equal(job.answer, undefined);
+    assert.equal(await prisma.chatgptBridgeDelivery.count({ where: { requestId: job.id } }), 1);
+    const context = await requests.context(grant, job.id);
+    assert.equal(context.actorRole, actor.role);
+    assert.equal(context.locale, locale);
+    assert.equal(context.question, message);
+    await requests.cancel(actor, job.id);
   }
   const pending = await ask();
   await assert.rejects(ask(alice, { message: 'hello' }), error => error.code === 'ASSISTANT_BUSY');
@@ -247,6 +258,8 @@ test('operator tools enforce fresh LAB scope, contact permissions and bounded co
   assert.ok(!JSON.stringify(stock).includes(foreign.code));
   const schedule = await read('get_lab_schedule', { startAt: start.toISOString(), endAt: end.toISOString() });
   assert.equal(schedule.total, 1); assert.equal(schedule.items[0].resource.id, material.id);
+  const personalSchedule = await read('get_lab_schedule', { startAt: start.toISOString(), endAt: end.toISOString(), ownOnly: true });
+  assert.equal(personalSchedule.total, 0, 'an operator personal calendar excludes customer bookings in the assigned LAB');
   const paidEnd = new Date(+end + 3600000);
   await prisma.booking.create({ data: { id: randomUUID(), resourceId: material.id, requestedById: contact.id, title: 'Payment hold scope fixture', purpose: 'Test',
     status: 'PENDING_APPROVAL', feeAmountVnd: 50000, paymentDueAt: new Date(+clock + 900000), startAt: end, endAt: paidEnd } });
@@ -313,6 +326,26 @@ test('publish is idempotent and never settles bookings or payments', async () =>
   const continued = await ask(alice, { conversationId: visible.conversation.id });
   assert.equal((await requests.context(grant, continued.id)).history.length, 1); await requests.cancel(alice, continued.id);
   await assert.rejects(ask(bob, { conversationId: visible.conversation.id }), error => error.code === 'ASSISTANT_CONVERSATION_EXPIRED');
+});
+
+test('named resource lookup returns direct links without a Work event and Work links require fresh evidence', async () => {
+  const { id, code, name } = await prisma.resource.findUniqueOrThrow({ where: { id: fixtureBooking.resourceId } });
+  const before = await prisma.chatgptBridgeDelivery.count();
+  const fast = await ask(alice, { message: 'Mở phòng ' + code });
+  assert.equal(fast.status, 'ANSWERED');
+  assert.equal(fast.source, 'authenticated_mcp');
+  assert.deepEqual(fast.resourceLinks, [{ id, name }]);
+  assert.equal(await prisma.chatgptBridgeDelivery.count(), before);
+
+  const job = await ask(alice, { message: 'Bạn mở giúp tôi hồ sơ chi tiết của phòng có mã ' + code + ' được không?' });
+  await requests.context(grant, job.id);
+  const evidence = await requests.readTool(grant, { requestId: job.id, tool: 'search_resources', input: { query: code } });
+  assert.deepEqual(evidence.resourceLinks, [{ id, name }]);
+  await requests.reply(grant, { requestId: job.id, generation: grant.generation,
+    answer: 'Bạn có thể mở [chi tiết phòng](http://localhost:5173/workspace/resources/' + id + ').' });
+  const visible = await requests.read(alice, job.id);
+  assert.equal(visible.answer, 'Bạn có thể mở chi tiết phòng.');
+  assert.deepEqual(visible.resourceLinks, [{ id, name }]);
 });
 
 test('tariffs, owned settlement status and verified spending are read fresh without payment secrets', async () => {

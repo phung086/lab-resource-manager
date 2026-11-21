@@ -24,6 +24,10 @@ export const paymentStatusLabels: Record<string, string> = {
 export function isAwaitingPayment(booking: { status?: string; paymentDueAt?: string | null } | null | undefined) {
  return booking?.status === 'PENDING_APPROVAL' && Boolean(booking.paymentDueAt);
 }
+export function findSuccessfulBookingPayment<T extends { status: string; reconciliationStatus?: string }>(rows: T[]) {
+ return rows.find(row => row.status === 'success' && row.reconciliationStatus === 'none')
+   || rows.find(row => row.status === 'success');
+}
 export function canInitiateBookingPayment(actor: { id: string }, booking: { requestedById: string; status: string; paymentDueAt?: string | null; startAt?: string } | null, charge: { userId: string; status: string } | null) {
  return !!actor.id && booking?.requestedById === actor.id && charge?.userId === actor.id && (booking.status === 'CONFIRMED' || isAwaitingPayment(booking)) && (!booking.paymentDueAt || Date.parse(booking.paymentDueAt) > Date.now()) && (!isAwaitingPayment(booking) || !booking.startAt || Date.parse(booking.startAt) > Date.now()) && ['pending','failed','expired'].includes(charge.status);
 }

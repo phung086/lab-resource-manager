@@ -1,7 +1,7 @@
 # Kế hoạch hoàn thiện và nghiệm thu đồ án
 
 Kế hoạch áp dụng cho đồ án cá nhân Lab Resource Manager tại mốc rà ngày
-12/11/2026. Các hàng là thứ tự chuẩn bị nghiệm thu. Ngày nộp và các mốc
+17/11/2026. Các hàng là thứ tự chuẩn bị nghiệm thu. Ngày nộp và các mốc
 báo cáo theo lịch giảng viên xác nhận.
 
 | Mốc | Công việc và đầu ra | Điều kiện hoàn thành |
@@ -10,7 +10,7 @@ báo cáo theo lịch giảng viên xác nhận.
 | 2. Chốt chất lượng mã | Kiểm tra imports, cấu hình, mã trùng và tệp sinh ra. Dùng chung formatter, locale, serializer và mã trạng thái ở nơi có cùng hợp đồng. | Diff có phạm vi rõ, build/typecheck/lint chạy được, ERD khớp schema. |
 | 3. Nghiệm thu lõi | Chạy test PostgreSQL 16 riêng cho phân quyền, đặt trùng, nhận/trả, lịch sử, bảo trì và giám sát. Mở giao diện theo vai trò và kiểm các lỗi liên quan. | Ghi lệnh, môi trường, ca đạt/lỗi/bỏ qua. Có kết quả riêng cho từng nhóm nghiệp vụ. |
 | 4. Chuẩn bị trình bày | Tập theo runbook, dùng ba phiên trình duyệt và một lịch demo. Mở nguồn đo Windows và kịch bản có nhãn mô phỏng. | Có thể lần theo mã lịch, trạng thái, bản ghi bàn giao, mẫu giám sát, cảnh báo và nhật ký. |
-| 5. Bàn giao hồ sơ | Đóng gói lý do chọn đề tài, kế hoạch, SRS, cấu trúc và ma trận kiểm chứng thành Word/PDF. | Hai định dạng cùng nội dung. Tài liệu ghi phạm vi, nguồn, giới hạn và việc còn lại. |
+| 5. Bàn giao hồ sơ | Đóng gói lý do chọn đề tài, kế hoạch, SRS, thiết kế, quy ước, kiểm thử và kịch bản thành bảy tài liệu Word tiếng Việt. | Mục lục mở đúng từng tệp. Tài liệu ghi phạm vi, nguồn, giới hạn và việc còn lại. |
 
 ## Các việc phụ thuộc điều kiện
 

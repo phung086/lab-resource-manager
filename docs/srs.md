@@ -5,9 +5,9 @@
 | Document field | Value |
 |---|---|
 | Document ID | LRM-SRS-001 |
-| Version | 1.4 |
+| Version | 1.5 |
 | Status | Working baseline for the current project checkpoint |
-| Prepared | 28 September 2026; clarified 3 October 2026 |
+| Prepared | 28 September 2026. Reviewed 15 November 2026. |
 | Product | Lab Resource Manager |
 
 ## 1. Introduction
@@ -18,7 +18,7 @@ This Software Requirements Specification (SRS) defines the users, system boundar
 
 ### 1.2 Scope
 
-Lab Resource Manager is a web application for discovering and operating shared laboratory resources. Its primary workflow covers resource discovery, availability review, booking, approval where required, handover, return, and operational history. Supporting capabilities include account and laboratory administration, maintenance, notifications, incident handling, monitoring, and reporting.
+Lab Resource Manager is a web application for scheduling and monitoring shared laboratory resources. The scheduling workflow covers discovery, availability review, booking confirmation, handover, return, and operational history. The monitoring workflow covers authenticated telemetry, freshness, thresholds, alerts and linked incidents. Supported operations include account and laboratory administration, maintenance, notifications, and reporting.
 
 Guest quick booking, pricing/payment, and AI assistance are supporting capabilities. Core authorization, booking rules, physical resource status, and human approval take precedence. Real payment-provider settlement and physical hardware verification require their own external configuration and evidence.
 
@@ -51,7 +51,7 @@ At a high level, the system supports:
 
 1. Account registration, login, account administration, and laboratory assignment.
 2. Public and authenticated resource discovery, detail, and schedule views.
-3. Booking requests, policy checks, approval, cancellation, handover, return, and completion.
+3. Booking requests, policy checks, automatic confirmation under the applicable payment rule, legacy pending review, cancellation, handover, return, and completion.
 4. Resource operation, maintenance windows, incident records, notifications, audit history, and dashboards.
 5. Persisted telemetry and alert workflows when a real configured source supplies data.
 6. Guest quick booking, resource and purpose-based pricing, and payment-provider integration when configured.
@@ -66,6 +66,23 @@ At a high level, the system supports:
 | `CUSTOMER` | Discover resources, book, pay and request assistance | Own bookings, incidents, profile and support history; no operator privileges |
 
 Public visitors may view explicitly public catalog and schedule projections. Public access does not grant booking mutation or account privileges.
+
+```mermaid
+flowchart LR
+    Visitor["Public visitor"] --> Catalog["Discover resources and check public schedules"]
+    Customer["CUSTOMER"] --> Catalog
+    Customer --> Book["Book, review and cancel eligible own reservations"]
+    Customer --> Support["Request support and report incidents"]
+    Staff["LAB_STAFF"] --> Handover["Hand over, accept return and complete bookings"]
+    Staff --> Maintain["Manage scoped maintenance and incidents"]
+    Admin["ADMIN"] --> Handover
+    Admin --> Maintain
+    Admin --> Administer["Manage accounts, LAB assignments and policies"]
+    Source["Configured telemetry source"] --> Ingest["Submit authenticated telemetry"]
+    Ingest --> Monitor["Review signals, alerts and linked incidents"]
+    Staff --> Monitor
+    Admin --> Monitor
+```
 
 ### 2.4 Operating environment
 
@@ -96,7 +113,7 @@ The UI shall provide role-appropriate navigation, clear booking and operational 
 - The frontend communicates with the backend through HTTP API routes under `/api`.
 - API mutations shall use backend authentication, authorization, validation, and service logic.
 - The backend communicates with PostgreSQL through Prisma and tracked migrations.
-- Optional integrations include SMTP, VNPAY, S3-compatible storage, Prometheus/telemetry agents, and configured AI services. Missing required configuration shall be reported as unavailable or failed; it shall not be represented as success.
+- Optional integrations include Google sign-in, SMTP, VNPAY, VietQR via SePay, S3-compatible storage, Prometheus/telemetry agents, and configured AI services. The system shall report missing configuration as unavailable or failed.
 
 ### 3.3 API error interface
 
@@ -113,7 +130,7 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | FR-AUTH-03 | For each protected request, the backend shall verify the current database user exists and is active before authorizing the operation. |
 | FR-AUTH-04 | An `ADMIN` shall be able to manage user roles, activation, and laboratory assignments. |
 | FR-AUTH-07 | ADMIN shall manage all accounts; LAB_STAFF shall create/read/edit contact/deactivate/soft-remove all CUSTOMER accounts only, without acquiring global LAB permissions. |
-| FR-AUTH-08 | All password changes shall require a one-use, expiring OTP delivered to the immutable registered email. Self changes also require the current password when a local password is enabled. Failure to deliver shall fail closed. |
+| FR-AUTH-08 | All password changes shall require a one-use, expiring OTP delivered to the immutable registered email. Self changes also require the current password when a local password is enabled. Failure to deliver shall fail closed. New local passwords shall fit the 72-byte UTF-8 limit. |
 | FR-AUTH-09 | Credential, activation and role changes shall invalidate earlier authentication versions; removal shall retain history and block while bookings/support remain open. |
 | FR-AUTH-05 | The system shall not treat client-side route hiding or client-provided user/role/laboratory identifiers as authorization. |
 | FR-AUTH-06 | Guest quick booking shall verify an email OTP before completing the reservation. New guest accounts have role `CUSTOMER`. Access to an existing account requires normal authentication. |
@@ -130,6 +147,7 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | FR-RES-03 | The system shall keep resource category separate from technical subtype and shall not infer unresolved categories. |
 | FR-RES-04 | `Resource.operationalStatus` shall be the authoritative physical state. Resource retirement shall preserve historical records. |
 | FR-RES-05 | The system shall record and display persisted resource history when supported by the relevant workflow. |
+| FR-RES-06 | Resource edits shall require the version read by the editor. The system shall reject stale edits while preserving the draft. Category changes shall wait until bookings still eligible for use, resources checked out, and returns awaiting inspection are handled. |
 
 ### 4.3 Scheduling and booking
 
@@ -191,6 +209,7 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 | FR-EXT-02 | A browser return from a payment provider shall not settle a transaction. Only a valid, verified server callback matching the configured merchant or issued bank recipient and transaction data may update payment state. |
 | FR-EXT-03 | Payment unavailability shall remain visible; the system shall not fabricate a successful payment or require payment as a canonical booking status. |
 | FR-EXT-04 | AI assistance may search, explain, summarize, or recommend using available data but shall not override authorization, operational state, policy, booking rules, or human approval. |
+| FR-EXT-05 | For VietQR, a verified SePay notification shall match the issued bank recipient and payment reference. The initial settlement requires the expected VND amount. Replaying the same notification shall have one effect. An additional transfer against an already settled reference shall retain its actual amount and separate reconciliation evidence without reconfirming the booking. Historical wallet records remain readable. |
 
 ## 5. Data and Business Rules
 
@@ -235,7 +254,7 @@ Errors shall use the stable shape `{ "error": { "code", "message", "details" } }
 
 ## 8. Current Status and Traceability Notes
 
-This SRS defines the working product requirements. Current implementation evidence is maintained separately in `docs/CURRENT_STATE.md`, current state and release/demo runbooks. At the 28 September 2026 checkpoint, core booking, operations, administration, notifications, persisted monitoring, and product-experience work have implementation and automated verification evidence. External SMTP OTP and a live VNPAY merchant transaction remain environment-dependent; physical sensor/camera verification requires real hardware. Optional AI and research workflows are supporting/experimental and do not define the required graduation core.
+This SRS defines the working product requirements. See [current state](CURRENT_STATE.md), the [system test guide](SYSTEM_TEST_GUIDE.md), and the [demo runbook](GRADUATION_DEMO_RUNBOOK.md) for dated execution evidence. The 15 November review distinguishes local checks, isolated PostgreSQL integration and browser fixtures. Google, external SMTP, live provider payments, and physical sensor/camera verification require separate environment evidence. AI remains supporting functionality.
 
 Requirement status shall be assessed against current code and verification artifacts before each progress report. A passing isolated test or demo does not alone establish production deployment or real-world use.
 
@@ -259,7 +278,8 @@ Requirement status shall be assessed against current code and verification artif
 - LAB-STOCK-02: Repeated identical movement IDs have one ledger effect. Changed
   retries fail. Maintenance-linked issues require an open job in the same lab.
 - LAB-MAINT-01: Preview affected bookings, reject overlaps, require reasons for
-  schedule/status changes, and preserve closed jobs. Resource physical state is
+  schedule/status changes, and preserve closed jobs. A concurrent update based
+  on an older job version shall be rejected. Resource physical state is
   verified separately; completing maintenance does not certify safe operation.
 - LAB-TEACH-01 (retired by ADR-033 and ADR-047): preserve historical tables and records at the database layer. Runtime screens and API routes are retired.
 - LAB-MEDIA-01: Show image/video details with truthful loading/unavailable states;
@@ -416,8 +436,13 @@ It does not activate predictive ML, hardware, provider AI or another numbered Ba
 - LAB-CHAT-05: This first release refreshes messages and positions every 2 seconds
   and heartbeats every 15 seconds. Presence expires after 45 seconds without a
   heartbeat. A disconnected ACTIVE session retains its handler and messages;
-  admin can requeue it. No background tab, read receipt, attachment, anonymous
-  chat, email delivery or automatic AI resolution is implied.
+  admin can requeue it. No read receipt, attachment, anonymous chat or automatic
+  AI resolution is implied.
+- LAB-CHAT-06: Staff and admins see actionable support alerts at the top of
+  their signed-in workspace. A waiting request alerts its LAB staff even before
+  anyone goes ready. Alerting leaves FIFO and the staff capacity rules in place.
+  High and critical incident reports use the same urgent area. Optional staff
+  email alerts use the outbox described in Appendix G.
 
 Verification entries: backend `test:support:integration` (guarded isolated
 PostgreSQL), frontend `test:ui:support` (separate browser sessions forwarding
@@ -450,6 +475,10 @@ See CURRENT_STATE for the actual run scope and limits.
   preference and a mail administration UI are deferred. Historical events are
   not automatically backfilled. External SMTP and live merchant verification
   remain prerequisites for inbox/end-to-end payment evidence.
+- LAB-MAIL-05: When enabled, enqueue an alert per new support request or high
+  or critical incident for staff assigned to the affected LAB. Check the
+  recipient and case again before sending. Do not include customer messages,
+  incident descriptions or contact details in the email.
 
 ## Appendix H. Account security and spending loyalty (approved 2026-10-13)
 

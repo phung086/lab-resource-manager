@@ -1,11 +1,11 @@
 /**
  * Email Notification Service
- * Powered by Nodemailer & HTML Templates
- * Requires real SMTP configuration; never reports console output as delivery.
+ * Uses SMTP by default, or the configured Google Apps Script relay.
  */
 
 import nodemailer from "nodemailer";
 import { createHash } from "node:crypto";
+import { callGoogleScriptMail, googleScriptConfiguration } from "./googleScriptMail.js";
 
 let transporter = null;
 let transportFingerprint = null;
@@ -27,7 +27,11 @@ export function emailConfiguration() {
   const pass = process.env.SMTP_PASS;
   const from = process.env.EMAIL_FROM?.trim();
   const fromAddress = from?.match(/^(?:[^<>\r\n]*<)?([^\s<>@]+@[^\s<>@]+\.[^\s<>@]+)>?$/)?.[1];
-  return { host, port, user, pass, from, fromAddress, configured: Boolean(
+  const provider = process.env.EMAIL_TRANSPORT?.trim() || "smtp";
+  if (provider === "google_script") {
+    return { provider, fromAddress, configured: Boolean(fromAddress && googleScriptConfiguration()) };
+  }
+  return { provider, host, port, user, pass, from, fromAddress, configured: provider === "smtp" && Boolean(
     host && user && pass && fromAddress && Number.isInteger(port) && port > 0 && port <= 65535
   ) };
 }
@@ -57,6 +61,11 @@ function deliveryError(error) {
 }
 
 export async function verifyEmailTransport() {
+  const config = emailConfiguration();
+  if (config.provider === "google_script") {
+    return config.configured ? callGoogleScriptMail("verify")
+      : { success: false, error: "GOOGLE_SCRIPT_MAIL_NOT_CONFIGURED" };
+  }
   const transport = getTransporter();
   if (!transport) return { success: false, error: "SMTP is not configured" };
   try { await transport.verify(); return { success: true }; }
@@ -67,6 +76,12 @@ export async function verifyEmailTransport() {
  * Send email safely without throwing
  */
 export async function sendEmail({ to, subject, html, text, messageId }) {
+  const config = emailConfiguration();
+  if (config.provider === "google_script") {
+    if (!config.configured) return { success: false, error: "GOOGLE_SCRIPT_MAIL_NOT_CONFIGURED" };
+    const result = await callGoogleScriptMail("send", { to, subject, html, text: text || subject });
+    return result.success ? { ...result, messageId } : result;
+  }
   try {
     const transport = getTransporter();
     if (!transport) return { success: false, error: "SMTP is not configured" };

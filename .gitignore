@@ -1,5 +1,6 @@
 .env
 .env.production
+/frontend/.env.local
 .env.batch*.ci
 .venv/
 __pycache__/
@@ -15,6 +16,7 @@ coverage/
 logs/
 .secrets/
 .local-pgdata/
+~$*.docx
 
 # Local browser verification artifacts (existing tracked references remain tracked)
 frontend/screenshot_*.png
@@ -48,3 +50,6 @@ frontend/src/.ui_b*_tmp.mjs
 # Local design captures, probes and ephemeral browser sessions
 /Temp/
 /frontend/.tmp-qa/
+
+# Local-only catalogue image pack with source attribution.
+/frontend/public/media/local-resource-catalog/
